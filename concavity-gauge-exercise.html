@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Concavity Gauge Exercise</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0f1117; --panel: #1a1d27; --panel-border: #2a2d3a;
+    --accent: #3b82f6; --accent-glow: rgba(59,130,246,0.3);
+    --success: #22c55e; --error: #ef4444; --warning: #f59e0b;
+    --text: #e2e8f0; --text-dim: #94a3b8; --text-bright: #f8fafc;
+  }
+  body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; user-select:none; }
+
+  .exercise-header {
+    background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);
+    border-bottom:1px solid var(--panel-border); padding:20px 32px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .exercise-title { font-size:18px; font-weight:700; color:var(--text-bright); }
+  .exercise-subtitle { font-size:13px; color:var(--text-dim); margin-top:2px; }
+
+  .exercise-body { display:grid; grid-template-columns:1fr 300px; gap:0; min-height:calc(100vh - 72px); }
+
+  .main-area { padding:24px 32px; display:flex; flex-direction:column; align-items:center; position:relative; }
+
+  .prompt-box {
+    background:var(--panel); border:1px solid var(--panel-border);
+    border-radius:10px; padding:16px 24px; margin-bottom:16px;
+    max-width:750px; width:100%;
+  }
+  .prompt-box h3 { font-size:14px; font-weight:600; color:var(--accent); margin-bottom:6px; }
+  .prompt-box p { font-size:14px; color:var(--text); line-height:1.5; }
+
+  .viewport {
+    background:#1e2130; border:1px solid var(--panel-border); border-radius:12px;
+    width:100%; max-width:750px; height:480px; overflow:hidden; position:relative;
+    box-shadow:inset 0 2px 8px rgba(0,0,0,0.3);
+  }
+  .viewport svg { width:100%; height:100%; }
+
+  .gauge-selector {
+    margin-top:16px; max-width:750px; width:100%;
+    display:flex; align-items:center; gap:10px;
+  }
+  .gauge-selector-label { font-size:13px; color:var(--text-dim); font-weight:600; }
+  .gauge-btn {
+    padding:10px 22px; border-radius:8px; border:2px solid var(--panel-border);
+    background:var(--panel); color:var(--text); font-family:'JetBrains Mono',monospace;
+    font-size:15px; font-weight:600; cursor:pointer; transition:all .2s;
+  }
+  .gauge-btn:hover { border-color:var(--accent); }
+  .gauge-btn.selected { border-color:var(--accent); background:rgba(59,130,246,0.12); color:var(--accent); }
+
+  .disposition-row {
+    margin-top:12px; max-width:750px; width:100%;
+    display:flex; align-items:center; gap:8px;
+  }
+  .disposition-label { font-size:13px; color:var(--text-dim); font-weight:600; margin-right:4px; }
+  .disp-btn {
+    padding:10px 28px; border-radius:8px; border:2px solid var(--panel-border);
+    background:var(--panel); color:var(--text); font-family:'Inter',sans-serif;
+    font-size:14px; font-weight:600; cursor:pointer; transition:all .2s;
+  }
+  .disp-btn:hover { border-color:var(--accent); }
+  .disp-btn.sel-accept { border-color:var(--success); background:rgba(34,197,94,0.15); color:var(--success); }
+  .disp-btn.sel-reject { border-color:var(--error); background:rgba(239,68,68,0.15); color:var(--error); }
+  .submit-btn {
+    padding:10px 32px; border-radius:10px; border:none; background:var(--accent);
+    color:white; font-family:'Inter',sans-serif; font-size:14px; font-weight:600;
+    cursor:pointer; margin-left:auto; transition:all .2s;
+  }
+  .submit-btn:hover { background:#2563eb; }
+  .submit-btn:disabled { opacity:.4; cursor:not-allowed; }
+
+  /* Feedback overlay */
+  .feedback {
+    display:none; position:absolute; inset:0; background:rgba(15,17,23,0.94);
+    z-index:10; flex-direction:column; align-items:center; justify-content:center;
+    padding:40px; text-align:center; animation:fadeIn .3s;
+  }
+  .feedback.visible { display:flex; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  .fb-icon { width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; margin-bottom:20px; }
+  .fb-icon.correct { background:rgba(34,197,94,0.15); }
+  .fb-icon.incorrect { background:rgba(239,68,68,0.15); }
+  .fb-title { font-size:22px; font-weight:700; margin-bottom:12px; }
+  .fb-title.correct { color:var(--success); }
+  .fb-title.incorrect { color:var(--error); }
+  .fb-detail { font-size:14px; color:var(--text); line-height:1.6; max-width:520px; }
+  .fb-values { font-family:'JetBrains Mono',monospace; font-size:15px; margin:12px 0; display:flex; gap:20px; justify-content:center; }
+  .fb-values span { color:var(--text-dim); }
+  .fb-values strong { color:var(--text-bright); }
+  .fb-buttons { display:flex; gap:12px; margin-top:24px; }
+  .fb-btn { padding:10px 32px; border-radius:10px; border:none; font-family:'Inter',sans-serif; font-size:14px; font-weight:600; cursor:pointer; transition:all .2s; }
+  .fb-btn-retry { background:var(--panel); color:var(--text); border:2px solid var(--panel-border); }
+  .fb-btn-retry:hover { border-color:var(--accent); }
+  .fb-btn-proceed { background:var(--accent); color:white; }
+  .fb-btn-proceed:hover { background:#2563eb; }
+
+  .round-progress { display:flex; gap:6px; align-items:center; margin-left:auto; }
+  .round-dot { width:10px; height:10px; border-radius:50%; background:var(--panel-border); border:1.5px solid var(--text-dim); }
+  .round-dot.active { background:var(--accent); border-color:var(--accent); }
+  .round-dot.done { background:var(--success); border-color:var(--success); }
+
+  /* Sidebar */
+  .sidebar { background:var(--panel); border-left:1px solid var(--panel-border); padding:24px; display:flex; flex-direction:column; gap:20px; }
+  .sidebar h4 { font-size:11px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text-dim); margin-bottom:10px; }
+  .criteria-panel { background:rgba(59,130,246,0.06); border:1px solid rgba(59,130,246,0.15); border-radius:10px; padding:16px; }
+  .criteria-panel h4 { color:var(--accent); }
+  .criteria-item { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.04); font-size:13px; }
+  .criteria-item:last-child { border-bottom:none; }
+  .criteria-item .cl { color:var(--text-dim); }
+  .criteria-item .cv { font-family:'JetBrains Mono',monospace; font-weight:600; color:var(--text-bright); }
+  .tip-card { background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.15); border-radius:10px; padding:16px; }
+  .tip-card h4 { color:var(--warning); }
+  .tip-card p { font-size:13px; color:var(--text); line-height:1.5; }
+</style>
+</head>
+<body>
+
+<div class="exercise-header">
+  <div>
+    <div class="exercise-title">Concavity Gauge — Weld Profile Inspection</div>
+    <div class="exercise-subtitle">AWS D17.1 Aerospace Visual Inspection Training</div>
+  </div>
+  <div class="round-progress" id="roundProgress"></div>
+</div>
+
+<div class="exercise-body">
+  <div class="main-area" id="mainArea">
+    <div class="prompt-box">
+      <h3 id="roundTitle">Round 1 — Concavity Check</h3>
+      <p id="roundPrompt">Read the weld symbol, select the correct concavity gauge, and place it on the weld. Does the weld face break the plane of the gauge's straight edge?</p>
+    </div>
+
+    <div class="viewport">
+      <svg id="scene" viewBox="0 0 750 480" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <div class="gauge-selector">
+      <span class="gauge-selector-label">Select gauge:</span>
+      <button class="gauge-btn" id="btn-half" onclick="selectGauge('half')">1/2"</button>
+      <button class="gauge-btn" id="btn-fiveeighths" onclick="selectGauge('fiveeighths')">5/8"</button>
+    </div>
+
+    <div class="disposition-row">
+      <span class="disposition-label">Disposition:</span>
+      <button class="disp-btn" id="acceptBtn" onclick="setDisp('accept')">ACCEPT</button>
+      <button class="disp-btn" id="rejectBtn" onclick="setDisp('reject')">REJECT</button>
+      <button class="submit-btn" id="submitBtn" onclick="submit()">Submit</button>
+    </div>
+
+    <div class="feedback" id="feedback">
+      <div class="fb-icon" id="fbIcon"></div>
+      <div class="fb-title" id="fbTitle"></div>
+      <div class="fb-values" id="fbValues"></div>
+      <div class="fb-detail" id="fbDetail"></div>
+      <div class="fb-buttons">
+        <button class="fb-btn fb-btn-retry" onclick="tryAgain()">Try Again</button>
+        <button class="fb-btn fb-btn-proceed" id="proceedBtn" onclick="proceed()">Proceed →</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <div>
+      <div class="criteria-panel">
+        <h4>D17.1 Concavity Criteria</h4>
+        <div class="criteria-item"><span class="cl">Required Leg Size</span><span class="cv" id="sidebarRequired">1/2" (0.500")</span></div>
+        <div class="criteria-item"><span class="cl">Gauge Check</span><span class="cv">Straight edge on toes</span></div>
+        <div class="criteria-item"><span class="cl">Accept If</span><span class="cv">Face flush or convex</span></div>
+        <div class="criteria-item"><span class="cl">Reject If</span><span class="cv">Face dips below edge</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="tip-card">
+        <h4>Inspector's Tip</h4>
+        <p>Place the concavity gauge so its straight edge bridges across the two weld toes. If the weld face dips below (concave past) the straight edge, the concavity is unacceptable. If the face is flush with or bulges above the edge, it passes.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const PPI = 150;
+
+// Gauge geometry constants (matching our standalone designs)
+// Triangle cut size = gauge size (e.g. 0.5" or 0.625")
+// Circle cut diameter = gauge size, radius = gauge size / 2
+// Circle center offset = 0.025" right & down from each hypotenuse/edge junction
+const CIRCLE_OFFSET = 0.025 * PPI; // 3.75px
+
+// ============================================================
+// ROUNDS
+// ============================================================
+const ROUNDS = [
+  {
+    title: 'Round 1 — Concavity Check (Reject)',
+    prompt: 'Read the weld symbol, select the correct concavity gauge, and place it on the weld. Does the weld face break the plane of the gauge\'s straight edge?',
+    legSize: 0.500,
+    weldSymbolLabel: '1/2"',
+    correctGauge: 'half',
+    correctDisp: 'reject',
+    weldProfile: 'concave',   // weld face dips below straight edge
+    concavityDepth: 0.08,     // how far the face dips below the hypotenuse (inches)
+    showIndicator: true,
+    feedbackCorrect: 'The weld symbol calls for 1/2". The concavity gauge\'s straight edge bridges the toes, and the weld face clearly dips below the edge — the concavity is unacceptable. Reject.',
+    feedbackIncorrect: 'The weld symbol calls for 1/2" — select the 1/2" gauge. When placed on the weld, the face dips below the gauge\'s straight edge, indicating excessive concavity. This is a reject.',
+    sidebarRequired: '1/2" (0.500")',
+  },
+  {
+    title: 'Round 2 — Concavity Check (Accept)',
+    prompt: 'A different gauge size is required this time. Select the correct gauge and check the weld profile.',
+    legSize: 0.625,
+    weldSymbolLabel: '5/8"',
+    correctGauge: 'fiveeighths',
+    correctDisp: 'accept',
+    weldProfile: 'flush',     // weld face aligns with straight edge
+    concavityDepth: 0,
+    showIndicator: true,
+    feedbackCorrect: 'The weld symbol calls for 5/8". The gauge\'s straight edge sits flush against the weld face — no concavity. Accept.',
+    feedbackIncorrect: 'The weld symbol calls for 5/8" — select the 5/8" gauge. The weld face is flush with the gauge\'s straight edge, meaning there is no concavity issue. This is an accept.',
+    sidebarRequired: '5/8" (0.625")',
+  },
+  {
+    title: 'Round 3 — Concavity Check (Accept)',
+    prompt: 'Select the correct gauge and evaluate the weld profile. Is this weld acceptable?',
+    legSize: 0.500,
+    weldSymbolLabel: '1/2"',
+    correctGauge: 'half',
+    correctDisp: 'accept',
+    weldProfile: 'convex',    // weld face bulges above straight edge
+    convexBulge: 0.06,        // how far face bulges above hypotenuse (inches)
+    concavityDepth: 0,
+    showIndicator: false,
+    feedbackCorrect: 'The weld symbol calls for 1/2". The weld face is convex — it bulges above the gauge\'s straight edge. There is no concavity. Accept.',
+    feedbackIncorrect: 'The weld symbol calls for 1/2" — select the 1/2" gauge. The weld face bulges above the gauge\'s straight edge (convex profile). Since the face doesn\'t dip below the edge, there is no concavity issue. This is an accept.',
+    sidebarRequired: '1/2" (0.500")',
+  },
+  {
+    title: 'Round 4 — Concavity Check',
+    prompt: 'Select the correct gauge and evaluate the weld profile. No training aids this time — make your call.',
+    legSize: 0.625,
+    weldSymbolLabel: '5/8"',
+    correctGauge: 'fiveeighths',
+    correctDisp: 'reject',
+    weldProfile: 'concave',
+    concavityDepth: 0.07,
+    showIndicator: false,
+    showEdgeLine: false,
+    feedbackCorrect: 'The weld symbol calls for 5/8". The weld face dips below the gauge\'s straight edge — the concavity is unacceptable. Reject.',
+    feedbackIncorrect: 'The weld symbol calls for 5/8" — select the 5/8" gauge. The weld face dips below the gauge\'s straight edge, meaning there is excessive concavity. This is a reject.',
+    sidebarRequired: '5/8" (0.625")',
+  },
+  {
+    title: 'Round 5 — Concavity Check',
+    prompt: 'Last round. Select the correct gauge and make your accept/reject call.',
+    legSize: 0.625,
+    weldSymbolLabel: '5/8"',
+    correctGauge: 'fiveeighths',
+    correctDisp: 'accept',
+    weldProfile: 'convex',
+    convexBulge: 0.05,
+    concavityDepth: 0,
+    showIndicator: false,
+    showEdgeLine: false,
+    feedbackCorrect: 'The weld symbol calls for 5/8". The weld face is convex — it bulges above the gauge\'s straight edge. There is no concavity. Accept.',
+    feedbackIncorrect: 'The weld symbol calls for 5/8" — select the 5/8" gauge. The weld face bulges above the gauge\'s straight edge (convex profile). Since the face doesn\'t dip below the edge, there is no concavity issue. This is an accept.',
+    sidebarRequired: '5/8" (0.625")',
+  },
+];
+
+let currentRound = 0;
+let selectedGauge = null;
+let selectedDisp = null;
+
+// ============================================================
+// DRAW THE T-JOINT WELD SCENE
+// ============================================================
+function drawScene() {
+  const svg = document.getElementById('scene');
+  const NS = 'http://www.w3.org/2000/svg';
+  svg.innerHTML = '';
+
+  const round = ROUNDS[currentRound];
+
+  // Defs
+  const defs = document.createElementNS(NS, 'defs');
+
+  const metalGrad = document.createElementNS(NS, 'linearGradient');
+  metalGrad.id = 'baseMetal';
+  metalGrad.setAttribute('x1','0'); metalGrad.setAttribute('y1','0');
+  metalGrad.setAttribute('x2','0'); metalGrad.setAttribute('y2','1');
+  [[0,'#5a6577'],[0.3,'#4a5567'],[0.6,'#3d4859'],[1,'#333d4d']].forEach(([o,c]) => {
+    const s = document.createElementNS(NS,'stop'); s.setAttribute('offset',o); s.setAttribute('stop-color',c); metalGrad.appendChild(s);
+  });
+  defs.appendChild(metalGrad);
+
+  const weldGrad = document.createElementNS(NS, 'linearGradient');
+  weldGrad.id = 'weldFill';
+  weldGrad.setAttribute('x1','0'); weldGrad.setAttribute('y1','0');
+  weldGrad.setAttribute('x2','1'); weldGrad.setAttribute('y2','1');
+  [[0,'#8a9ab0'],[0.4,'#6b7a8e'],[0.7,'#5a6978'],[1,'#4a5866']].forEach(([o,c]) => {
+    const s = document.createElementNS(NS,'stop'); s.setAttribute('offset',o); s.setAttribute('stop-color',c); weldGrad.appendChild(s);
+  });
+  defs.appendChild(weldGrad);
+
+  const gaugeGrad = document.createElementNS(NS, 'linearGradient');
+  gaugeGrad.id = 'gaugeMetal';
+  gaugeGrad.setAttribute('x1','0%'); gaugeGrad.setAttribute('y1','0%');
+  gaugeGrad.setAttribute('x2','0%'); gaugeGrad.setAttribute('y2','100%');
+  [[0,'#e5e7eb'],[0.45,'#9ca3af'],[1,'#6b7280']].forEach(([o,c]) => {
+    const s = document.createElementNS(NS,'stop'); s.setAttribute('offset',o); s.setAttribute('stop-color',c); gaugeGrad.appendChild(s);
+  });
+  defs.appendChild(gaugeGrad);
+
+  const shadow = document.createElementNS(NS,'filter');
+  shadow.id = 'shadow';
+  shadow.innerHTML = '<feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.4"/>';
+  defs.appendChild(shadow);
+
+  svg.appendChild(defs);
+
+  // --- T-JOINT ---
+  const plateY = 340;
+  const vertX = 400;
+  const vertW = 30;
+
+  const hp = document.createElementNS(NS,'rect');
+  hp.setAttribute('x',60); hp.setAttribute('y',plateY);
+  hp.setAttribute('width',630); hp.setAttribute('height',120);
+  hp.setAttribute('fill','url(#baseMetal)'); hp.setAttribute('stroke','#2a3040'); hp.setAttribute('stroke-width','1');
+  svg.appendChild(hp);
+
+  const vp = document.createElementNS(NS,'rect');
+  vp.setAttribute('x',vertX - vertW/2); vp.setAttribute('y',100);
+  vp.setAttribute('width',vertW); vp.setAttribute('height',plateY - 100);
+  vp.setAttribute('fill','url(#baseMetal)'); vp.setAttribute('stroke','#2a3040'); vp.setAttribute('stroke-width','1');
+  svg.appendChild(vp);
+
+  // --- FILLET WELD (left side of T-joint) ---
+  const legPx = round.legSize * PPI;
+  const weldRootX = vertX - vertW/2;   // 385
+  const weldRootY = plateY;            // 340
+
+  const toeX = weldRootX - legPx;      // horizontal toe
+  const toeY = weldRootY - legPx;      // vertical toe
+
+  // Draw weld with profile variation
+  const weld = document.createElementNS(NS,'path');
+  let weldPath;
+
+  if (round.weldProfile === 'concave') {
+    // Concave: face dips INWARD (toward the root)
+    const depth = round.concavityDepth * PPI;
+    const midX = (toeX + weldRootX)/2 + depth;
+    const midY = (toeY + weldRootY)/2 + depth;
+    weldPath = `M ${toeX} ${weldRootY} Q ${midX} ${midY} ${weldRootX} ${toeY} L ${weldRootX} ${weldRootY} Z`;
+  } else if (round.weldProfile === 'flush') {
+    // Flush: face is a straight line from toe to toe
+    weldPath = `M ${toeX} ${weldRootY} L ${weldRootX} ${toeY} L ${weldRootX} ${weldRootY} Z`;
+  } else if (round.weldProfile === 'convex') {
+    // Convex: face bulges OUTWARD (away from root)
+    const bulge = (round.convexBulge || 0.06) * PPI;
+    const midX = (toeX + weldRootX)/2 - bulge;
+    const midY = (toeY + weldRootY)/2 - bulge;
+    weldPath = `M ${toeX} ${weldRootY} Q ${midX} ${midY} ${weldRootX} ${toeY} L ${weldRootX} ${weldRootY} Z`;
+  }
+
+  weld.setAttribute('d', weldPath);
+  weld.setAttribute('fill','url(#weldFill)'); weld.setAttribute('stroke','#555'); weld.setAttribute('stroke-width','0.5');
+  svg.appendChild(weld);
+
+  // Weld ripples
+  for (let r = 0; r < 5; r++) {
+    const t = (r+1)/6;
+    let px, py;
+    if (round.weldProfile === 'flush') {
+      px = toeX + t * (weldRootX - toeX);
+      py = weldRootY + t * (toeY - weldRootY);
+    } else {
+      const depth = round.weldProfile === 'concave' ? round.concavityDepth * PPI : -(round.convexBulge || 0.06) * PPI;
+      const mx = (toeX + weldRootX)/2 + depth;
+      const my = (toeY + weldRootY)/2 + depth;
+      px = (1-t)*(1-t)*toeX + 2*(1-t)*t*mx + t*t*weldRootX;
+      py = (1-t)*(1-t)*weldRootY + 2*(1-t)*t*my + t*t*toeY;
+    }
+    const rip = document.createElementNS(NS,'ellipse');
+    rip.setAttribute('cx',px); rip.setAttribute('cy',py);
+    rip.setAttribute('rx',3); rip.setAttribute('ry',1.5);
+    rip.setAttribute('transform',`rotate(-45,${px},${py})`);
+    rip.setAttribute('fill','none'); rip.setAttribute('stroke','rgba(255,255,255,0.06)'); rip.setAttribute('stroke-width','0.5');
+    svg.appendChild(rip);
+  }
+
+  // --- WELD SYMBOL ---
+  drawWeldSymbol(svg, NS, 80, 30, round.weldSymbolLabel);
+
+  // --- GAUGE OVERLAY ---
+  if (selectedGauge) {
+    // For convex welds, the gauge is pushed outward — the straight edge
+    // sits tangent to the convex face, not at the root.
+    let gaugeRootX = weldRootX;
+    let gaugeRootY = weldRootY;
+    let gaugeToeX = toeX;
+    let gaugeToeY = toeY;
+
+    if (round.weldProfile === 'convex') {
+      // Shift gauge outward (perpendicular to hypotenuse, away from root)
+      // Max Bezier deviation from chord = bulge/2 in each axis direction
+      const bulge = (round.convexBulge || 0.06) * PPI;
+      const shift = bulge / 2;
+      gaugeRootX = weldRootX - shift;
+      gaugeRootY = weldRootY - shift;
+      gaugeToeX = toeX - shift;
+      gaugeToeY = toeY - shift;
+    }
+
+    drawConcavityGauge(svg, NS, selectedGauge, gaugeRootX, gaugeRootY, gaugeToeX, gaugeToeY, round);
+  }
+}
+
+// ============================================================
+// WELD SYMBOL
+// ============================================================
+function drawWeldSymbol(svg, NS, x, y, legLabel) {
+  const g = document.createElementNS(NS,'g');
+  const boxW = 140;
+  const boxH = 70;
+
+  const bg = document.createElementNS(NS,'rect');
+  bg.setAttribute('x',x-10); bg.setAttribute('y',y-10);
+  bg.setAttribute('width',boxW); bg.setAttribute('height',boxH);
+  bg.setAttribute('rx',6); bg.setAttribute('fill','rgba(0,0,0,0.5)');
+  bg.setAttribute('stroke','rgba(59,130,246,0.3)'); bg.setAttribute('stroke-width','1');
+  g.appendChild(bg);
+
+  const cx = x - 10 + boxW/2;
+
+  const title = document.createElementNS(NS,'text');
+  title.setAttribute('x',cx); title.setAttribute('y',y+6);
+  title.setAttribute('text-anchor','middle'); title.setAttribute('fill','#3b82f6');
+  title.setAttribute('font-size','9'); title.setAttribute('font-weight','600');
+  title.setAttribute('font-family','Inter, sans-serif');
+  title.textContent = 'WELD SYMBOL';
+  g.appendChild(title);
+
+  // Reference line
+  const ref = document.createElementNS(NS,'line');
+  ref.setAttribute('x1',x+10); ref.setAttribute('y1',y+30);
+  ref.setAttribute('x2',x + boxW - 30); ref.setAttribute('y2',y+30);
+  ref.setAttribute('stroke','#e2e8f0'); ref.setAttribute('stroke-width','1.5');
+  g.appendChild(ref);
+
+  // Arrow
+  const arrX = x + boxW - 30;
+  const arr = document.createElementNS(NS,'polygon');
+  arr.setAttribute('points',`${arrX},${y+30} ${arrX-7},${y+26} ${arrX-7},${y+34}`);
+  arr.setAttribute('fill','#e2e8f0');
+  g.appendChild(arr);
+
+  // Fillet triangle symbol (below ref line)
+  const triX = x + 30;
+  const sym = document.createElementNS(NS,'path');
+  sym.setAttribute('d',`M ${triX} ${y+30} L ${triX} ${y+44} L ${triX+14} ${y+30} Z`);
+  sym.setAttribute('fill','none'); sym.setAttribute('stroke','#e2e8f0'); sym.setAttribute('stroke-width','1.5');
+  g.appendChild(sym);
+
+  // Size text
+  const sz = document.createElementNS(NS,'text');
+  sz.setAttribute('x', x + 65); sz.setAttribute('y',y+50);
+  sz.setAttribute('text-anchor','middle'); sz.setAttribute('fill','#f8fafc');
+  sz.setAttribute('font-size','13'); sz.setAttribute('font-weight','700');
+  sz.setAttribute('font-family','JetBrains Mono, monospace');
+  sz.textContent = legLabel;
+  g.appendChild(sz);
+
+  svg.appendChild(g);
+}
+
+// ============================================================
+// DRAW CONCAVITY GAUGE
+// ============================================================
+function drawConcavityGauge(svg, NS, gaugeId, rootX, rootY, toeX, toeY, round) {
+  const isHalf = (gaugeId === 'half');
+  const gaugeLabel = isHalf ? '1/2"' : '5/8"';
+  const gaugeSizeIn = isHalf ? 0.500 : 0.625;
+  const gaugeSizePx = gaugeSizeIn * PPI;
+  const circR = gaugeSizePx / 2;  // circle cut radius = half the gauge size
+
+  const g = document.createElementNS(NS, 'g');
+  g.setAttribute('filter', 'url(#shadow)');
+
+  // The gauge is placed so its hypotenuse (straight edge) bridges from
+  // the horizontal toe to the vertical toe of the fillet weld.
+  // The hypotenuse goes from (toeX, rootY) to (rootX, toeY).
+  // The gauge body extends to the upper-left of this hypotenuse.
+
+  // We'll draw the gauge in the actual weld coordinate system.
+  // The triangle cut corner is at the weld root (rootX, rootY).
+  // Hypotenuse from (rootX, rootY - gaugeSizePx) to (rootX - gaugeSizePx, rootY).
+
+  // Gauge rectangle: extends LEFT and UP from the triangle area
+  const gaugeW = 350;
+  const gaugeH = 160;
+
+  // Triangle vertices (the cut portion):
+  // Bottom-right of original rect = (rootX, rootY) — but this is cut away
+  // Top-right of triangle: (rootX, rootY - gaugeSizePx)
+  // Bottom-left of triangle: (rootX - gaugeSizePx, rootY)
+
+  const triTopX = rootX;
+  const triTopY = rootY - gaugeSizePx;
+  const triBotX = rootX - gaugeSizePx;
+  const triBotY = rootY;
+
+  // Circle cuts at the two hypotenuse/edge junctions, offset 0.025" right & down
+  // Bottom circle: center offset from (triBotX, rootY)
+  const botCircCX = triBotX + CIRCLE_OFFSET;
+  const botCircCY = rootY + CIRCLE_OFFSET;
+  // Right circle: center offset from (rootX, triTopY)
+  const rtCircCX = rootX + CIRCLE_OFFSET;
+  const rtCircCY = triTopY + CIRCLE_OFFSET;
+
+  // Rectangle bounds
+  const gRight = rootX;
+  const gBottom = rootY;
+  const gLeft = gRight - gaugeW;
+  const gTop = gBottom - gaugeH;
+
+  // Calculate circle intersections with gauge edges
+
+  // Bottom circle intersects bottom edge (y = gBottom):
+  const botDy = gBottom - botCircCY;
+  const botDxEdge = Math.sqrt(circR * circR - botDy * botDy);
+  const botEdgeLeft = botCircCX - botDxEdge;
+
+  // Bottom circle intersects hypotenuse (x + y = rootX + rootY - gaugeSizePx... wait)
+  // Hypotenuse line from (rootX, triTopY) to (triBotX, rootY)
+  // Parametric: the hypotenuse of the triangle at 45° has equation:
+  // (x - triBotX) / (rootX - triBotX) = (rootY - y) / (rootY - triTopY)
+  // Simplifies to: x - triBotX = rootY - y (since both legs = gaugeSizePx)
+  // So: x + y = triBotX + rootY = rootX - gaugeSizePx + rootY
+  const hypSum = triBotX + rootY;
+
+  // Bottom circle vs hypotenuse: x + y = hypSum, (x-cx)²+(y-cy)² = r²
+  // Substituting x = hypSum - y:
+  // (hypSum - y - botCircCX)² + (y - botCircCY)² = circR²
+  const botA = hypSum - botCircCX;
+  const botB = botCircCY;
+  // (botA - y)² + (y - botB)² = circR²
+  // 2y² - 2(botA + botB)y + botA² + botB² = circR²
+  // y² - (botA+botB)y + (botA² + botB² - circR²)/2 = 0
+  const botP = -(botA + botB);
+  const botQ = (botA * botA + botB * botB - circR * circR) / 2;
+  const botDisc = (botP/2)*(botP/2) - botQ;
+  const botHypY = -botP/2 - Math.sqrt(botDisc); // take the smaller y (upper intersection)
+  const botHypX = hypSum - botHypY;
+
+  // Right circle intersects right edge (x = gRight):
+  const rtDx = gRight - rtCircCX;
+  const rtDyEdge = Math.sqrt(circR * circR - rtDx * rtDx);
+  const rtEdgeTop = rtCircCY - rtDyEdge;
+
+  // Right circle vs hypotenuse:
+  const rtA = hypSum - rtCircCX;
+  const rtB = rtCircCY;
+  const rtP = -(rtA + rtB);
+  const rtQ = (rtA * rtA + rtB * rtB - circR * circR) / 2;
+  const rtDisc = (rtP/2)*(rtP/2) - rtQ;
+  const rtHypY = -rtP/2 + Math.sqrt(rtDisc); // take the larger y (lower intersection)
+  const rtHypX = hypSum - rtHypY;
+
+  // Build gauge body path
+  const cr = 4; // corner radius
+  const path = document.createElementNS(NS, 'path');
+  path.setAttribute('d', `
+    M ${gLeft + cr} ${gTop}
+    L ${gRight - cr} ${gTop}
+    Q ${gRight} ${gTop} ${gRight} ${gTop + cr}
+    L ${gRight} ${rtEdgeTop}
+    A ${circR} ${circR} 0 0 0 ${rtHypX} ${rtHypY}
+    L ${botHypX} ${botHypY}
+    A ${circR} ${circR} 0 0 0 ${botEdgeLeft} ${gBottom}
+    L ${gLeft + cr} ${gBottom}
+    Q ${gLeft} ${gBottom} ${gLeft} ${gBottom - cr}
+    L ${gLeft} ${gTop + cr}
+    Q ${gLeft} ${gTop} ${gLeft + cr} ${gTop}
+    Z
+  `);
+  path.setAttribute('fill', 'url(#gaugeMetal)');
+  path.setAttribute('stroke', '#4b5563');
+  path.setAttribute('stroke-width', '1.5');
+  path.setAttribute('opacity', '0.9');
+  g.appendChild(path);
+
+  // Graduation line: vertical, at x = gRight - gaugeSizePx
+  // It should end at the bottom circle cut
+  const gradX = gRight - gaugeSizePx;
+  // Find where gradX intersects the bottom circle:
+  const gdx = gradX - botCircCX;
+  const gdyCalc = Math.sqrt(Math.max(0, circR * circR - gdx * gdx));
+  const gradEndY = botCircCY - gdyCalc;  // top of circle at this x
+
+  const gradStartY = gradEndY - 37; // keep graduation line short, same length as standalone
+
+  const grad = document.createElementNS(NS, 'line');
+  grad.setAttribute('x1', gradX); grad.setAttribute('y1', gradStartY);
+  grad.setAttribute('x2', gradX); grad.setAttribute('y2', gradEndY);
+  grad.setAttribute('stroke', '#333'); grad.setAttribute('stroke-width', '1.5');
+  g.appendChild(grad);
+
+  // Graduation label
+  const gradLabel = document.createElementNS(NS, 'text');
+  gradLabel.setAttribute('x', gradX - 16); gradLabel.setAttribute('y', gradEndY - 5);
+  gradLabel.setAttribute('text-anchor', 'middle'); gradLabel.setAttribute('fill', '#333');
+  gradLabel.setAttribute('font-family', 'JetBrains Mono, monospace'); gradLabel.setAttribute('font-size', '10');
+  gradLabel.setAttribute('font-weight', '700');
+  gradLabel.textContent = gaugeLabel;
+  g.appendChild(gradLabel);
+
+  // Horizontal graduation: at y = gBottom - gaugeSizePx
+  const gradY = gBottom - gaugeSizePx;
+  // Find where gradY intersects the right circle:
+  const gdy2 = gradY - rtCircCY;
+  const gdx2Calc = Math.sqrt(Math.max(0, circR * circR - gdy2 * gdy2));
+  const gradEndX = rtCircCX - gdx2Calc; // left of circle at this y
+
+  const gradStartX = gradEndX - 37;
+
+  const grad2 = document.createElementNS(NS, 'line');
+  grad2.setAttribute('x1', gradStartX); grad2.setAttribute('y1', gradY);
+  grad2.setAttribute('x2', gradEndX); grad2.setAttribute('y2', gradY);
+  grad2.setAttribute('stroke', '#333'); grad2.setAttribute('stroke-width', '1.5');
+  g.appendChild(grad2);
+
+  // Horizontal graduation label
+  const gradLabel2 = document.createElementNS(NS, 'text');
+  gradLabel2.setAttribute('x', gradStartX - 20); gradLabel2.setAttribute('y', gradY - 5);
+  gradLabel2.setAttribute('text-anchor', 'middle'); gradLabel2.setAttribute('fill', '#333');
+  gradLabel2.setAttribute('font-family', 'JetBrains Mono, monospace'); gradLabel2.setAttribute('font-size', '10');
+  gradLabel2.setAttribute('font-weight', '700');
+  gradLabel2.textContent = gaugeLabel;
+  g.appendChild(gradLabel2);
+
+  // NDT text labels
+  const textX = gLeft + 60;
+  const ndtText = document.createElementNS(NS, 'text');
+  ndtText.setAttribute('x', textX); ndtText.setAttribute('y', gBottom - 22);
+  ndtText.setAttribute('text-anchor', 'middle'); ndtText.setAttribute('fill', '#333');
+  ndtText.setAttribute('font-family', 'sans-serif'); ndtText.setAttribute('font-size', '8');
+  ndtText.setAttribute('font-weight', '600'); ndtText.setAttribute('letter-spacing', '1');
+  ndtText.textContent = 'NDT Video Library';
+  g.appendChild(ndtText);
+
+  const wfg = document.createElementNS(NS, 'text');
+  wfg.setAttribute('x', textX); wfg.setAttribute('y', gBottom - 10);
+  wfg.setAttribute('text-anchor', 'middle'); wfg.setAttribute('fill', '#333');
+  wfg.setAttribute('font-family', 'sans-serif'); wfg.setAttribute('font-size', '9');
+  wfg.setAttribute('font-weight', '700'); wfg.setAttribute('letter-spacing', '1');
+  wfg.textContent = 'Weld Fillet Gage';
+  g.appendChild(wfg);
+
+  // --- STRAIGHT EDGE REFERENCE LINE (red dashed) — only if enabled ---
+  if (round.showEdgeLine !== false) {
+    const edgeLine = document.createElementNS(NS, 'line');
+    edgeLine.setAttribute('x1', triBotX); edgeLine.setAttribute('y1', rootY);
+    edgeLine.setAttribute('x2', rootX);   edgeLine.setAttribute('y2', triTopY);
+    edgeLine.setAttribute('stroke', '#ef4444'); edgeLine.setAttribute('stroke-width', '1.5');
+    edgeLine.setAttribute('stroke-dasharray', '6,3');
+    edgeLine.setAttribute('opacity', '0.8');
+    g.appendChild(edgeLine);
+  }
+
+  // --- FIT INDICATOR ---
+  if (round.showIndicator) {
+    const midHypX = (triBotX + rootX) / 2;
+    const midHypY = (rootY + triTopY) / 2;
+
+    if (round.weldProfile === 'concave') {
+      const indicator = document.createElementNS(NS, 'text');
+      indicator.setAttribute('x', midHypX - 50); indicator.setAttribute('y', midHypY + 5);
+      indicator.setAttribute('text-anchor', 'middle');
+      indicator.setAttribute('fill', '#ef4444');
+      indicator.setAttribute('font-size', '11'); indicator.setAttribute('font-weight', '700');
+      indicator.setAttribute('font-family', 'Inter, sans-serif');
+      indicator.textContent = '↙ face dips below edge';
+      g.appendChild(indicator);
+    } else if (round.weldProfile === 'flush') {
+      const indicator = document.createElementNS(NS, 'text');
+      indicator.setAttribute('x', midHypX - 50); indicator.setAttribute('y', midHypY + 5);
+      indicator.setAttribute('text-anchor', 'middle');
+      indicator.setAttribute('fill', '#22c55e');
+      indicator.setAttribute('font-size', '11'); indicator.setAttribute('font-weight', '700');
+      indicator.setAttribute('font-family', 'Inter, sans-serif');
+      indicator.textContent = '✓ flush with edge';
+      g.appendChild(indicator);
+    }
+  }
+
+  svg.appendChild(g);
+}
+
+// ============================================================
+// UI LOGIC
+// ============================================================
+function selectGauge(id) {
+  selectedGauge = id;
+  document.getElementById('btn-half').className = 'gauge-btn' + (id === 'half' ? ' selected' : '');
+  document.getElementById('btn-fiveeighths').className = 'gauge-btn' + (id === 'fiveeighths' ? ' selected' : '');
+  drawScene();
+}
+
+function setDisp(val) {
+  selectedDisp = val;
+  document.getElementById('acceptBtn').className = 'disp-btn' + (val === 'accept' ? ' sel-accept' : '');
+  document.getElementById('rejectBtn').className = 'disp-btn' + (val === 'reject' ? ' sel-reject' : '');
+}
+
+function submit() {
+  if (!selectedGauge) {
+    document.querySelector('.gauge-selector').style.outline = '2px solid var(--error)';
+    setTimeout(() => document.querySelector('.gauge-selector').style.outline = 'none', 1000);
+    return;
+  }
+  if (!selectedDisp) {
+    document.querySelector('.disposition-row').style.outline = '2px solid var(--error)';
+    setTimeout(() => document.querySelector('.disposition-row').style.outline = 'none', 1000);
+    return;
+  }
+
+  const round = ROUNDS[currentRound];
+  const gaugeOk = (selectedGauge === round.correctGauge);
+  const dispOk = (selectedDisp === round.correctDisp);
+  const correct = gaugeOk && dispOk;
+
+  const gLabel = selectedGauge === 'half' ? '1/2"' : '5/8"';
+  const valuesHtml =
+    `<span>Your gauge: <strong style="color:${gaugeOk?'var(--success)':'var(--error)'}">${gLabel}</strong></span>` +
+    `<span>Disposition: <strong style="color:${dispOk?'var(--success)':'var(--error)'}">${selectedDisp.toUpperCase()}</strong></span>`;
+
+  const fb = document.getElementById('feedback');
+  document.getElementById('fbIcon').className = 'fb-icon ' + (correct ? 'correct' : 'incorrect');
+  document.getElementById('fbIcon').textContent = correct ? '✓' : '✗';
+  document.getElementById('fbTitle').className = 'fb-title ' + (correct ? 'correct' : 'incorrect');
+  document.getElementById('fbTitle').textContent = correct ? 'Correct!' : 'Incorrect';
+  document.getElementById('fbValues').innerHTML = valuesHtml;
+  document.getElementById('fbDetail').textContent = correct ? round.feedbackCorrect : round.feedbackIncorrect;
+
+  const proceedBtn = document.getElementById('proceedBtn');
+  if (currentRound >= ROUNDS.length - 1) {
+    proceedBtn.textContent = 'Finish';
+    proceedBtn.onclick = finish;
+  } else {
+    proceedBtn.textContent = 'Proceed →';
+    proceedBtn.onclick = proceed;
+  }
+
+  fb.classList.add('visible');
+  document.getElementById('submitBtn').disabled = true;
+}
+
+function tryAgain() {
+  selectedGauge = null;
+  selectedDisp = null;
+  document.getElementById('feedback').classList.remove('visible');
+  document.getElementById('submitBtn').disabled = false;
+  document.getElementById('btn-half').className = 'gauge-btn';
+  document.getElementById('btn-fiveeighths').className = 'gauge-btn';
+  document.getElementById('acceptBtn').className = 'disp-btn';
+  document.getElementById('rejectBtn').className = 'disp-btn';
+  drawScene();
+}
+
+function proceed() {
+  currentRound++;
+  if (currentRound < ROUNDS.length) {
+    loadRound();
+  }
+}
+
+function finish() {
+  const fb = document.getElementById('feedback');
+  document.getElementById('fbIcon').className = 'fb-icon correct';
+  document.getElementById('fbIcon').textContent = '★';
+  document.getElementById('fbTitle').className = 'fb-title correct';
+  document.getElementById('fbTitle').textContent = 'Exercise Complete!';
+  document.getElementById('fbValues').innerHTML = '';
+  document.getElementById('fbDetail').textContent = 'You have completed all rounds of the Concavity Gauge exercise. Great work!';
+  document.querySelector('.fb-buttons').innerHTML =
+    '<button class="fb-btn fb-btn-proceed" onclick="resetExercise()">Restart Exercise</button>';
+  fb.classList.add('visible');
+}
+
+function resetExercise() {
+  currentRound = 0;
+  loadRound();
+}
+
+function loadRound() {
+  const round = ROUNDS[currentRound];
+
+  // Restore feedback buttons
+  document.querySelector('.fb-buttons').innerHTML =
+    '<button class="fb-btn fb-btn-retry" onclick="tryAgain()">Try Again</button>' +
+    '<button class="fb-btn fb-btn-proceed" id="proceedBtn" onclick="proceed()">Proceed →</button>';
+
+  selectedGauge = null;
+  selectedDisp = null;
+  document.getElementById('feedback').classList.remove('visible');
+  document.getElementById('submitBtn').disabled = false;
+  document.getElementById('btn-half').className = 'gauge-btn';
+  document.getElementById('btn-fiveeighths').className = 'gauge-btn';
+  document.getElementById('acceptBtn').className = 'disp-btn';
+  document.getElementById('rejectBtn').className = 'disp-btn';
+
+  document.getElementById('roundTitle').textContent = round.title;
+  document.getElementById('roundPrompt').textContent = round.prompt;
+  document.getElementById('sidebarRequired').textContent = round.sidebarRequired;
+
+  updateProgress();
+  drawScene();
+}
+
+function updateProgress() {
+  const container = document.getElementById('roundProgress');
+  container.innerHTML = '';
+  for (let i = 0; i < ROUNDS.length; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'round-dot';
+    if (i < currentRound) dot.classList.add('done');
+    else if (i === currentRound) dot.classList.add('active');
+    container.appendChild(dot);
+  }
+}
+
+// Init
+updateProgress();
+drawScene();
+</script>
+</body>
+</html>
