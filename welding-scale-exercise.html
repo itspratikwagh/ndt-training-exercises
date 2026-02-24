@@ -44,7 +44,7 @@
 
   .measurement-viewport {
     background:#1e2130; border:1px solid var(--panel-border); border-radius:12px;
-    width:100%; max-width:700px; height:420px; overflow:hidden; position:relative;
+    width:100%; max-width:750px; height:550px; overflow:hidden; position:relative;
     box-shadow:inset 0 2px 8px rgba(0,0,0,0.3); cursor:default;
   }
   .measurement-viewport svg { width:100%; height:100%; }
@@ -190,7 +190,7 @@
     </div>
 
     <div class="measurement-viewport" id="viewport">
-      <svg id="measureSvg" viewBox="0 0 700 420" xmlns="http://www.w3.org/2000/svg"></svg>
+      <svg id="measureSvg" viewBox="0 0 750 550" xmlns="http://www.w3.org/2000/svg"></svg>
       <div class="ruler-instructions" id="rulerInstructions">Drag ruler to position · Scroll wheel to rotate</div>
     </div>
 
@@ -267,7 +267,7 @@
 // ============================================================
 const SCENARIOS = [
   {
-    id: 1, title: "Round 1 of 9 — Basic Reading",
+    id: 1, title: "Round 1 of 7 — Basic Reading",
     prompt: "Position the ruler over the weld bead and measure its width. The red markers show the feature edges.",
     featureLabel: "Weld Width", trueValue: 0.250, tolerance: 0.003,
     rulerStartX: 80, rulerStartY: 30, rulerStartAngle: 2,
@@ -279,7 +279,7 @@ const SCENARIOS = [
     consequence: ""
   },
   {
-    id: 2, title: "Round 2 of 9 — Basic Reading",
+    id: 2, title: "Round 2 of 7 — Basic Reading",
     prompt: "Measure the width of this weld reinforcement cap. The measurement does not fall on a major graduation.",
     featureLabel: "Reinforcement Width", trueValue: 0.187, tolerance: 0.005,
     rulerStartX: 90, rulerStartY: 35, rulerStartAngle: -1,
@@ -291,7 +291,7 @@ const SCENARIOS = [
     consequence: ""
   },
   {
-    id: 3, title: "Round 3 of 9 — Interpolation",
+    id: 3, title: "Round 3 of 7 — Interpolation",
     prompt: "Measure the length of this undercut indication. The feature edge falls between graduation lines — interpolate your reading.",
     featureLabel: "Undercut Length", trueValue: 0.094, tolerance: 0.004,
     rulerStartX: 70, rulerStartY: 25, rulerStartAngle: 3,
@@ -303,7 +303,7 @@ const SCENARIOS = [
     consequence: ""
   },
   {
-    id: 4, title: "Round 4 of 9 — Parallax Error",
+    id: 4, title: "Round 4 of 7 — Parallax Error",
     prompt: "Position the ruler and measure the weld width. Use the viewing angle slider below — notice how the apparent reading shifts when you're not looking straight down. Set the angle to 0° before reading.",
     featureLabel: "Weld Width", trueValue: 0.312, tolerance: 0.005,
     rulerStartX: 60, rulerStartY: 28, rulerStartAngle: 0,
@@ -315,7 +315,7 @@ const SCENARIOS = [
     consequence: "A 0.018\" parallax error on a thin-wall aerospace tube (0.035\" wall) is more than half the wall thickness."
   },
   {
-    id: 5, title: "Round 5 of 9 — Offset Zero",
+    id: 5, title: "Round 5 of 7 — Offset Zero",
     prompt: "Measure the length of this porosity cluster. ⚠ Look carefully at where the ruler's zero mark is — it is NOT at the physical edge.",
     featureLabel: "Porosity Cluster Length", trueValue: 0.156, tolerance: 0.005,
     rulerStartX: 30, rulerStartY: 30, rulerStartAngle: 1,
@@ -327,41 +327,7 @@ const SCENARIOS = [
     consequence: "Reading from the wrong reference point is the most common new-inspector error."
   },
   {
-    id: 6, title: "Round 6 of 9 — Unit Conversion + Disposition",
-    prompt: "Measure this undercut depth. D17.1 Class A limit is 0.007\" max. Measure, convert, and make an accept/reject call.",
-    featureLabel: "Undercut Depth", trueValue: 0.009, tolerance: 0.002,
-    rulerStartX: 70, rulerStartY: 32, rulerStartAngle: -2,
-    featureType: "undercut-depth", answerMode: "numeric",
-    needsDisposition: true, correctDisposition: "reject",
-    criteria: [
-      { label: "Max Undercut (Class A)", value: "0.007\"" },
-      { label: "Max Undercut (Class B)", value: "0.010\"" },
-      { label: "Max Length", value: "≤ 10% of weld length" }
-    ],
-    tip: "Class A welds (primary structure) have tighter limits. Always verify the weld class on the drawing.",
-    correctFeedback: "Correct! 0.009\" exceeds the 0.007\" Class A limit. Reject.",
-    wrongFeedback: "The undercut is ≈ 0.009\". Class A limit is 0.007\" max. 0.009\" > 0.007\" → reject.",
-    consequence: "Undercut exceeding limits creates a stress riser at the weld toe — a fatigue crack initiation site under cyclic aerospace loads."
-  },
-  {
-    id: 7, title: "Round 7 of 9 — Spec Limit Comparison",
-    prompt: "The drawing specifies minimum weld reinforcement of 1/32\". Position the ruler to examine the reinforcement height. Determine if it meets the 1/32\" minimum — you don't need an exact number, just determine which side of the spec limit it falls on.",
-    featureLabel: "Reinforcement Height", trueValue: 0.025,
-    rulerStartX: 60, rulerStartY: 20, rulerStartAngle: -1,
-    featureType: "reinforcement-small", answerMode: "bracket",
-    correctBracket: "below",
-    needsDisposition: true, correctDisposition: "reject",
-    criteria: [
-      { label: "Min Reinforcement (drawing)", value: "1/32\" (0.03125\")" },
-      { label: "Max Reinforcement (D17.1)", value: "Per Table 9.22" }
-    ],
-    tip: "When a measurement falls between graduations and the question is pass/fail, determine which side of the spec line it falls on. You don't always need an exact thousandths reading.",
-    correctFeedback: "Sharp eye! The reinforcement is clearly below the 1/32\" (0.03125\") graduation mark. It falls between 1/64\" and 1/32\" — insufficient. Reject.",
-    wrongFeedback: "The reinforcement peak is visibly below the 1/32\" graduation (0.03125\"). You don't need to know it's exactly 0.025\" — you just need to see it doesn't reach the 1/32\" mark. That's a reject.",
-    consequence: "Insufficient reinforcement means thinner weld throat than designed. The joint won't develop full rated strength — critical on rocket engine mounts and pressure vessels."
-  },
-  {
-    id: 8, title: "Round 8 of 9 — Edge-to-Edge Pore Spacing",
+    id: 6, title: "Round 6 of 7 — Edge-to-Edge Pore Spacing",
     prompt: "Two porosity indications of equal size (0.025\" diameter each). Measure the EDGE-TO-EDGE clear spacing between them — not center-to-center. D17.1 requires spacing ≥ 3× the larger pore diameter.",
     featureLabel: "Pore Spacing (edge-to-edge)", trueValue: 0.062, tolerance: 0.004,
     rulerStartX: 50, rulerStartY: 30, rulerStartAngle: 2,
@@ -380,7 +346,7 @@ const SCENARIOS = [
     consequence: "Center-to-center measurement is the most common pore spacing error. It adds one radius from each pore to the clear distance, making the spacing appear larger than it actually is. Closely spaced pores act as connected flaws under load."
   },
   {
-    id: 9, title: "Round 9 of 9 — Unequal Pore Trap",
+    id: 7, title: "Round 7 of 7 — Unequal Pore Trap",
     prompt: "Two unequal porosity indications: one 0.025\" diameter and one 0.018\" diameter. Measure the edge-to-edge spacing. D17.1 requires spacing ≥ 3× the LARGER pore diameter. Which pore diameter do you use for the calculation?",
     featureLabel: "Pore Spacing (edge-to-edge)", trueValue: 0.070, tolerance: 0.004,
     rulerStartX: 55, rulerStartY: 28, rulerStartAngle: -1,
@@ -461,15 +427,15 @@ function drawScene(svg, scenario) {
   const baseY = 250;
   const bm = document.createElementNS(svgNS,'rect');
   bm.setAttribute('x',0); bm.setAttribute('y', baseY);
-  bm.setAttribute('width',700); bm.setAttribute('height',170);
+  bm.setAttribute('width',750); bm.setAttribute('height',300);
   bm.setAttribute('fill','#3a4555');
   svg.appendChild(bm);
 
   // Texture
-  for (let i = 0; i < 700; i += 5) {
+  for (let i = 0; i < 750; i += 5) {
     const l = document.createElementNS(svgNS,'line');
     l.setAttribute('x1',i); l.setAttribute('y1',baseY);
-    l.setAttribute('x2',i+2); l.setAttribute('y2',420);
+    l.setAttribute('x2',i+2); l.setAttribute('y2',550);
     l.setAttribute('stroke','rgba(255,255,255,0.02)'); l.setAttribute('stroke-width','1');
     svg.appendChild(l);
   }
@@ -895,8 +861,8 @@ function initDragHandlers() {
       ruler.x = pt.x - ruler.dragOffsetX;
       ruler.y = pt.y - ruler.dragOffsetY;
       // Clamp
-      ruler.x = Math.max(-200, Math.min(400, ruler.x));
-      ruler.y = Math.max(-50, Math.min(320, ruler.y));
+      ruler.x = Math.max(-250, Math.min(500, ruler.x));
+      ruler.y = Math.max(-150, Math.min(450, ruler.y));
       updateRulerTransform();
     }
 
@@ -945,8 +911,8 @@ function initDragHandlers() {
   svg.addEventListener('touchmove', (e) => {
     if (ruler.dragging && e.touches.length === 1) {
       const pt = svgPoint(svg, e.touches[0].clientX, e.touches[0].clientY);
-      ruler.x = Math.max(-200, Math.min(400, pt.x - ruler.dragOffsetX));
-      ruler.y = Math.max(-50, Math.min(320, pt.y - ruler.dragOffsetY));
+      ruler.x = Math.max(-250, Math.min(500, pt.x - ruler.dragOffsetX));
+      ruler.y = Math.max(-150, Math.min(450, pt.y - ruler.dragOffsetY));
       updateRulerTransform();
       e.preventDefault();
     }
