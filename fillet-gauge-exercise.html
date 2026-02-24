@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fillet Gauge Exercise</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0f1117; --panel: #1a1d27; --panel-border: #2a2d3a;
+    --accent: #3b82f6; --accent-glow: rgba(59,130,246,0.3);
+    --success: #22c55e; --error: #ef4444; --warning: #f59e0b;
+    --text: #e2e8f0; --text-dim: #94a3b8; --text-bright: #f8fafc;
+  }
+  body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; user-select:none; }
+
+  .exercise-header {
+    background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);
+    border-bottom:1px solid var(--panel-border); padding:20px 32px;
+  }
+  .exercise-title { font-size:18px; font-weight:700; color:var(--text-bright); }
+  .exercise-subtitle { font-size:13px; color:var(--text-dim); margin-top:2px; }
+
+  .exercise-body { display:grid; grid-template-columns:1fr 300px; gap:0; min-height:calc(100vh - 72px); }
+
+  .main-area { padding:24px 32px; display:flex; flex-direction:column; align-items:center; position:relative; }
+
+  .prompt-box {
+    background:var(--panel); border:1px solid var(--panel-border);
+    border-radius:10px; padding:16px 24px; margin-bottom:16px;
+    max-width:750px; width:100%;
+  }
+  .prompt-box h3 { font-size:14px; font-weight:600; color:var(--accent); margin-bottom:6px; }
+  .prompt-box p { font-size:14px; color:var(--text); line-height:1.5; }
+
+  .viewport {
+    background:#1e2130; border:1px solid var(--panel-border); border-radius:12px;
+    width:100%; max-width:750px; height:480px; overflow:hidden; position:relative;
+    box-shadow:inset 0 2px 8px rgba(0,0,0,0.3);
+  }
+  .viewport svg { width:100%; height:100%; }
+
+  .gauge-selector {
+    margin-top:16px; max-width:750px; width:100%;
+    display:flex; align-items:center; gap:10px;
+  }
+  .gauge-selector-label { font-size:13px; color:var(--text-dim); font-weight:600; }
+  .gauge-btn {
+    padding:10px 22px; border-radius:8px; border:2px solid var(--panel-border);
+    background:var(--panel); color:var(--text); font-family:'JetBrains Mono',monospace;
+    font-size:15px; font-weight:600; cursor:pointer; transition:all .2s;
+  }
+  .gauge-btn:hover { border-color:var(--accent); }
+  .gauge-btn.selected { border-color:var(--accent); background:rgba(59,130,246,0.12); color:var(--accent); }
+
+  .disposition-row {
+    margin-top:12px; max-width:750px; width:100%;
+    display:flex; align-items:center; gap:8px;
+  }
+  .disposition-label { font-size:13px; color:var(--text-dim); font-weight:600; margin-right:4px; }
+  .disp-btn {
+    padding:10px 28px; border-radius:8px; border:2px solid var(--panel-border);
+    background:var(--panel); color:var(--text); font-family:'Inter',sans-serif;
+    font-size:14px; font-weight:600; cursor:pointer; transition:all .2s;
+  }
+  .disp-btn:hover { border-color:var(--accent); }
+  .disp-btn.sel-accept { border-color:var(--success); background:rgba(34,197,94,0.15); color:var(--success); }
+  .disp-btn.sel-reject { border-color:var(--error); background:rgba(239,68,68,0.15); color:var(--error); }
+  .submit-btn {
+    padding:10px 32px; border-radius:10px; border:none; background:var(--accent);
+    color:white; font-family:'Inter',sans-serif; font-size:14px; font-weight:600;
+    cursor:pointer; margin-left:auto; transition:all .2s;
+  }
+  .submit-btn:hover { background:#2563eb; }
+  .submit-btn:disabled { opacity:.4; cursor:not-allowed; }
+
+  /* Feedback overlay */
+  .feedback {
+    display:none; position:absolute; inset:0; background:rgba(15,17,23,0.94);
+    z-index:10; flex-direction:column; align-items:center; justify-content:center;
+    padding:40px; text-align:center; animation:fadeIn .3s;
+  }
+  .feedback.visible { display:flex; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  .fb-icon { width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; margin-bottom:20px; }
+  .fb-icon.correct { background:rgba(34,197,94,0.15); }
+  .fb-icon.incorrect { background:rgba(239,68,68,0.15); }
+  .fb-title { font-size:22px; font-weight:700; margin-bottom:12px; }
+  .fb-title.correct { color:var(--success); }
+  .fb-title.incorrect { color:var(--error); }
+  .fb-detail { font-size:14px; color:var(--text); line-height:1.6; max-width:520px; }
+  .fb-values { font-family:'JetBrains Mono',monospace; font-size:15px; margin:12px 0; display:flex; gap:20px; justify-content:center; }
+  .fb-values span { color:var(--text-dim); }
+  .fb-values strong { color:var(--text-bright); }
+  .fb-buttons { display:flex; gap:12px; margin-top:24px; }
+  .fb-btn { padding:10px 32px; border-radius:10px; border:none; font-family:'Inter',sans-serif; font-size:14px; font-weight:600; cursor:pointer; transition:all .2s; }
+  .fb-btn-retry { background:var(--panel); color:var(--text); border:2px solid var(--panel-border); }
+  .fb-btn-retry:hover { border-color:var(--accent); }
+  .fb-btn-proceed { background:var(--accent); color:white; }
+  .fb-btn-proceed:hover { background:#2563eb; }
+  .fb-btn-proceed:disabled { opacity:.4; cursor:not-allowed; }
+
+  .measure-btn {
+    padding:8px 18px; border-radius:8px; border:2px solid var(--warning);
+    background:rgba(245,158,11,0.1); color:var(--warning); font-family:'Inter',sans-serif;
+    font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; display:none; align-items:center; gap:6px;
+  }
+  .measure-btn:hover { background:rgba(245,158,11,0.2); }
+  .measure-btn.visible { display:inline-flex; }
+  .leg-indicator {
+    font-size:12px; font-weight:600; padding:4px 12px;
+    border-radius:6px; display:none; margin-left:auto;
+  }
+  .leg-indicator.visible { display:inline-block; }
+  .leg-indicator.horiz { color:var(--accent); background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); }
+  .leg-indicator.vert { color:var(--warning); background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.2); }
+
+  .round-progress { display:flex; gap:6px; align-items:center; margin-left:auto; }
+  .round-dot { width:10px; height:10px; border-radius:50%; background:var(--panel-border); border:1.5px solid var(--text-dim); }
+  .round-dot.active { background:var(--accent); border-color:var(--accent); }
+  .round-dot.done { background:var(--success); border-color:var(--success); }
+
+  /* Sidebar */
+  .sidebar { background:var(--panel); border-left:1px solid var(--panel-border); padding:24px; display:flex; flex-direction:column; gap:20px; }
+  .sidebar h4 { font-size:11px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text-dim); margin-bottom:10px; }
+  .criteria-panel { background:rgba(59,130,246,0.06); border:1px solid rgba(59,130,246,0.15); border-radius:10px; padding:16px; }
+  .criteria-panel h4 { color:var(--accent); }
+  .criteria-item { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.04); font-size:13px; }
+  .criteria-item:last-child { border-bottom:none; }
+  .criteria-item .cl { color:var(--text-dim); }
+  .criteria-item .cv { font-family:'JetBrains Mono',monospace; font-weight:600; color:var(--text-bright); }
+  .tip-card { background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.15); border-radius:10px; padding:16px; }
+  .tip-card h4 { color:var(--warning); }
+  .tip-card p { font-size:13px; color:var(--text); line-height:1.5; }
+</style>
+</head>
+<body>
+
+<div class="exercise-header" style="display:flex;align-items:center;justify-content:space-between;">
+  <div>
+    <div class="exercise-title">Fillet Gauge — Weld Size Inspection</div>
+    <div class="exercise-subtitle">AWS D17.1 Aerospace Visual Inspection Training</div>
+  </div>
+  <div class="round-progress" id="roundProgress"></div>
+</div>
+
+<div class="exercise-body">
+  <div class="main-area" id="mainArea">
+    <div class="prompt-box">
+      <h3>Round 1 — Leg Size Check</h3>
+      <p>Read the weld symbol, select the correct fillet gauge, and check the fit against the weld. Does this fillet weld meet the minimum leg size requirement?</p>
+    </div>
+
+    <div class="viewport">
+      <svg id="scene" viewBox="0 0 750 480" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <div class="gauge-selector">
+      <span class="gauge-selector-label">Select gauge:</span>
+      <button class="gauge-btn" id="btn-half" onclick="selectGauge('half')">1/2"</button>
+      <button class="gauge-btn" id="btn-fiveeighths" onclick="selectGauge('fiveeighths')">5/8"</button>
+      <button class="measure-btn" id="measureVertBtn" onclick="switchToVertical()">Measure Vertical Leg →</button>
+      <button class="measure-btn" id="measureHorizBtn" onclick="switchToHorizontal()">← Back to Horizontal</button>
+      <span class="leg-indicator" id="legIndicator"></span>
+    </div>
+
+    <div class="disposition-row">
+      <span class="disposition-label">Disposition:</span>
+      <button class="disp-btn" id="acceptBtn" onclick="setDisp('accept')">ACCEPT</button>
+      <button class="disp-btn" id="rejectBtn" onclick="setDisp('reject')">REJECT</button>
+      <button class="submit-btn" id="submitBtn" onclick="submit()">Submit</button>
+    </div>
+
+    <div class="feedback" id="feedback">
+      <div class="fb-icon" id="fbIcon"></div>
+      <div class="fb-title" id="fbTitle"></div>
+      <div class="fb-values" id="fbValues"></div>
+      <div class="fb-detail" id="fbDetail"></div>
+      <div class="fb-buttons">
+        <button class="fb-btn fb-btn-retry" onclick="tryAgain()">Try Again</button>
+        <button class="fb-btn fb-btn-proceed" id="proceedBtn" onclick="proceed()">Proceed →</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <div>
+      <div class="criteria-panel">
+        <h4>D17.1 Acceptance Criteria</h4>
+        <div class="criteria-item"><span class="cl">Required Leg Size</span><span class="cv" id="sidebarRequired">1/2" (0.500")</span></div>
+        <div class="criteria-item"><span class="cl">Accept If</span><span class="cv">Leg ≥ required size</span></div>
+        <div class="criteria-item"><span class="cl">Gauge Fit</span><span class="cv">Flush or gap = pass</span></div>
+        <div class="criteria-item"><span class="cl">Gauge Overhang</span><span class="cv">Weld undersized = reject</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="tip-card">
+        <h4>Inspector's Tip</h4>
+        <p>Read the weld symbol first — it tells you the required fillet size. Select the gauge that matches the callout. If the gauge sits flush or shows a gap at the toe, the weld meets the minimum. If the gauge overhangs past the weld toe, the weld is undersized.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const PPI = 150; // pixels per inch for our gauge scale
+const ARC_RADIUS = 0.750 * PPI; // 112.5px — the concave cut radius on both gauges
+
+// ============================================================
+// ROUNDS
+// ============================================================
+const ROUNDS = [
+  {
+    title: 'Round 1 — Leg Size Check (Accept)',
+    prompt: 'Read the weld symbol, select the correct fillet gauge, and check the fit against the weld. Does this fillet weld meet the minimum leg size requirement?',
+    actualLeg: 0.540,
+    requiredLeg: 0.500,
+    weldSymbolLabel: '1/2"',
+    correctGauge: 'half',
+    correctDisp: 'accept',
+    showFitIndicator: true,
+    feedbackCorrect: 'The weld symbol calls for 1/2". The 1/2" gauge shows a gap at the toe — the actual leg is ~0.540", exceeding the 0.500" requirement. Accept.',
+    feedbackIncorrect: 'The weld symbol calls for 1/2" — so select the 1/2" gauge (not 5/8"). The gauge shows a gap, meaning the weld leg exceeds the minimum. Since the leg (~0.540") ≥ required (0.500"), this is an accept.',
+    sidebarRequired: '1/2" (0.500")',
+  },
+  {
+    title: 'Round 2 — Leg Size Check (Reject)',
+    prompt: 'Read the weld symbol, select the correct fillet gauge, and measure the weld. Is the leg size adequate?',
+    actualLeg: 0.420,
+    requiredLeg: 0.500,
+    weldSymbolLabel: '1/2"',
+    correctGauge: 'half',
+    correctDisp: 'reject',
+    showFitIndicator: true,
+    feedbackCorrect: 'The weld symbol calls for 1/2". The 1/2" gauge overhangs past the weld toe — the actual leg is only ~0.420", which is less than the 0.500" requirement. Reject.',
+    feedbackIncorrect: 'The weld symbol calls for 1/2" — so select the 1/2" gauge. The gauge overhangs past the weld toe, meaning the weld is undersized. Since the leg (~0.420") < required (0.500"), this is a reject.',
+    sidebarRequired: '1/2" (0.500")',
+  },
+  {
+    title: 'Round 3 — Leg Size Check',
+    prompt: 'The weld symbol specifies a different size this time. Select the correct gauge and make your accept/reject call.',
+    actualLeg: 0.560,
+    requiredLeg: 0.625,
+    weldSymbolLabel: '5/8"',
+    correctGauge: 'fiveeighths',
+    correctDisp: 'reject',
+    showFitIndicator: false,
+    feedbackCorrect: 'The weld symbol calls for 5/8". The 5/8" gauge overhangs past the weld toe — the actual leg is only ~0.560", which is less than the 0.625" requirement. Reject.',
+    feedbackIncorrect: 'The weld symbol calls for 5/8" — so select the 5/8" gauge. The gauge overhangs past the weld toe, meaning the weld is undersized. Since the leg (~0.560") < required (0.625"), this is a reject.',
+    sidebarRequired: '5/8" (0.625")',
+  },
+  {
+    title: 'Round 4 — Leg Size Check',
+    prompt: 'Read the weld symbol, select the correct gauge, and determine if this weld meets the requirement.',
+    actualLeg: 0.700,
+    requiredLeg: 0.625,
+    weldSymbolLabel: '5/8"',
+    correctGauge: 'fiveeighths',
+    correctDisp: 'accept',
+    showFitIndicator: false,
+    feedbackCorrect: 'The weld symbol calls for 5/8". The 5/8" gauge shows a gap at the toe — the actual leg is ~0.700", exceeding the 0.625" requirement. Accept.',
+    feedbackIncorrect: 'The weld symbol calls for 5/8" — so select the 5/8" gauge. The gauge shows a gap, meaning the weld exceeds the minimum. Since the leg (~0.700") ≥ required (0.625"), this is an accept.',
+    sidebarRequired: '5/8" (0.625")',
+  },
+  {
+    title: 'Round 5 — Unequal Legs',
+    prompt: 'This weld has two different leg size requirements. Measure the horizontal leg first, then click "Measure Vertical Leg" to rotate the gauge and check the vertical leg. Both legs must pass for the weld to be accepted.',
+    unequalLegs: true,
+    actualLegH: 0.540,
+    actualLegV: 0.560,
+    requiredLegH: 0.500,
+    requiredLegV: 0.625,
+    weldSymbolLabel: '1/2" × 5/8"',
+    correctGaugeH: 'half',
+    correctGaugeV: 'fiveeighths',
+    correctDisp: 'reject',
+    showFitIndicator: false,
+    feedbackCorrect: 'The weld symbol calls for 1/2" × 5/8" (horizontal × vertical). The horizontal leg (~0.540") passes the 1/2" check, but the vertical leg (~0.560") is less than the 5/8" (0.625") requirement. Since one leg fails, the weld must be rejected.',
+    feedbackIncorrect: 'The weld symbol calls for 1/2" × 5/8". Use the 1/2" gauge for the horizontal leg and the 5/8" gauge for the vertical leg. The horizontal leg passes, but the vertical leg (~0.560") is undersized for the 5/8" requirement. Both legs must pass — reject.',
+    sidebarRequired: '1/2" × 5/8"',
+  },
+];
+
+let currentRound = 0;
+let selectedGauge = null;
+let selectedDisp = null;
+
+// Gauge drag state
+let gaugeDragX = 0;
+let gaugeDragging = false;
+let gaugeDragStartX = 0;
+let gaugeDragStartOffset = 0;
+
+// Unequal legs state
+let gaugeOrientation = 'horizontal'; // 'horizontal' or 'vertical'
+let gaugeForH = null; // saved gauge choice for horizontal leg
+
+// ============================================================
+// DRAW THE T-JOINT WELD SCENE
+// ============================================================
+function drawScene() {
+  const svg = document.getElementById('scene');
+  const NS = 'http://www.w3.org/2000/svg';
+  svg.innerHTML = '';
+
+  const round = ROUNDS[currentRound];
+
+  // Defs
+  const defs = document.createElementNS(NS, 'defs');
+
+  const metalGrad = document.createElementNS(NS, 'linearGradient');
+  metalGrad.id = 'baseMetal';
+  metalGrad.setAttribute('x1','0'); metalGrad.setAttribute('y1','0');
+  metalGrad.setAttribute('x2','0'); metalGrad.setAttribute('y2','1');
+  [[0,'#5a6577'],[0.3,'#4a5567'],[0.6,'#3d4859'],[1,'#333d4d']].forEach(([o,c]) => {
+    const s = document.createElementNS(NS,'stop'); s.setAttribute('offset',o); s.setAttribute('stop-color',c); metalGrad.appendChild(s);
+  });
+  defs.appendChild(metalGrad);
+
+  const weldGrad = document.createElementNS(NS, 'linearGradient');
+  weldGrad.id = 'weldFill';
+  weldGrad.setAttribute('x1','0'); weldGrad.setAttribute('y1','0');
+  weldGrad.setAttribute('x2','1'); weldGrad.setAttribute('y2','1');
+  [[0,'#8a9ab0'],[0.4,'#6b7a8e'],[0.7,'#5a6978'],[1,'#4a5866']].forEach(([o,c]) => {
+    const s = document.createElementNS(NS,'stop'); s.setAttribute('offset',o); s.setAttribute('stop-color',c); weldGrad.appendChild(s);
+  });
+  defs.appendChild(weldGrad);
+
+  const gaugeGrad = document.createElementNS(NS, 'linearGradient');
+  gaugeGrad.id = 'gaugeMetal';
+  gaugeGrad.setAttribute('x1','0%'); gaugeGrad.setAttribute('y1','0%');
+  gaugeGrad.setAttribute('x2','0%'); gaugeGrad.setAttribute('y2','100%');
+  [[0,'#e5e7eb'],[0.45,'#9ca3af'],[1,'#6b7280']].forEach(([o,c]) => {
+    const s = document.createElementNS(NS,'stop'); s.setAttribute('offset',o); s.setAttribute('stop-color',c); gaugeGrad.appendChild(s);
+  });
+  defs.appendChild(gaugeGrad);
+
+  const shadow = document.createElementNS(NS,'filter');
+  shadow.id = 'shadow';
+  shadow.innerHTML = '<feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.4"/>';
+  defs.appendChild(shadow);
+
+  svg.appendChild(defs);
+
+  // --- T-JOINT ---
+  const plateY = 320;
+  const vertX = 380;
+  const vertW = 30;
+
+  const hp = document.createElementNS(NS,'rect');
+  hp.setAttribute('x',60); hp.setAttribute('y',plateY);
+  hp.setAttribute('width',630); hp.setAttribute('height',120);
+  hp.setAttribute('fill','url(#baseMetal)'); hp.setAttribute('stroke','#2a3040'); hp.setAttribute('stroke-width','1');
+  svg.appendChild(hp);
+
+  const vp = document.createElementNS(NS,'rect');
+  vp.setAttribute('x',vertX - vertW/2); vp.setAttribute('y',100);
+  vp.setAttribute('width',vertW); vp.setAttribute('height',plateY - 100);
+  vp.setAttribute('fill','url(#baseMetal)'); vp.setAttribute('stroke','#2a3040'); vp.setAttribute('stroke-width','1');
+  svg.appendChild(vp);
+
+  // --- FILLET WELD (left side of T-joint) ---
+  const hLegPx = (round.unequalLegs ? round.actualLegH : round.actualLeg) * PPI;
+  const vLegPx = (round.unequalLegs ? round.actualLegV : round.actualLeg) * PPI;
+  const weldRootX = vertX - vertW/2;
+  const weldRootY = plateY;
+
+  const toeX = weldRootX - hLegPx;
+  const toeY = weldRootY - vLegPx;
+
+  const avgLeg = (hLegPx + vLegPx) / 2;
+  const bulge = avgLeg * 0.15;
+  const midX = (toeX + weldRootX)/2 - bulge;
+  const midY = (toeY + weldRootY)/2 - bulge;
+
+  const weld = document.createElementNS(NS,'path');
+  weld.setAttribute('d', `M ${toeX} ${weldRootY} Q ${midX} ${midY} ${weldRootX} ${toeY} L ${weldRootX} ${weldRootY} Z`);
+  weld.setAttribute('fill','url(#weldFill)'); weld.setAttribute('stroke','#555'); weld.setAttribute('stroke-width','0.5');
+  svg.appendChild(weld);
+
+  for (let r = 0; r < 5; r++) {
+    const t = (r+1)/6;
+    const px = (1-t)*(1-t)*toeX + 2*(1-t)*t*midX + t*t*weldRootX;
+    const py = (1-t)*(1-t)*weldRootY + 2*(1-t)*t*midY + t*t*toeY;
+    const rip = document.createElementNS(NS,'ellipse');
+    rip.setAttribute('cx',px); rip.setAttribute('cy',py);
+    rip.setAttribute('rx',3); rip.setAttribute('ry',1.5);
+    rip.setAttribute('transform',`rotate(-45,${px},${py})`);
+    rip.setAttribute('fill','none'); rip.setAttribute('stroke','rgba(255,255,255,0.06)'); rip.setAttribute('stroke-width','0.5');
+    svg.appendChild(rip);
+  }
+
+  // --- WELD SYMBOL ---
+  drawWeldSymbol(svg, NS, 80, 30, round.weldSymbolLabel);
+
+  // --- GAUGE OVERLAY ---
+  if (selectedGauge) {
+    const measureLegPx = (round.unequalLegs && gaugeOrientation === 'vertical') ? vLegPx : hLegPx;
+    drawGauge(svg, NS, selectedGauge, weldRootX, weldRootY, measureLegPx, gaugeOrientation);
+  }
+}
+
+// ============================================================
+// WELD SYMBOL
+// ============================================================
+function drawWeldSymbol(svg, NS, x, y, legLabel) {
+  const g = document.createElementNS(NS,'g');
+  const isUnequal = legLabel.includes('×');
+  const boxW = isUnequal ? 190 : 140;
+  const boxH = isUnequal ? 82 : 70;
+
+  const bg = document.createElementNS(NS,'rect');
+  bg.setAttribute('x',x-10); bg.setAttribute('y',y-10);
+  bg.setAttribute('width',boxW); bg.setAttribute('height',boxH);
+  bg.setAttribute('rx',6); bg.setAttribute('fill','rgba(0,0,0,0.5)');
+  bg.setAttribute('stroke','rgba(59,130,246,0.3)'); bg.setAttribute('stroke-width','1');
+  g.appendChild(bg);
+
+  const cx = x - 10 + boxW/2; // center x of box
+
+  const title = document.createElementNS(NS,'text');
+  title.setAttribute('x',cx); title.setAttribute('y',y+6);
+  title.setAttribute('text-anchor','middle'); title.setAttribute('fill','#3b82f6');
+  title.setAttribute('font-size','9'); title.setAttribute('font-weight','600');
+  title.setAttribute('font-family','Inter, sans-serif');
+  title.textContent = 'WELD SYMBOL';
+  g.appendChild(title);
+
+  // Reference line
+  const ref = document.createElementNS(NS,'line');
+  ref.setAttribute('x1',x+10); ref.setAttribute('y1',y+30);
+  ref.setAttribute('x2',x + boxW - 30); ref.setAttribute('y2',y+30);
+  ref.setAttribute('stroke','#e2e8f0'); ref.setAttribute('stroke-width','1.5');
+  g.appendChild(ref);
+
+  // Arrow
+  const arrX = x + boxW - 30;
+  const arr = document.createElementNS(NS,'polygon');
+  arr.setAttribute('points',`${arrX},${y+30} ${arrX-7},${y+26} ${arrX-7},${y+34}`);
+  arr.setAttribute('fill','#e2e8f0');
+  g.appendChild(arr);
+
+  // Fillet triangle symbol (below ref line)
+  const triX = x + 30;
+  const sym = document.createElementNS(NS,'path');
+  sym.setAttribute('d',`M ${triX} ${y+30} L ${triX} ${y+44} L ${triX+14} ${y+30} Z`);
+  sym.setAttribute('fill','none'); sym.setAttribute('stroke','#e2e8f0'); sym.setAttribute('stroke-width','1.5');
+  g.appendChild(sym);
+
+  // Size text — positioned to the right of the triangle symbol
+  const sz = document.createElementNS(NS,'text');
+  const szX = isUnequal ? x + 80 : x + 65;
+  sz.setAttribute('x', szX); sz.setAttribute('y',y+50);
+  sz.setAttribute('text-anchor','middle'); sz.setAttribute('fill','#f8fafc');
+  sz.setAttribute('font-size', isUnequal ? '11' : '13');
+  sz.setAttribute('font-weight','700');
+  sz.setAttribute('font-family','JetBrains Mono, monospace');
+  sz.textContent = legLabel;
+  g.appendChild(sz);
+
+  // For unequal legs, add a subtitle clarifying orientation
+  if (isUnequal) {
+    const sub = document.createElementNS(NS,'text');
+    sub.setAttribute('x', szX); sub.setAttribute('y',y+64);
+    sub.setAttribute('text-anchor','middle'); sub.setAttribute('fill','#94a3b8');
+    sub.setAttribute('font-size','8'); sub.setAttribute('font-weight','500');
+    sub.setAttribute('font-family','Inter, sans-serif');
+    sub.textContent = 'horiz × vert';
+    g.appendChild(sub);
+  }
+
+  svg.appendChild(g);
+}
+
+// ============================================================
+// DRAW GAUGE placed against the weld
+// ============================================================
+function drawGauge(svg, NS, gaugeId, weldRootX, weldRootY, actualLegPx, orientation) {
+  const isHalf = (gaugeId === 'half');
+  const gaugeLabel = isHalf ? '1/2"' : '5/8"';
+  const gradDist = isHalf ? (0.5 * PPI) : (0.625 * PPI);
+  const arcR = ARC_RADIUS;
+  const isVert = (orientation === 'vertical');
+  const cr = 4;
+
+  const g = document.createElementNS(NS, 'g');
+  g.id = 'gaugeGroup';
+  g.setAttribute('filter', 'url(#shadow)');
+  g.setAttribute('transform', `translate(${isVert ? 0 : gaugeDragX}, 0)`);
+  g.style.cursor = isVert ? 'default' : 'grab';
+
+  // Both orientations share: bottom-right corner at weld root, arc at that corner.
+  // Horizontal: body extends LEFT, graduation is VERTICAL, measures horizontal leg.
+  // Vertical: body extends UPWARD, graduation is HORIZONTAL, measures vertical leg.
+  // No rotation needed — gauge stays on the same side as the weld.
+
+  const gRight = weldRootX;
+  const gBottom = weldRootY;
+
+  let gaugeW, gaugeH;
+  if (isVert) {
+    gaugeW = arcR + 20;  // narrow body (just enough for the arc + padding)
+    gaugeH = 350;        // tall, extends upward
+  } else {
+    gaugeW = 350;        // wide, extends left
+    gaugeH = arcR + 20;  // short body
+  }
+
+  const gLeft = gRight - gaugeW;
+  const gTop = gBottom - gaugeH;
+
+  // Arc: quarter circle centered at (gRight, gBottom)
+  const arcStartX = gRight;
+  const arcStartY = gBottom - arcR;
+  const arcEndX = gRight - arcR;
+  const arcEndY = gBottom;
+
+  // Gauge body path (same structure for both orientations — just different proportions)
+  const path = document.createElementNS(NS, 'path');
+  path.setAttribute('d', `
+    M ${gLeft + cr} ${gTop}
+    L ${gRight - cr} ${gTop}
+    Q ${gRight} ${gTop} ${gRight} ${gTop + cr}
+    L ${arcStartX} ${arcStartY}
+    A ${arcR} ${arcR} 0 0 0 ${arcEndX} ${arcEndY}
+    L ${gLeft + cr} ${gBottom}
+    Q ${gLeft} ${gBottom} ${gLeft} ${gBottom - cr}
+    L ${gLeft} ${gTop + cr}
+    Q ${gLeft} ${gTop} ${gLeft + cr} ${gTop}
+    Z
+  `);
+  path.setAttribute('fill', 'url(#gaugeMetal)');
+  path.setAttribute('stroke', '#4b5563');
+  path.setAttribute('stroke-width', '1.5');
+  path.setAttribute('opacity', '0.9');
+  g.appendChild(path);
+
+  if (isVert) {
+    // === VERTICAL GAUGE: horizontal graduation measuring upward from root ===
+    const gradY = gBottom - gradDist;
+    const dy = gradY - gBottom; // negative
+    const arcIntX = gRight - Math.sqrt(arcR * arcR - dy * dy);
+
+    // Horizontal graduation line
+    const grad = document.createElementNS(NS, 'line');
+    grad.setAttribute('x1', gLeft + 15); grad.setAttribute('y1', gradY);
+    grad.setAttribute('x2', arcIntX);    grad.setAttribute('y2', gradY);
+    grad.setAttribute('stroke', '#333'); grad.setAttribute('stroke-width', '1.5');
+    g.appendChild(grad);
+
+    // Gauge size label (above the graduation, inside body)
+    const label = document.createElementNS(NS, 'text');
+    label.setAttribute('x', gLeft + 20); label.setAttribute('y', gradY - 8);
+    label.setAttribute('text-anchor', 'start'); label.setAttribute('fill', '#333');
+    label.setAttribute('font-family', 'sans-serif'); label.setAttribute('font-size', '11');
+    label.setAttribute('font-weight', '700');
+    label.textContent = gaugeLabel;
+    g.appendChild(label);
+
+    // Red dotted projection line: extends RIGHT from arc intersection toward vertical plate
+    const projLine = document.createElementNS(NS, 'line');
+    projLine.setAttribute('x1', arcIntX);     projLine.setAttribute('y1', gradY);
+    projLine.setAttribute('x2', gRight + 30); projLine.setAttribute('y2', gradY);
+    projLine.setAttribute('stroke', '#ef4444'); projLine.setAttribute('stroke-width', '1.5');
+    projLine.setAttribute('stroke-dasharray', '4,3');
+    projLine.setAttribute('opacity', '0.7');
+    g.appendChild(projLine);
+
+    // Text labels (positioned in the narrow upper body)
+    const textCenterX = gLeft + gaugeW / 2 - 10;
+    const ndtText = document.createElementNS(NS, 'text');
+    ndtText.setAttribute('x', textCenterX); ndtText.setAttribute('y', gTop + 30);
+    ndtText.setAttribute('text-anchor', 'middle'); ndtText.setAttribute('fill', '#333');
+    ndtText.setAttribute('font-family', 'sans-serif'); ndtText.setAttribute('font-size', '7');
+    ndtText.setAttribute('font-weight', '600'); ndtText.setAttribute('letter-spacing', '0.5');
+    ndtText.textContent = 'NDT Video Library';
+    g.appendChild(ndtText);
+
+    const wfg = document.createElementNS(NS, 'text');
+    wfg.setAttribute('x', textCenterX); wfg.setAttribute('y', gTop + 42);
+    wfg.setAttribute('text-anchor', 'middle'); wfg.setAttribute('fill', '#333');
+    wfg.setAttribute('font-family', 'sans-serif'); wfg.setAttribute('font-size', '8');
+    wfg.setAttribute('font-weight', '700'); wfg.setAttribute('letter-spacing', '0.5');
+    wfg.textContent = 'Weld Fillet Gage';
+    g.appendChild(wfg);
+
+    // Fit indicator (vertical comparison — only if enabled)
+    const showFit = ROUNDS[currentRound].showFitIndicator !== false;
+    if (showFit) {
+      const weldToeY = weldRootY - actualLegPx;
+      if (weldToeY < gradY) {
+        // Toe is ABOVE graduation → leg exceeds min → gap → accept
+        const gapLabel = document.createElementNS(NS, 'text');
+        gapLabel.setAttribute('x', gLeft - 10);
+        gapLabel.setAttribute('y', (weldToeY + gradY) / 2);
+        gapLabel.setAttribute('text-anchor', 'end');
+        gapLabel.setAttribute('fill', '#22c55e');
+        gapLabel.setAttribute('font-size', '11'); gapLabel.setAttribute('font-weight', '700');
+        gapLabel.setAttribute('font-family', 'Inter, sans-serif');
+        gapLabel.textContent = '↑ gap (weld extends past gauge)';
+        g.appendChild(gapLabel);
+      } else {
+        const ohLabel = document.createElementNS(NS, 'text');
+        ohLabel.setAttribute('x', gLeft - 10);
+        ohLabel.setAttribute('y', (weldToeY + gradY) / 2);
+        ohLabel.setAttribute('text-anchor', 'end');
+        ohLabel.setAttribute('fill', '#ef4444');
+        ohLabel.setAttribute('font-size', '11'); ohLabel.setAttribute('font-weight', '700');
+        ohLabel.setAttribute('font-family', 'Inter, sans-serif');
+        ohLabel.textContent = '✗ gauge overhangs (undersized)';
+        g.appendChild(ohLabel);
+      }
+    }
+
+  } else {
+    // === HORIZONTAL GAUGE: vertical graduation measuring leftward from root ===
+    const gradX = gRight - gradDist;
+    const dx = gradX - gRight;
+    const arcIntersectY = gBottom - Math.sqrt(arcR * arcR - dx * dx);
+
+    // Vertical graduation line
+    const grad = document.createElementNS(NS, 'line');
+    grad.setAttribute('x1', gradX); grad.setAttribute('y1', gTop + 15);
+    grad.setAttribute('x2', gradX); grad.setAttribute('y2', arcIntersectY);
+    grad.setAttribute('stroke', '#333'); grad.setAttribute('stroke-width', '1.5');
+    g.appendChild(grad);
+
+    // Gauge size label
+    const label = document.createElementNS(NS, 'text');
+    label.setAttribute('x', gradX - 8); label.setAttribute('y', gTop + 30);
+    label.setAttribute('text-anchor', 'end'); label.setAttribute('fill', '#333');
+    label.setAttribute('font-family', 'sans-serif'); label.setAttribute('font-size', '11');
+    label.setAttribute('font-weight', '700');
+    label.textContent = gaugeLabel;
+    g.appendChild(label);
+
+    // Red dotted projection line: extends DOWN from graduation to below base plate
+    const projLine = document.createElementNS(NS, 'line');
+    projLine.setAttribute('x1', gradX); projLine.setAttribute('y1', arcIntersectY);
+    projLine.setAttribute('x2', gradX); projLine.setAttribute('y2', gBottom + 30);
+    projLine.setAttribute('stroke', '#ef4444'); projLine.setAttribute('stroke-width', '1.5');
+    projLine.setAttribute('stroke-dasharray', '4,3');
+    projLine.setAttribute('opacity', '0.7');
+    g.appendChild(projLine);
+
+    // Text labels
+    const ndtText = document.createElementNS(NS, 'text');
+    ndtText.setAttribute('x', (gLeft + gRight - arcR) / 2);
+    ndtText.setAttribute('y', gBottom - 22);
+    ndtText.setAttribute('text-anchor', 'middle'); ndtText.setAttribute('fill', '#333');
+    ndtText.setAttribute('font-family', 'sans-serif'); ndtText.setAttribute('font-size', '8');
+    ndtText.setAttribute('font-weight', '600'); ndtText.setAttribute('letter-spacing', '1');
+    ndtText.textContent = 'NDT Video Library';
+    g.appendChild(ndtText);
+
+    const wfg = document.createElementNS(NS, 'text');
+    wfg.setAttribute('x', (gLeft + gRight - arcR) / 2);
+    wfg.setAttribute('y', gBottom - 10);
+    wfg.setAttribute('text-anchor', 'middle'); wfg.setAttribute('fill', '#333');
+    wfg.setAttribute('font-family', 'sans-serif'); wfg.setAttribute('font-size', '9');
+    wfg.setAttribute('font-weight', '700'); wfg.setAttribute('letter-spacing', '1');
+    wfg.textContent = 'Weld Fillet Gage';
+    g.appendChild(wfg);
+
+    // Fit indicator (horizontal comparison — only if enabled)
+    const showFit = ROUNDS[currentRound].showFitIndicator !== false;
+    if (showFit) {
+      const weldToeX = weldRootX - actualLegPx;
+      if (weldToeX < gradX) {
+        const gapLabel = document.createElementNS(NS, 'text');
+        gapLabel.setAttribute('x', (weldToeX + gradX) / 2);
+        gapLabel.setAttribute('y', gBottom + 18);
+        gapLabel.setAttribute('text-anchor', 'middle');
+        gapLabel.setAttribute('fill', '#22c55e');
+        gapLabel.setAttribute('font-size', '11'); gapLabel.setAttribute('font-weight', '700');
+        gapLabel.setAttribute('font-family', 'Inter, sans-serif');
+        gapLabel.textContent = '← gap (weld extends past gauge)';
+        g.appendChild(gapLabel);
+
+        const bracket = document.createElementNS(NS, 'line');
+        bracket.setAttribute('x1', weldToeX); bracket.setAttribute('y1', gBottom + 6);
+        bracket.setAttribute('x2', gradX);    bracket.setAttribute('y2', gBottom + 6);
+        bracket.setAttribute('stroke', '#22c55e'); bracket.setAttribute('stroke-width', '1.5');
+        g.appendChild(bracket);
+      } else {
+        const ohLabel = document.createElementNS(NS, 'text');
+        ohLabel.setAttribute('x', (weldToeX + gradX) / 2);
+        ohLabel.setAttribute('y', gBottom + 18);
+        ohLabel.setAttribute('text-anchor', 'middle');
+        ohLabel.setAttribute('fill', '#ef4444');
+        ohLabel.setAttribute('font-size', '11'); ohLabel.setAttribute('font-weight', '700');
+        ohLabel.setAttribute('font-family', 'Inter, sans-serif');
+        ohLabel.textContent = '✗ gauge overhangs (undersized)';
+        g.appendChild(ohLabel);
+      }
+    }
+  }
+
+  svg.appendChild(g);
+}
+
+// ============================================================
+// UI LOGIC
+// ============================================================
+function selectGauge(id) {
+  selectedGauge = id;
+  document.getElementById('btn-half').className = 'gauge-btn' + (id === 'half' ? ' selected' : '');
+  document.getElementById('btn-fiveeighths').className = 'gauge-btn' + (id === 'fiveeighths' ? ' selected' : '');
+  drawScene();
+}
+
+function setDisp(val) {
+  selectedDisp = val;
+  document.getElementById('acceptBtn').className = 'disp-btn' + (val === 'accept' ? ' sel-accept' : '');
+  document.getElementById('rejectBtn').className = 'disp-btn' + (val === 'reject' ? ' sel-reject' : '');
+}
+
+function switchToVertical() {
+  gaugeForH = selectedGauge; // save horizontal gauge choice
+  gaugeOrientation = 'vertical';
+  selectedGauge = null;
+  gaugeDragX = 0;
+  document.getElementById('btn-half').className = 'gauge-btn';
+  document.getElementById('btn-fiveeighths').className = 'gauge-btn';
+  updateOrientationUI();
+  drawScene();
+}
+
+function switchToHorizontal() {
+  gaugeOrientation = 'horizontal';
+  selectedGauge = gaugeForH; // restore horizontal gauge choice
+  gaugeDragX = 0;
+  document.getElementById('btn-half').className = 'gauge-btn' + (selectedGauge === 'half' ? ' selected' : '');
+  document.getElementById('btn-fiveeighths').className = 'gauge-btn' + (selectedGauge === 'fiveeighths' ? ' selected' : '');
+  updateOrientationUI();
+  drawScene();
+}
+
+function updateOrientationUI() {
+  const round = ROUNDS[currentRound];
+  const isUnequal = round.unequalLegs;
+  const vertBtn = document.getElementById('measureVertBtn');
+  const horizBtn = document.getElementById('measureHorizBtn');
+  const indicator = document.getElementById('legIndicator');
+
+  if (!isUnequal) {
+    vertBtn.className = 'measure-btn';
+    horizBtn.className = 'measure-btn';
+    indicator.className = 'leg-indicator';
+    return;
+  }
+
+  if (gaugeOrientation === 'horizontal') {
+    vertBtn.className = 'measure-btn visible';
+    horizBtn.className = 'measure-btn';
+    indicator.className = 'leg-indicator visible horiz';
+    indicator.textContent = 'Measuring: Horizontal Leg';
+  } else {
+    vertBtn.className = 'measure-btn';
+    horizBtn.className = 'measure-btn visible';
+    indicator.className = 'leg-indicator visible vert';
+    indicator.textContent = 'Measuring: Vertical Leg';
+  }
+}
+
+function submit() {
+  const round = ROUNDS[currentRound];
+
+  // For unequal legs, must be in vertical phase and have both gauges selected
+  if (round.unequalLegs) {
+    if (gaugeOrientation === 'horizontal') {
+      // Prompt to measure vertical leg first
+      document.querySelector('.gauge-selector').style.outline = '2px solid var(--warning)';
+      setTimeout(() => document.querySelector('.gauge-selector').style.outline = 'none', 1200);
+      return;
+    }
+    if (!gaugeForH) {
+      document.querySelector('.gauge-selector').style.outline = '2px solid var(--error)';
+      setTimeout(() => document.querySelector('.gauge-selector').style.outline = 'none', 1000);
+      return;
+    }
+  }
+
+  if (!selectedGauge) {
+    document.querySelector('.gauge-selector').style.outline = '2px solid var(--error)';
+    setTimeout(() => document.querySelector('.gauge-selector').style.outline = 'none', 1000);
+    return;
+  }
+  if (!selectedDisp) {
+    document.querySelector('.disposition-row').style.outline = '2px solid var(--error)';
+    setTimeout(() => document.querySelector('.disposition-row').style.outline = 'none', 1000);
+    return;
+  }
+
+  let gaugeOk, correct, valuesHtml;
+  const dispOk = (selectedDisp === round.correctDisp);
+
+  if (round.unequalLegs) {
+    const hGaugeOk = (gaugeForH === round.correctGaugeH);
+    const vGaugeOk = (selectedGauge === round.correctGaugeV);
+    gaugeOk = hGaugeOk && vGaugeOk;
+    correct = gaugeOk && dispOk;
+
+    const hLabel = gaugeForH === 'half' ? '1/2"' : '5/8"';
+    const vLabel = selectedGauge === 'half' ? '1/2"' : '5/8"';
+    valuesHtml =
+      `<span>H gauge: <strong style="color:${hGaugeOk?'var(--success)':'var(--error)'}">${hLabel}</strong></span>` +
+      `<span>V gauge: <strong style="color:${vGaugeOk?'var(--success)':'var(--error)'}">${vLabel}</strong></span>` +
+      `<span>Disposition: <strong style="color:${dispOk?'var(--success)':'var(--error)'}">${selectedDisp.toUpperCase()}</strong></span>`;
+  } else {
+    gaugeOk = (selectedGauge === round.correctGauge);
+    correct = gaugeOk && dispOk;
+
+    const gLabel = selectedGauge === 'half' ? '1/2"' : '5/8"';
+    valuesHtml =
+      `<span>Your gauge: <strong style="color:${gaugeOk?'var(--success)':'var(--error)'}">${gLabel}</strong></span>` +
+      `<span>Disposition: <strong style="color:${dispOk?'var(--success)':'var(--error)'}">${selectedDisp.toUpperCase()}</strong></span>`;
+  }
+
+  const fb = document.getElementById('feedback');
+  document.getElementById('fbIcon').className = 'fb-icon ' + (correct ? 'correct' : 'incorrect');
+  document.getElementById('fbIcon').textContent = correct ? '✓' : '✗';
+  document.getElementById('fbTitle').className = 'fb-title ' + (correct ? 'correct' : 'incorrect');
+  document.getElementById('fbTitle').textContent = correct ? 'Correct!' : 'Incorrect';
+
+  document.getElementById('fbValues').innerHTML = valuesHtml;
+
+  document.getElementById('fbDetail').textContent = correct
+    ? round.feedbackCorrect
+    : round.feedbackIncorrect;
+
+  // Show/hide Proceed button based on whether there are more rounds
+  const proceedBtn = document.getElementById('proceedBtn');
+  if (currentRound >= ROUNDS.length - 1) {
+    proceedBtn.textContent = 'Finish';
+    proceedBtn.onclick = finish;
+  } else {
+    proceedBtn.textContent = 'Proceed →';
+    proceedBtn.onclick = proceed;
+  }
+
+  fb.classList.add('visible');
+  document.getElementById('submitBtn').disabled = true;
+}
+
+function tryAgain() {
+  selectedGauge = null;
+  selectedDisp = null;
+  gaugeDragX = 0;
+  gaugeOrientation = 'horizontal';
+  gaugeForH = null;
+  document.getElementById('feedback').classList.remove('visible');
+  document.getElementById('submitBtn').disabled = false;
+  document.getElementById('btn-half').className = 'gauge-btn';
+  document.getElementById('btn-fiveeighths').className = 'gauge-btn';
+  document.getElementById('acceptBtn').className = 'disp-btn';
+  document.getElementById('rejectBtn').className = 'disp-btn';
+  updateOrientationUI();
+  drawScene();
+}
+
+function proceed() {
+  currentRound++;
+  if (currentRound < ROUNDS.length) {
+    loadRound();
+  }
+}
+
+function finish() {
+  const fb = document.getElementById('feedback');
+  document.getElementById('fbIcon').className = 'fb-icon correct';
+  document.getElementById('fbIcon').textContent = '★';
+  document.getElementById('fbTitle').className = 'fb-title correct';
+  document.getElementById('fbTitle').textContent = 'Exercise Complete!';
+  document.getElementById('fbValues').innerHTML = '';
+  document.getElementById('fbDetail').textContent = 'You have completed all rounds of the Fillet Gauge exercise. Great work!';
+  document.querySelector('.fb-buttons').innerHTML =
+    '<button class="fb-btn fb-btn-proceed" onclick="resetExercise()">Restart Exercise</button>';
+  fb.classList.add('visible');
+}
+
+function resetExercise() {
+  currentRound = 0;
+  loadRound();
+}
+
+function loadRound() {
+  const round = ROUNDS[currentRound];
+
+  // Restore feedback buttons (in case finish() replaced them)
+  document.querySelector('.fb-buttons').innerHTML =
+    '<button class="fb-btn fb-btn-retry" onclick="tryAgain()">Try Again</button>' +
+    '<button class="fb-btn fb-btn-proceed" id="proceedBtn" onclick="proceed()">Proceed →</button>';
+
+  // Reset state
+  selectedGauge = null;
+  selectedDisp = null;
+  gaugeDragX = 0;
+  gaugeOrientation = 'horizontal';
+  gaugeForH = null;
+  document.getElementById('feedback').classList.remove('visible');
+  document.getElementById('submitBtn').disabled = false;
+  document.getElementById('btn-half').className = 'gauge-btn';
+  document.getElementById('btn-fiveeighths').className = 'gauge-btn';
+  document.getElementById('acceptBtn').className = 'disp-btn';
+  document.getElementById('rejectBtn').className = 'disp-btn';
+
+  // Update orientation UI for unequal legs
+  updateOrientationUI();
+
+  // Update prompt
+  document.querySelector('.prompt-box h3').textContent = round.title;
+  document.querySelector('.prompt-box p').textContent = round.prompt;
+
+  // Update sidebar
+  document.getElementById('sidebarRequired').textContent = round.sidebarRequired;
+
+  // Update progress dots
+  updateProgress();
+
+  // Redraw
+  drawScene();
+}
+
+function updateProgress() {
+  const container = document.getElementById('roundProgress');
+  container.innerHTML = '';
+  for (let i = 0; i < ROUNDS.length; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'round-dot';
+    if (i < currentRound) dot.classList.add('done');
+    else if (i === currentRound) dot.classList.add('active');
+    container.appendChild(dot);
+  }
+}
+
+// ============================================================
+// GAUGE DRAG HANDLERS
+// ============================================================
+function svgPoint(svg, clientX, clientY) {
+  const pt = svg.createSVGPoint();
+  pt.x = clientX; pt.y = clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+
+function initDrag() {
+  const svg = document.getElementById('scene');
+  const viewport = document.querySelector('.viewport');
+
+  svg.addEventListener('mousedown', (e) => {
+    const target = e.target;
+    if (target.closest && target.closest('#gaugeGroup') && gaugeOrientation === 'horizontal') {
+      gaugeDragging = true;
+      const pt = svgPoint(svg, e.clientX, e.clientY);
+      gaugeDragStartX = pt.x;
+      gaugeDragStartOffset = gaugeDragX;
+      const gg = document.getElementById('gaugeGroup');
+      if (gg) gg.style.cursor = 'grabbing';
+      e.preventDefault();
+    }
+  });
+
+  svg.addEventListener('mousemove', (e) => {
+    if (gaugeDragging) {
+      const pt = svgPoint(svg, e.clientX, e.clientY);
+      gaugeDragX = gaugeDragStartOffset + (pt.x - gaugeDragStartX);
+      // Clamp so gauge stays visible
+      gaugeDragX = Math.max(-200, Math.min(200, gaugeDragX));
+      const gg = document.getElementById('gaugeGroup');
+      if (gg) gg.setAttribute('transform', `translate(${gaugeDragX}, 0)`);
+    }
+  });
+
+  const endDrag = () => {
+    gaugeDragging = false;
+    const gg = document.getElementById('gaugeGroup');
+    if (gg) gg.style.cursor = 'grab';
+  };
+
+  svg.addEventListener('mouseup', endDrag);
+  svg.addEventListener('mouseleave', endDrag);
+
+  // Touch support
+  svg.addEventListener('touchstart', (e) => {
+    const touch = e.touches[0];
+    const target = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (target && target.closest && target.closest('#gaugeGroup') && gaugeOrientation === 'horizontal') {
+      gaugeDragging = true;
+      const pt = svgPoint(svg, touch.clientX, touch.clientY);
+      gaugeDragStartX = pt.x;
+      gaugeDragStartOffset = gaugeDragX;
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  svg.addEventListener('touchmove', (e) => {
+    if (gaugeDragging && e.touches.length === 1) {
+      const pt = svgPoint(svg, e.touches[0].clientX, e.touches[0].clientY);
+      gaugeDragX = gaugeDragStartOffset + (pt.x - gaugeDragStartX);
+      gaugeDragX = Math.max(-200, Math.min(200, gaugeDragX));
+      const gg = document.getElementById('gaugeGroup');
+      if (gg) gg.setAttribute('transform', `translate(${gaugeDragX}, 0)`);
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  svg.addEventListener('touchend', endDrag);
+}
+
+// Init
+updateProgress();
+updateOrientationUI();
+drawScene();
+initDrag();
+</script>
+</body>
+</html>
