@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Welding Scale — Reading in Thousandths | NDT Visual Testing</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0f1117; --panel: #1a1d27; --panel-border: #2a2d3a;
+    --accent: #3b82f6; --accent-glow: rgba(59,130,246,0.3);
+    --success: #22c55e; --error: #ef4444; --warning: #f59e0b;
+    --text: #e2e8f0; --text-dim: #94a3b8; --text-bright: #f8fafc;
+  }
+  body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; user-select:none; }
+
+  .exercise-header {
+    background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);
+    border-bottom:1px solid var(--panel-border); padding:20px 32px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .exercise-title { font-size:18px; font-weight:700; color:var(--text-bright); }
+  .exercise-subtitle { font-size:13px; color:var(--text-dim); margin-top:2px; }
+  .round-indicator { display:flex; align-items:center; gap:8px; }
+  .round-dot { width:10px; height:10px; border-radius:50%; background:var(--panel-border); transition:all .3s; }
+  .round-dot.completed { background:var(--success); }
+  .round-dot.current { background:var(--accent); box-shadow:0 0 8px var(--accent-glow); }
+  .round-dot.wrong { background:var(--error); }
+
+  .exercise-body { display:grid; grid-template-columns:1fr 320px; gap:0; min-height:calc(100vh - 72px); }
+
+  .measurement-area {
+    padding:24px 32px; display:flex; flex-direction:column;
+    align-items:center; position:relative;
+  }
+  .scenario-prompt {
+    background:var(--panel); border:1px solid var(--panel-border);
+    border-radius:10px; padding:16px 24px; margin-bottom:16px;
+    max-width:700px; width:100%;
+  }
+  .scenario-prompt h3 { font-size:14px; font-weight:600; color:var(--accent); margin-bottom:6px; }
+  .scenario-prompt p { font-size:14px; color:var(--text); line-height:1.5; }
+
+  .measurement-viewport {
+    background:#1e2130; border:1px solid var(--panel-border); border-radius:12px;
+    width:100%; max-width:700px; height:420px; overflow:hidden; position:relative;
+    box-shadow:inset 0 2px 8px rgba(0,0,0,0.3); cursor:default;
+  }
+  .measurement-viewport svg { width:100%; height:100%; }
+
+  .ruler-instructions {
+    position:absolute; bottom:10px; left:50%; transform:translateX(-50%);
+    background:rgba(0,0,0,0.7); color:var(--text-dim); font-size:11px;
+    padding:6px 14px; border-radius:6px; pointer-events:none;
+    transition:opacity .5s;
+  }
+
+  .answer-area { margin-top:16px; display:flex; align-items:center; gap:12px; max-width:700px; width:100%; }
+  .answer-input-group {
+    flex:1; display:flex; align-items:center; gap:8px;
+    background:var(--panel); border:2px solid var(--panel-border);
+    border-radius:10px; padding:8px 16px; transition:border-color .2s;
+  }
+  .answer-input-group:focus-within { border-color:var(--accent); }
+  .answer-input-group label { font-size:13px; color:var(--text-dim); white-space:nowrap; }
+  .answer-input-group input {
+    background:transparent; border:none; outline:none; color:var(--text-bright);
+    font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:600; width:140px;
+  }
+  .answer-input-group .unit { font-family:'JetBrains Mono',monospace; font-size:14px; color:var(--text-dim); }
+
+  /* Bracket selector for Round 7 */
+  .bracket-area { display:none; margin-top:16px; max-width:700px; width:100%; gap:10px; flex-wrap:wrap; }
+  .bracket-area.visible { display:flex; }
+  .bracket-btn {
+    padding:10px 20px; border-radius:8px; border:2px solid var(--panel-border);
+    background:var(--panel); color:var(--text); font-family:'JetBrains Mono',monospace;
+    font-size:14px; font-weight:500; cursor:pointer; transition:all .2s; flex:1; text-align:center;
+  }
+  .bracket-btn:hover { border-color:var(--accent); }
+  .bracket-btn.selected { border-color:var(--accent); background:rgba(59,130,246,0.12); color:var(--accent); }
+
+  .disposition-area { display:none; margin-top:10px; max-width:700px; width:100%; gap:8px; }
+  .disposition-area.visible { display:flex; }
+  .disposition-label { font-size:13px; color:var(--text-dim); margin-right:8px; align-self:center; }
+  .disposition-btn {
+    padding:8px 20px; border-radius:8px; border:2px solid var(--panel-border);
+    background:var(--panel); color:var(--text); font-family:'Inter',sans-serif;
+    font-size:13px; font-weight:600; cursor:pointer; transition:all .2s;
+  }
+  .disposition-btn:hover { border-color:var(--accent); }
+  .disposition-btn.selected-accept { border-color:var(--success); background:rgba(34,197,94,0.15); color:var(--success); }
+  .disposition-btn.selected-reject { border-color:var(--error); background:rgba(239,68,68,0.15); color:var(--error); }
+
+  .submit-btn {
+    padding:12px 32px; border-radius:10px; border:none; background:var(--accent);
+    color:white; font-family:'Inter',sans-serif; font-size:14px; font-weight:600;
+    cursor:pointer; transition:all .2s; white-space:nowrap;
+  }
+  .submit-btn:hover { background:#2563eb; transform:translateY(-1px); }
+  .submit-btn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+
+  .feedback-overlay {
+    display:none; position:absolute; inset:0; background:rgba(15,17,23,0.94);
+    z-index:10; flex-direction:column; align-items:center; justify-content:center;
+    padding:40px; text-align:center; animation:fadeIn .3s;
+  }
+  .feedback-overlay.visible { display:flex; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  .feedback-icon { width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; margin-bottom:20px; }
+  .feedback-icon.correct { background:rgba(34,197,94,0.15); }
+  .feedback-icon.incorrect { background:rgba(239,68,68,0.15); }
+  .feedback-title { font-size:22px; font-weight:700; margin-bottom:12px; }
+  .feedback-title.correct { color:var(--success); }
+  .feedback-title.incorrect { color:var(--error); }
+  .feedback-detail { font-size:14px; color:var(--text); line-height:1.6; max-width:520px; margin-bottom:8px; }
+  .feedback-consequence {
+    font-size:13px; color:var(--warning); line-height:1.5; max-width:520px;
+    margin-top:12px; padding:12px 16px; background:rgba(245,158,11,0.08);
+    border:1px solid rgba(245,158,11,0.2); border-radius:8px;
+  }
+  .feedback-values { font-family:'JetBrains Mono',monospace; font-size:15px; margin:12px 0; display:flex; gap:20px; justify-content:center; flex-wrap:wrap; }
+  .feedback-values span { color:var(--text-dim); }
+  .feedback-values strong { color:var(--text-bright); }
+  .next-btn { margin-top:24px; padding:12px 36px; border-radius:10px; border:none; background:var(--accent); color:white; font-family:'Inter',sans-serif; font-size:14px; font-weight:600; cursor:pointer; }
+  .next-btn:hover { background:#2563eb; }
+
+  .sidebar { background:var(--panel); border-left:1px solid var(--panel-border); padding:24px; display:flex; flex-direction:column; gap:20px; overflow-y:auto; }
+  .sidebar-section h4 { font-size:11px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text-dim); margin-bottom:10px; }
+  .score-card { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .score-item { background:rgba(255,255,255,0.03); border:1px solid var(--panel-border); border-radius:8px; padding:12px; text-align:center; }
+  .score-item .value { font-family:'JetBrains Mono',monospace; font-size:24px; font-weight:700; color:var(--text-bright); }
+  .score-item .label { font-size:11px; color:var(--text-dim); margin-top:2px; }
+  .criteria-panel { background:rgba(59,130,246,0.06); border:1px solid rgba(59,130,246,0.15); border-radius:10px; padding:16px; }
+  .criteria-panel h4 { color:var(--accent); }
+  .criteria-item { display:flex; justify-content:space-between; align-items:baseline; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.04); font-size:13px; }
+  .criteria-item:last-child { border-bottom:none; }
+  .criteria-item .criteria-label { color:var(--text-dim); }
+  .criteria-item .criteria-value { font-family:'JetBrains Mono',monospace; font-weight:600; color:var(--text-bright); }
+  .tip-card { background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.15); border-radius:10px; padding:16px; }
+  .tip-card h4 { color:var(--warning); }
+  .tip-card p { font-size:13px; color:var(--text); line-height:1.5; }
+
+  .results-screen { display:none; flex-direction:column; align-items:center; justify-content:center; padding:48px; text-align:center; }
+  .results-screen.visible { display:flex; }
+  .results-grade { font-size:72px; font-weight:700; margin:16px 0; }
+  .results-grade.pass { color:var(--success); }
+  .results-grade.fail { color:var(--error); }
+  .results-summary { font-size:15px; color:var(--text); line-height:1.6; max-width:500px; margin-bottom:24px; }
+  .results-breakdown { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:24px 0; }
+  .results-stat { background:var(--panel); border:1px solid var(--panel-border); border-radius:10px; padding:20px; }
+  .results-stat .stat-value { font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:700; }
+  .results-stat .stat-label { font-size:12px; color:var(--text-dim); margin-top:4px; }
+  .restart-btn { margin-top:20px; padding:14px 40px; border-radius:10px; border:2px solid var(--accent); background:transparent; color:var(--accent); font-family:'Inter',sans-serif; font-size:15px; font-weight:600; cursor:pointer; transition:all .2s; }
+  .restart-btn:hover { background:var(--accent); color:white; }
+
+  /* Viewing angle controls for parallax round */
+  .parallax-controls {
+    display:none; margin-top:8px; max-width:700px; width:100%;
+    background:var(--panel); border:1px solid rgba(245,158,11,0.3);
+    border-radius:10px; padding:14px 20px;
+  }
+  .parallax-controls.visible { display:flex; align-items:center; gap:16px; }
+  .parallax-controls label { font-size:12px; color:var(--warning); white-space:nowrap; font-weight:600; }
+  .parallax-slider { flex:1; accent-color:var(--warning); }
+  .parallax-value { font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--text-bright); min-width:80px; text-align:right; }
+
+  @media (max-width:900px) {
+    .exercise-body { grid-template-columns:1fr; }
+    .sidebar { border-left:none; border-top:1px solid var(--panel-border); }
+  }
+</style>
+</head>
+<body>
+
+<div class="exercise-header">
+  <div>
+    <div class="exercise-title">Welding Scale — Reading in Thousandths</div>
+    <div class="exercise-subtitle">AWS D17.1 Aerospace Visual Inspection Training</div>
+  </div>
+  <div class="round-indicator" id="roundIndicator"></div>
+</div>
+
+<div class="exercise-body">
+  <div class="measurement-area" id="mainArea">
+    <div class="scenario-prompt" id="scenarioPrompt">
+      <h3 id="scenarioTitle">Round 1 of 9</h3>
+      <p id="scenarioText">Loading...</p>
+    </div>
+
+    <div class="measurement-viewport" id="viewport">
+      <svg id="measureSvg" viewBox="0 0 700 420" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="ruler-instructions" id="rulerInstructions">Drag ruler to position · Scroll wheel to rotate</div>
+    </div>
+
+    <div class="answer-area" id="answerArea">
+      <div class="answer-input-group">
+        <label>Your reading:</label>
+        <input type="text" id="answerInput" placeholder="0.000" autocomplete="off" />
+        <span class="unit">inches</span>
+      </div>
+      <button class="submit-btn" id="submitBtn" onclick="submitAnswer()">Submit</button>
+    </div>
+
+    <!-- Bracket selector for Round 7 -->
+    <div class="bracket-area" id="bracketArea">
+      <button class="bracket-btn" onclick="selectBracket('below')">Below 1/32"<br><span style="font-size:11px;color:var(--text-dim)">(&lt; 0.03125")</span></button>
+      <button class="bracket-btn" onclick="selectBracket('approximately')">Approx. 1/32"<br><span style="font-size:11px;color:var(--text-dim)">(≈ 0.03125")</span></button>
+      <button class="bracket-btn" onclick="selectBracket('above')">Above 1/32"<br><span style="font-size:11px;color:var(--text-dim)">(&gt; 0.03125")</span></button>
+      <button class="submit-btn" id="bracketSubmitBtn" onclick="submitAnswer()">Submit</button>
+    </div>
+
+    <div class="disposition-area" id="dispositionArea">
+      <span class="disposition-label">Disposition:</span>
+      <button class="disposition-btn" id="acceptBtn" onclick="setDisposition('accept')">ACCEPT</button>
+      <button class="disposition-btn" id="rejectBtn" onclick="setDisposition('reject')">REJECT</button>
+    </div>
+
+    <!-- Parallax viewing angle control -->
+    <div class="parallax-controls" id="parallaxControls">
+      <label>Your Viewing Angle:</label>
+      <input type="range" class="parallax-slider" id="parallaxSlider" min="-30" max="30" value="15" step="1" oninput="updateParallax(this.value)">
+      <span class="parallax-value" id="parallaxLabel">15° off-center</span>
+    </div>
+
+    <div class="feedback-overlay" id="feedbackOverlay">
+      <div class="feedback-icon" id="feedbackIcon"></div>
+      <div class="feedback-title" id="feedbackTitle"></div>
+      <div class="feedback-values" id="feedbackValues"></div>
+      <div class="feedback-detail" id="feedbackDetail"></div>
+      <div class="feedback-consequence" id="feedbackConsequence"></div>
+      <button class="next-btn" id="nextBtn" onclick="nextRound()">Next Round →</button>
+    </div>
+
+    <div class="results-screen" id="resultsScreen"></div>
+  </div>
+
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <h4>Your Score</h4>
+      <div class="score-card">
+        <div class="score-item"><div class="value" id="scoreCorrect">0</div><div class="label">Correct</div></div>
+        <div class="score-item"><div class="value" id="scoreTotal">0</div><div class="label">Attempted</div></div>
+        <div class="score-item"><div class="value" id="scoreAccuracy">—</div><div class="label">Accuracy</div></div>
+        <div class="score-item"><div class="value" id="scoreStreak">0</div><div class="label">Streak</div></div>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="criteria-panel" id="criteriaPanel">
+        <h4>D17.1 Acceptance Criteria</h4>
+        <div id="criteriaContent"></div>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="tip-card">
+        <h4>Inspector's Tip</h4>
+        <p id="tipText">Always read measurement scales perpendicular to the surface to avoid parallax error.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// SCENARIOS (9 rounds)
+// ============================================================
+const SCENARIOS = [
+  {
+    id: 1, title: "Round 1 of 9 — Basic Reading",
+    prompt: "Position the ruler over the weld bead and measure its width. The red markers show the feature edges.",
+    featureLabel: "Weld Width", trueValue: 0.250, tolerance: 0.003,
+    rulerStartX: 80, rulerStartY: 30, rulerStartAngle: 2,
+    featureType: "butt-weld", answerMode: "numeric",
+    needsDisposition: false, criteria: [],
+    tip: "Start with the basics: find the zero line, then count graduations. Each 1/64\" division ≈ 0.016\".",
+    correctFeedback: "Correct! 0.250\" (1/4\") is a clean reading on a major graduation line.",
+    wrongFeedback: "The weld width is exactly 1/4\" (0.250\"). Count from zero: 4 × 1/16\" = 4 × 0.0625\" = 0.250\".",
+    consequence: ""
+  },
+  {
+    id: 2, title: "Round 2 of 9 — Basic Reading",
+    prompt: "Measure the width of this weld reinforcement cap. The measurement does not fall on a major graduation.",
+    featureLabel: "Reinforcement Width", trueValue: 0.187, tolerance: 0.005,
+    rulerStartX: 90, rulerStartY: 35, rulerStartAngle: -1,
+    featureType: "butt-weld", answerMode: "numeric",
+    needsDisposition: false, criteria: [],
+    tip: "3/16\" = 0.1875\" ≈ 0.188\". Experienced inspectors round to the nearest 0.005\".",
+    correctFeedback: "Good read! 0.187\"-0.188\" is the 3/16\" mark.",
+    wrongFeedback: "This measurement is 3/16\" or 0.1875\". Count: 3 × (1/16\") = 0.1875\".",
+    consequence: ""
+  },
+  {
+    id: 3, title: "Round 3 of 9 — Interpolation",
+    prompt: "Measure the length of this undercut indication. The feature edge falls between graduation lines — interpolate your reading.",
+    featureLabel: "Undercut Length", trueValue: 0.094, tolerance: 0.004,
+    rulerStartX: 70, rulerStartY: 25, rulerStartAngle: 3,
+    featureType: "undercut-length", answerMode: "numeric",
+    needsDisposition: false, criteria: [],
+    tip: "Interpolation: estimate between the smallest marks. 3/32\" = 0.09375\", 7/64\" = 0.1094\".",
+    correctFeedback: "Excellent interpolation! Just past the 3/32\" mark, reading approximately 0.094\".",
+    wrongFeedback: "The feature edge sits just past 3/32\" (0.09375\"). The correct reading is ≈ 0.094\".",
+    consequence: ""
+  },
+  {
+    id: 4, title: "Round 4 of 9 — Parallax Error",
+    prompt: "Position the ruler and measure the weld width. Use the viewing angle slider below — notice how the apparent reading shifts when you're not looking straight down. Set the angle to 0° before reading.",
+    featureLabel: "Weld Width", trueValue: 0.312, tolerance: 0.005,
+    rulerStartX: 60, rulerStartY: 28, rulerStartAngle: 0,
+    featureType: "butt-weld-wide", answerMode: "numeric",
+    needsDisposition: false, criteria: [], isParallax: true,
+    tip: "Parallax error shifts your apparent reading. Always read with your eye directly above the measurement point — 0° viewing angle.",
+    correctFeedback: "Outstanding! You set the viewing angle to 0° and read the true value: 0.312\" (5/16\").",
+    wrongFeedback: "The true weld width is 0.312\" (5/16\"). If you read at an angle, parallax shifts the apparent value. Always view from 0° (straight down).",
+    consequence: "A 0.018\" parallax error on a thin-wall aerospace tube (0.035\" wall) is more than half the wall thickness."
+  },
+  {
+    id: 5, title: "Round 5 of 9 — Offset Zero",
+    prompt: "Measure the length of this porosity cluster. ⚠ Look carefully at where the ruler's zero mark is — it is NOT at the physical edge.",
+    featureLabel: "Porosity Cluster Length", trueValue: 0.156, tolerance: 0.005,
+    rulerStartX: 30, rulerStartY: 30, rulerStartAngle: 1,
+    featureType: "porosity-cluster", answerMode: "numeric",
+    needsDisposition: false, criteria: [], hasOffsetZero: true,
+    tip: "Many scales have zero inset from the edge. Read from the zero graduation mark — not the metal edge of the ruler.",
+    correctFeedback: "Correct! The feature spans from 0.100\" to 0.256\", a length of 0.156\" (5/32\").",
+    wrongFeedback: "The ruler's zero is inset. Feature edges at 0.100\" and 0.256\". Length = 0.256\" − 0.100\" = 0.156\".",
+    consequence: "Reading from the wrong reference point is the most common new-inspector error."
+  },
+  {
+    id: 6, title: "Round 6 of 9 — Unit Conversion + Disposition",
+    prompt: "Measure this undercut depth. D17.1 Class A limit is 0.007\" max. Measure, convert, and make an accept/reject call.",
+    featureLabel: "Undercut Depth", trueValue: 0.009, tolerance: 0.002,
+    rulerStartX: 70, rulerStartY: 32, rulerStartAngle: -2,
+    featureType: "undercut-depth", answerMode: "numeric",
+    needsDisposition: true, correctDisposition: "reject",
+    criteria: [
+      { label: "Max Undercut (Class A)", value: "0.007\"" },
+      { label: "Max Undercut (Class B)", value: "0.010\"" },
+      { label: "Max Length", value: "≤ 10% of weld length" }
+    ],
+    tip: "Class A welds (primary structure) have tighter limits. Always verify the weld class on the drawing.",
+    correctFeedback: "Correct! 0.009\" exceeds the 0.007\" Class A limit. Reject.",
+    wrongFeedback: "The undercut is ≈ 0.009\". Class A limit is 0.007\" max. 0.009\" > 0.007\" → reject.",
+    consequence: "Undercut exceeding limits creates a stress riser at the weld toe — a fatigue crack initiation site under cyclic aerospace loads."
+  },
+  {
+    id: 7, title: "Round 7 of 9 — Spec Limit Comparison",
+    prompt: "The drawing specifies minimum weld reinforcement of 1/32\". Position the ruler to examine the reinforcement height. Determine if it meets the 1/32\" minimum — you don't need an exact number, just determine which side of the spec limit it falls on.",
+    featureLabel: "Reinforcement Height", trueValue: 0.025,
+    rulerStartX: 60, rulerStartY: 20, rulerStartAngle: -1,
+    featureType: "reinforcement-small", answerMode: "bracket",
+    correctBracket: "below",
+    needsDisposition: true, correctDisposition: "reject",
+    criteria: [
+      { label: "Min Reinforcement (drawing)", value: "1/32\" (0.03125\")" },
+      { label: "Max Reinforcement (D17.1)", value: "Per Table 9.22" }
+    ],
+    tip: "When a measurement falls between graduations and the question is pass/fail, determine which side of the spec line it falls on. You don't always need an exact thousandths reading.",
+    correctFeedback: "Sharp eye! The reinforcement is clearly below the 1/32\" (0.03125\") graduation mark. It falls between 1/64\" and 1/32\" — insufficient. Reject.",
+    wrongFeedback: "The reinforcement peak is visibly below the 1/32\" graduation (0.03125\"). You don't need to know it's exactly 0.025\" — you just need to see it doesn't reach the 1/32\" mark. That's a reject.",
+    consequence: "Insufficient reinforcement means thinner weld throat than designed. The joint won't develop full rated strength — critical on rocket engine mounts and pressure vessels."
+  },
+  {
+    id: 8, title: "Round 8 of 9 — Edge-to-Edge Pore Spacing",
+    prompt: "Two porosity indications of equal size (0.025\" diameter each). Measure the EDGE-TO-EDGE clear spacing between them — not center-to-center. D17.1 requires spacing ≥ 3× the larger pore diameter.",
+    featureLabel: "Pore Spacing (edge-to-edge)", trueValue: 0.062, tolerance: 0.004,
+    rulerStartX: 50, rulerStartY: 30, rulerStartAngle: 2,
+    featureType: "pore-spacing-equal", answerMode: "numeric",
+    needsDisposition: true, correctDisposition: "reject",
+    pore1Diam: 0.025, pore2Diam: 0.025,
+    criteria: [
+      { label: "Pore 1 Diameter", value: "0.025\"" },
+      { label: "Pore 2 Diameter", value: "0.025\"" },
+      { label: "Min Spacing (3× larger)", value: "3 × 0.025\" = 0.075\"" },
+      { label: "Measure", value: "Edge-to-edge (clear distance)" }
+    ],
+    tip: "D17.1 specifies the clear distance between nearest edges, not center-to-center. A center-to-center measurement would give you 0.087\" — falsely passing this weld.",
+    correctFeedback: "Correct! Edge-to-edge spacing is 0.062\", which is less than the 0.075\" minimum (3 × 0.025\"). Reject.",
+    wrongFeedback: "The edge-to-edge clear spacing is 0.062\". Required minimum: 3 × 0.025\" = 0.075\". Since 0.062\" < 0.075\", this must be rejected. If you measured center-to-center (0.087\") you'd wrongly accept.",
+    consequence: "Center-to-center measurement is the most common pore spacing error. It adds one radius from each pore to the clear distance, making the spacing appear larger than it actually is. Closely spaced pores act as connected flaws under load."
+  },
+  {
+    id: 9, title: "Round 9 of 9 — Unequal Pore Trap",
+    prompt: "Two unequal porosity indications: one 0.025\" diameter and one 0.018\" diameter. Measure the edge-to-edge spacing. D17.1 requires spacing ≥ 3× the LARGER pore diameter. Which pore diameter do you use for the calculation?",
+    featureLabel: "Pore Spacing (edge-to-edge)", trueValue: 0.070, tolerance: 0.004,
+    rulerStartX: 55, rulerStartY: 28, rulerStartAngle: -1,
+    featureType: "pore-spacing-unequal", answerMode: "numeric",
+    needsDisposition: true, correctDisposition: "reject",
+    pore1Diam: 0.025, pore2Diam: 0.018,
+    criteria: [
+      { label: "Pore 1 (larger)", value: "0.025\"" },
+      { label: "Pore 2 (smaller)", value: "0.018\"" },
+      { label: "Min Spacing (3× LARGER pore)", value: "3 × 0.025\" = 0.075\"" },
+      { label: "Measure", value: "Edge-to-edge (clear distance)" }
+    ],
+    tip: "Always use the LARGER pore diameter for the 3× calculation. Using the smaller pore (3 × 0.018\" = 0.054\") would wrongly lower the acceptance threshold.",
+    correctFeedback: "Excellent! Edge-to-edge is 0.070\", and the minimum is 3 × 0.025\" (larger pore) = 0.075\". Since 0.070\" < 0.075\" → reject.",
+    wrongFeedback: "Edge-to-edge spacing is 0.070\". The spec says 3× the LARGER pore: 3 × 0.025\" = 0.075\". Since 0.070\" < 0.075\", this is a reject. If you used the smaller pore (3 × 0.018\" = 0.054\"), you'd wrongly accept.",
+    consequence: "Using the smaller pore for the 3× calculation artificially lowers the threshold. The spec says 'larger pore' because the larger defect governs the stress concentration. This is a reject that looks like it passes if you pick the wrong pore."
+  }
+];
+
+// ============================================================
+// STATE
+// ============================================================
+let currentRound = 0;
+let score = { correct: 0, total: 0, streak: 0, maxStreak: 0 };
+let selectedDisposition = null;
+let selectedBracket = null;
+let roundResults = [];
+
+// Ruler drag state
+let ruler = { x: 80, y: 30, angle: 0, dragging: false, dragOffsetX: 0, dragOffsetY: 0 };
+let parallaxOffset = 0; // pixels of shift due to viewing angle
+
+// ============================================================
+// SVG COORDINATE HELPERS
+// ============================================================
+function svgPoint(svg, clientX, clientY) {
+  const pt = svg.createSVGPoint();
+  pt.x = clientX; pt.y = clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+
+// ============================================================
+// RULER DRAWING
+// ============================================================
+function drawScene(svg, scenario) {
+  const svgNS = "http://www.w3.org/2000/svg";
+  svg.innerHTML = '';
+
+  // Defs
+  const defs = document.createElementNS(svgNS, 'defs');
+
+  const metalGrad = document.createElementNS(svgNS, 'linearGradient');
+  metalGrad.id = 'metalGrad';
+  metalGrad.setAttribute('x1','0'); metalGrad.setAttribute('y1','0');
+  metalGrad.setAttribute('x2','0'); metalGrad.setAttribute('y2','1');
+  [[0,'#eaecf0'],[.15,'#d5d8de'],[.3,'#ccd0d8'],[.5,'#c0c5cf'],[.7,'#ccd0d8'],[.85,'#d5d8de'],[1,'#e0e3e9']].forEach(([o,c]) => {
+    const s = document.createElementNS(svgNS,'stop'); s.setAttribute('offset',o); s.setAttribute('stop-color',c); metalGrad.appendChild(s);
+  });
+  defs.appendChild(metalGrad);
+
+  const weldGrad = document.createElementNS(svgNS, 'linearGradient');
+  weldGrad.id = 'weldGrad';
+  weldGrad.setAttribute('x1','0'); weldGrad.setAttribute('y1','0');
+  weldGrad.setAttribute('x2','0'); weldGrad.setAttribute('y2','1');
+  [[0,'#8a9ab0'],[.4,'#6b7a8e'],[.7,'#5a6978'],[1,'#4a5866']].forEach(([o,c]) => {
+    const s = document.createElementNS(svgNS,'stop'); s.setAttribute('offset',o); s.setAttribute('stop-color',c); weldGrad.appendChild(s);
+  });
+  defs.appendChild(weldGrad);
+
+  const shadow = document.createElementNS(svgNS,'filter');
+  shadow.id = 'shadow';
+  shadow.innerHTML = '<feDropShadow dx="0" dy="3" stdDeviation="4" flood-opacity="0.5"/>';
+  defs.appendChild(shadow);
+
+  svg.appendChild(defs);
+
+  // ---- BASE METAL ----
+  const baseY = 250;
+  const bm = document.createElementNS(svgNS,'rect');
+  bm.setAttribute('x',0); bm.setAttribute('y', baseY);
+  bm.setAttribute('width',700); bm.setAttribute('height',170);
+  bm.setAttribute('fill','#3a4555');
+  svg.appendChild(bm);
+
+  // Texture
+  for (let i = 0; i < 700; i += 5) {
+    const l = document.createElementNS(svgNS,'line');
+    l.setAttribute('x1',i); l.setAttribute('y1',baseY);
+    l.setAttribute('x2',i+2); l.setAttribute('y2',420);
+    l.setAttribute('stroke','rgba(255,255,255,0.02)'); l.setAttribute('stroke-width','1');
+    svg.appendChild(l);
+  }
+
+  // ---- WELD FEATURE ----
+  drawFeature(svg, svgNS, scenario, baseY);
+
+  // ---- RULER (draggable group) ----
+  drawRulerGroup(svg, svgNS, scenario, baseY);
+}
+
+function drawFeature(svg, svgNS, scenario, baseY) {
+  const ppi = 500; // pixels per inch for features
+  const featureOriginX = 150; // where the left feature edge is placed
+
+  if (scenario.featureType === 'butt-weld' || scenario.featureType === 'butt-weld-wide') {
+    const weldW = scenario.trueValue * ppi;
+    const startX = featureOriginX;
+    const endX = featureOriginX + weldW;
+    const centerX = (startX + endX) / 2;
+    const reinH = 20;
+
+    // HAZ
+    const haz = document.createElementNS(svgNS,'rect');
+    haz.setAttribute('x', centerX - weldW * 0.8); haz.setAttribute('y', baseY);
+    haz.setAttribute('width', weldW * 1.6); haz.setAttribute('height', 50);
+    haz.setAttribute('fill','rgba(139,119,80,0.25)');
+    svg.appendChild(haz);
+
+    // Bead
+    const bead = document.createElementNS(svgNS,'path');
+    bead.setAttribute('d', `M ${startX} ${baseY} Q ${startX + weldW*0.15} ${baseY - reinH*0.6} ${centerX} ${baseY - reinH} Q ${endX - weldW*0.15} ${baseY - reinH*0.6} ${endX} ${baseY} Z`);
+    bead.setAttribute('fill','url(#weldGrad)'); bead.setAttribute('stroke','#555'); bead.setAttribute('stroke-width','0.5');
+    svg.appendChild(bead);
+
+    // Ripples
+    for (let r = 0; r < 6; r++) {
+      const rx = startX + (weldW/7)*(r+1);
+      const rip = document.createElementNS(svgNS,'ellipse');
+      rip.setAttribute('cx',rx); rip.setAttribute('cy', baseY - reinH*0.4 + Math.sin(r)*2);
+      rip.setAttribute('rx', weldW/18); rip.setAttribute('ry',2);
+      rip.setAttribute('fill','none'); rip.setAttribute('stroke','rgba(255,255,255,0.08)'); rip.setAttribute('stroke-width','0.5');
+      svg.appendChild(rip);
+    }
+
+    // Feature edge markers (red triangles)
+    drawEdgeMarker(svg, svgNS, startX, baseY, 'left');
+    drawEdgeMarker(svg, svgNS, endX, baseY, 'right');
+    drawFeatureLabel(svg, svgNS, startX, endX, baseY + 50, scenario.featureLabel);
+
+  } else if (scenario.featureType === 'undercut-length') {
+    const ucLen = scenario.trueValue * ppi;
+    const startX = featureOriginX;
+    const endX = featureOriginX + ucLen;
+
+    // Weld bead background
+    const bead = document.createElementNS(svgNS,'path');
+    bead.setAttribute('d', `M ${startX-30} ${baseY} Q ${startX+20} ${baseY-22} ${(startX+endX+80)/2} ${baseY-25} Q ${endX+50} ${baseY-22} ${endX+80} ${baseY} Z`);
+    bead.setAttribute('fill','url(#weldGrad)');
+    svg.appendChild(bead);
+
+    // Undercut groove
+    const uc = document.createElementNS(svgNS,'path');
+    uc.setAttribute('d', `M ${startX} ${baseY} Q ${startX+(endX-startX)*0.3} ${baseY+5} ${(startX+endX)/2} ${baseY+6} Q ${endX-(endX-startX)*0.3} ${baseY+5} ${endX} ${baseY}`);
+    uc.setAttribute('fill','#2a3040'); uc.setAttribute('stroke','#444'); uc.setAttribute('stroke-width','0.5');
+    svg.appendChild(uc);
+
+    drawEdgeMarker(svg, svgNS, startX, baseY, 'left');
+    drawEdgeMarker(svg, svgNS, endX, baseY, 'right');
+    drawFeatureLabel(svg, svgNS, startX, endX, baseY + 50, scenario.featureLabel);
+
+  } else if (scenario.featureType === 'porosity-cluster') {
+    // Feature markers at the cluster extents
+    // The actual cluster length: left edge mark at one position, right edge mark at another
+    // For the offset trap: the ruler zero is inset, so the cluster edges will be at specific ruler positions
+    const clusterLen = scenario.trueValue * ppi; // 0.156 * 500 = 78px
+    const startX = featureOriginX;
+    const endX = featureOriginX + clusterLen;
+
+    // Weld background
+    const wr = document.createElementNS(svgNS,'rect');
+    wr.setAttribute('x',80); wr.setAttribute('y', baseY - 14);
+    wr.setAttribute('width',540); wr.setAttribute('height',55);
+    wr.setAttribute('fill','url(#weldGrad)');
+    svg.appendChild(wr);
+
+    // Pores scattered inside the cluster
+    const pores = [
+      {cx: startX+5, cy: baseY+3, r:3}, {cx: startX+22, cy: baseY-5, r:4},
+      {cx: (startX+endX)/2, cy: baseY+5, r:3.5}, {cx: endX-18, cy: baseY-3, r:3},
+      {cx: endX-3, cy: baseY+4, r:2.5}
+    ];
+    pores.forEach(p => {
+      const c = document.createElementNS(svgNS,'circle');
+      c.setAttribute('cx',p.cx); c.setAttribute('cy',p.cy); c.setAttribute('r',p.r);
+      c.setAttribute('fill','#1a1d27'); c.setAttribute('stroke','#333'); c.setAttribute('stroke-width','0.5');
+      svg.appendChild(c);
+    });
+
+    drawEdgeMarker(svg, svgNS, startX, baseY, 'left');
+    drawEdgeMarker(svg, svgNS, endX, baseY, 'right');
+    drawFeatureLabel(svg, svgNS, startX, endX, baseY + 50, scenario.featureLabel);
+
+  } else if (scenario.featureType === 'undercut-depth') {
+    const depthPx = scenario.trueValue * ppi; // small
+    const centerX = featureOriginX + 30;
+
+    // Weld with toe
+    const wp = document.createElementNS(svgNS,'path');
+    wp.setAttribute('d', `M 80 ${baseY} L ${centerX-12} ${baseY} L ${centerX} ${baseY-22} Q ${centerX+60} ${baseY-38} ${centerX+120} ${baseY-22} L ${centerX+132} ${baseY} L 580 ${baseY} L 580 ${baseY+60} L 80 ${baseY+60} Z`);
+    wp.setAttribute('fill','url(#weldGrad)');
+    svg.appendChild(wp);
+
+    // Undercut notch
+    const notch = document.createElementNS(svgNS,'path');
+    notch.setAttribute('d', `M ${centerX-10} ${baseY} Q ${centerX-3} ${baseY+depthPx} ${centerX+5} ${baseY}`);
+    notch.setAttribute('fill','#1a1d27'); notch.setAttribute('stroke','#555'); notch.setAttribute('stroke-width','0.5');
+    svg.appendChild(notch);
+
+    // Vertical depth markers
+    drawEdgeMarker(svg, svgNS, centerX-3, baseY, 'top');
+    drawEdgeMarker(svg, svgNS, centerX-3, baseY + depthPx, 'bottom');
+    drawFeatureLabel(svg, svgNS, centerX - 30, centerX + 30, baseY + 45, scenario.featureLabel);
+
+  } else if (scenario.featureType === 'reinforcement-small') {
+    const centerX = featureOriginX + 60;
+    const reinH = 12;
+
+    // Weld bead
+    const wp = document.createElementNS(svgNS,'path');
+    wp.setAttribute('d', `M 80 ${baseY} L ${centerX-65} ${baseY} Q ${centerX-35} ${baseY-reinH*0.5} ${centerX} ${baseY-reinH} Q ${centerX+35} ${baseY-reinH*0.5} ${centerX+65} ${baseY} L 580 ${baseY} L 580 ${baseY+60} L 80 ${baseY+60} Z`);
+    wp.setAttribute('fill','url(#weldGrad)');
+    svg.appendChild(wp);
+
+    // Base metal reference line
+    const ref = document.createElementNS(svgNS,'line');
+    ref.setAttribute('x1', centerX-90); ref.setAttribute('y1', baseY);
+    ref.setAttribute('x2', centerX+90); ref.setAttribute('y2', baseY);
+    ref.setAttribute('stroke','rgba(255,255,255,0.2)'); ref.setAttribute('stroke-width','0.5');
+    ref.setAttribute('stroke-dasharray','4,3');
+    svg.appendChild(ref);
+
+    // Height markers
+    drawEdgeMarker(svg, svgNS, centerX, baseY, 'top');
+    drawEdgeMarker(svg, svgNS, centerX, baseY - reinH, 'bottom-up');
+    drawFeatureLabel(svg, svgNS, centerX - 40, centerX + 40, baseY + 40, scenario.featureLabel);
+
+  } else if (scenario.featureType === 'pore-spacing-equal') {
+    const spacingPx = scenario.trueValue * ppi; // edge-to-edge
+    const poreDiam = scenario.pore1Diam;
+    const poreR = poreDiam * ppi / 2;
+    // Pore 1 near edge at featureOriginX, Pore 2 near edge at featureOriginX + spacingPx
+    const p1CenterX = featureOriginX - poreR; // left pore, right edge at featureOriginX
+    const p2CenterX = featureOriginX + spacingPx + poreR; // right pore, left edge at featureOriginX + spacingPx
+    const poreY = baseY - 10;
+
+    // Weld background
+    const wb = document.createElementNS(svgNS,'path');
+    const mid = (p1CenterX + p2CenterX) / 2;
+    wb.setAttribute('d', `M 80 ${baseY} Q ${mid-60} ${baseY-20} ${mid} ${baseY-24} Q ${mid+60} ${baseY-20} 580 ${baseY} L 580 ${baseY+60} L 80 ${baseY+60} Z`);
+    wb.setAttribute('fill','url(#weldGrad)');
+    svg.appendChild(wb);
+
+    // Pore 1
+    drawPore(svg, svgNS, p1CenterX, poreY, poreR, `Ø0.025"`);
+    // Pore 2
+    drawPore(svg, svgNS, p2CenterX, poreY, poreR, `Ø0.025"`);
+
+    // Edge markers at the NEAR EDGES
+    drawEdgeMarker(svg, svgNS, featureOriginX, baseY - 10, 'left');
+    drawEdgeMarker(svg, svgNS, featureOriginX + spacingPx, baseY - 10, 'right');
+    drawFeatureLabel(svg, svgNS, featureOriginX, featureOriginX + spacingPx, baseY + 55, 'Edge-to-Edge Spacing');
+
+  } else if (scenario.featureType === 'pore-spacing-unequal') {
+    const spacingPx = scenario.trueValue * ppi;
+    const p1R = scenario.pore1Diam * ppi / 2; // 0.025 → 6.25px
+    const p2R = scenario.pore2Diam * ppi / 2; // 0.018 → 4.5px
+    const p1CenterX = featureOriginX - p1R;
+    const p2CenterX = featureOriginX + spacingPx + p2R;
+    const poreY = baseY - 10;
+
+    // Weld background
+    const mid = (p1CenterX + p2CenterX) / 2;
+    const wb = document.createElementNS(svgNS,'path');
+    wb.setAttribute('d', `M 80 ${baseY} Q ${mid-60} ${baseY-20} ${mid} ${baseY-24} Q ${mid+60} ${baseY-20} 580 ${baseY} L 580 ${baseY+60} L 80 ${baseY+60} Z`);
+    wb.setAttribute('fill','url(#weldGrad)');
+    svg.appendChild(wb);
+
+    drawPore(svg, svgNS, p1CenterX, poreY, p1R, `Ø0.025"`);
+    drawPore(svg, svgNS, p2CenterX, poreY, p2R, `Ø0.018"`);
+
+    drawEdgeMarker(svg, svgNS, featureOriginX, baseY - 10, 'left');
+    drawEdgeMarker(svg, svgNS, featureOriginX + spacingPx, baseY - 10, 'right');
+    drawFeatureLabel(svg, svgNS, featureOriginX, featureOriginX + spacingPx, baseY + 55, 'Edge-to-Edge Spacing');
+  }
+}
+
+function drawPore(svg, svgNS, cx, cy, r, label) {
+  const c = document.createElementNS(svgNS,'circle');
+  c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', r);
+  c.setAttribute('fill','#1a1d27'); c.setAttribute('stroke','#666'); c.setAttribute('stroke-width','1');
+  svg.appendChild(c);
+
+  // Diameter dimension line
+  const dl = document.createElementNS(svgNS,'line');
+  dl.setAttribute('x1', cx - r - 4); dl.setAttribute('y1', cy);
+  dl.setAttribute('x2', cx + r + 4); dl.setAttribute('y2', cy);
+  dl.setAttribute('stroke','rgba(255,255,255,0.3)'); dl.setAttribute('stroke-width','0.5');
+  dl.setAttribute('stroke-dasharray','2,2');
+  svg.appendChild(dl);
+
+  const t = document.createElementNS(svgNS,'text');
+  t.setAttribute('x', cx); t.setAttribute('y', cy + r + 14);
+  t.setAttribute('text-anchor','middle'); t.setAttribute('fill','rgba(255,255,255,0.4)');
+  t.setAttribute('font-size','9'); t.setAttribute('font-family','JetBrains Mono, monospace');
+  t.textContent = label;
+  svg.appendChild(t);
+}
+
+function drawEdgeMarker(svg, svgNS, x, y, side) {
+  const m = document.createElementNS(svgNS, 'g');
+  m.setAttribute('class','edge-marker');
+
+  if (side === 'left' || side === 'right') {
+    // Vertical line + small triangle
+    const line = document.createElementNS(svgNS,'line');
+    line.setAttribute('x1',x); line.setAttribute('y1', y - 30);
+    line.setAttribute('x2',x); line.setAttribute('y2', y + 20);
+    line.setAttribute('stroke','#ef4444'); line.setAttribute('stroke-width','1.5');
+    line.setAttribute('stroke-dasharray','4,3');
+    m.appendChild(line);
+
+    const tri = document.createElementNS(svgNS,'polygon');
+    const dir = side === 'left' ? 1 : -1;
+    tri.setAttribute('points', `${x},${y-30} ${x+6*dir},${y-25} ${x},${y-20}`);
+    tri.setAttribute('fill','#ef4444');
+    m.appendChild(tri);
+  } else {
+    // Horizontal marker for depth measurements
+    const line = document.createElementNS(svgNS,'line');
+    line.setAttribute('x1', x - 20); line.setAttribute('y1', y);
+    line.setAttribute('x2', x + 20); line.setAttribute('y2', y);
+    line.setAttribute('stroke','#ef4444'); line.setAttribute('stroke-width','1.5');
+    line.setAttribute('stroke-dasharray','4,3');
+    m.appendChild(line);
+  }
+
+  svg.appendChild(m);
+}
+
+function drawFeatureLabel(svg, svgNS, x1, x2, y, text) {
+  // Dimension arrow line
+  const g = document.createElementNS(svgNS,'g');
+
+  const line = document.createElementNS(svgNS,'line');
+  line.setAttribute('x1', x1); line.setAttribute('y1', y);
+  line.setAttribute('x2', x2); line.setAttribute('y2', y);
+  line.setAttribute('stroke','#ef4444'); line.setAttribute('stroke-width','1.5');
+  g.appendChild(line);
+
+  // Arrows
+  const la = document.createElementNS(svgNS,'polygon');
+  la.setAttribute('points', `${x1},${y} ${x1+7},${y-3} ${x1+7},${y+3}`);
+  la.setAttribute('fill','#ef4444');
+  g.appendChild(la);
+  const ra = document.createElementNS(svgNS,'polygon');
+  ra.setAttribute('points', `${x2},${y} ${x2-7},${y-3} ${x2-7},${y+3}`);
+  ra.setAttribute('fill','#ef4444');
+  g.appendChild(ra);
+
+  const t = document.createElementNS(svgNS,'text');
+  t.setAttribute('x', (x1+x2)/2); t.setAttribute('y', y + 16);
+  t.setAttribute('text-anchor','middle'); t.setAttribute('fill','#ef4444');
+  t.setAttribute('font-size','10'); t.setAttribute('font-weight','600');
+  t.setAttribute('font-family','Inter, sans-serif');
+  t.textContent = text;
+  g.appendChild(t);
+
+  svg.appendChild(g);
+}
+
+function drawRulerGroup(svg, svgNS, scenario) {
+  const rulerGroup = document.createElementNS(svgNS, 'g');
+  rulerGroup.id = 'rulerGroup';
+  rulerGroup.setAttribute('filter','url(#shadow)');
+  rulerGroup.style.cursor = 'grab';
+
+  // Internal ruler dimensions (drawn in local coords, then transformed)
+  const rW = 550, rH = 100;
+  const zeroOffset = scenario.hasOffsetZero ? 50 : 10; // px from left edge to zero mark
+  const ppi = 500;
+
+  // Ruler body
+  const body = document.createElementNS(svgNS,'rect');
+  body.setAttribute('x', 0); body.setAttribute('y', 0);
+  body.setAttribute('width', rW); body.setAttribute('height', rH);
+  body.setAttribute('rx', 2); body.setAttribute('fill','url(#metalGrad)');
+  body.setAttribute('stroke','#999'); body.setAttribute('stroke-width','0.5');
+  rulerGroup.appendChild(body);
+
+  // Top edge highlight
+  const hl = document.createElementNS(svgNS,'rect');
+  hl.setAttribute('x',0); hl.setAttribute('y',0);
+  hl.setAttribute('width', rW); hl.setAttribute('height', 1.5);
+  hl.setAttribute('fill','rgba(255,255,255,0.5)');
+  rulerGroup.appendChild(hl);
+
+  // Offset edge label
+  if (scenario.hasOffsetZero) {
+    const el = document.createElementNS(svgNS,'text');
+    el.setAttribute('x', 6); el.setAttribute('y', rH - 8);
+    el.setAttribute('fill','#777'); el.setAttribute('font-size','7');
+    el.setAttribute('font-family','Inter, sans-serif');
+    el.textContent = '← edge';
+    rulerGroup.appendChild(el);
+  }
+
+  // Graduation marks from zero
+  const maxInches = 0.75;
+  const steps64 = Math.floor(maxInches * 64);
+
+  for (let i = 0; i <= steps64; i++) {
+    const inchVal = i / 64;
+    const x = zeroOffset + inchVal * ppi;
+    if (x > rW - 8) break;
+
+    let tickH, tickW, showLabel;
+    if (i % 16 === 0) { tickH = 36; tickW = 1.5; showLabel = true; }
+    else if (i % 8 === 0) { tickH = 26; tickW = 1; showLabel = true; }
+    else if (i % 4 === 0) { tickH = 18; tickW = 0.8; showLabel = false; }
+    else if (i % 2 === 0) { tickH = 12; tickW = 0.5; showLabel = false; }
+    else { tickH = 7; tickW = 0.3; showLabel = false; }
+
+    const tick = document.createElementNS(svgNS,'line');
+    tick.setAttribute('x1', x); tick.setAttribute('y1', rH);
+    tick.setAttribute('x2', x); tick.setAttribute('y2', rH - tickH);
+    tick.setAttribute('stroke','#333'); tick.setAttribute('stroke-width', tickW);
+    rulerGroup.appendChild(tick);
+
+    if (showLabel) {
+      const lbl = document.createElementNS(svgNS,'text');
+      lbl.setAttribute('x', x); lbl.setAttribute('y', rH - tickH - 4);
+      lbl.setAttribute('text-anchor','middle'); lbl.setAttribute('fill','#333');
+      lbl.setAttribute('font-size','9'); lbl.setAttribute('font-weight','600');
+      lbl.setAttribute('font-family','JetBrains Mono, monospace');
+      lbl.textContent = inchVal.toFixed(3);
+      rulerGroup.appendChild(lbl);
+    }
+  }
+
+  // Decimal labels at top
+  for (let thou = 0; thou <= maxInches * 1000; thou += 25) {
+    const inchVal = thou / 1000;
+    const x = zeroOffset + inchVal * ppi;
+    if (x > rW - 8) break;
+    if (thou % 125 === 0 && thou % 250 !== 0) {
+      const lbl = document.createElementNS(svgNS,'text');
+      lbl.setAttribute('x', x); lbl.setAttribute('y', 16);
+      lbl.setAttribute('text-anchor','middle'); lbl.setAttribute('fill','#666');
+      lbl.setAttribute('font-size','7'); lbl.setAttribute('font-family','JetBrains Mono, monospace');
+      lbl.textContent = '.' + String(thou).padStart(3, '0');
+      rulerGroup.appendChild(lbl);
+    }
+  }
+
+  // Rotation handle (small circle at right end)
+  const handle = document.createElementNS(svgNS,'circle');
+  handle.setAttribute('cx', rW - 8); handle.setAttribute('cy', rH / 2);
+  handle.setAttribute('r', 6); handle.setAttribute('fill','rgba(59,130,246,0.3)');
+  handle.setAttribute('stroke','rgba(59,130,246,0.6)'); handle.setAttribute('stroke-width','1.5');
+  handle.id = 'rotateHandle';
+  handle.style.cursor = 'crosshair';
+  rulerGroup.appendChild(handle);
+
+  // Apply transform
+  updateRulerTransform(rulerGroup);
+
+  svg.appendChild(rulerGroup);
+}
+
+function updateRulerTransform(group) {
+  if (!group) group = document.getElementById('rulerGroup');
+  if (!group) return;
+  // Parallax offset: shift the ruler visually when viewing at angle
+  const px = ruler.x + parallaxOffset;
+  group.setAttribute('transform', `translate(${px}, ${ruler.y}) rotate(${ruler.angle}, 275, 50)`);
+}
+
+// ============================================================
+// DRAG & ROTATE HANDLERS
+// ============================================================
+function initDragHandlers() {
+  const svg = document.getElementById('measureSvg');
+  const viewport = document.getElementById('viewport');
+  let rotating = false;
+
+  svg.addEventListener('mousedown', (e) => {
+    const target = e.target;
+    const rulerGroup = document.getElementById('rulerGroup');
+    if (!rulerGroup) return;
+
+    if (target.id === 'rotateHandle' || target.closest && target.closest('#rotateHandle')) {
+      rotating = true;
+      e.preventDefault();
+      return;
+    }
+
+    // Check if click is on ruler
+    if (target.closest && target.closest('#rulerGroup')) {
+      ruler.dragging = true;
+      const pt = svgPoint(svg, e.clientX, e.clientY);
+      ruler.dragOffsetX = pt.x - ruler.x;
+      ruler.dragOffsetY = pt.y - ruler.y;
+      rulerGroup.style.cursor = 'grabbing';
+      e.preventDefault();
+    }
+  });
+
+  svg.addEventListener('mousemove', (e) => {
+    const pt = svgPoint(svg, e.clientX, e.clientY);
+
+    if (ruler.dragging) {
+      ruler.x = pt.x - ruler.dragOffsetX;
+      ruler.y = pt.y - ruler.dragOffsetY;
+      // Clamp
+      ruler.x = Math.max(-200, Math.min(400, ruler.x));
+      ruler.y = Math.max(-50, Math.min(320, ruler.y));
+      updateRulerTransform();
+    }
+
+    if (rotating) {
+      // Angle based on mouse position relative to ruler center
+      const cx = ruler.x + 275;
+      const cy = ruler.y + 50;
+      const angle = Math.atan2(pt.y - cy, pt.x - cx) * 180 / Math.PI;
+      ruler.angle = Math.max(-45, Math.min(45, angle));
+      updateRulerTransform();
+    }
+  });
+
+  const endDrag = () => {
+    ruler.dragging = false;
+    rotating = false;
+    const rg = document.getElementById('rulerGroup');
+    if (rg) rg.style.cursor = 'grab';
+  };
+
+  svg.addEventListener('mouseup', endDrag);
+  svg.addEventListener('mouseleave', endDrag);
+
+  // Scroll wheel rotation
+  viewport.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 1 : -1;
+    ruler.angle = Math.max(-45, Math.min(45, ruler.angle + delta));
+    updateRulerTransform();
+  }, { passive: false });
+
+  // Touch support
+  let touchStartX, touchStartY, touchStartAngle;
+  svg.addEventListener('touchstart', (e) => {
+    const touch = e.touches[0];
+    const target = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (target && target.closest && target.closest('#rulerGroup')) {
+      ruler.dragging = true;
+      const pt = svgPoint(svg, touch.clientX, touch.clientY);
+      ruler.dragOffsetX = pt.x - ruler.x;
+      ruler.dragOffsetY = pt.y - ruler.y;
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  svg.addEventListener('touchmove', (e) => {
+    if (ruler.dragging && e.touches.length === 1) {
+      const pt = svgPoint(svg, e.touches[0].clientX, e.touches[0].clientY);
+      ruler.x = Math.max(-200, Math.min(400, pt.x - ruler.dragOffsetX));
+      ruler.y = Math.max(-50, Math.min(320, pt.y - ruler.dragOffsetY));
+      updateRulerTransform();
+      e.preventDefault();
+    }
+    // Two-finger rotate
+    if (e.touches.length === 2) {
+      const dx = e.touches[1].clientX - e.touches[0].clientX;
+      const dy = e.touches[1].clientY - e.touches[0].clientY;
+      ruler.angle = Math.max(-45, Math.min(45, Math.atan2(dy, dx) * 180 / Math.PI));
+      updateRulerTransform();
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  svg.addEventListener('touchend', () => { ruler.dragging = false; });
+}
+
+// ============================================================
+// PARALLAX
+// ============================================================
+function updateParallax(angleDeg) {
+  const angle = parseFloat(angleDeg);
+  const label = document.getElementById('parallaxLabel');
+  if (angle === 0) {
+    label.textContent = "0° (straight down) ✓";
+    label.style.color = 'var(--success)';
+  } else {
+    label.textContent = `${Math.abs(angle)}° ${angle > 0 ? 'right' : 'left'} of center`;
+    label.style.color = 'var(--warning)';
+  }
+  // Simulate parallax shift: ruler thickness ~3mm → at angle, shift = thickness * tan(angle)
+  // In our SVG scale, about 0.8px per degree
+  parallaxOffset = angle * 0.8;
+  updateRulerTransform();
+}
+
+// ============================================================
+// GAME LOGIC
+// ============================================================
+function initExercise() {
+  currentRound = 0;
+  score = { correct: 0, total: 0, streak: 0, maxStreak: 0 };
+  roundResults = [];
+  selectedDisposition = null;
+  selectedBracket = null;
+  updateScoreDisplay();
+  buildRoundIndicator();
+  loadRound(0);
+  initDragHandlers();
+}
+
+function buildRoundIndicator() {
+  const c = document.getElementById('roundIndicator');
+  c.innerHTML = '';
+  SCENARIOS.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'round-dot' + (i === 0 ? ' current' : '');
+    d.id = `dot-${i}`;
+    c.appendChild(d);
+  });
+}
+
+function loadRound(index) {
+  const s = SCENARIOS[index];
+  document.getElementById('scenarioTitle').textContent = s.title;
+  document.getElementById('scenarioText').textContent = s.prompt;
+  document.getElementById('feedbackOverlay').classList.remove('visible');
+  document.getElementById('tipText').textContent = s.tip;
+  selectedDisposition = null;
+  selectedBracket = null;
+  parallaxOffset = 0;
+
+  // Reset ruler position
+  ruler.x = s.rulerStartX;
+  ruler.y = s.rulerStartY;
+  ruler.angle = s.rulerStartAngle;
+
+  // Answer mode
+  const answerArea = document.getElementById('answerArea');
+  const bracketArea = document.getElementById('bracketArea');
+  const parallaxCtrl = document.getElementById('parallaxControls');
+
+  if (s.answerMode === 'bracket') {
+    answerArea.style.display = 'none';
+    bracketArea.classList.add('visible');
+    document.querySelectorAll('.bracket-btn').forEach(b => b.classList.remove('selected'));
+  } else {
+    answerArea.style.display = 'flex';
+    bracketArea.classList.remove('visible');
+    document.getElementById('answerInput').value = '';
+    setTimeout(() => document.getElementById('answerInput').focus(), 100);
+  }
+
+  // Parallax controls
+  if (s.isParallax) {
+    parallaxCtrl.classList.add('visible');
+    document.getElementById('parallaxSlider').value = 15;
+    updateParallax(15);
+  } else {
+    parallaxCtrl.classList.remove('visible');
+  }
+
+  // Disposition
+  const dispArea = document.getElementById('dispositionArea');
+  if (s.needsDisposition) {
+    dispArea.classList.add('visible');
+    document.getElementById('acceptBtn').className = 'disposition-btn';
+    document.getElementById('rejectBtn').className = 'disposition-btn';
+  } else {
+    dispArea.classList.remove('visible');
+  }
+
+  // Criteria
+  const cc = document.getElementById('criteriaContent');
+  if (s.criteria && s.criteria.length > 0) {
+    cc.innerHTML = s.criteria.map(c => `<div class="criteria-item"><span class="criteria-label">${c.label}</span><span class="criteria-value">${c.value}</span></div>`).join('');
+  } else {
+    cc.innerHTML = '<div class="criteria-item"><span class="criteria-label">No disposition required</span></div>';
+  }
+
+  // Round dots
+  SCENARIOS.forEach((_, i) => {
+    const dot = document.getElementById(`dot-${i}`);
+    dot.className = 'round-dot';
+    if (i < index) dot.className = 'round-dot ' + (roundResults[i] ? 'completed' : 'wrong');
+    else if (i === index) dot.className = 'round-dot current';
+  });
+
+  // Draw scene
+  const svg = document.getElementById('measureSvg');
+  drawScene(svg, s);
+
+  // Enable submit
+  document.getElementById('submitBtn').disabled = false;
+  const bsb = document.getElementById('bracketSubmitBtn');
+  if (bsb) bsb.disabled = false;
+
+  // Instructions visibility
+  document.getElementById('rulerInstructions').style.opacity = '1';
+  setTimeout(() => { document.getElementById('rulerInstructions').style.opacity = '0'; }, 4000);
+
+  // Next button text
+  document.getElementById('nextBtn').textContent = index >= SCENARIOS.length - 1 ? 'See Results' : 'Next Round →';
+}
+
+function selectBracket(value) {
+  selectedBracket = value;
+  document.querySelectorAll('.bracket-btn').forEach(b => {
+    b.classList.remove('selected');
+    if (b.onclick.toString().includes(`'${value}'`)) b.classList.add('selected');
+  });
+}
+
+function setDisposition(value) {
+  selectedDisposition = value;
+  document.getElementById('acceptBtn').className = 'disposition-btn' + (value === 'accept' ? ' selected-accept' : '');
+  document.getElementById('rejectBtn').className = 'disposition-btn' + (value === 'reject' ? ' selected-reject' : '');
+}
+
+function submitAnswer() {
+  const s = SCENARIOS[currentRound];
+  let measurementCorrect = false;
+  let userValueDisplay = '';
+
+  if (s.answerMode === 'bracket') {
+    if (!selectedBracket) {
+      document.getElementById('bracketArea').style.border = '2px solid var(--error)';
+      setTimeout(() => document.getElementById('bracketArea').style.border = 'none', 1000);
+      return;
+    }
+    measurementCorrect = (selectedBracket === s.correctBracket);
+    const bracketLabels = { below: 'Below 1/32"', approximately: 'Approx. 1/32"', above: 'Above 1/32"' };
+    userValueDisplay = bracketLabels[selectedBracket];
+  } else {
+    const input = document.getElementById('answerInput').value.trim();
+    const userValue = parseFloat(input);
+    if (isNaN(userValue)) {
+      document.getElementById('answerInput').style.borderColor = 'var(--error)';
+      setTimeout(() => document.getElementById('answerInput').style.borderColor = '', 500);
+      return;
+    }
+    measurementCorrect = Math.abs(userValue - s.trueValue) <= s.tolerance;
+    userValueDisplay = userValue.toFixed(3) + '"';
+  }
+
+  // Disposition check
+  let dispositionCorrect = true;
+  if (s.needsDisposition) {
+    if (!selectedDisposition) {
+      document.getElementById('dispositionArea').style.border = '2px solid var(--error)';
+      setTimeout(() => document.getElementById('dispositionArea').style.border = 'none', 1000);
+      return;
+    }
+    dispositionCorrect = (selectedDisposition === s.correctDisposition);
+  }
+
+  const isCorrect = measurementCorrect && dispositionCorrect;
+
+  score.total++;
+  if (isCorrect) { score.correct++; score.streak++; if (score.streak > score.maxStreak) score.maxStreak = score.streak; }
+  else { score.streak = 0; }
+  roundResults[currentRound] = isCorrect;
+  updateScoreDisplay();
+
+  showFeedback(isCorrect, userValueDisplay, s, measurementCorrect, dispositionCorrect);
+
+  document.getElementById('submitBtn').disabled = true;
+  const bsb = document.getElementById('bracketSubmitBtn');
+  if (bsb) bsb.disabled = true;
+}
+
+function showFeedback(isCorrect, userValueDisplay, scenario, measurementCorrect, dispositionCorrect) {
+  const overlay = document.getElementById('feedbackOverlay');
+  document.getElementById('feedbackIcon').className = 'feedback-icon ' + (isCorrect ? 'correct' : 'incorrect');
+  document.getElementById('feedbackIcon').textContent = isCorrect ? '✓' : '✗';
+  document.getElementById('feedbackTitle').className = 'feedback-title ' + (isCorrect ? 'correct' : 'incorrect');
+  document.getElementById('feedbackTitle').textContent = isCorrect ? 'Correct!' : 'Incorrect';
+
+  let vh = `<span>Your answer: <strong>${userValueDisplay}</strong></span>`;
+  if (scenario.answerMode !== 'bracket') {
+    vh += `<span>Actual: <strong>${scenario.trueValue.toFixed(3)}"</strong></span>`;
+  }
+  if (scenario.needsDisposition) {
+    vh += `<span>Disposition: <strong style="color:${dispositionCorrect ? 'var(--success)' : 'var(--error)'}">${selectedDisposition ? selectedDisposition.toUpperCase() : 'NONE'}</strong></span>`;
+  }
+  document.getElementById('feedbackValues').innerHTML = vh;
+
+  document.getElementById('feedbackDetail').textContent = isCorrect ? scenario.correctFeedback : scenario.wrongFeedback;
+
+  const cons = document.getElementById('feedbackConsequence');
+  if (!isCorrect && scenario.consequence) { cons.style.display = 'block'; cons.textContent = scenario.consequence; }
+  else { cons.style.display = 'none'; }
+
+  overlay.classList.add('visible');
+}
+
+function nextRound() {
+  currentRound++;
+  if (currentRound >= SCENARIOS.length) showResults();
+  else loadRound(currentRound);
+}
+
+function updateScoreDisplay() {
+  document.getElementById('scoreCorrect').textContent = score.correct;
+  document.getElementById('scoreTotal').textContent = score.total;
+  document.getElementById('scoreAccuracy').textContent = score.total > 0 ? Math.round(score.correct / score.total * 100) + '%' : '—';
+  document.getElementById('scoreStreak').textContent = score.streak;
+}
+
+function showResults() {
+  const pct = Math.round(score.correct / SCENARIOS.length * 100);
+  const pass = pct >= 75;
+  document.getElementById('mainArea').innerHTML = `
+    <div class="results-screen visible">
+      <div style="font-size:14px;text-transform:uppercase;letter-spacing:2px;color:var(--text-dim);">Exercise Complete</div>
+      <div class="results-grade ${pass?'pass':'fail'}">${pct}%</div>
+      <div style="font-size:20px;font-weight:700;color:${pass?'var(--success)':'var(--error)'};margin-bottom:8px;">${pass?'PASSED':'NEEDS IMPROVEMENT'}</div>
+      <div class="results-summary">${pass
+        ? 'You demonstrated competency in reading a welding scale in thousandths. Continue practicing borderline measurements and always read perpendicular to the surface.'
+        : 'Review the fundamentals: zero reference points, parallax, fraction-to-decimal conversions, and edge-to-edge spacing before re-attempting.'}</div>
+      <div class="results-breakdown">
+        <div class="results-stat"><div class="stat-value" style="color:var(--success)">${score.correct}</div><div class="stat-label">Correct</div></div>
+        <div class="results-stat"><div class="stat-value" style="color:var(--error)">${SCENARIOS.length - score.correct}</div><div class="stat-label">Incorrect</div></div>
+        <div class="results-stat"><div class="stat-value" style="color:var(--accent)">${score.maxStreak}</div><div class="stat-label">Best Streak</div></div>
+      </div>
+      <div style="margin-top:8px;font-size:13px;color:var(--text-dim);max-width:500px;line-height:1.8;">
+        ${roundResults.map((r,i) => `<span style="color:${r?'var(--success)':'var(--error)'};margin-right:4px;">R${i+1}: ${r?'✓':'✗'}</span>`).join(' · ')}
+      </div>
+      <button class="restart-btn" onclick="location.reload()">Restart Exercise</button>
+    </div>`;
+}
+
+// Enter key submits
+document.getElementById('answerInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitAnswer(); });
+
+// Init
+initExercise();
+</script>
+</body>
+</html>
