@@ -905,7 +905,7 @@ function initDragHandlers() {
       const cx = ruler.x + 275;
       const cy = ruler.y + 50;
       const angle = Math.atan2(pt.y - cy, pt.x - cx) * 180 / Math.PI;
-      ruler.angle = Math.max(-45, Math.min(45, angle));
+      ruler.angle = Math.max(-90, Math.min(90, angle));
       updateRulerTransform();
     }
   });
@@ -924,7 +924,7 @@ function initDragHandlers() {
   viewport.addEventListener('wheel', (e) => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? 1 : -1;
-    ruler.angle = Math.max(-45, Math.min(45, ruler.angle + delta));
+    ruler.angle = Math.max(-90, Math.min(90, ruler.angle + delta));
     updateRulerTransform();
   }, { passive: false });
 
@@ -954,7 +954,7 @@ function initDragHandlers() {
     if (e.touches.length === 2) {
       const dx = e.touches[1].clientX - e.touches[0].clientX;
       const dy = e.touches[1].clientY - e.touches[0].clientY;
-      ruler.angle = Math.max(-45, Math.min(45, Math.atan2(dy, dx) * 180 / Math.PI));
+      ruler.angle = Math.max(-90, Math.min(90, Math.atan2(dy, dx) * 180 / Math.PI));
       updateRulerTransform();
       e.preventDefault();
     }
