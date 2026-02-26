@@ -1,0 +1,1685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Radiographic Testing: Distance Concepts Interactive Exercises</title>
+<style>
+  :root {
+    --primary: #1a5276;
+    --primary-light: #2980b9;
+    --accent: #e67e22;
+    --accent-light: #f39c12;
+    --success: #27ae60;
+    --danger: #c0392b;
+    --bg: #f4f6f8;
+    --card: #ffffff;
+    --text: #2c3e50;
+    --text-light: #7f8c8d;
+    --border: #dce1e6;
+    --shadow: 0 4px 15px rgba(0,0,0,0.08);
+    --radius: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    color: white;
+    padding: 28px 40px;
+    text-align: center;
+  }
+  .header h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 4px; }
+  .header p { opacity: 0.85; font-size: 1rem; }
+
+  /* PROGRESS BAR */
+  .progress-container {
+    background: var(--card);
+    padding: 16px 40px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .progress-label { font-size: 0.85rem; color: var(--text-light); white-space: nowrap; }
+  .progress-bar {
+    flex: 1;
+    height: 10px;
+    background: var(--border);
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--success), #2ecc71);
+    border-radius: 5px;
+    transition: width 0.5s ease;
+    width: 0%;
+  }
+  .progress-text { font-size: 0.85rem; font-weight: 600; color: var(--primary); }
+
+  /* TAB NAV */
+  .tab-nav {
+    display: flex;
+    gap: 4px;
+    padding: 16px 40px 0;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    color: var(--text-light);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    border-radius: 8px 8px 0 0;
+    position: relative;
+  }
+  .tab-btn:hover { background: var(--bg); color: var(--text); }
+  .tab-btn.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+    background: var(--bg);
+    font-weight: 600;
+  }
+  .tab-btn .badge {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .badge.done { background: var(--success); }
+  .badge.pending { background: var(--border); }
+  .tab-btn.locked {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+  .tab-btn.locked .badge { background: var(--border); }
+
+  /* MAIN CONTENT */
+  .main { padding: 30px 40px; max-width: 1200px; margin: 0 auto; }
+
+  .exercise {
+    display: none;
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 36px;
+    animation: fadeIn 0.3s ease;
+  }
+  .exercise.active { display: block; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .exercise h2 { font-size: 1.4rem; color: var(--primary); margin-bottom: 6px; }
+  .exercise .subtitle { color: var(--text-light); font-size: 0.95rem; margin-bottom: 24px; }
+
+  /* INFO BOX */
+  .info-box {
+    background: #eaf2f8;
+    border-left: 4px solid var(--primary-light);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 24px;
+    font-size: 0.92rem;
+  }
+  .info-box strong { color: var(--primary); }
+
+  /* CANVAS / INTERACTIVE AREAS */
+  .interactive-area {
+    position: relative;
+    background: #fafbfc;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    min-height: 400px;
+    margin: 20px 0;
+    overflow: hidden;
+  }
+
+  /* DRAGGABLE ITEMS */
+  .draggable {
+    position: absolute;
+    cursor: grab;
+    user-select: none;
+    transition: box-shadow 0.2s;
+    z-index: 10;
+  }
+  .draggable:active { cursor: grabbing; }
+  .draggable:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+
+  .component-card {
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 18px;
+    text-align: center;
+    min-width: 100px;
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+  .component-card.source { border-color: var(--danger); color: var(--danger); }
+  .component-card.source .icon { font-size: 1.8rem; }
+  .component-card.object { border-color: var(--accent); color: var(--accent); }
+  .component-card.object .icon { font-size: 1.8rem; }
+  .component-card.film { border-color: var(--primary-light); color: var(--primary-light); }
+  .component-card.film .icon { font-size: 1.8rem; }
+
+  .drop-zone {
+    position: absolute;
+    border: 2px dashed #bbb;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #aaa;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  .drop-zone.highlight { border-color: var(--accent); background: rgba(230,126,34,0.08); }
+  .drop-zone.filled { border-style: solid; border-color: var(--success); background: rgba(39,174,96,0.06); }
+
+  /* POPUP / MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 36px;
+    max-width: 560px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    position: relative;
+  }
+  .modal h3 { color: var(--primary); margin-bottom: 12px; font-size: 1.2rem; }
+  .modal p { margin-bottom: 12px; font-size: 0.95rem; }
+  .modal .close-btn {
+    position: absolute;
+    top: 14px;
+    right: 18px;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-light);
+    cursor: pointer;
+  }
+  .modal .close-btn:hover { color: var(--text); }
+
+  /* BUTTONS */
+  .btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: var(--primary-light); }
+  .btn-accent { background: var(--accent); color: white; }
+  .btn-accent:hover { background: var(--accent-light); }
+  .btn-success { background: var(--success); color: white; }
+  .btn-success:hover { background: #2ecc71; }
+  .btn-outline {
+    background: transparent;
+    border: 2px solid var(--primary);
+    color: var(--primary);
+  }
+  .btn-outline:hover { background: var(--primary); color: white; }
+
+  /* SLIDERS */
+  .slider-group { margin: 16px 0; }
+  .slider-group label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .slider-group input[type="range"] {
+    width: 100%;
+    accent-color: var(--primary);
+    height: 6px;
+  }
+
+  /* SVG DIAGRAM */
+  .diagram-svg { width: 100%; height: 380px; }
+  .diagram-svg text { font-family: 'Segoe UI', system-ui, sans-serif; }
+
+  /* TOOLTIP */
+  .tooltip-trigger {
+    display: inline-block;
+    border-bottom: 2px dotted var(--accent);
+    cursor: help;
+    position: relative;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .tooltip-trigger .tooltip-content {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--text);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 400;
+    width: 260px;
+    z-index: 100;
+    line-height: 1.5;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+  .tooltip-trigger .tooltip-content::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: var(--text);
+  }
+  .tooltip-trigger:hover .tooltip-content { display: block; }
+
+  /* SCENARIO CARDS */
+  .scenario-card {
+    background: #fefefe;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 16px 0;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .scenario-card:hover { border-color: var(--primary-light); box-shadow: var(--shadow); }
+  .scenario-card.selected { border-color: var(--primary); background: #eaf2f8; }
+  .scenario-card h4 { color: var(--primary); margin-bottom: 6px; }
+  .scenario-card p { font-size: 0.9rem; color: var(--text-light); }
+
+  /* QUIZ */
+  .quiz-question {
+    background: #fafbfc;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 16px 0;
+  }
+  .quiz-question h4 { margin-bottom: 14px; font-size: 1rem; }
+  .quiz-option {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 12px 18px;
+    margin: 6px 0;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+  }
+  .quiz-option:hover { border-color: var(--primary-light); background: #f0f7fc; }
+  .quiz-option.correct { border-color: var(--success); background: #e8f8ef; color: var(--success); font-weight: 600; }
+  .quiz-option.incorrect { border-color: var(--danger); background: #fde8e8; color: var(--danger); }
+  .quiz-option.disabled { pointer-events: none; opacity: 0.7; }
+  .quiz-feedback {
+    margin-top: 12px;
+    padding: 14px 18px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    display: none;
+  }
+  .quiz-feedback.show { display: block; }
+  .quiz-feedback.correct-fb { background: #e8f8ef; color: #1e8449; border: 1px solid #a9dfbf; }
+  .quiz-feedback.incorrect-fb { background: #fde8e8; color: #922b21; border: 1px solid #f5b7b1; }
+
+  /* FORMULA DISPLAY */
+  .formula-box {
+    background: #2c3e50;
+    color: #ecf0f1;
+    padding: 20px 28px;
+    border-radius: var(--radius);
+    font-family: 'Courier New', monospace;
+    font-size: 1.1rem;
+    text-align: center;
+    margin: 16px 0;
+    letter-spacing: 0.5px;
+  }
+  .formula-box .highlight { color: var(--accent-light); font-weight: 700; }
+
+  /* INPUT FIELDS */
+  .calc-input {
+    width: 100px;
+    padding: 8px 12px;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    font-size: 1rem;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .calc-input:focus { border-color: var(--primary-light); }
+  .calc-input.correct { border-color: var(--success); background: #e8f8ef; }
+  .calc-input.incorrect { border-color: var(--danger); background: #fde8e8; }
+
+  /* RESULT DISPLAY */
+  .result-display {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin: 8px 0;
+  }
+  .result-display.good { background: #e8f8ef; color: var(--success); }
+  .result-display.warn { background: #fef9e7; color: #d4a800; }
+  .result-display.bad { background: #fde8e8; color: var(--danger); }
+
+  /* GRID LAYOUTS */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .three-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+  /* NAV BUTTONS */
+  .nav-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* CLICKABLE LEARN ITEMS */
+  .learn-item {
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .learn-item:hover { border-color: var(--primary-light); transform: translateY(-2px); box-shadow: var(--shadow); }
+  .learn-item .learn-icon { font-size: 2.5rem; margin-bottom: 8px; }
+  .learn-item h4 { color: var(--primary); font-size: 0.95rem; }
+  .learn-item p { font-size: 0.8rem; color: var(--text-light); margin-top: 4px; }
+
+  /* CHALLENGE CARD */
+  .challenge {
+    background: linear-gradient(135deg, #fef9e7, #fdebd0);
+    border: 2px solid var(--accent-light);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 20px 0;
+  }
+  .challenge h4 { color: var(--accent); margin-bottom: 8px; }
+
+  /* IMAGE QUALITY METER */
+  .quality-meter {
+    height: 24px;
+    background: var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 8px 0;
+    position: relative;
+  }
+  .quality-fill {
+    height: 100%;
+    border-radius: 12px;
+    transition: all 0.5s ease;
+  }
+  .quality-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+
+  /* ANIMATION for X-ray beam */
+  @keyframes pulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+  .beam-pulse { animation: pulse 2s ease-in-out infinite; }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .header { padding: 20px; }
+    .main { padding: 16px; }
+    .exercise { padding: 20px; }
+    .two-col, .three-col { grid-template-columns: 1fr; }
+    .tab-nav { padding: 10px 16px 0; }
+    .tab-btn { padding: 8px 12px; font-size: 0.8rem; }
+    .progress-container { padding: 12px 16px; }
+  }
+
+  /* Congratulations */
+  .congrats {
+    text-align: center;
+    padding: 40px;
+  }
+  .congrats .trophy { font-size: 4rem; margin-bottom: 16px; }
+  .congrats h2 { color: var(--success); font-size: 1.6rem; margin-bottom: 10px; }
+
+  /* Score circle */
+  .score-circle {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    border: 6px solid var(--success);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--success);
+    margin: 16px 0;
+  }
+
+  .flex-center { display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .mt-16 { margin-top: 16px; }
+  .mb-16 { margin-bottom: 16px; }
+  .text-center { text-align: center; }
+
+  /* Shadow diagram styling */
+  .shadow-demo {
+    background: #1a1a2e;
+    border-radius: var(--radius);
+    padding: 20px;
+    margin: 16px 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <h1>Radiographic Testing: Distance Concepts</h1>
+  <p>Interactive Learning Module &mdash; SOD, OFD, and SFD</p>
+</div>
+
+<!-- PROGRESS -->
+<div class="progress-container">
+  <span class="progress-label">Module Progress</span>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <span class="progress-text" id="progressText">0 / 5</span>
+</div>
+
+<!-- TABS -->
+<div class="tab-nav" id="tabNav">
+  <button class="tab-btn active" onclick="showExercise(0)">1. Learn the Setup<span class="badge pending" id="badge0"></span></button>
+  <button class="tab-btn locked" onclick="showExercise(1)">2. Build a Setup<span class="badge pending" id="badge1"></span></button>
+  <button class="tab-btn locked" onclick="showExercise(2)">3. See the Effect<span class="badge pending" id="badge2"></span></button>
+  <button class="tab-btn locked" onclick="showExercise(3)">4. Calculate Ug<span class="badge pending" id="badge3"></span></button>
+  <button class="tab-btn locked" onclick="showExercise(4)">5. Final Quiz<span class="badge pending" id="badge4"></span></button>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+<!-- ========== EXERCISE 1: LEARN THE SETUP ========== -->
+<div class="exercise active" id="ex0">
+  <h2>Exercise 1: Learn the Radiographic Setup</h2>
+  <p class="subtitle">Click on each component to learn what it is and why it matters.</p>
+
+  <div class="info-box">
+    In radiographic testing, we use a <strong>radiation source</strong> to send X-rays or gamma rays through an <strong>object</strong> (the part we're inspecting) onto a <strong>film</strong> (or detector) that captures the image. The distances between these three elements are critical for image quality.
+  </div>
+
+  <div class="three-col">
+    <div class="learn-item" onclick="showLearnPopup('source')">
+      <div class="learn-icon">&#9762;</div>
+      <h4>Radiation Source</h4>
+      <p>Click to learn more</p>
+    </div>
+    <div class="learn-item" onclick="showLearnPopup('object')">
+      <div class="learn-icon">&#9881;</div>
+      <h4>Test Object</h4>
+      <p>Click to learn more</p>
+    </div>
+    <div class="learn-item" onclick="showLearnPopup('film')">
+      <div class="learn-icon">&#9635;</div>
+      <h4>Film / Detector</h4>
+      <p>Click to learn more</p>
+    </div>
+  </div>
+
+  <div style="margin-top: 30px;">
+    <h3 style="margin-bottom: 12px; color: var(--primary);">The Three Key Distances</h3>
+    <p class="mb-16">Hover over each term to see its definition:</p>
+
+    <svg viewBox="0 0 800 300" class="diagram-svg" id="ex1Diagram">
+      <!-- Background -->
+      <rect x="0" y="0" width="800" height="300" fill="#fafbfc" rx="12"/>
+
+      <!-- Source -->
+      <circle cx="100" cy="150" r="30" fill="#c0392b" opacity="0.15"/>
+      <circle cx="100" cy="150" r="18" fill="#c0392b"/>
+      <text x="100" y="155" text-anchor="middle" fill="white" font-size="12" font-weight="700">SRC</text>
+      <text x="100" y="200" text-anchor="middle" fill="#c0392b" font-size="13" font-weight="600">Source</text>
+
+      <!-- X-ray beam -->
+      <polygon points="118,138 380,80 380,220 118,162" fill="#e74c3c" opacity="0.08" class="beam-pulse"/>
+      <line x1="118" y1="150" x2="380" y2="80" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+      <line x1="118" y1="150" x2="380" y2="220" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+
+      <!-- Object -->
+      <rect x="366" y="90" width="28" height="120" rx="4" fill="#e67e22"/>
+      <text x="380" y="155" text-anchor="middle" fill="white" font-size="11" font-weight="700">OBJ</text>
+      <text x="380" y="250" text-anchor="middle" fill="#e67e22" font-size="13" font-weight="600">Object</text>
+
+      <!-- Beam continues past object -->
+      <polygon points="400,90 680,60 680,240 400,210" fill="#e74c3c" opacity="0.04"/>
+
+      <!-- Film -->
+      <rect x="664" y="56" width="12" height="188" rx="2" fill="#2980b9"/>
+      <text x="670" y="155" text-anchor="middle" fill="white" font-size="9" font-weight="700">F</text>
+      <text x="670" y="280" text-anchor="middle" fill="#2980b9" font-size="13" font-weight="600">Film</text>
+
+      <!-- SOD arrow -->
+      <defs>
+        <marker id="arrowR" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#c0392b"/></marker>
+        <marker id="arrowL" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#c0392b"/></marker>
+        <marker id="arrowRo" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#e67e22"/></marker>
+        <marker id="arrowLo" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#e67e22"/></marker>
+        <marker id="arrowRb" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2980b9"/></marker>
+        <marker id="arrowLb" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#2980b9"/></marker>
+      </defs>
+
+      <!-- Dotted vertical reference lines at solid shape edges -->
+      <!-- Source right edge (x=118) -->
+      <line x1="118" y1="25" x2="118" y2="295" stroke="#c0392b" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+      <!-- Object near/left edge of solid rect (x=366) -->
+      <line x1="366" y1="25" x2="366" y2="295" stroke="#e67e22" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+      <!-- Object far/right edge of solid rect (x=394) -->
+      <line x1="394" y1="25" x2="394" y2="295" stroke="#e67e22" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+      <!-- Film near/left edge of solid rect (x=664) -->
+      <line x1="664" y1="25" x2="664" y2="295" stroke="#2980b9" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+
+      <!-- SOD: source right edge (118) to object near surface (366) -->
+      <line x1="118" y1="30" x2="366" y2="30" stroke="#c0392b" stroke-width="2" marker-start="url(#arrowL)" marker-end="url(#arrowR)"/>
+      <rect x="193" y="17" width="100" height="26" rx="4" fill="white" stroke="#c0392b" stroke-width="1.5"/>
+      <text x="243" y="35" text-anchor="middle" fill="#c0392b" font-size="13" font-weight="700" style="cursor:pointer" onclick="showLearnPopup('sod')">SOD &#9432;</text>
+
+      <!-- OFD: object near surface (366) to film near surface (664) -->
+      <line x1="366" y1="50" x2="664" y2="50" stroke="#e67e22" stroke-width="2" marker-start="url(#arrowLo)" marker-end="url(#arrowRo)"/>
+      <rect x="480" y="37" width="90" height="26" rx="4" fill="white" stroke="#e67e22" stroke-width="1.5"/>
+      <text x="525" y="55" text-anchor="middle" fill="#e67e22" font-size="13" font-weight="700" style="cursor:pointer" onclick="showLearnPopup('ofd')">OFD &#9432;</text>
+
+      <!-- SFD: source right edge (118) to film near surface (664) -->
+      <line x1="118" y1="70" x2="664" y2="70" stroke="#2980b9" stroke-width="2" marker-start="url(#arrowLb)" marker-end="url(#arrowRb)"/>
+      <rect x="342" y="57" width="90" height="26" rx="4" fill="white" stroke="#2980b9" stroke-width="1.5"/>
+      <text x="387" y="75" text-anchor="middle" fill="#2980b9" font-size="13" font-weight="700" style="cursor:pointer" onclick="showLearnPopup('sfd')">SFD &#9432;</text>
+
+      <!-- Relationship -->
+      <text x="400" y="15" text-anchor="middle" fill="#7f8c8d" font-size="11" font-style="italic">SFD = SOD + OFD</text>
+    </svg>
+  </div>
+
+  <div class="info-box" style="background: #fef9e7; border-left-color: var(--accent);">
+    <strong>Key Relationship:</strong> SFD = SOD + OFD. The Source-to-Film Distance always equals the Source-to-Object Distance plus the Object-to-Film Distance. Click on SOD, OFD, or SFD labels in the diagram above to learn more!
+  </div>
+
+  <div style="margin-top: 30px;">
+    <h3 style="margin-bottom: 12px; color: var(--primary);">Film in Contact with Object (Ideal Setup)</h3>
+    <p class="mb-16">When the film is placed directly against the object, OFD equals the object thickness and is minimised. This gives the sharpest possible image.</p>
+
+    <svg viewBox="0 0 800 300" class="diagram-svg">
+      <!-- Background -->
+      <rect x="0" y="0" width="800" height="300" fill="#fafbfc" rx="12"/>
+
+      <!-- Source -->
+      <circle cx="100" cy="150" r="30" fill="#c0392b" opacity="0.15"/>
+      <circle cx="100" cy="150" r="18" fill="#c0392b"/>
+      <text x="100" y="155" text-anchor="middle" fill="white" font-size="12" font-weight="700">SRC</text>
+      <text x="100" y="200" text-anchor="middle" fill="#c0392b" font-size="13" font-weight="600">Source</text>
+
+      <!-- X-ray beam -->
+      <polygon points="118,138 380,80 380,220 118,162" fill="#e74c3c" opacity="0.08" class="beam-pulse"/>
+      <line x1="118" y1="150" x2="380" y2="80" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+      <line x1="118" y1="150" x2="380" y2="220" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+
+      <!-- Object -->
+      <rect x="366" y="90" width="28" height="120" rx="4" fill="#e67e22"/>
+      <text x="380" y="155" text-anchor="middle" fill="white" font-size="11" font-weight="700">OBJ</text>
+      <text x="380" y="250" text-anchor="middle" fill="#e67e22" font-size="13" font-weight="600">Object</text>
+
+      <!-- Film (in contact with object, right against its far surface) -->
+      <rect x="394" y="90" width="12" height="120" rx="2" fill="#2980b9"/>
+      <text x="400" y="230" text-anchor="middle" fill="#2980b9" font-size="13" font-weight="600">Film</text>
+
+      <!-- Arrow markers (reuse ids with suffix 2) -->
+      <defs>
+        <marker id="arrowR2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#c0392b"/></marker>
+        <marker id="arrowL2" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#c0392b"/></marker>
+        <marker id="arrowRb2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2980b9"/></marker>
+        <marker id="arrowLb2" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#2980b9"/></marker>
+        <marker id="arrowRo2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#e67e22"/></marker>
+        <marker id="arrowLo2" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#e67e22"/></marker>
+      </defs>
+
+      <!-- Dotted vertical reference lines -->
+      <line x1="118" y1="25" x2="118" y2="260" stroke="#c0392b" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+      <line x1="366" y1="25" x2="366" y2="260" stroke="#e67e22" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+      <line x1="394" y1="25" x2="394" y2="260" stroke="#2980b9" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+
+      <!-- SOD: source right edge (118) to object near surface (366) -->
+      <line x1="118" y1="30" x2="366" y2="30" stroke="#c0392b" stroke-width="2" marker-start="url(#arrowL2)" marker-end="url(#arrowR2)"/>
+      <rect x="193" y="17" width="100" height="26" rx="4" fill="white" stroke="#c0392b" stroke-width="1.5"/>
+      <text x="243" y="35" text-anchor="middle" fill="#c0392b" font-size="13" font-weight="700">SOD</text>
+
+      <!-- OFD: object near surface (366) to film near surface (394) — very short -->
+      <line x1="366" y1="50" x2="394" y2="50" stroke="#e67e22" stroke-width="2" marker-start="url(#arrowLo2)" marker-end="url(#arrowRo2)"/>
+      <rect x="420" y="37" width="170" height="26" rx="4" fill="white" stroke="#e67e22" stroke-width="1.5"/>
+      <text x="505" y="55" text-anchor="middle" fill="#e67e22" font-size="12" font-weight="700">OFD (= T of OBJ)</text>
+
+      <!-- SFD: source right edge (118) to film near surface (394) -->
+      <line x1="118" y1="70" x2="394" y2="70" stroke="#2980b9" stroke-width="2" marker-start="url(#arrowLb2)" marker-end="url(#arrowRb2)"/>
+      <rect x="205" y="57" width="100" height="26" rx="4" fill="white" stroke="#2980b9" stroke-width="1.5"/>
+      <text x="255" y="75" text-anchor="middle" fill="#2980b9" font-size="13" font-weight="700">SFD</text>
+
+      <!-- Relationship -->
+      <text x="400" y="15" text-anchor="middle" fill="#7f8c8d" font-size="11" font-style="italic">Film in contact: OFD = object thickness only, SFD = SOD + OFD = SOD + T</text>
+    </svg>
+  </div>
+
+  <div class="info-box" style="background: #e8f8ef; border-left-color: var(--success);">
+    <strong>Best Practice:</strong> Placing the film directly against the object minimises OFD (it equals just the object thickness). This makes SFD nearly equal to SOD and produces the sharpest image with the least geometric unsharpness.
+  </div>
+
+  <div class="nav-buttons">
+    <div></div>
+    <button class="btn btn-primary" onclick="completeExercise(0); showExercise(1);">I understand! Next Exercise &rarr;</button>
+  </div>
+</div>
+
+<!-- ========== EXERCISE 2: BUILD A SETUP (DRAG & DROP) ========== -->
+<div class="exercise" id="ex1">
+  <h2>Exercise 2: Build the Radiographic Setup</h2>
+  <p class="subtitle">Drag each component to its correct position to create a proper radiographic setup.</p>
+
+  <div class="info-box">
+    Place the components in the correct order from left to right. Remember: radiation travels from the <strong>Source</strong> &rarr; through the <strong>Object</strong> &rarr; to the <strong>Film</strong>.
+  </div>
+
+  <div class="interactive-area" id="dragArea" style="height: 320px;">
+    <!-- Drop zones -->
+    <div class="drop-zone" id="dropZone1" style="left: 60px; top: 80px; width: 150px; height: 160px;" data-accept="source">
+      <span>Position 1<br>(Leftmost)</span>
+    </div>
+    <div class="drop-zone" id="dropZone2" style="left: 325px; top: 80px; width: 150px; height: 160px;" data-accept="object">
+      <span>Position 2<br>(Middle)</span>
+    </div>
+    <div class="drop-zone" id="dropZone3" style="left: 590px; top: 80px; width: 150px; height: 160px;" data-accept="film">
+      <span>Position 3<br>(Rightmost)</span>
+    </div>
+
+    <!-- Arrows between zones -->
+    <svg style="position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none;">
+      <text x="275" y="168" fill="#bbb" font-size="24" text-anchor="middle">&#10132;</text>
+      <text x="540" y="168" fill="#bbb" font-size="24" text-anchor="middle">&#10132;</text>
+    </svg>
+
+    <!-- Draggable components (start stacked at bottom) -->
+    <div class="draggable component-card film" id="dragFilm" style="left: 440px; top: 270px;" data-type="film">
+      <div class="icon">&#9635;</div>
+      Film
+    </div>
+    <div class="draggable component-card source" id="dragSource" style="left: 120px; top: 270px;" data-type="source">
+      <div class="icon">&#9762;</div>
+      Source
+    </div>
+    <div class="draggable component-card object" id="dragObject" style="left: 280px; top: 270px;" data-type="object">
+      <div class="icon">&#9881;</div>
+      Object
+    </div>
+  </div>
+
+  <div id="dragFeedback" style="display:none; margin-top: 16px;"></div>
+
+  <div class="nav-buttons">
+    <button class="btn btn-outline" onclick="showExercise(0)">&larr; Previous</button>
+    <button class="btn btn-primary" id="ex2NextBtn" onclick="completeExercise(1); showExercise(2);" style="display:none;">Next Exercise &rarr;</button>
+  </div>
+</div>
+
+<!-- ========== EXERCISE 3: INTERACTIVE SIMULATOR ========== -->
+<div class="exercise" id="ex2">
+  <h2>Exercise 3: See How Distances Affect Image Quality</h2>
+  <p class="subtitle">Adjust the sliders to move the source, object, and film. Watch how the shadow (image) changes!</p>
+
+  <div class="info-box">
+    <strong>Goal:</strong> Understand that as
+    <span class="tooltip-trigger">OFD<span class="tooltip-content">Object-to-Film Distance: The distance between object top and the film. Larger OFD = more geometric unsharpness (blurry edges).</span></span>
+    increases, the image becomes blurry (more geometric unsharpness). And as
+    <span class="tooltip-trigger">SOD<span class="tooltip-content">Source-to-Object Distance: The distance from the radiation source to the object. Larger SOD = sharper image (less unsharpness).</span></span>
+    increases, the image becomes sharper.
+  </div>
+
+  <div class="two-col">
+    <div>
+      <div class="slider-group">
+        <label>Source Position <span id="srcPosVal">50 mm</span></label>
+        <input type="range" min="20" max="150" value="50" step="1" id="srcPosSlider" oninput="updateSimulator()">
+      </div>
+      <div class="slider-group">
+        <label>Object Position <span id="objPosVal">300 mm</span></label>
+        <input type="range" min="200" max="500" value="300" step="1" id="objPosSlider" oninput="updateSimulator()">
+      </div>
+      <div class="slider-group">
+        <label>Film Position <span id="filmPosVal">600 mm</span></label>
+        <input type="range" min="400" max="800" value="600" step="1" id="filmPosSlider" oninput="updateSimulator()">
+      </div>
+      <div class="slider-group">
+        <label>Source Size (f) <span id="srcSizeVal">3 mm</span></label>
+        <input type="range" min="1" max="10" value="3" step="0.5" id="srcSizeSlider" oninput="updateSimulator()">
+      </div>
+
+      <div style="margin-top: 20px;">
+        <div style="display:flex; gap:12px; flex-wrap: wrap;">
+          <div class="result-display" id="sodDisplay">SOD: 250 mm</div>
+          <div class="result-display" id="ofdDisplay">OFD: 300 mm</div>
+          <div class="result-display" id="sfdDisplay">SFD: 550 mm</div>
+        </div>
+        <div style="margin-top: 12px;">
+          <div class="result-display" id="ugDisplay">Ug: — mm</div>
+        </div>
+        <div style="margin-top: 12px;">
+          <strong style="font-size:0.85rem;">Image Sharpness:</strong>
+          <div class="quality-meter">
+            <div class="quality-fill" id="qualityFill" style="width: 50%; background: linear-gradient(90deg, #e74c3c, #f39c12, #27ae60);"></div>
+            <div class="quality-label" id="qualityLabel">Moderate</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="shadow-demo" id="shadowDemo">
+        <svg viewBox="0 0 360 340" width="100%" height="340">
+          <rect x="0" y="0" width="360" height="340" fill="#1a1a2e" rx="8"/>
+
+          <!-- Source -->
+          <circle id="simSource" cx="30" cy="170" r="8" fill="#e74c3c"/>
+          <text id="simSrcLabel" x="30" y="200" text-anchor="middle" fill="#e74c3c" font-size="10" font-weight="600">Source</text>
+
+          <!-- Beam -->
+          <polygon id="simBeam" points="38,162 200,100 200,240 38,178" fill="#e74c3c" opacity="0.06"/>
+
+          <!-- Object -->
+          <rect id="simObject" x="195" y="120" width="10" height="100" rx="2" fill="#e67e22"/>
+          <text id="simObjLabel" x="200" y="245" text-anchor="middle" fill="#e67e22" font-size="10" font-weight="600">Object</text>
+
+          <!-- Film -->
+          <rect id="simFilm" x="320" y="40" width="6" height="260" rx="1" fill="#2980b9"/>
+          <text id="simFilmLabel" x="323" y="320" text-anchor="middle" fill="#2980b9" font-size="10" font-weight="600">Film</text>
+
+          <!-- Shadow on film -->
+          <rect id="simShadow" x="322" y="110" width="4" height="120" fill="#ecf0f1" opacity="0.7" rx="1"/>
+          <!-- Penumbra (unsharpness) top -->
+          <rect id="simPenTop" x="322" y="105" width="4" height="10" fill="#ecf0f1" opacity="0.25" rx="1"/>
+          <!-- Penumbra (unsharpness) bottom -->
+          <rect id="simPenBot" x="322" y="225" width="4" height="10" fill="#ecf0f1" opacity="0.25" rx="1"/>
+
+          <!-- Labels -->
+          <text x="180" y="20" text-anchor="middle" fill="#7f8c8d" font-size="10">Live Radiographic Setup Simulation</text>
+
+          <!-- SOD/OFD/SFD lines -->
+          <line id="simSODline" x1="30" y1="280" x2="200" y2="280" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="3"/>
+          <text id="simSODtext" x="115" y="295" text-anchor="middle" fill="#c0392b" font-size="9">SOD</text>
+          <line id="simOFDline" x1="200" y1="280" x2="323" y2="280" stroke="#e67e22" stroke-width="1.5" stroke-dasharray="3"/>
+          <text id="simOFDtext" x="262" y="295" text-anchor="middle" fill="#e67e22" font-size="9">OFD</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="challenge">
+    <h4>&#127775; Try These Challenges:</h4>
+    <p id="simChallenge">1. Make the image as <strong>sharp as possible</strong> (minimize Ug). What did you need to do?</p>
+    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="btn btn-accent" onclick="setSimChallenge(1)">Challenge 1: Sharpest Image</button>
+      <button class="btn btn-accent" onclick="setSimChallenge(2)">Challenge 2: Blurriest Image</button>
+      <button class="btn btn-accent" onclick="setSimChallenge(3)">Challenge 3: SFD = 700 mm</button>
+    </div>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn btn-outline" onclick="showExercise(1)">&larr; Previous</button>
+    <button class="btn btn-primary" onclick="completeExercise(2); showExercise(3);">Next Exercise &rarr;</button>
+  </div>
+</div>
+
+<!-- ========== EXERCISE 4: FORMULA CALCULATOR ========== -->
+<div class="exercise" id="ex3">
+  <h2>Exercise 4: Calculate Geometric Unsharpness</h2>
+  <p class="subtitle">Use the formula to solve real calculation problems. Type your answer and check it!</p>
+
+  <div class="formula-box">
+    <span class="highlight">Ug</span> = <span class="highlight">f</span> &times; <span class="highlight">OFD</span> / <span class="highlight">SOD</span>
+  </div>
+
+  <div class="info-box">
+    <strong>Where:</strong><br>
+    <strong>Ug</strong> = Geometric Unsharpness (mm) &mdash; the blurriness of the image edges<br>
+    <strong>f</strong> = Focal spot size of the source (mm)<br>
+    <strong>OFD</strong> = Object-to-Film Distance (mm)<br>
+    <strong>SOD</strong> = Source-to-Object Distance (mm)
+  </div>
+
+  <!-- Problem 1 -->
+  <div class="challenge" id="calcProblem1">
+    <h4>Problem 1 of 4</h4>
+    <p>A technician uses a source with a <strong>focal spot size of 3 mm</strong>. The <strong>SOD is 600 mm</strong> and the <strong>OFD is 30 mm</strong>.</p>
+    <p style="margin-top:10px;">What is the geometric unsharpness (Ug)?</p>
+    <div style="margin-top:14px; display:flex; align-items:center; gap:10px;">
+      <span>Ug = </span>
+      <input type="number" step="0.001" class="calc-input" id="calc1Input" placeholder="?">
+      <span> mm</span>
+      <button class="btn btn-success" onclick="checkCalc(1)">Check</button>
+    </div>
+    <div class="quiz-feedback" id="calc1Feedback"></div>
+  </div>
+
+  <!-- Problem 2 -->
+  <div class="challenge" id="calcProblem2" style="display:none;">
+    <h4>Problem 2 of 4</h4>
+    <p>An Ir-192 gamma ray source has a <strong>source size of 2.5 mm</strong>. The <strong>SFD is 800 mm</strong> and the <strong>OFD is 50 mm</strong>.</p>
+    <p style="margin-top:6px;"><em>Hint: First find SOD from SFD and OFD, then calculate Ug.</em></p>
+    <div style="margin-top:14px; display:flex; align-items:center; gap:10px; flex-wrap: wrap;">
+      <span>SOD = </span>
+      <input type="number" step="1" class="calc-input" id="calc2aSod" placeholder="?">
+      <span> mm &nbsp;&nbsp; Ug = </span>
+      <input type="number" step="0.001" class="calc-input" id="calc2Input" placeholder="?">
+      <span> mm</span>
+      <button class="btn btn-success" onclick="checkCalc(2)">Check</button>
+    </div>
+    <div class="quiz-feedback" id="calc2Feedback"></div>
+  </div>
+
+  <!-- Problem 3 -->
+  <div class="challenge" id="calcProblem3" style="display:none;">
+    <h4>Problem 3 of 4</h4>
+    <p>The maximum allowed Ug for a job is <strong>0.5 mm</strong>. The source focal spot is <strong>4 mm</strong> and the <strong>OFD is 40 mm</strong>.</p>
+    <p style="margin-top:6px;">What is the <strong>minimum SOD</strong> required to meet the Ug requirement?</p>
+    <p style="margin-top:4px;"><em>Hint: Rearrange the formula: SOD = f &times; OFD / Ug</em></p>
+    <div style="margin-top:14px; display:flex; align-items:center; gap:10px;">
+      <span>Min SOD = </span>
+      <input type="number" step="1" class="calc-input" id="calc3Input" placeholder="?">
+      <span> mm</span>
+      <button class="btn btn-success" onclick="checkCalc(3)">Check</button>
+    </div>
+    <div class="quiz-feedback" id="calc3Feedback"></div>
+  </div>
+
+  <!-- Problem 4 -->
+  <div class="challenge" id="calcProblem4" style="display:none;">
+    <h4>Problem 4 of 4</h4>
+    <p>A Co-60 gamma ray source (source size <strong>f = 5 mm</strong>) is placed at <strong>SOD = 500 mm</strong>. The object thickness is <strong>25 mm</strong> and the film is placed directly behind the object.</p>
+    <p style="margin-top:6px;">What is the OFD, and what is the Ug?</p>
+    <div style="margin-top:14px; display:flex; align-items:center; gap:10px; flex-wrap: wrap;">
+      <span>OFD = </span>
+      <input type="number" step="1" class="calc-input" id="calc4aOfd" placeholder="?">
+      <span> mm &nbsp;&nbsp; Ug = </span>
+      <input type="number" step="0.001" class="calc-input" id="calc4Input" placeholder="?">
+      <span> mm</span>
+      <button class="btn btn-success" onclick="checkCalc(4)">Check</button>
+    </div>
+    <div class="quiz-feedback" id="calc4Feedback"></div>
+  </div>
+
+  <div id="calcScore" style="display:none; margin-top:20px;" class="text-center">
+    <div class="score-circle" id="calcScoreCircle">0/4</div>
+    <p style="margin-top:8px; font-weight:600; color:var(--success);">Formula practice complete!</p>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn btn-outline" onclick="showExercise(2)">&larr; Previous</button>
+    <button class="btn btn-primary" id="ex4NextBtn" onclick="completeExercise(3); showExercise(4);" style="display:none;">Next Exercise &rarr;</button>
+  </div>
+</div>
+
+<!-- ========== EXERCISE 5: FINAL QUIZ ========== -->
+<div class="exercise" id="ex4">
+  <h2>Exercise 5: Final Assessment Quiz</h2>
+  <p class="subtitle">Test your understanding with these scenario-based questions. Choose the best answer for each.</p>
+
+  <div id="quizContainer"></div>
+
+  <div id="quizResult" style="display:none; margin-top: 24px;" class="text-center">
+    <div class="score-circle" id="quizScoreCircle">0/8</div>
+    <p id="quizResultMsg" style="margin-top:8px; font-weight:600;"></p>
+    <button class="btn btn-accent mt-16" onclick="resetQuiz()">Retake Quiz</button>
+  </div>
+
+  <!-- Completion Section (hidden until Finish clicked) -->
+  <div id="completionSection" style="display:none; margin-top: 30px;">
+    <div class="congrats">
+      <div class="trophy">&#127942;</div>
+      <h2>Congratulations, You've Completed the Module!</h2>
+      <p style="margin-top:10px; color:var(--text-light); font-size: 1rem;">You have successfully worked through all 5 exercises covering Source-to-Object Distance (SOD), Object-to-Film Distance (OFD), Source-to-Film Distance (SFD), and the Geometric Unsharpness formula.</p>
+      <div style="margin-top: 20px; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+        <div style="background:#eaf2f8; border-radius:10px; padding:16px 24px; text-align:center;">
+          <div style="font-size:1.4rem; font-weight:700; color:var(--primary);" id="finalCalcScore">—</div>
+          <div style="font-size:0.8rem; color:var(--text-light);">Calculation Score</div>
+        </div>
+        <div style="background:#eaf2f8; border-radius:10px; padding:16px 24px; text-align:center;">
+          <div style="font-size:1.4rem; font-weight:700; color:var(--primary);" id="finalQuizScore">—</div>
+          <div style="font-size:0.8rem; color:var(--text-light);">Quiz Score</div>
+        </div>
+      </div>
+      <p style="margin-top: 24px; font-size: 0.95rem; color: var(--text);">Want to go through the module again and improve your scores?</p>
+      <button class="btn btn-primary mt-16" onclick="restartModule()" style="font-size: 1rem; padding: 14px 32px;">Restart Module for Practice</button>
+    </div>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn btn-outline" onclick="showExercise(3)">&larr; Previous</button>
+    <button class="btn btn-success" id="submitQuizBtn" onclick="submitQuiz()">Submit Quiz</button>
+    <button class="btn btn-success" id="finishModuleBtn" onclick="showCompletion()" style="display:none;">Finish Module &#10003;</button>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <button class="close-btn" onclick="closeModalDirect()">&times;</button>
+    <h3 id="modalTitle"></h3>
+    <div id="modalBody"></div>
+    <div style="margin-top:18px; text-align:right;">
+      <button class="btn btn-primary" onclick="closeModalDirect()">Got it!</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== STATE ==========
+const exerciseCompleted = [false, false, false, false, false];
+let calcCorrect = 0;
+let calcAttempted = new Set();
+let calcSolved = new Set();
+let calcAttemptCount = {};
+let quizAnswered = {};
+
+// ========== NAVIGATION ==========
+function showExercise(idx) {
+  // Block navigation to locked tabs (only tab 0 is unlocked by default)
+  const tabs = document.querySelectorAll('.tab-btn');
+  if (idx > 0 && tabs[idx].classList.contains('locked')) return;
+
+  document.querySelectorAll('.exercise').forEach((el, i) => {
+    el.classList.toggle('active', i === idx);
+  });
+  tabs.forEach((btn, i) => {
+    btn.classList.toggle('active', i === idx);
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (idx === 2) updateSimulator();
+  if (idx === 4 && !document.getElementById('quizContainer').innerHTML) buildQuiz();
+}
+
+function completeExercise(idx) {
+  if (!exerciseCompleted[idx]) {
+    exerciseCompleted[idx] = true;
+    document.getElementById('badge' + idx).className = 'badge done';
+    updateProgress();
+    // Unlock the next tab
+    const tabs = document.querySelectorAll('.tab-btn');
+    if (idx + 1 < tabs.length) {
+      tabs[idx + 1].classList.remove('locked');
+    }
+  }
+}
+
+function updateProgress() {
+  const done = exerciseCompleted.filter(Boolean).length;
+  const total = exerciseCompleted.length;
+  document.getElementById('progressFill').style.width = (done / total * 100) + '%';
+  document.getElementById('progressText').textContent = done + ' / ' + total;
+}
+
+// ========== MODAL ==========
+function openModal(title, bodyHTML) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = bodyHTML;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function closeModal(e) { if (e.target === e.currentTarget) closeModalDirect(); }
+function closeModalDirect() { document.getElementById('modalOverlay').classList.remove('show'); }
+
+// ========== EXERCISE 1: LEARN POPUPS ==========
+function showLearnPopup(type) {
+  const content = {
+    source: {
+      title: 'Radiation Source',
+      body: `<p>The <strong>radiation source</strong> emits X-rays or gamma rays that pass through the test object.</p>
+        <p style="margin-top:10px;">Common sources include:</p>
+        <p>&bull; <strong>X-ray tubes</strong> &mdash; produce X-rays electrically (adjustable energy)</p>
+        <p>&bull; <strong>Iridium-192 (Ir-192)</strong> &mdash; a gamma ray isotope commonly used in field work</p>
+        <p>&bull; <strong>Cobalt-60 (Co-60)</strong> &mdash; a higher-energy gamma source for thick materials</p>
+        <p style="margin-top:10px;">The source has a <strong>focal spot size (f)</strong>, also known as the <strong>source size (SS)</strong>, which directly affects image sharpness. A smaller focal spot produces a sharper image.</p>`
+    },
+    object: {
+      title: 'Test Object (Specimen)',
+      body: `<p>The <strong>test object</strong> is the part being inspected &mdash; for example, a weld, casting, or pipe section.</p>
+        <p style="margin-top:10px;">Key points:</p>
+        <p>&bull; Radiation passes <em>through</em> the object and is absorbed differently depending on material thickness and density</p>
+        <p>&bull; Defects like cracks, porosity, or inclusions appear as darker or lighter areas on the film</p>
+        <p>&bull; The object's <strong>thickness</strong> determines the OFD when the film is placed on the far side</p>`
+    },
+    film: {
+      title: 'Film / Detector',
+      body: `<p>The <strong>film</strong> (or digital detector) captures the radiographic image after radiation passes through the object.</p>
+        <p style="margin-top:10px;">Important facts:</p>
+        <p>&bull; Film darkens where more radiation hits it (areas with less material or defects)</p>
+        <p>&bull; Modern systems may use <strong>computed radiography (CR)</strong> or <strong>digital radiography (DR)</strong> instead of traditional film</p>
+        <p>&bull; The film should be placed as <strong>close to the object as possible</strong> to minimize geometric unsharpness</p>`
+    },
+    sod: {
+      title: 'Source-to-Object Distance (SOD)',
+      body: `<p><strong>SOD</strong> is the distance from the radiation source to the near surface of the object being inspected.</p>
+        <p style="margin-top:10px;"><strong>Effect on image quality:</strong></p>
+        <p>&bull; <strong>Increasing SOD</strong> &rarr; radiation rays become more parallel &rarr; <strong>sharper image</strong> (less geometric unsharpness)</p>
+        <p>&bull; <strong>Decreasing SOD</strong> &rarr; more divergent rays &rarr; <strong>blurrier image</strong></p>
+        <p style="margin-top:10px;"><strong>Trade-off:</strong> Larger SOD means longer exposure times because radiation intensity decreases with distance (inverse square law).</p>`
+    },
+    ofd: {
+      title: 'Object-to-Film Distance (OFD)',
+      body: `<p><strong>OFD</strong> is the distance from the far surface of the object to the film (detector).</p>
+        <p style="margin-top:10px;"><strong>Effect on image quality:</strong></p>
+        <p>&bull; <strong>Increasing OFD</strong> &rarr; shadow spreads more &rarr; <strong>more geometric unsharpness (blurrier)</strong></p>
+        <p>&bull; <strong>Minimizing OFD</strong> (film close to object) &rarr; <strong>sharper image</strong></p>
+        <p style="margin-top:10px;"><strong>Best practice:</strong> Always place the film as close to the object as physically possible. In many setups, the film cassette is placed directly against the back surface of the object, making OFD nearly equal to the object thickness.</p>`
+    },
+    sfd: {
+      title: 'Source-to-Film Distance (SFD)',
+      body: `<p><strong>SFD</strong> is the total distance from the source to the film. It equals SOD + OFD.</p>
+        <p style="margin-top:10px;"><strong>SFD = SOD + OFD</strong></p>
+        <p style="margin-top:10px;">Many codes and standards specify a <strong>minimum SFD</strong> to ensure acceptable image quality. For example, some standards require SFD to be at least 7 times the object thickness for critical applications.</p>
+        <p style="margin-top:10px;"><strong>Practical note:</strong> The SFD also determines exposure time. Doubling the SFD requires 4x the exposure time (inverse square law).</p>`
+    }
+  };
+  const c = content[type];
+  if (c) openModal(c.title, c.body);
+}
+
+// ========== EXERCISE 2: DRAG & DROP ==========
+(function initDragDrop() {
+  let draggedEl = null;
+  let offsetX = 0, offsetY = 0;
+
+  document.querySelectorAll('.draggable').forEach(el => {
+    el.addEventListener('mousedown', startDrag);
+    el.addEventListener('touchstart', startDragTouch, { passive: false });
+  });
+
+  function startDrag(e) {
+    draggedEl = e.currentTarget;
+    const rect = draggedEl.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+    draggedEl.style.zIndex = 100;
+    document.addEventListener('mousemove', onDrag);
+    document.addEventListener('mouseup', endDrag);
+  }
+
+  function startDragTouch(e) {
+    e.preventDefault();
+    draggedEl = e.currentTarget;
+    const touch = e.touches[0];
+    const rect = draggedEl.getBoundingClientRect();
+    offsetX = touch.clientX - rect.left;
+    offsetY = touch.clientY - rect.top;
+    draggedEl.style.zIndex = 100;
+    document.addEventListener('touchmove', onDragTouch, { passive: false });
+    document.addEventListener('touchend', endDragTouch);
+  }
+
+  function onDrag(e) {
+    if (!draggedEl) return;
+    const area = document.getElementById('dragArea').getBoundingClientRect();
+    draggedEl.style.left = (e.clientX - area.left - offsetX) + 'px';
+    draggedEl.style.top = (e.clientY - area.top - offsetY) + 'px';
+    highlightDropZones(e.clientX, e.clientY);
+  }
+
+  function onDragTouch(e) {
+    e.preventDefault();
+    if (!draggedEl) return;
+    const touch = e.touches[0];
+    const area = document.getElementById('dragArea').getBoundingClientRect();
+    draggedEl.style.left = (touch.clientX - area.left - offsetX) + 'px';
+    draggedEl.style.top = (touch.clientY - area.top - offsetY) + 'px';
+    highlightDropZones(touch.clientX, touch.clientY);
+  }
+
+  function highlightDropZones(cx, cy) {
+    document.querySelectorAll('.drop-zone').forEach(dz => {
+      const r = dz.getBoundingClientRect();
+      const over = cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom;
+      dz.classList.toggle('highlight', over && !dz.classList.contains('filled'));
+    });
+  }
+
+  function endDrag(e) {
+    checkDrop(e.clientX, e.clientY);
+    document.removeEventListener('mousemove', onDrag);
+    document.removeEventListener('mouseup', endDrag);
+  }
+
+  function endDragTouch(e) {
+    const touch = e.changedTouches[0];
+    checkDrop(touch.clientX, touch.clientY);
+    document.removeEventListener('touchmove', onDragTouch);
+    document.removeEventListener('touchend', endDragTouch);
+  }
+
+  function checkDrop(cx, cy) {
+    if (!draggedEl) return;
+    draggedEl.style.zIndex = 10;
+    const type = draggedEl.dataset.type;
+    let dropped = false;
+
+    document.querySelectorAll('.drop-zone').forEach(dz => {
+      dz.classList.remove('highlight');
+      const r = dz.getBoundingClientRect();
+      const over = cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom;
+      if (over && dz.dataset.accept === type && !dz.classList.contains('filled')) {
+        // Snap to center of drop zone
+        const areaRect = document.getElementById('dragArea').getBoundingClientRect();
+        const dzLeft = dz.offsetLeft + (dz.offsetWidth - draggedEl.offsetWidth) / 2;
+        const dzTop = dz.offsetTop + (dz.offsetHeight - draggedEl.offsetHeight) / 2;
+        draggedEl.style.left = dzLeft + 'px';
+        draggedEl.style.top = dzTop + 'px';
+        dz.classList.add('filled');
+        draggedEl.style.cursor = 'default';
+        dropped = true;
+      } else if (over && dz.dataset.accept !== type) {
+        // Wrong zone - show feedback
+        showDragFeedback('Not quite! Think about the order: Source → Object → Film', false);
+      }
+    });
+
+    if (dropped) {
+      checkAllDropped();
+    }
+    draggedEl = null;
+  }
+
+  function checkAllDropped() {
+    const filled = document.querySelectorAll('.drop-zone.filled').length;
+    if (filled === 3) {
+      showDragFeedback('Excellent! You\'ve correctly arranged the radiographic setup: Source → Object → Film. The radiation travels from left to right through the object onto the film.', true);
+      document.getElementById('ex2NextBtn').style.display = 'inline-block';
+    }
+  }
+})();
+
+function showDragFeedback(msg, success) {
+  const el = document.getElementById('dragFeedback');
+  el.style.display = 'block';
+  el.innerHTML = `<div class="info-box" style="background: ${success ? '#e8f8ef' : '#fde8e8'}; border-left-color: ${success ? 'var(--success)' : 'var(--danger)'};">
+    <strong>${success ? 'Correct!' : 'Try again!'}</strong> ${msg}
+  </div>`;
+}
+
+// ========== EXERCISE 3: SIMULATOR ==========
+function updateSimulator() {
+  const srcPos = parseInt(document.getElementById('srcPosSlider').value);
+  const objPos = parseInt(document.getElementById('objPosSlider').value);
+  let filmPos = parseInt(document.getElementById('filmPosSlider').value);
+  const srcSize = parseFloat(document.getElementById('srcSizeSlider').value);
+
+  // Ensure film is always beyond object
+  if (filmPos <= objPos + 20) {
+    filmPos = objPos + 20;
+    document.getElementById('filmPosSlider').value = filmPos;
+  }
+  // Ensure object is always beyond source
+  if (objPos <= srcPos + 30) {
+    objPos = srcPos + 30;
+    document.getElementById('objPosSlider').value = objPos;
+    return updateSimulator();
+  }
+
+  const sod = objPos - srcPos;
+  const ofd = filmPos - objPos;
+  const sfd = filmPos - srcPos;
+  const ug = (srcSize * ofd) / sod;
+
+  document.getElementById('srcPosVal').textContent = srcPos.toFixed(0) + ' mm';
+  document.getElementById('objPosVal').textContent = objPos.toFixed(0) + ' mm';
+  document.getElementById('filmPosVal').textContent = filmPos.toFixed(0) + ' mm';
+  document.getElementById('srcSizeVal').textContent = srcSize.toFixed(1) + ' mm';
+
+  document.getElementById('sodDisplay').textContent = 'SOD: ' + sod.toFixed(0) + ' mm';
+  document.getElementById('ofdDisplay').textContent = 'OFD: ' + ofd.toFixed(0) + ' mm';
+  document.getElementById('sfdDisplay').textContent = 'SFD: ' + sfd.toFixed(0) + ' mm';
+  document.getElementById('ugDisplay').textContent = 'Ug: ' + ug.toFixed(3) + ' mm';
+
+  // Color code
+  const qual = ug < 0.3 ? 'good' : ug < 1.0 ? 'warn' : 'bad';
+  document.getElementById('sodDisplay').className = 'result-display ' + (sod > 300 ? 'good' : sod > 150 ? 'warn' : 'bad');
+  document.getElementById('ofdDisplay').className = 'result-display ' + (ofd < 50 ? 'good' : ofd < 150 ? 'warn' : 'bad');
+  document.getElementById('ugDisplay').className = 'result-display ' + qual;
+
+  // Quality meter
+  const qualPct = Math.max(5, Math.min(95, 100 - (ug / 3 * 100)));
+  const qualFill = document.getElementById('qualityFill');
+  qualFill.style.width = qualPct + '%';
+  if (qualPct > 70) {
+    qualFill.style.background = 'linear-gradient(90deg, #27ae60, #2ecc71)';
+    document.getElementById('qualityLabel').textContent = 'Sharp';
+  } else if (qualPct > 40) {
+    qualFill.style.background = 'linear-gradient(90deg, #f39c12, #f1c40f)';
+    document.getElementById('qualityLabel').textContent = 'Moderate';
+  } else {
+    qualFill.style.background = 'linear-gradient(90deg, #e74c3c, #c0392b)';
+    document.getElementById('qualityLabel').textContent = 'Blurry';
+  }
+
+  // Update SVG positions (scale to 360px wide viewport)
+  const scale = 340 / 800;
+  const sx = 10 + srcPos * scale;
+  const ox = 10 + objPos * scale;
+  const fx = 10 + filmPos * scale;
+  const srcR = Math.max(4, srcSize * 2);
+
+  document.getElementById('simSource').setAttribute('cx', sx);
+  document.getElementById('simSource').setAttribute('r', srcR);
+  document.getElementById('simSrcLabel').setAttribute('x', sx);
+
+  document.getElementById('simObject').setAttribute('x', ox - 5);
+  document.getElementById('simObjLabel').setAttribute('x', ox);
+
+  document.getElementById('simFilm').setAttribute('x', fx - 3);
+  document.getElementById('simFilmLabel').setAttribute('x', fx);
+
+  // Beam polygon
+  const beamW = srcR;
+  document.getElementById('simBeam').setAttribute('points',
+    `${sx + srcR},${170 - beamW * 3} ${fx},40 ${fx},300 ${sx + srcR},${170 + beamW * 3}`);
+
+  // Shadow on film
+  const objHalfH = 50;
+  const shadowHalfH = objHalfH * (sfd / sod);
+  const penumbraSize = Math.min(40, ug * scale * 80);
+  const shadowY = 170 - shadowHalfH;
+  const shadowH = shadowHalfH * 2;
+
+  document.getElementById('simShadow').setAttribute('x', fx - 1);
+  document.getElementById('simShadow').setAttribute('y', shadowY);
+  document.getElementById('simShadow').setAttribute('height', Math.max(2, shadowH));
+
+  document.getElementById('simPenTop').setAttribute('x', fx - 1);
+  document.getElementById('simPenTop').setAttribute('y', shadowY - penumbraSize);
+  document.getElementById('simPenTop').setAttribute('height', Math.max(1, penumbraSize));
+
+  document.getElementById('simPenBot').setAttribute('x', fx - 1);
+  document.getElementById('simPenBot').setAttribute('y', shadowY + shadowH);
+  document.getElementById('simPenBot').setAttribute('height', Math.max(1, penumbraSize));
+
+  // Distance lines
+  document.getElementById('simSODline').setAttribute('x1', sx);
+  document.getElementById('simSODline').setAttribute('x2', ox);
+  document.getElementById('simSODtext').setAttribute('x', (sx + ox) / 2);
+
+  document.getElementById('simOFDline').setAttribute('x1', ox);
+  document.getElementById('simOFDline').setAttribute('x2', fx);
+  document.getElementById('simOFDtext').setAttribute('x', (ox + fx) / 2);
+}
+
+function setSimChallenge(n) {
+  const el = document.getElementById('simChallenge');
+  if (n === 1) el.innerHTML = '1. Make the image as <strong>sharp as possible</strong> (minimize Ug). Try: maximize SOD, minimize OFD, and use a small source size.';
+  if (n === 2) el.innerHTML = '2. Make the image as <strong>blurry as possible</strong> (maximize Ug). Try: minimize SOD, maximize OFD, and use a large source size.';
+  if (n === 3) el.innerHTML = '3. Set the <strong>SFD to exactly 700 mm</strong> while keeping Ug below 0.5 mm. Hint: You may need to adjust the source size.';
+}
+
+// ========== EXERCISE 4: CALCULATIONS ==========
+// Solutions and hints for each problem
+const calcProblems = {
+  1: {
+    check: function() {
+      const ans = parseFloat(document.getElementById('calc1Input').value);
+      const expected = 3 * 30 / 600; // 0.15
+      const correct = Math.abs(ans - expected) < 0.02;
+      document.getElementById('calc1Input').className = 'calc-input ' + (correct ? 'correct' : 'incorrect');
+      return correct;
+    },
+    hint: 'Not quite. Remember the formula: Ug = f &times; OFD / SOD. Plug in f = 3, OFD = 30, SOD = 600. Try once more!',
+    solution: 'The answer is: Ug = f &times; OFD / SOD = 3 &times; 30 / 600 = <strong>0.15 mm</strong>. This is excellent sharpness (below 0.5 mm).',
+    correct_fb: 'Correct! Ug = 3 &times; 30 / 600 = 0.15 mm. This is excellent sharpness (below 0.5 mm).',
+    nextProblem: 'calcProblem2'
+  },
+  2: {
+    check: function() {
+      const sodAns = parseFloat(document.getElementById('calc2aSod').value);
+      const ugAns = parseFloat(document.getElementById('calc2Input').value);
+      const sodOk = Math.abs(sodAns - 750) < 2;
+      const ugOk = Math.abs(ugAns - 0.1667) < 0.02;
+      document.getElementById('calc2aSod').className = 'calc-input ' + (sodOk ? 'correct' : 'incorrect');
+      document.getElementById('calc2Input').className = 'calc-input ' + (ugOk ? 'correct' : 'incorrect');
+      return sodOk && ugOk;
+    },
+    hint: 'Not quite. First find SOD: SOD = SFD - OFD. Then use the Ug formula. Try once more!',
+    solution: 'The answer is: SOD = SFD - OFD = 800 - 50 = <strong>750 mm</strong>. Then Ug = 2.5 &times; 50 / 750 = <strong>0.167 mm</strong>.',
+    correct_fb: 'Correct! SOD = SFD - OFD = 800 - 50 = 750 mm. Ug = 2.5 &times; 50 / 750 = 0.167 mm.',
+    nextProblem: 'calcProblem3'
+  },
+  3: {
+    check: function() {
+      const ans = parseFloat(document.getElementById('calc3Input').value);
+      const correct = Math.abs(ans - 320) < 5;
+      document.getElementById('calc3Input').className = 'calc-input ' + (correct ? 'correct' : 'incorrect');
+      return correct;
+    },
+    hint: 'Not quite. Rearrange the formula to solve for SOD: SOD = f &times; OFD / Ug. Try once more!',
+    solution: 'The answer is: SOD = f &times; OFD / Ug = 4 &times; 40 / 0.5 = <strong>320 mm</strong>. The source must be at least 320 mm from the object.',
+    correct_fb: 'Correct! SOD = f &times; OFD / Ug = 4 &times; 40 / 0.5 = 320 mm. The source must be at least 320 mm from the object.',
+    nextProblem: 'calcProblem4'
+  },
+  4: {
+    check: function() {
+      const ofdAns = parseFloat(document.getElementById('calc4aOfd').value);
+      const ugAns = parseFloat(document.getElementById('calc4Input').value);
+      const ofdOk = Math.abs(ofdAns - 25) < 2;
+      const ugOk = Math.abs(ugAns - 0.25) < 0.02;
+      document.getElementById('calc4aOfd').className = 'calc-input ' + (ofdOk ? 'correct' : 'incorrect');
+      document.getElementById('calc4Input').className = 'calc-input ' + (ugOk ? 'correct' : 'incorrect');
+      return ofdOk && ugOk;
+    },
+    hint: 'Not quite. When the film is directly behind the object, what does OFD equal? Then use the Ug formula. Try once more!',
+    solution: 'The answer is: When the film is directly behind the object, OFD = object thickness = <strong>25 mm</strong>. Ug = 5 &times; 25 / 500 = <strong>0.25 mm</strong>.',
+    correct_fb: 'Correct! OFD = object thickness = 25 mm. Ug = 5 &times; 25 / 500 = 0.25 mm.',
+    nextProblem: null
+  }
+};
+
+function checkCalc(n) {
+  // If problem is already resolved, do nothing
+  if (calcSolved.has(n)) return;
+
+  const problem = calcProblems[n];
+  const feedbackEl = document.getElementById('calc' + n + 'Feedback');
+  calcAttemptCount[n] = (calcAttemptCount[n] || 0) + 1;
+  const attempt = calcAttemptCount[n];
+  const correct = problem.check();
+
+  if (correct) {
+    // Correct answer
+    if (!calcAttempted.has(n)) calcCorrect++;
+    calcAttempted.add(n);
+    calcSolved.add(n);
+    feedbackEl.innerHTML = problem.correct_fb;
+    feedbackEl.className = 'quiz-feedback show correct-fb';
+    showNextProblem(n);
+  } else if (attempt >= 2) {
+    // 2nd wrong attempt — reveal solution and move on
+    calcAttempted.add(n);
+    calcSolved.add(n);
+    feedbackEl.innerHTML = problem.solution;
+    feedbackEl.className = 'quiz-feedback show incorrect-fb';
+    showNextProblem(n);
+  } else {
+    // 1st wrong attempt — give hint, let them try again
+    feedbackEl.innerHTML = problem.hint;
+    feedbackEl.className = 'quiz-feedback show incorrect-fb';
+  }
+}
+
+function showNextProblem(n) {
+  const problem = calcProblems[n];
+  // Show next problem if there is one
+  if (problem.nextProblem) {
+    document.getElementById(problem.nextProblem).style.display = 'block';
+  }
+
+  // Update score display when all 4 are resolved
+  if (calcSolved.size === 4) {
+    document.getElementById('calcScore').style.display = 'block';
+    document.getElementById('calcScoreCircle').textContent = calcCorrect + '/4';
+    document.getElementById('ex4NextBtn').style.display = 'inline-block';
+  }
+}
+
+// ========== EXERCISE 5: QUIZ ==========
+const quizQuestions = [
+  {
+    q: 'What does SFD stand for?',
+    opts: ['Source-to-Focus Distance', 'Source-to-Film Distance', 'Surface-to-Film Distance', 'Spot-to-Film Distance'],
+    correct: 1,
+    explanation: 'SFD stands for Source-to-Film Distance \u2014 the total distance from the radiation source to the film or detector.'
+  },
+  {
+    q: 'Which relationship is correct?',
+    opts: ['SFD = SOD - OFD', 'SOD = SFD + OFD', 'SFD = SOD + OFD', 'OFD = SFD + SOD'],
+    correct: 2,
+    explanation: 'SFD = SOD + OFD. The total source-to-film distance is the sum of source-to-object and object-to-film distances.'
+  },
+  {
+    q: 'To get a sharper radiographic image, you should:',
+    opts: ['Increase OFD and decrease SOD', 'Decrease OFD and increase SOD', 'Increase both OFD and SOD equally', 'Decrease both OFD and SOD'],
+    correct: 1,
+    explanation: 'A sharper image (less Ug) requires minimizing OFD (film close to object) and maximizing SOD (source far from object).'
+  },
+  {
+    q: 'What happens to geometric unsharpness (Ug) when you double the OFD while keeping everything else the same?',
+    opts: ['Ug is halved', 'Ug stays the same', 'Ug doubles', 'Ug quadruples'],
+    correct: 2,
+    explanation: 'Since Ug = f \u00d7 OFD / SOD, doubling OFD directly doubles Ug. OFD has a proportional (linear) effect on unsharpness.'
+  },
+  {
+    q: 'A technician has f = 2 mm, SOD = 400 mm, OFD = 20 mm. What is Ug?',
+    opts: ['0.01 mm', '0.05 mm', '0.1 mm', '0.2 mm'],
+    correct: 2,
+    explanation: 'Ug = f \u00d7 OFD / SOD = 2 \u00d7 20 / 400 = 0.1 mm.'
+  },
+  {
+    q: 'Why is OFD often approximately equal to the object thickness in practice?',
+    opts: [
+      'Because standards require it',
+      'Because the film is placed directly against the back of the object',
+      'Because X-rays only travel through one thickness',
+      'Because the source focal spot size equals the thickness'
+    ],
+    correct: 1,
+    explanation: 'In practice, the film cassette is placed directly against the far side of the object to minimize OFD. The minimum OFD then equals the object thickness itself.'
+  },
+  {
+    q: 'For a pipeline weld with 10 mm wall thickness, which setup gives the BEST image quality?',
+    opts: [
+      'f = 5 mm, SOD = 200 mm, film against pipe',
+      'f = 2 mm, SOD = 800 mm, film against pipe',
+      'f = 2 mm, SOD = 200 mm, film 100 mm from pipe',
+      'f = 5 mm, SOD = 800 mm, film 100 mm from pipe'
+    ],
+    correct: 1,
+    explanation: 'Ug = 2 \u00d7 10 / 800 = 0.025 mm. This setup has the smallest focal spot, largest SOD, and film right against the pipe (OFD = wall thickness = 10 mm).'
+  },
+  {
+    q: 'If the maximum allowable Ug is 0.4 mm, f = 3 mm, and OFD = 24 mm, what is the minimum SOD?',
+    opts: ['120 mm', '150 mm', '180 mm', '200 mm'],
+    correct: 2,
+    explanation: 'SOD = f \u00d7 OFD / Ug = 3 \u00d7 24 / 0.4 = 180 mm. The source must be at least 180 mm from the object.'
+  }
+];
+
+function buildQuiz() {
+  const container = document.getElementById('quizContainer');
+  let html = '';
+  quizQuestions.forEach((q, i) => {
+    html += `<div class="quiz-question" id="qq${i}">
+      <h4>Question ${i + 1} of ${quizQuestions.length}</h4>
+      <p style="margin-bottom:12px;">${q.q}</p>`;
+    q.opts.forEach((opt, j) => {
+      html += `<button class="quiz-option" id="qo${i}_${j}" onclick="answerQuiz(${i},${j})">${opt}</button>`;
+    });
+    html += `<div class="quiz-feedback" id="qf${i}"></div></div>`;
+  });
+  container.innerHTML = html;
+}
+
+function answerQuiz(qi, oi) {
+  if (quizAnswered[qi] !== undefined) return;
+  quizAnswered[qi] = oi;
+  const q = quizQuestions[qi];
+  const correct = oi === q.correct;
+
+  // Style all options
+  q.opts.forEach((_, j) => {
+    const btn = document.getElementById(`qo${qi}_${j}`);
+    btn.classList.add('disabled');
+    if (j === q.correct) btn.classList.add('correct');
+    if (j === oi && !correct) btn.classList.add('incorrect');
+  });
+
+  const fb = document.getElementById('qf' + qi);
+  fb.innerHTML = (correct ? '<strong>Correct!</strong> ' : '<strong>Incorrect.</strong> ') + q.explanation;
+  fb.className = 'quiz-feedback show ' + (correct ? 'correct-fb' : 'incorrect-fb');
+}
+
+function submitQuiz() {
+  // Answer remaining as unanswered
+  quizQuestions.forEach((_, i) => {
+    if (quizAnswered[i] === undefined) {
+      answerQuiz(i, -1);
+    }
+  });
+
+  const score = quizQuestions.reduce((sum, q, i) => sum + (quizAnswered[i] === q.correct ? 1 : 0), 0);
+  const total = quizQuestions.length;
+
+  document.getElementById('quizResult').style.display = 'block';
+  document.getElementById('quizScoreCircle').textContent = score + '/' + total;
+
+  const pct = score / total;
+  const circle = document.getElementById('quizScoreCircle');
+  const msg = document.getElementById('quizResultMsg');
+
+  if (pct >= 0.875) {
+    circle.style.borderColor = 'var(--success)';
+    circle.style.color = 'var(--success)';
+    msg.textContent = 'Outstanding! You have a strong understanding of RT distance concepts.';
+    msg.style.color = 'var(--success)';
+  } else if (pct >= 0.625) {
+    circle.style.borderColor = 'var(--accent)';
+    circle.style.color = 'var(--accent)';
+    msg.textContent = 'Good work! Review the questions you missed and try again.';
+    msg.style.color = 'var(--accent)';
+  } else {
+    circle.style.borderColor = 'var(--danger)';
+    circle.style.color = 'var(--danger)';
+    msg.textContent = 'Keep studying! Review the earlier exercises and try the quiz again.';
+    msg.style.color = 'var(--danger)';
+  }
+
+  document.getElementById('submitQuizBtn').style.display = 'none';
+  document.getElementById('finishModuleBtn').style.display = 'inline-block';
+  completeExercise(4);
+}
+
+function resetQuiz() {
+  quizAnswered = {};
+  document.getElementById('quizResult').style.display = 'none';
+  document.getElementById('completionSection').style.display = 'none';
+  document.getElementById('finishModuleBtn').style.display = 'none';
+  document.getElementById('submitQuizBtn').style.display = 'inline-block';
+  buildQuiz();
+}
+
+function showCompletion() {
+  // Show final scores
+  document.getElementById('finalCalcScore').textContent = calcCorrect + ' / 4';
+  const quizScore = quizQuestions.reduce((sum, q, i) => sum + (quizAnswered[i] === q.correct ? 1 : 0), 0);
+  document.getElementById('finalQuizScore').textContent = quizScore + ' / ' + quizQuestions.length;
+
+  document.getElementById('completionSection').style.display = 'block';
+  document.getElementById('finishModuleBtn').style.display = 'none';
+  document.getElementById('completionSection').scrollIntoView({ behavior: 'smooth' });
+}
+
+function restartModule() {
+  // Reset all state
+  for (let i = 0; i < exerciseCompleted.length; i++) {
+    exerciseCompleted[i] = false;
+    document.getElementById('badge' + i).className = 'badge pending';
+  }
+  calcCorrect = 0;
+  calcAttempted = new Set();
+  calcSolved = new Set();
+  calcAttemptCount = {};
+  quizAnswered = {};
+
+  // Re-lock tabs 1-4
+  const tabs = document.querySelectorAll('.tab-btn');
+  tabs.forEach((tab, i) => { if (i > 0) tab.classList.add('locked'); });
+
+  // Reset Exercise 4 problems
+  ['calcProblem2','calcProblem3','calcProblem4'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  document.getElementById('calcScore').style.display = 'none';
+  document.getElementById('ex4NextBtn').style.display = 'none';
+  // Reset all calc inputs and feedback
+  for (let i = 1; i <= 4; i++) {
+    const fb = document.getElementById('calc' + i + 'Feedback');
+    fb.className = 'quiz-feedback';
+    fb.innerHTML = '';
+  }
+  document.querySelectorAll('.calc-input').forEach(inp => {
+    inp.className = 'calc-input';
+    inp.value = '';
+  });
+
+  // Reset quiz
+  document.getElementById('quizResult').style.display = 'none';
+  document.getElementById('completionSection').style.display = 'none';
+  document.getElementById('finishModuleBtn').style.display = 'none';
+  document.getElementById('submitQuizBtn').style.display = 'inline-block';
+  document.getElementById('quizContainer').innerHTML = '';
+
+  // Reset progress and go to Exercise 1
+  updateProgress();
+  showExercise(0);
+}
+
+// ========== INIT ==========
+updateSimulator();
+updateProgress();
+</script>
+</body>
+</html>
