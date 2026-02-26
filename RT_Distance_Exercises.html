@@ -546,7 +546,7 @@
 <div class="header">
   <h1>Radiographic Testing: Distance Concepts</h1>
   <p>Interactive Learning Module &mdash; SOD, OFD, and SFD</p>
-  <button class="fullscreen-btn" id="fullscreenBtn" onclick="toggleFullscreen()">
+  <button class="fullscreen-btn" id="fullscreenBtn" onclick="toggleFullscreen()" style="display: none;">
     <span id="fsIcon">&#x26F6;</span> <span id="fsLabel">Full Screen</span>
   </button>
 </div>
@@ -577,13 +577,23 @@
     <div class="info-box" style="max-width: 560px; margin: 0 auto 28px; text-align: left; background: #FFF5F5; border-left-color: var(--primary);">
       <strong>Important:</strong> Please complete all 5 exercises before clicking the "Complete and Continue" button below this module. The exercises are sequential &mdash; each one unlocks after you finish the previous one. You'll know you're done when you see the congratulations screen at the end of Exercise 5.
     </div>
-    <div id="fsPrompt">
+    <!-- Fullscreen available: show enter fullscreen button -->
+    <div id="fsPromptAvailable" style="display: none;">
       <div style="background: #FFF5F5; border: 2px solid var(--primary); border-radius: 10px; padding: 24px 32px; max-width: 560px; margin: 0 auto 16px;">
         <p style="font-size: 1rem; font-weight: 600; color: var(--primary); margin-bottom: 8px;">&#x26F6; For the best experience, go full screen first</p>
         <p style="font-size: 0.9rem; color: var(--text-light); margin-bottom: 18px;">This module has interactive diagrams, drag-and-drop exercises, and a simulator that work much better with the full screen space.</p>
         <button class="btn btn-primary" onclick="enterFsThenBegin()" style="font-size: 1.05rem; padding: 14px 36px; width: 100%;">Enter Full Screen &amp; Begin Module &rarr;</button>
       </div>
       <button onclick="beginModule()" style="background: none; border: none; color: var(--text-light); font-size: 0.85rem; cursor: pointer; text-decoration: underline; margin-top: 4px;">Continue without full screen</button>
+    </div>
+    <!-- Fullscreen NOT available (restricted iframe): show open-in-new-tab button -->
+    <div id="fsPromptBlocked" style="display: none;">
+      <div style="background: #FFF5F5; border: 2px solid var(--primary); border-radius: 10px; padding: 24px 32px; max-width: 560px; margin: 0 auto 16px;">
+        <p style="font-size: 1rem; font-weight: 600; color: var(--primary); margin-bottom: 8px;">&#x26F6; For the best experience, open this module in full screen</p>
+        <p style="font-size: 0.9rem; color: var(--text-light); margin-bottom: 18px;">This module has interactive diagrams, drag-and-drop exercises, and a simulator that work much better with more screen space. Click below to open in a new tab where you can go full screen.</p>
+        <a href="https://itspratikwagh.github.io/ndt-training-exercises/RT_Distance_Exercises.html" target="_blank" rel="noopener" class="btn btn-primary" style="font-size: 1.05rem; padding: 14px 36px; width: 100%; display: block; box-sizing: border-box; text-decoration: none; text-align: center;">Open in New Tab (Full Screen) &rarr;</a>
+      </div>
+      <button onclick="beginModule()" style="background: none; border: none; color: var(--text-light); font-size: 0.85rem; cursor: pointer; text-decoration: underline; margin-top: 4px;">Continue here without full screen</button>
     </div>
   </div>
 </div>
@@ -1835,6 +1845,18 @@ function beginModule() {
 // ========== INIT ==========
 updateSimulator();
 updateProgress();
+
+// Detect fullscreen availability and show appropriate cover page prompt
+(function detectFullscreen() {
+  const fsEnabled = document.fullscreenEnabled || document.webkitFullscreenEnabled || false;
+  if (fsEnabled) {
+    document.getElementById('fsPromptAvailable').style.display = 'block';
+    document.getElementById('fullscreenBtn').style.display = 'flex';
+  } else {
+    document.getElementById('fsPromptBlocked').style.display = 'block';
+    document.getElementById('fullscreenBtn').style.display = 'none';
+  }
+})();
 </script>
 </body>
 </html>
