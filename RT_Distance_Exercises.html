@@ -36,9 +36,28 @@
     color: white;
     padding: 28px 40px;
     text-align: center;
+    position: relative;
   }
   .header h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 4px; }
   .header p { opacity: 0.85; font-size: 1rem; }
+  .fullscreen-btn {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: white;
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .fullscreen-btn:hover { background: rgba(255,255,255,0.35); }
 
   /* PROGRESS BAR */
   .progress-container {
@@ -527,6 +546,9 @@
 <div class="header">
   <h1>Radiographic Testing: Distance Concepts</h1>
   <p>Interactive Learning Module &mdash; SOD, OFD, and SFD</p>
+  <button class="fullscreen-btn" id="fullscreenBtn" onclick="toggleFullscreen()">
+    <span id="fsIcon">&#x26F6;</span> <span id="fsLabel">Full Screen</span>
+  </button>
 </div>
 
 <!-- PROGRESS -->
@@ -555,7 +577,14 @@
     <div class="info-box" style="max-width: 560px; margin: 0 auto 28px; text-align: left; background: #FFF5F5; border-left-color: var(--primary);">
       <strong>Important:</strong> Please complete all 5 exercises before clicking the "Complete and Continue" button below this module. The exercises are sequential &mdash; each one unlocks after you finish the previous one. You'll know you're done when you see the congratulations screen at the end of Exercise 5.
     </div>
-    <button class="btn btn-primary" onclick="beginModule()" style="font-size: 1.05rem; padding: 14px 36px;">Begin Module &rarr;</button>
+    <div id="fsPrompt">
+      <div style="background: #FFF5F5; border: 2px solid var(--primary); border-radius: 10px; padding: 24px 32px; max-width: 560px; margin: 0 auto 16px;">
+        <p style="font-size: 1rem; font-weight: 600; color: var(--primary); margin-bottom: 8px;">&#x26F6; For the best experience, go full screen first</p>
+        <p style="font-size: 0.9rem; color: var(--text-light); margin-bottom: 18px;">This module has interactive diagrams, drag-and-drop exercises, and a simulator that work much better with the full screen space.</p>
+        <button class="btn btn-primary" onclick="enterFsThenBegin()" style="font-size: 1.05rem; padding: 14px 36px; width: 100%;">Enter Full Screen &amp; Begin Module &rarr;</button>
+      </div>
+      <button onclick="beginModule()" style="background: none; border: none; color: var(--text-light); font-size: 0.85rem; cursor: pointer; text-decoration: underline; margin-top: 4px;">Continue without full screen</button>
+    </div>
   </div>
 </div>
 
@@ -581,20 +610,23 @@
 
   <p class="subtitle" style="margin-bottom: 16px;">Click on each component to learn what it is and why it matters.</p>
 
-  <div style="display: flex; flex-direction: column; align-items: center; gap: 0;">
-    <div class="learn-item" onclick="showLearnPopup('source')" style="width: 100%; max-width: 400px; display: flex; align-items: center; gap: 16px; text-align: left; padding: 16px 24px;">
+  <div style="display: flex; flex-direction: column; align-items: stretch; gap: 0; width: 100%;">
+    <div class="learn-item" onclick="showLearnPopup('source')" style="width: 100%; box-sizing: border-box; display: flex; align-items: center; gap: 16px; text-align: left; padding: 16px 24px;">
       <div class="learn-icon" style="margin-bottom: 0; min-width: 50px; text-align: center;">&#9762;</div>
-      <div><h4>Radiation Source</h4><p>Click to learn more</p></div>
+      <div style="flex: 1;"><h4>Radiation Source</h4><p>Click to learn more</p></div>
+      <div style="color: var(--primary); font-size: 1.2rem;">&#9654;</div>
     </div>
-    <div style="font-size: 1.5rem; color: var(--primary); line-height: 1;">&#11015;</div>
-    <div class="learn-item" onclick="showLearnPopup('object')" style="width: 100%; max-width: 400px; display: flex; align-items: center; gap: 16px; text-align: left; padding: 16px 24px;">
+    <div style="font-size: 1.5rem; color: var(--primary); line-height: 1; text-align: center;">&#11015;</div>
+    <div class="learn-item" onclick="showLearnPopup('object')" style="width: 100%; box-sizing: border-box; display: flex; align-items: center; gap: 16px; text-align: left; padding: 16px 24px;">
       <div class="learn-icon" style="margin-bottom: 0; min-width: 50px; text-align: center;">&#9881;</div>
-      <div><h4>Test Object</h4><p>Click to learn more</p></div>
+      <div style="flex: 1;"><h4>Test Object</h4><p>Click to learn more</p></div>
+      <div style="color: #555555; font-size: 1.2rem;">&#9654;</div>
     </div>
-    <div style="font-size: 1.5rem; color: var(--primary); line-height: 1;">&#11015;</div>
-    <div class="learn-item" onclick="showLearnPopup('film')" style="width: 100%; max-width: 400px; display: flex; align-items: center; gap: 16px; text-align: left; padding: 16px 24px;">
+    <div style="font-size: 1.5rem; color: var(--primary); line-height: 1; text-align: center;">&#11015;</div>
+    <div class="learn-item" onclick="showLearnPopup('film')" style="width: 100%; box-sizing: border-box; display: flex; align-items: center; gap: 16px; text-align: left; padding: 16px 24px;">
       <div class="learn-icon" style="margin-bottom: 0; min-width: 50px; text-align: center;">&#9635;</div>
-      <div><h4>Film / Detector</h4><p>Click to learn more</p></div>
+      <div style="flex: 1;"><h4>Film / Detector</h4><p>Click to learn more</p></div>
+      <div style="color: #333333; font-size: 1.2rem;">&#9654;</div>
     </div>
   </div>
 
@@ -607,23 +639,19 @@
       <rect x="0" y="0" width="800" height="300" fill="#fafbfc" rx="12"/>
 
       <!-- Source -->
-      <circle cx="100" cy="150" r="30" fill="#A82020" opacity="0.15"/>
       <circle cx="100" cy="150" r="18" fill="#A82020"/>
       <text x="100" y="155" text-anchor="middle" fill="white" font-size="12" font-weight="700">SRC</text>
       <text x="100" y="200" text-anchor="middle" fill="#A82020" font-size="13" font-weight="600">Source</text>
 
-      <!-- X-ray beam -->
-      <polygon points="118,138 380,80 380,220 118,162" fill="#C43030" opacity="0.08" class="beam-pulse"/>
-      <line x1="118" y1="150" x2="380" y2="80" stroke="#C43030" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
-      <line x1="118" y1="150" x2="380" y2="220" stroke="#C43030" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+      <!-- X-ray beam (continuous cone from source to film) -->
+      <polygon points="118,138 676,56 676,244 118,162" fill="#C43030" opacity="0.08" class="beam-pulse"/>
+      <line x1="118" y1="150" x2="676" y2="56" stroke="#C43030" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+      <line x1="118" y1="150" x2="676" y2="244" stroke="#C43030" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
 
       <!-- Object -->
       <rect x="366" y="90" width="28" height="120" rx="4" fill="#555555"/>
       <text x="380" y="155" text-anchor="middle" fill="white" font-size="11" font-weight="700">OBJ</text>
       <text x="380" y="250" text-anchor="middle" fill="#555555" font-size="13" font-weight="600">Object</text>
-
-      <!-- Beam continues past object -->
-      <polygon points="400,90 680,60 680,240 400,210" fill="#C43030" opacity="0.04"/>
 
       <!-- Film -->
       <rect x="664" y="56" width="12" height="188" rx="2" fill="#333333"/>
@@ -683,15 +711,14 @@
       <rect x="0" y="0" width="800" height="300" fill="#fafbfc" rx="12"/>
 
       <!-- Source -->
-      <circle cx="100" cy="150" r="30" fill="#A82020" opacity="0.15"/>
       <circle cx="100" cy="150" r="18" fill="#A82020"/>
       <text x="100" y="155" text-anchor="middle" fill="white" font-size="12" font-weight="700">SRC</text>
       <text x="100" y="200" text-anchor="middle" fill="#A82020" font-size="13" font-weight="600">Source</text>
 
-      <!-- X-ray beam -->
-      <polygon points="118,138 380,80 380,220 118,162" fill="#C43030" opacity="0.08" class="beam-pulse"/>
-      <line x1="118" y1="150" x2="380" y2="80" stroke="#C43030" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
-      <line x1="118" y1="150" x2="380" y2="220" stroke="#C43030" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+      <!-- X-ray beam (continuous cone from source to film) -->
+      <polygon points="118,138 406,82 406,218 118,162" fill="#C43030" opacity="0.08" class="beam-pulse"/>
+      <line x1="118" y1="150" x2="406" y2="82" stroke="#C43030" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+      <line x1="118" y1="150" x2="406" y2="218" stroke="#C43030" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
 
       <!-- Object -->
       <rect x="366" y="90" width="28" height="120" rx="4" fill="#555555"/>
@@ -722,10 +749,11 @@
       <rect x="193" y="17" width="100" height="26" rx="4" fill="white" stroke="#A82020" stroke-width="1.5"/>
       <text x="243" y="35" text-anchor="middle" fill="#A82020" font-size="13" font-weight="700">SOD</text>
 
-      <!-- OFD: object near surface (366) to film near surface (394) — very short -->
+      <!-- OFD: object near surface (366) to film near surface (394) — short, with label intersected by extension line -->
       <line x1="366" y1="50" x2="394" y2="50" stroke="#555555" stroke-width="2" marker-start="url(#arrowLo2)" marker-end="url(#arrowRo2)"/>
-      <rect x="420" y="37" width="170" height="26" rx="4" fill="white" stroke="#555555" stroke-width="1.5"/>
-      <text x="505" y="55" text-anchor="middle" fill="#555555" font-size="12" font-weight="700">OFD (= T of OBJ)</text>
+      <line x1="394" y1="50" x2="580" y2="50" stroke="#555555" stroke-width="1" stroke-dasharray="4,3" opacity="0.5"/>
+      <rect x="420" y="37" width="220" height="26" rx="4" fill="white" stroke="#555555" stroke-width="1.5"/>
+      <text x="530" y="55" text-anchor="middle" fill="#555555" font-size="12" font-weight="700">OFD (= Thickness of OBJ)</text>
 
       <!-- SFD: source right edge (118) to film near surface (394) -->
       <line x1="118" y1="70" x2="394" y2="70" stroke="#333333" stroke-width="2" marker-start="url(#arrowLb2)" marker-end="url(#arrowRb2)"/>
@@ -733,7 +761,7 @@
       <text x="255" y="75" text-anchor="middle" fill="#333333" font-size="13" font-weight="700">SFD</text>
 
       <!-- Relationship -->
-      <text x="400" y="15" text-anchor="middle" fill="#666666" font-size="11" font-style="italic">Film in contact: OFD = object thickness only, SFD = SOD + OFD = SOD + T</text>
+      <text x="400" y="15" text-anchor="middle" fill="#666666" font-size="11" font-style="italic">Film in contact: OFD = object thickness only, SFD = SOD + OFD = SOD + Thickness</text>
     </svg>
   </div>
 
@@ -750,40 +778,40 @@
 <!-- ========== EXERCISE 2: BUILD A SETUP (DRAG & DROP) ========== -->
 <div class="exercise" id="ex1">
   <h2>Exercise 2: Build the Radiographic Setup</h2>
-  <p class="subtitle">Drag each component to its correct position to create a proper radiographic setup.</p>
 
   <div class="info-box">
     Place the components in the correct order from left to right. Remember: radiation travels from the <strong>Source</strong> &rarr; through the <strong>Object</strong> &rarr; to the <strong>Film</strong>.
   </div>
 
-  <div class="interactive-area" id="dragArea" style="height: 320px;">
+  <div class="interactive-area" id="dragArea" style="height: 350px;">
+    <p style="position: absolute; top: 8px; left: 0; right: 0; text-align: center; color: var(--text-light); font-size: 0.9rem; margin: 0; padding: 0 12px;">Drag each component to its correct position to create a proper radiographic setup.</p>
     <!-- Drop zones -->
-    <div class="drop-zone" id="dropZone1" style="left: 60px; top: 80px; width: 150px; height: 160px;" data-accept="source">
+    <div class="drop-zone" id="dropZone1" style="left: 60px; top: 110px; width: 150px; height: 140px;" data-accept="source">
       <span>Position 1<br>(Leftmost)</span>
     </div>
-    <div class="drop-zone" id="dropZone2" style="left: 325px; top: 80px; width: 150px; height: 160px;" data-accept="object">
+    <div class="drop-zone" id="dropZone2" style="left: 325px; top: 110px; width: 150px; height: 140px;" data-accept="object">
       <span>Position 2<br>(Middle)</span>
     </div>
-    <div class="drop-zone" id="dropZone3" style="left: 590px; top: 80px; width: 150px; height: 160px;" data-accept="film">
+    <div class="drop-zone" id="dropZone3" style="left: 590px; top: 110px; width: 150px; height: 140px;" data-accept="film">
       <span>Position 3<br>(Rightmost)</span>
     </div>
 
     <!-- Arrows between zones -->
     <svg style="position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none;">
-      <text x="275" y="168" fill="#bbb" font-size="24" text-anchor="middle">&#10132;</text>
-      <text x="540" y="168" fill="#bbb" font-size="24" text-anchor="middle">&#10132;</text>
+      <text x="275" y="188" fill="#bbb" font-size="24" text-anchor="middle">&#10132;</text>
+      <text x="540" y="188" fill="#bbb" font-size="24" text-anchor="middle">&#10132;</text>
     </svg>
 
     <!-- Draggable components (start stacked at bottom) -->
-    <div class="draggable component-card film" id="dragFilm" style="left: 440px; top: 270px;" data-type="film">
+    <div class="draggable component-card film" id="dragFilm" style="left: 440px; top: 290px;" data-type="film">
       <div class="icon">&#9635;</div>
       Film
     </div>
-    <div class="draggable component-card source" id="dragSource" style="left: 120px; top: 270px;" data-type="source">
+    <div class="draggable component-card source" id="dragSource" style="left: 120px; top: 290px;" data-type="source">
       <div class="icon">&#9762;</div>
       Source
     </div>
-    <div class="draggable component-card object" id="dragObject" style="left: 280px; top: 270px;" data-type="object">
+    <div class="draggable component-card object" id="dragObject" style="left: 280px; top: 290px;" data-type="object">
       <div class="icon">&#9881;</div>
       Object
     </div>
@@ -812,7 +840,10 @@
 
   <!-- Challenges: one at a time -->
   <div class="challenge" id="challengeBlock">
-    <h4>&#127775; Challenge <span id="challengeNum">1</span> of 3</h4>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h4 style="margin: 0;">&#127775; Challenge <span id="challengeNum">1</span> of 3</h4>
+      <button onclick="resetChallenges()" style="background: none; border: none; color: var(--text-light); font-size: 0.8rem; cursor: pointer; text-decoration: underline; padding: 0;">&#8635; Restart Challenges</button>
+    </div>
     <div id="challenge1" style="display: block;">
       <p style="font-weight: 600; margin-bottom: 6px;">Create the Sharpest Image Possible</p>
       <p style="font-size: 0.9rem;">Use the sliders below to minimize geometric unsharpness (Ug). Try increasing the distance between the source and the object (SOD), moving the film as close to the object as possible (reduce OFD), and reducing the source size (f). Can you get Ug below 0.05 mm?</p>
@@ -1065,6 +1096,47 @@
 </div>
 
 <script>
+// ========== FULLSCREEN ==========
+function toggleFullscreen() {
+  const doc = document.documentElement;
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    // Enter fullscreen
+    if (doc.requestFullscreen) {
+      doc.requestFullscreen();
+    } else if (doc.webkitRequestFullscreen) {
+      doc.webkitRequestFullscreen(); // Safari
+    }
+  } else {
+    // Exit fullscreen
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen(); // Safari
+    }
+  }
+}
+// Update button label when fullscreen state changes
+document.addEventListener('fullscreenchange', updateFsButton);
+document.addEventListener('webkitfullscreenchange', updateFsButton);
+function updateFsButton() {
+  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  document.getElementById('fsIcon').innerHTML = isFs ? '&#x2716;' : '&#x26F6;';
+  document.getElementById('fsLabel').textContent = isFs ? 'Exit Full Screen' : 'Full Screen';
+}
+
+function enterFsThenBegin() {
+  const doc = document.documentElement;
+  if (doc.requestFullscreen) {
+    doc.requestFullscreen().then(function() { beginModule(); }).catch(function() { beginModule(); });
+  } else if (doc.webkitRequestFullscreen) {
+    doc.webkitRequestFullscreen();
+    setTimeout(function() { beginModule(); }, 300);
+  } else {
+    // Fullscreen not supported, just begin
+    beginModule();
+  }
+}
+
 // ========== STATE ==========
 const exerciseCompleted = [false, false, false, false, false];
 let calcCorrect = 0;
@@ -1403,6 +1475,7 @@ function updateSimulator() {
 }
 
 let challengesDone = 0;
+const challenge3OriginalHTML = '<p style="font-weight: 600; margin-bottom: 6px;">Set SFD to Exactly 700 mm with Ug Below 0.5 mm</p><p style="font-size: 0.9rem;">This time you have a constraint: the total Source-to-Film Distance (SFD) must equal 700 mm. Adjust the source, object, and film positions so that SFD reads 700 mm, while also keeping Ug below 0.5 mm. You may need to adjust the source size too.</p><div style="margin-top: 12px;"><button class="btn btn-accent" id="challengeBtn3" onclick="completeChallenge(3)">Done &mdash; Complete! &#10003;</button></div>';
 
 function completeChallenge(n) {
   // Disable the button so they can't click again
@@ -1420,6 +1493,20 @@ function completeChallenge(n) {
     document.getElementById('ex3NextBtn').style.display = 'inline-block';
   }
   challengesDone = n;
+}
+
+function resetChallenges() {
+  challengesDone = 0;
+  document.getElementById('challengeNum').textContent = '1';
+  document.getElementById('challenge1').style.display = 'block';
+  document.getElementById('challengeBtn1').disabled = false;
+  document.getElementById('challengeBtn1').style.opacity = '1';
+  document.getElementById('challenge2').style.display = 'none';
+  document.getElementById('challengeBtn2').disabled = false;
+  document.getElementById('challengeBtn2').style.opacity = '1';
+  document.getElementById('challenge3').style.display = 'none';
+  document.getElementById('challenge3').innerHTML = challenge3OriginalHTML;
+  document.getElementById('ex3NextBtn').style.display = 'none';
 }
 
 // ========== EXERCISE 4: CALCULATIONS ==========
@@ -1696,18 +1783,7 @@ function restartModule() {
   calcSolved = new Set();
   calcAttemptCount = {};
   quizAnswered = {};
-  challengesDone = 0;
-  document.getElementById('ex3NextBtn').style.display = 'none';
-  // Reset challenges to show only challenge 1
-  document.getElementById('challengeNum').textContent = '1';
-  document.getElementById('challenge1').style.display = 'block';
-  document.getElementById('challenge1').querySelector('.btn').disabled = false;
-  document.getElementById('challenge1').querySelector('.btn').style.opacity = '1';
-  document.getElementById('challenge2').style.display = 'none';
-  document.getElementById('challenge2').querySelector('.btn').disabled = false;
-  document.getElementById('challenge2').querySelector('.btn').style.opacity = '1';
-  document.getElementById('challenge3').style.display = 'none';
-  document.getElementById('challenge3').innerHTML = '<p style="font-weight: 600; margin-bottom: 6px;">Set SFD to Exactly 700 mm with Ug Below 0.5 mm</p><p style="font-size: 0.9rem;">This time you have a constraint: the total Source-to-Film Distance (SFD) must equal 700 mm. Adjust the source, object, and film positions so that SFD reads 700 mm, while also keeping Ug below 0.5 mm. You may need to adjust the source size too.</p><div style="margin-top: 12px;"><button class="btn btn-accent" id="challengeBtn3" onclick="completeChallenge(3)">Done &mdash; Complete! &#10003;</button></div>';
+  resetChallenges();
 
   // Re-lock tabs 1-4
   const tabs = document.querySelectorAll('.tab-btn');
