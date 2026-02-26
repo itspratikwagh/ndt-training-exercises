@@ -574,27 +574,27 @@
 <!-- ========== EXERCISE 1: LEARN THE SETUP ========== -->
 <div class="exercise active" id="ex0">
   <h2>Exercise 1: Learn the Radiographic Setup</h2>
-  <p class="subtitle">Click on each component to learn what it is and why it matters.</p>
 
   <div class="info-box">
     In radiographic testing, we use a <strong>radiation source</strong> to send X-rays or gamma rays through an <strong>object</strong> (the part we're inspecting) onto a <strong>film</strong> (or detector) that captures the image. The distances between these three elements are critical for image quality.
   </div>
 
-  <div class="three-col">
-    <div class="learn-item" onclick="showLearnPopup('source')">
-      <div class="learn-icon">&#9762;</div>
-      <h4>Radiation Source</h4>
-      <p>Click to learn more</p>
+  <p class="subtitle" style="margin-bottom: 16px;">Click on each component to learn what it is and why it matters.</p>
+
+  <div style="display: flex; flex-direction: column; align-items: center; gap: 0;">
+    <div class="learn-item" onclick="showLearnPopup('source')" style="width: 100%; max-width: 400px; display: flex; align-items: center; gap: 16px; text-align: left; padding: 16px 24px;">
+      <div class="learn-icon" style="margin-bottom: 0; min-width: 50px; text-align: center;">&#9762;</div>
+      <div><h4>Radiation Source</h4><p>Click to learn more</p></div>
     </div>
-    <div class="learn-item" onclick="showLearnPopup('object')">
-      <div class="learn-icon">&#9881;</div>
-      <h4>Test Object</h4>
-      <p>Click to learn more</p>
+    <div style="font-size: 1.5rem; color: var(--primary); line-height: 1;">&#11015;</div>
+    <div class="learn-item" onclick="showLearnPopup('object')" style="width: 100%; max-width: 400px; display: flex; align-items: center; gap: 16px; text-align: left; padding: 16px 24px;">
+      <div class="learn-icon" style="margin-bottom: 0; min-width: 50px; text-align: center;">&#9881;</div>
+      <div><h4>Test Object</h4><p>Click to learn more</p></div>
     </div>
-    <div class="learn-item" onclick="showLearnPopup('film')">
-      <div class="learn-icon">&#9635;</div>
-      <h4>Film / Detector</h4>
-      <p>Click to learn more</p>
+    <div style="font-size: 1.5rem; color: var(--primary); line-height: 1;">&#11015;</div>
+    <div class="learn-item" onclick="showLearnPopup('film')" style="width: 100%; max-width: 400px; display: flex; align-items: center; gap: 16px; text-align: left; padding: 16px 24px;">
+      <div class="learn-icon" style="margin-bottom: 0; min-width: 50px; text-align: center;">&#9635;</div>
+      <div><h4>Film / Detector</h4><p>Click to learn more</p></div>
     </div>
   </div>
 
@@ -810,6 +810,32 @@
     increases, the image becomes sharper.
   </div>
 
+  <!-- Challenges: one at a time -->
+  <div class="challenge" id="challengeBlock">
+    <h4>&#127775; Challenge <span id="challengeNum">1</span> of 3</h4>
+    <div id="challenge1" style="display: block;">
+      <p style="font-weight: 600; margin-bottom: 6px;">Create the Sharpest Image Possible</p>
+      <p style="font-size: 0.9rem;">Use the sliders below to minimize geometric unsharpness (Ug). Try increasing the distance between the source and the object (SOD), moving the film as close to the object as possible (reduce OFD), and reducing the source size (f). Can you get Ug below 0.05 mm?</p>
+      <div style="margin-top: 12px;">
+        <button class="btn btn-accent" id="challengeBtn1" onclick="completeChallenge(1)">Done &mdash; Next Challenge &rarr;</button>
+      </div>
+    </div>
+    <div id="challenge2" style="display: none;">
+      <p style="font-weight: 600; margin-bottom: 6px;">Create the Blurriest Image Possible</p>
+      <p style="font-size: 0.9rem;">Now do the opposite. Move the source as close to the object as you can (reduce SOD), move the film far from the object (increase OFD), and increase the source size (f) to its maximum. How high can you get Ug?</p>
+      <div style="margin-top: 12px;">
+        <button class="btn btn-accent" id="challengeBtn2" onclick="completeChallenge(2)">Done &mdash; Next Challenge &rarr;</button>
+      </div>
+    </div>
+    <div id="challenge3" style="display: none;">
+      <p style="font-weight: 600; margin-bottom: 6px;">Set SFD to Exactly 700 mm with Ug Below 0.5 mm</p>
+      <p style="font-size: 0.9rem;">This time you have a constraint: the total Source-to-Film Distance (SFD) must equal 700 mm. Adjust the source, object, and film positions so that SFD reads 700 mm, while also keeping Ug below 0.5 mm. You may need to adjust the source size too.</p>
+      <div style="margin-top: 12px;">
+        <button class="btn btn-accent" id="challengeBtn3" onclick="completeChallenge(3)">Done &mdash; Complete! &#10003;</button>
+      </div>
+    </div>
+  </div>
+
   <div class="two-col">
     <div>
       <div class="slider-group">
@@ -885,16 +911,6 @@
           <text id="simOFDtext" x="262" y="295" text-anchor="middle" fill="#555555" font-size="9">OFD</text>
         </svg>
       </div>
-    </div>
-  </div>
-
-  <div class="challenge">
-    <h4>&#127775; Try These Challenges:</h4>
-    <p id="simChallenge">1. Make the image as <strong>sharp as possible</strong> (minimize Ug). What did you need to do?</p>
-    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
-      <button class="btn btn-accent" onclick="setSimChallenge(1)">Challenge 1: Sharpest Image</button>
-      <button class="btn btn-accent" onclick="setSimChallenge(2)">Challenge 2: Blurriest Image</button>
-      <button class="btn btn-accent" onclick="setSimChallenge(3)">Challenge 3: SFD = 700 mm</button>
     </div>
   </div>
 
@@ -1386,18 +1402,24 @@ function updateSimulator() {
   document.getElementById('simOFDtext').setAttribute('x', (ox + fx) / 2);
 }
 
-const challengesClicked = new Set();
+let challengesDone = 0;
 
-function setSimChallenge(n) {
-  const el = document.getElementById('simChallenge');
-  if (n === 1) el.innerHTML = '1. Make the image as <strong>sharp as possible</strong> (minimize Ug). Try: maximize SOD, minimize OFD, and use a small source size.';
-  if (n === 2) el.innerHTML = '2. Make the image as <strong>blurry as possible</strong> (maximize Ug). Try: minimize SOD, maximize OFD, and use a large source size.';
-  if (n === 3) el.innerHTML = '3. Set the <strong>SFD to exactly 700 mm</strong> while keeping Ug below 0.5 mm. Hint: You may need to adjust the source size.';
+function completeChallenge(n) {
+  // Disable the button so they can't click again
+  document.getElementById('challengeBtn' + n).disabled = true;
+  document.getElementById('challengeBtn' + n).style.opacity = '0.5';
 
-  challengesClicked.add(n);
-  if (challengesClicked.size === 3) {
+  if (n < 3) {
+    // Hide current challenge, show next
+    document.getElementById('challenge' + n).style.display = 'none';
+    document.getElementById('challenge' + (n + 1)).style.display = 'block';
+    document.getElementById('challengeNum').textContent = n + 1;
+  } else {
+    // All 3 done — show completion message and Next Exercise button
+    document.getElementById('challenge3').innerHTML = '<p style="color: var(--success); font-weight: 600; font-size: 1.1rem;">&#10003; All 3 challenges complete! Great work exploring the simulator.</p>';
     document.getElementById('ex3NextBtn').style.display = 'inline-block';
   }
+  challengesDone = n;
 }
 
 // ========== EXERCISE 4: CALCULATIONS ==========
@@ -1674,8 +1696,18 @@ function restartModule() {
   calcSolved = new Set();
   calcAttemptCount = {};
   quizAnswered = {};
-  challengesClicked.clear();
+  challengesDone = 0;
   document.getElementById('ex3NextBtn').style.display = 'none';
+  // Reset challenges to show only challenge 1
+  document.getElementById('challengeNum').textContent = '1';
+  document.getElementById('challenge1').style.display = 'block';
+  document.getElementById('challenge1').querySelector('.btn').disabled = false;
+  document.getElementById('challenge1').querySelector('.btn').style.opacity = '1';
+  document.getElementById('challenge2').style.display = 'none';
+  document.getElementById('challenge2').querySelector('.btn').disabled = false;
+  document.getElementById('challenge2').querySelector('.btn').style.opacity = '1';
+  document.getElementById('challenge3').style.display = 'none';
+  document.getElementById('challenge3').innerHTML = '<p style="font-weight: 600; margin-bottom: 6px;">Set SFD to Exactly 700 mm with Ug Below 0.5 mm</p><p style="font-size: 0.9rem;">This time you have a constraint: the total Source-to-Film Distance (SFD) must equal 700 mm. Adjust the source, object, and film positions so that SFD reads 700 mm, while also keeping Ug below 0.5 mm. You may need to adjust the source size too.</p><div style="margin-top: 12px;"><button class="btn btn-accent" id="challengeBtn3" onclick="completeChallenge(3)">Done &mdash; Complete! &#10003;</button></div>';
 
   // Re-lock tabs 1-4
   const tabs = document.querySelectorAll('.tab-btn');
