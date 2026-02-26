@@ -530,14 +530,37 @@
 </div>
 
 <!-- PROGRESS -->
-<div class="progress-container">
+<div class="progress-container" id="progressContainer" style="display: none;">
   <span class="progress-label">Module Progress</span>
   <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
   <span class="progress-text" id="progressText">0 / 5</span>
 </div>
 
+<!-- COVER PAGE -->
+<div class="main" id="coverPage">
+  <div id="coverContent" style="display: block; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 50px 36px; text-align: center;">
+    <div style="font-size: 3rem; margin-bottom: 16px;">&#9762;</div>
+    <h2 style="font-size: 1.6rem; margin-bottom: 16px;">Welcome to the RT Distance Concepts Interactive Module</h2>
+    <p style="max-width: 640px; margin: 0 auto 24px; font-size: 1rem; line-height: 1.7; color: var(--text);">
+      This module contains <strong>5 exercises</strong> that will teach you the fundamentals of Source-to-Object Distance (SOD), Object-to-Film Distance (OFD), and Source-to-Film Distance (SFD).
+    </p>
+    <div style="max-width: 480px; margin: 0 auto 28px; text-align: left;">
+      <p style="font-weight: 600; margin-bottom: 12px; color: var(--primary);">What you'll do:</p>
+      <p style="margin: 8px 0; font-size: 0.95rem;">1. <strong>Learn the Setup</strong> &mdash; Understand each component and distance</p>
+      <p style="margin: 8px 0; font-size: 0.95rem;">2. <strong>Build a Setup</strong> &mdash; Drag and drop components into position</p>
+      <p style="margin: 8px 0; font-size: 0.95rem;">3. <strong>See the Effect</strong> &mdash; Experiment with a live simulator</p>
+      <p style="margin: 8px 0; font-size: 0.95rem;">4. <strong>Calculate Ug</strong> &mdash; Practice the geometric unsharpness formula</p>
+      <p style="margin: 8px 0; font-size: 0.95rem;">5. <strong>Final Quiz</strong> &mdash; Test your understanding</p>
+    </div>
+    <div class="info-box" style="max-width: 560px; margin: 0 auto 28px; text-align: left; background: #FFF5F5; border-left-color: var(--primary);">
+      <strong>Important:</strong> Please complete all 5 exercises before clicking the "Complete and Continue" button below this module. The exercises are sequential &mdash; each one unlocks after you finish the previous one. You'll know you're done when you see the congratulations screen at the end of Exercise 5.
+    </div>
+    <button class="btn btn-primary" onclick="beginModule()" style="font-size: 1.05rem; padding: 14px 36px;">Begin Module &rarr;</button>
+  </div>
+</div>
+
 <!-- TABS -->
-<div class="tab-nav" id="tabNav">
+<div class="tab-nav" id="tabNav" style="display: none;">
   <button class="tab-btn active" onclick="showExercise(0)">1. Learn the Setup<span class="badge pending" id="badge0"></span></button>
   <button class="tab-btn locked" onclick="showExercise(1)">2. Build a Setup<span class="badge pending" id="badge1"></span></button>
   <button class="tab-btn locked" onclick="showExercise(2)">3. See the Effect<span class="badge pending" id="badge2"></span></button>
@@ -546,7 +569,7 @@
 </div>
 
 <!-- MAIN CONTENT -->
-<div class="main">
+<div class="main" id="mainContent" style="display: none;">
 
 <!-- ========== EXERCISE 1: LEARN THE SETUP ========== -->
 <div class="exercise active" id="ex0">
@@ -877,7 +900,7 @@
 
   <div class="nav-buttons">
     <button class="btn btn-outline" onclick="showExercise(1)">&larr; Previous</button>
-    <button class="btn btn-primary" onclick="completeExercise(2); showExercise(3);">Next Exercise &rarr;</button>
+    <button class="btn btn-primary" id="ex3NextBtn" onclick="completeExercise(2); showExercise(3);" style="display:none;">Next Exercise &rarr;</button>
   </div>
 </div>
 
@@ -1363,11 +1386,18 @@ function updateSimulator() {
   document.getElementById('simOFDtext').setAttribute('x', (ox + fx) / 2);
 }
 
+const challengesClicked = new Set();
+
 function setSimChallenge(n) {
   const el = document.getElementById('simChallenge');
   if (n === 1) el.innerHTML = '1. Make the image as <strong>sharp as possible</strong> (minimize Ug). Try: maximize SOD, minimize OFD, and use a small source size.';
   if (n === 2) el.innerHTML = '2. Make the image as <strong>blurry as possible</strong> (maximize Ug). Try: minimize SOD, maximize OFD, and use a large source size.';
   if (n === 3) el.innerHTML = '3. Set the <strong>SFD to exactly 700 mm</strong> while keeping Ug below 0.5 mm. Hint: You may need to adjust the source size.';
+
+  challengesClicked.add(n);
+  if (challengesClicked.size === 3) {
+    document.getElementById('ex3NextBtn').style.display = 'inline-block';
+  }
 }
 
 // ========== EXERCISE 4: CALCULATIONS ==========
@@ -1644,6 +1674,8 @@ function restartModule() {
   calcSolved = new Set();
   calcAttemptCount = {};
   quizAnswered = {};
+  challengesClicked.clear();
+  document.getElementById('ex3NextBtn').style.display = 'none';
 
   // Re-lock tabs 1-4
   const tabs = document.querySelectorAll('.tab-btn');
@@ -1673,9 +1705,23 @@ function restartModule() {
   document.getElementById('submitQuizBtn').style.display = 'inline-block';
   document.getElementById('quizContainer').innerHTML = '';
 
-  // Reset progress and go to Exercise 1
+  // Reset progress and go back to cover page
   updateProgress();
   showExercise(0);
+  document.getElementById('mainContent').style.display = 'none';
+  document.getElementById('tabNav').style.display = 'none';
+  document.getElementById('progressContainer').style.display = 'none';
+  document.getElementById('coverPage').style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ========== COVER PAGE ==========
+function beginModule() {
+  document.getElementById('coverPage').style.display = 'none';
+  document.getElementById('progressContainer').style.display = 'flex';
+  document.getElementById('tabNav').style.display = 'flex';
+  document.getElementById('mainContent').style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ========== INIT ==========
