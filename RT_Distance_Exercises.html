@@ -6,17 +6,17 @@
 <title>Radiographic Testing: Distance Concepts Interactive Exercises</title>
 <style>
   :root {
-    --primary: #1a5276;
-    --primary-light: #2980b9;
-    --accent: #e67e22;
-    --accent-light: #f39c12;
+    --primary: #A82020;
+    --primary-light: #C43030;
+    --accent: #A82020;
+    --accent-light: #C43030;
     --success: #27ae60;
-    --danger: #c0392b;
-    --bg: #f4f6f8;
-    --card: #ffffff;
-    --text: #2c3e50;
-    --text-light: #7f8c8d;
-    --border: #dce1e6;
+    --danger: #A82020;
+    --bg: #F5F5F5;
+    --card: #FFFFFF;
+    --text: #333333;
+    --text-light: #666666;
+    --border: #E0E0E0;
     --shadow: 0 4px 15px rgba(0,0,0,0.08);
     --radius: 12px;
   }
@@ -131,7 +131,7 @@
 
   /* INFO BOX */
   .info-box {
-    background: #eaf2f8;
+    background: #F5E6E6;
     border-left: 4px solid var(--primary-light);
     padding: 16px 20px;
     border-radius: 0 8px 8px 0;
@@ -174,9 +174,9 @@
   }
   .component-card.source { border-color: var(--danger); color: var(--danger); }
   .component-card.source .icon { font-size: 1.8rem; }
-  .component-card.object { border-color: var(--accent); color: var(--accent); }
+  .component-card.object { border-color: #555555; color: #555555; }
   .component-card.object .icon { font-size: 1.8rem; }
-  .component-card.film { border-color: var(--primary-light); color: var(--primary-light); }
+  .component-card.film { border-color: #333333; color: #333333; }
   .component-card.film .icon { font-size: 1.8rem; }
 
   .drop-zone {
@@ -321,7 +321,7 @@
     transition: all 0.2s;
   }
   .scenario-card:hover { border-color: var(--primary-light); box-shadow: var(--shadow); }
-  .scenario-card.selected { border-color: var(--primary); background: #eaf2f8; }
+  .scenario-card.selected { border-color: var(--primary); background: #F5E6E6; }
   .scenario-card h4 { color: var(--primary); margin-bottom: 6px; }
   .scenario-card p { font-size: 0.9rem; color: var(--text-light); }
 
@@ -347,7 +347,7 @@
     font-size: 0.9rem;
     transition: all 0.2s;
   }
-  .quiz-option:hover { border-color: var(--primary-light); background: #f0f7fc; }
+  .quiz-option:hover { border-color: var(--primary-light); background: #FFF0F0; }
   .quiz-option.correct { border-color: var(--success); background: #e8f8ef; color: var(--success); font-weight: 600; }
   .quiz-option.incorrect { border-color: var(--danger); background: #fde8e8; color: var(--danger); }
   .quiz-option.disabled { pointer-events: none; opacity: 0.7; }
@@ -364,7 +364,7 @@
 
   /* FORMULA DISPLAY */
   .formula-box {
-    background: #2c3e50;
+    background: #333333;
     color: #ecf0f1;
     padding: 20px 28px;
     border-radius: var(--radius);
@@ -403,7 +403,7 @@
     margin: 8px 0;
   }
   .result-display.good { background: #e8f8ef; color: var(--success); }
-  .result-display.warn { background: #fef9e7; color: #d4a800; }
+  .result-display.warn { background: #FFF5F5; color: #d4a800; }
   .result-display.bad { background: #fde8e8; color: var(--danger); }
 
   /* GRID LAYOUTS */
@@ -436,7 +436,7 @@
 
   /* CHALLENGE CARD */
   .challenge {
-    background: linear-gradient(135deg, #fef9e7, #fdebd0);
+    background: linear-gradient(135deg, #FFF5F5, #fdebd0);
     border: 2px solid var(--accent-light);
     border-radius: var(--radius);
     padding: 24px;
@@ -514,7 +514,7 @@
 
   /* Shadow diagram styling */
   .shadow-demo {
-    background: #1a1a2e;
+    background: #F0F0F0;
     border-radius: var(--radius);
     padding: 20px;
     margin: 16px 0;
@@ -584,70 +584,70 @@
       <rect x="0" y="0" width="800" height="300" fill="#fafbfc" rx="12"/>
 
       <!-- Source -->
-      <circle cx="100" cy="150" r="30" fill="#c0392b" opacity="0.15"/>
-      <circle cx="100" cy="150" r="18" fill="#c0392b"/>
+      <circle cx="100" cy="150" r="30" fill="#A82020" opacity="0.15"/>
+      <circle cx="100" cy="150" r="18" fill="#A82020"/>
       <text x="100" y="155" text-anchor="middle" fill="white" font-size="12" font-weight="700">SRC</text>
-      <text x="100" y="200" text-anchor="middle" fill="#c0392b" font-size="13" font-weight="600">Source</text>
+      <text x="100" y="200" text-anchor="middle" fill="#A82020" font-size="13" font-weight="600">Source</text>
 
       <!-- X-ray beam -->
-      <polygon points="118,138 380,80 380,220 118,162" fill="#e74c3c" opacity="0.08" class="beam-pulse"/>
-      <line x1="118" y1="150" x2="380" y2="80" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
-      <line x1="118" y1="150" x2="380" y2="220" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+      <polygon points="118,138 380,80 380,220 118,162" fill="#C43030" opacity="0.08" class="beam-pulse"/>
+      <line x1="118" y1="150" x2="380" y2="80" stroke="#C43030" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+      <line x1="118" y1="150" x2="380" y2="220" stroke="#C43030" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
 
       <!-- Object -->
-      <rect x="366" y="90" width="28" height="120" rx="4" fill="#e67e22"/>
+      <rect x="366" y="90" width="28" height="120" rx="4" fill="#555555"/>
       <text x="380" y="155" text-anchor="middle" fill="white" font-size="11" font-weight="700">OBJ</text>
-      <text x="380" y="250" text-anchor="middle" fill="#e67e22" font-size="13" font-weight="600">Object</text>
+      <text x="380" y="250" text-anchor="middle" fill="#555555" font-size="13" font-weight="600">Object</text>
 
       <!-- Beam continues past object -->
-      <polygon points="400,90 680,60 680,240 400,210" fill="#e74c3c" opacity="0.04"/>
+      <polygon points="400,90 680,60 680,240 400,210" fill="#C43030" opacity="0.04"/>
 
       <!-- Film -->
-      <rect x="664" y="56" width="12" height="188" rx="2" fill="#2980b9"/>
+      <rect x="664" y="56" width="12" height="188" rx="2" fill="#333333"/>
       <text x="670" y="155" text-anchor="middle" fill="white" font-size="9" font-weight="700">F</text>
-      <text x="670" y="280" text-anchor="middle" fill="#2980b9" font-size="13" font-weight="600">Film</text>
+      <text x="670" y="280" text-anchor="middle" fill="#333333" font-size="13" font-weight="600">Film</text>
 
       <!-- SOD arrow -->
       <defs>
-        <marker id="arrowR" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#c0392b"/></marker>
-        <marker id="arrowL" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#c0392b"/></marker>
-        <marker id="arrowRo" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#e67e22"/></marker>
-        <marker id="arrowLo" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#e67e22"/></marker>
-        <marker id="arrowRb" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2980b9"/></marker>
-        <marker id="arrowLb" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#2980b9"/></marker>
+        <marker id="arrowR" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#A82020"/></marker>
+        <marker id="arrowL" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#A82020"/></marker>
+        <marker id="arrowRo" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#555555"/></marker>
+        <marker id="arrowLo" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#555555"/></marker>
+        <marker id="arrowRb" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#333333"/></marker>
+        <marker id="arrowLb" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#333333"/></marker>
       </defs>
 
       <!-- Dotted vertical reference lines at solid shape edges -->
       <!-- Source right edge (x=118) -->
-      <line x1="118" y1="25" x2="118" y2="295" stroke="#c0392b" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+      <line x1="118" y1="25" x2="118" y2="295" stroke="#A82020" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
       <!-- Object near/left edge of solid rect (x=366) -->
-      <line x1="366" y1="25" x2="366" y2="295" stroke="#e67e22" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+      <line x1="366" y1="25" x2="366" y2="295" stroke="#555555" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
       <!-- Object far/right edge of solid rect (x=394) -->
-      <line x1="394" y1="25" x2="394" y2="295" stroke="#e67e22" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+      <line x1="394" y1="25" x2="394" y2="295" stroke="#555555" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
       <!-- Film near/left edge of solid rect (x=664) -->
-      <line x1="664" y1="25" x2="664" y2="295" stroke="#2980b9" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+      <line x1="664" y1="25" x2="664" y2="295" stroke="#333333" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
 
       <!-- SOD: source right edge (118) to object near surface (366) -->
-      <line x1="118" y1="30" x2="366" y2="30" stroke="#c0392b" stroke-width="2" marker-start="url(#arrowL)" marker-end="url(#arrowR)"/>
-      <rect x="193" y="17" width="100" height="26" rx="4" fill="white" stroke="#c0392b" stroke-width="1.5"/>
-      <text x="243" y="35" text-anchor="middle" fill="#c0392b" font-size="13" font-weight="700" style="cursor:pointer" onclick="showLearnPopup('sod')">SOD &#9432;</text>
+      <line x1="118" y1="30" x2="366" y2="30" stroke="#A82020" stroke-width="2" marker-start="url(#arrowL)" marker-end="url(#arrowR)"/>
+      <rect x="193" y="17" width="100" height="26" rx="4" fill="white" stroke="#A82020" stroke-width="1.5"/>
+      <text x="243" y="35" text-anchor="middle" fill="#A82020" font-size="13" font-weight="700" style="cursor:pointer" onclick="showLearnPopup('sod')">SOD &#9432;</text>
 
       <!-- OFD: object near surface (366) to film near surface (664) -->
-      <line x1="366" y1="50" x2="664" y2="50" stroke="#e67e22" stroke-width="2" marker-start="url(#arrowLo)" marker-end="url(#arrowRo)"/>
-      <rect x="480" y="37" width="90" height="26" rx="4" fill="white" stroke="#e67e22" stroke-width="1.5"/>
-      <text x="525" y="55" text-anchor="middle" fill="#e67e22" font-size="13" font-weight="700" style="cursor:pointer" onclick="showLearnPopup('ofd')">OFD &#9432;</text>
+      <line x1="366" y1="50" x2="664" y2="50" stroke="#555555" stroke-width="2" marker-start="url(#arrowLo)" marker-end="url(#arrowRo)"/>
+      <rect x="480" y="37" width="90" height="26" rx="4" fill="white" stroke="#555555" stroke-width="1.5"/>
+      <text x="525" y="55" text-anchor="middle" fill="#555555" font-size="13" font-weight="700" style="cursor:pointer" onclick="showLearnPopup('ofd')">OFD &#9432;</text>
 
       <!-- SFD: source right edge (118) to film near surface (664) -->
-      <line x1="118" y1="70" x2="664" y2="70" stroke="#2980b9" stroke-width="2" marker-start="url(#arrowLb)" marker-end="url(#arrowRb)"/>
-      <rect x="342" y="57" width="90" height="26" rx="4" fill="white" stroke="#2980b9" stroke-width="1.5"/>
-      <text x="387" y="75" text-anchor="middle" fill="#2980b9" font-size="13" font-weight="700" style="cursor:pointer" onclick="showLearnPopup('sfd')">SFD &#9432;</text>
+      <line x1="118" y1="70" x2="664" y2="70" stroke="#333333" stroke-width="2" marker-start="url(#arrowLb)" marker-end="url(#arrowRb)"/>
+      <rect x="342" y="57" width="90" height="26" rx="4" fill="white" stroke="#333333" stroke-width="1.5"/>
+      <text x="387" y="75" text-anchor="middle" fill="#333333" font-size="13" font-weight="700" style="cursor:pointer" onclick="showLearnPopup('sfd')">SFD &#9432;</text>
 
       <!-- Relationship -->
-      <text x="400" y="15" text-anchor="middle" fill="#7f8c8d" font-size="11" font-style="italic">SFD = SOD + OFD</text>
+      <text x="400" y="15" text-anchor="middle" fill="#666666" font-size="11" font-style="italic">SFD = SOD + OFD</text>
     </svg>
   </div>
 
-  <div class="info-box" style="background: #fef9e7; border-left-color: var(--accent);">
+  <div class="info-box" style="background: #FFF5F5; border-left-color: var(--accent);">
     <strong>Key Relationship:</strong> SFD = SOD + OFD. The Source-to-Film Distance always equals the Source-to-Object Distance plus the Object-to-Film Distance. Click on SOD, OFD, or SFD labels in the diagram above to learn more!
   </div>
 
@@ -660,57 +660,57 @@
       <rect x="0" y="0" width="800" height="300" fill="#fafbfc" rx="12"/>
 
       <!-- Source -->
-      <circle cx="100" cy="150" r="30" fill="#c0392b" opacity="0.15"/>
-      <circle cx="100" cy="150" r="18" fill="#c0392b"/>
+      <circle cx="100" cy="150" r="30" fill="#A82020" opacity="0.15"/>
+      <circle cx="100" cy="150" r="18" fill="#A82020"/>
       <text x="100" y="155" text-anchor="middle" fill="white" font-size="12" font-weight="700">SRC</text>
-      <text x="100" y="200" text-anchor="middle" fill="#c0392b" font-size="13" font-weight="600">Source</text>
+      <text x="100" y="200" text-anchor="middle" fill="#A82020" font-size="13" font-weight="600">Source</text>
 
       <!-- X-ray beam -->
-      <polygon points="118,138 380,80 380,220 118,162" fill="#e74c3c" opacity="0.08" class="beam-pulse"/>
-      <line x1="118" y1="150" x2="380" y2="80" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
-      <line x1="118" y1="150" x2="380" y2="220" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+      <polygon points="118,138 380,80 380,220 118,162" fill="#C43030" opacity="0.08" class="beam-pulse"/>
+      <line x1="118" y1="150" x2="380" y2="80" stroke="#C43030" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+      <line x1="118" y1="150" x2="380" y2="220" stroke="#C43030" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
 
       <!-- Object -->
-      <rect x="366" y="90" width="28" height="120" rx="4" fill="#e67e22"/>
+      <rect x="366" y="90" width="28" height="120" rx="4" fill="#555555"/>
       <text x="380" y="155" text-anchor="middle" fill="white" font-size="11" font-weight="700">OBJ</text>
-      <text x="380" y="250" text-anchor="middle" fill="#e67e22" font-size="13" font-weight="600">Object</text>
+      <text x="380" y="250" text-anchor="middle" fill="#555555" font-size="13" font-weight="600">Object</text>
 
       <!-- Film (in contact with object, right against its far surface) -->
-      <rect x="394" y="90" width="12" height="120" rx="2" fill="#2980b9"/>
-      <text x="400" y="230" text-anchor="middle" fill="#2980b9" font-size="13" font-weight="600">Film</text>
+      <rect x="394" y="90" width="12" height="120" rx="2" fill="#333333"/>
+      <text x="400" y="230" text-anchor="middle" fill="#333333" font-size="13" font-weight="600">Film</text>
 
       <!-- Arrow markers (reuse ids with suffix 2) -->
       <defs>
-        <marker id="arrowR2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#c0392b"/></marker>
-        <marker id="arrowL2" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#c0392b"/></marker>
-        <marker id="arrowRb2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2980b9"/></marker>
-        <marker id="arrowLb2" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#2980b9"/></marker>
-        <marker id="arrowRo2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#e67e22"/></marker>
-        <marker id="arrowLo2" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#e67e22"/></marker>
+        <marker id="arrowR2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#A82020"/></marker>
+        <marker id="arrowL2" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#A82020"/></marker>
+        <marker id="arrowRb2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#333333"/></marker>
+        <marker id="arrowLb2" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#333333"/></marker>
+        <marker id="arrowRo2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#555555"/></marker>
+        <marker id="arrowLo2" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><polygon points="8 0, 0 3, 8 6" fill="#555555"/></marker>
       </defs>
 
       <!-- Dotted vertical reference lines -->
-      <line x1="118" y1="25" x2="118" y2="260" stroke="#c0392b" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
-      <line x1="366" y1="25" x2="366" y2="260" stroke="#e67e22" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
-      <line x1="394" y1="25" x2="394" y2="260" stroke="#2980b9" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+      <line x1="118" y1="25" x2="118" y2="260" stroke="#A82020" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+      <line x1="366" y1="25" x2="366" y2="260" stroke="#555555" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+      <line x1="394" y1="25" x2="394" y2="260" stroke="#333333" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
 
       <!-- SOD: source right edge (118) to object near surface (366) -->
-      <line x1="118" y1="30" x2="366" y2="30" stroke="#c0392b" stroke-width="2" marker-start="url(#arrowL2)" marker-end="url(#arrowR2)"/>
-      <rect x="193" y="17" width="100" height="26" rx="4" fill="white" stroke="#c0392b" stroke-width="1.5"/>
-      <text x="243" y="35" text-anchor="middle" fill="#c0392b" font-size="13" font-weight="700">SOD</text>
+      <line x1="118" y1="30" x2="366" y2="30" stroke="#A82020" stroke-width="2" marker-start="url(#arrowL2)" marker-end="url(#arrowR2)"/>
+      <rect x="193" y="17" width="100" height="26" rx="4" fill="white" stroke="#A82020" stroke-width="1.5"/>
+      <text x="243" y="35" text-anchor="middle" fill="#A82020" font-size="13" font-weight="700">SOD</text>
 
       <!-- OFD: object near surface (366) to film near surface (394) — very short -->
-      <line x1="366" y1="50" x2="394" y2="50" stroke="#e67e22" stroke-width="2" marker-start="url(#arrowLo2)" marker-end="url(#arrowRo2)"/>
-      <rect x="420" y="37" width="170" height="26" rx="4" fill="white" stroke="#e67e22" stroke-width="1.5"/>
-      <text x="505" y="55" text-anchor="middle" fill="#e67e22" font-size="12" font-weight="700">OFD (= T of OBJ)</text>
+      <line x1="366" y1="50" x2="394" y2="50" stroke="#555555" stroke-width="2" marker-start="url(#arrowLo2)" marker-end="url(#arrowRo2)"/>
+      <rect x="420" y="37" width="170" height="26" rx="4" fill="white" stroke="#555555" stroke-width="1.5"/>
+      <text x="505" y="55" text-anchor="middle" fill="#555555" font-size="12" font-weight="700">OFD (= T of OBJ)</text>
 
       <!-- SFD: source right edge (118) to film near surface (394) -->
-      <line x1="118" y1="70" x2="394" y2="70" stroke="#2980b9" stroke-width="2" marker-start="url(#arrowLb2)" marker-end="url(#arrowRb2)"/>
-      <rect x="205" y="57" width="100" height="26" rx="4" fill="white" stroke="#2980b9" stroke-width="1.5"/>
-      <text x="255" y="75" text-anchor="middle" fill="#2980b9" font-size="13" font-weight="700">SFD</text>
+      <line x1="118" y1="70" x2="394" y2="70" stroke="#333333" stroke-width="2" marker-start="url(#arrowLb2)" marker-end="url(#arrowRb2)"/>
+      <rect x="205" y="57" width="100" height="26" rx="4" fill="white" stroke="#333333" stroke-width="1.5"/>
+      <text x="255" y="75" text-anchor="middle" fill="#333333" font-size="13" font-weight="700">SFD</text>
 
       <!-- Relationship -->
-      <text x="400" y="15" text-anchor="middle" fill="#7f8c8d" font-size="11" font-style="italic">Film in contact: OFD = object thickness only, SFD = SOD + OFD = SOD + T</text>
+      <text x="400" y="15" text-anchor="middle" fill="#666666" font-size="11" font-style="italic">Film in contact: OFD = object thickness only, SFD = SOD + OFD = SOD + T</text>
     </svg>
   </div>
 
@@ -818,7 +818,7 @@
         <div style="margin-top: 12px;">
           <strong style="font-size:0.85rem;">Image Sharpness:</strong>
           <div class="quality-meter">
-            <div class="quality-fill" id="qualityFill" style="width: 50%; background: linear-gradient(90deg, #e74c3c, #f39c12, #27ae60);"></div>
+            <div class="quality-fill" id="qualityFill" style="width: 50%; background: linear-gradient(90deg, #C43030, #D4A017, #27ae60);"></div>
             <div class="quality-label" id="qualityLabel">Moderate</div>
           </div>
         </div>
@@ -828,38 +828,38 @@
     <div>
       <div class="shadow-demo" id="shadowDemo">
         <svg viewBox="0 0 360 340" width="100%" height="340">
-          <rect x="0" y="0" width="360" height="340" fill="#1a1a2e" rx="8"/>
+          <rect x="0" y="0" width="360" height="340" fill="#F0F0F0" rx="8"/>
 
           <!-- Source -->
-          <circle id="simSource" cx="30" cy="170" r="8" fill="#e74c3c"/>
-          <text id="simSrcLabel" x="30" y="200" text-anchor="middle" fill="#e74c3c" font-size="10" font-weight="600">Source</text>
+          <circle id="simSource" cx="30" cy="170" r="8" fill="#C43030"/>
+          <text id="simSrcLabel" x="30" y="200" text-anchor="middle" fill="#C43030" font-size="10" font-weight="600">Source</text>
 
           <!-- Beam -->
-          <polygon id="simBeam" points="38,162 200,100 200,240 38,178" fill="#e74c3c" opacity="0.06"/>
+          <polygon id="simBeam" points="38,162 200,100 200,240 38,178" fill="#C43030" opacity="0.06"/>
 
           <!-- Object -->
-          <rect id="simObject" x="195" y="120" width="10" height="100" rx="2" fill="#e67e22"/>
-          <text id="simObjLabel" x="200" y="245" text-anchor="middle" fill="#e67e22" font-size="10" font-weight="600">Object</text>
+          <rect id="simObject" x="195" y="120" width="10" height="100" rx="2" fill="#555555"/>
+          <text id="simObjLabel" x="200" y="245" text-anchor="middle" fill="#555555" font-size="10" font-weight="600">Object</text>
 
           <!-- Film -->
-          <rect id="simFilm" x="320" y="40" width="6" height="260" rx="1" fill="#2980b9"/>
-          <text id="simFilmLabel" x="323" y="320" text-anchor="middle" fill="#2980b9" font-size="10" font-weight="600">Film</text>
+          <rect id="simFilm" x="320" y="40" width="6" height="260" rx="1" fill="#333333"/>
+          <text id="simFilmLabel" x="323" y="320" text-anchor="middle" fill="#333333" font-size="10" font-weight="600">Film</text>
 
           <!-- Shadow on film -->
-          <rect id="simShadow" x="322" y="110" width="4" height="120" fill="#ecf0f1" opacity="0.7" rx="1"/>
+          <rect id="simShadow" x="322" y="110" width="4" height="120" fill="#333333" opacity="0.7" rx="1"/>
           <!-- Penumbra (unsharpness) top -->
-          <rect id="simPenTop" x="322" y="105" width="4" height="10" fill="#ecf0f1" opacity="0.25" rx="1"/>
+          <rect id="simPenTop" x="322" y="105" width="4" height="10" fill="#333333" opacity="0.25" rx="1"/>
           <!-- Penumbra (unsharpness) bottom -->
-          <rect id="simPenBot" x="322" y="225" width="4" height="10" fill="#ecf0f1" opacity="0.25" rx="1"/>
+          <rect id="simPenBot" x="322" y="225" width="4" height="10" fill="#333333" opacity="0.25" rx="1"/>
 
           <!-- Labels -->
-          <text x="180" y="20" text-anchor="middle" fill="#7f8c8d" font-size="10">Live Radiographic Setup Simulation</text>
+          <text x="180" y="20" text-anchor="middle" fill="#666666" font-size="10">Live Radiographic Setup Simulation</text>
 
           <!-- SOD/OFD/SFD lines -->
-          <line id="simSODline" x1="30" y1="280" x2="200" y2="280" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="3"/>
-          <text id="simSODtext" x="115" y="295" text-anchor="middle" fill="#c0392b" font-size="9">SOD</text>
-          <line id="simOFDline" x1="200" y1="280" x2="323" y2="280" stroke="#e67e22" stroke-width="1.5" stroke-dasharray="3"/>
-          <text id="simOFDtext" x="262" y="295" text-anchor="middle" fill="#e67e22" font-size="9">OFD</text>
+          <line id="simSODline" x1="30" y1="280" x2="200" y2="280" stroke="#A82020" stroke-width="1.5" stroke-dasharray="3"/>
+          <text id="simSODtext" x="115" y="295" text-anchor="middle" fill="#A82020" font-size="9">SOD</text>
+          <line id="simOFDline" x1="200" y1="280" x2="323" y2="280" stroke="#555555" stroke-width="1.5" stroke-dasharray="3"/>
+          <text id="simOFDtext" x="262" y="295" text-anchor="middle" fill="#555555" font-size="9">OFD</text>
         </svg>
       </div>
     </div>
@@ -990,11 +990,11 @@
       <h2>Congratulations, You've Completed the Module!</h2>
       <p style="margin-top:10px; color:var(--text-light); font-size: 1rem;">You have successfully worked through all 5 exercises covering Source-to-Object Distance (SOD), Object-to-Film Distance (OFD), Source-to-Film Distance (SFD), and the Geometric Unsharpness formula.</p>
       <div style="margin-top: 20px; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
-        <div style="background:#eaf2f8; border-radius:10px; padding:16px 24px; text-align:center;">
+        <div style="background:#F5E6E6; border-radius:10px; padding:16px 24px; text-align:center;">
           <div style="font-size:1.4rem; font-weight:700; color:var(--primary);" id="finalCalcScore">—</div>
           <div style="font-size:0.8rem; color:var(--text-light);">Calculation Score</div>
         </div>
-        <div style="background:#eaf2f8; border-radius:10px; padding:16px 24px; text-align:center;">
+        <div style="background:#F5E6E6; border-radius:10px; padding:16px 24px; text-align:center;">
           <div style="font-size:1.4rem; font-weight:700; color:var(--primary);" id="finalQuizScore">—</div>
           <div style="font-size:0.8rem; color:var(--text-light);">Quiz Score</div>
         </div>
@@ -1304,10 +1304,10 @@ function updateSimulator() {
     qualFill.style.background = 'linear-gradient(90deg, #27ae60, #2ecc71)';
     document.getElementById('qualityLabel').textContent = 'Sharp';
   } else if (qualPct > 40) {
-    qualFill.style.background = 'linear-gradient(90deg, #f39c12, #f1c40f)';
+    qualFill.style.background = 'linear-gradient(90deg, #D4A017, #f1c40f)';
     document.getElementById('qualityLabel').textContent = 'Moderate';
   } else {
-    qualFill.style.background = 'linear-gradient(90deg, #e74c3c, #c0392b)';
+    qualFill.style.background = 'linear-gradient(90deg, #C43030, #A82020)';
     document.getElementById('qualityLabel').textContent = 'Blurry';
   }
 
@@ -1328,10 +1328,11 @@ function updateSimulator() {
   document.getElementById('simFilm').setAttribute('x', fx - 3);
   document.getElementById('simFilmLabel').setAttribute('x', fx);
 
-  // Beam polygon
+  // Beam polygon — cone angle depends only on source size, extends to edge of viewport
   const beamW = srcR;
+  const beamFarX = 350; // fixed far edge of SVG
   document.getElementById('simBeam').setAttribute('points',
-    `${sx + srcR},${170 - beamW * 3} ${fx},40 ${fx},300 ${sx + srcR},${170 + beamW * 3}`);
+    `${sx + srcR},${170 - beamW * 3} ${beamFarX},40 ${beamFarX},300 ${sx + srcR},${170 + beamW * 3}`);
 
   // Shadow on film
   const objHalfH = 50;
