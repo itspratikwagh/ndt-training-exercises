@@ -191,7 +191,7 @@
 
     <div class="measurement-viewport" id="viewport">
       <svg id="measureSvg" viewBox="0 0 750 550" xmlns="http://www.w3.org/2000/svg"></svg>
-      <div class="ruler-instructions" id="rulerInstructions">Drag ruler to position · Scroll wheel to rotate</div>
+      <div class="ruler-instructions" id="rulerInstructions">Drag ruler to position</div>
     </div>
 
     <div class="answer-area" id="answerArea">
@@ -270,8 +270,7 @@ const SCENARIOS = [
     id: 1, title: "Round 1 of 7 — Basic Reading",
     prompt: "Position the ruler over the weld bead and measure its width. The red markers show the feature edges.",
     featureLabel: "Weld Width", trueValue: 0.250, tolerance: 0.003,
-    rulerStartX: 80, rulerStartY: 30, rulerStartAngle: 2,
-    featureType: "butt-weld", answerMode: "numeric",
+    rulerStartX: 80, rulerStartY: 30,    featureType: "butt-weld", answerMode: "numeric",
     needsDisposition: false, criteria: [],
     tip: "Start with the basics: find the zero line, then count graduations. Each 1/64\" division ≈ 0.016\".",
     correctFeedback: "Correct! 0.250\" (1/4\") is a clean reading on a major graduation line.",
@@ -282,8 +281,7 @@ const SCENARIOS = [
     id: 2, title: "Round 2 of 7 — Basic Reading",
     prompt: "Measure the width of this weld reinforcement cap. The measurement does not fall on a major graduation.",
     featureLabel: "Reinforcement Width", trueValue: 0.187, tolerance: 0.005,
-    rulerStartX: 90, rulerStartY: 35, rulerStartAngle: -1,
-    featureType: "butt-weld", answerMode: "numeric",
+    rulerStartX: 90, rulerStartY: 35,    featureType: "butt-weld", answerMode: "numeric",
     needsDisposition: false, criteria: [],
     tip: "3/16\" = 0.1875\" ≈ 0.188\". Experienced inspectors round to the nearest 0.005\".",
     correctFeedback: "Good read! 0.187\"-0.188\" is the 3/16\" mark.",
@@ -294,8 +292,7 @@ const SCENARIOS = [
     id: 3, title: "Round 3 of 7 — Interpolation",
     prompt: "Measure the length of this undercut indication. The feature edge falls between graduation lines — interpolate your reading.",
     featureLabel: "Undercut Length", trueValue: 0.094, tolerance: 0.004,
-    rulerStartX: 70, rulerStartY: 25, rulerStartAngle: 3,
-    featureType: "undercut-length", answerMode: "numeric",
+    rulerStartX: 70, rulerStartY: 25,    featureType: "undercut-length", answerMode: "numeric",
     needsDisposition: false, criteria: [],
     tip: "Interpolation: estimate between the smallest marks. 3/32\" = 0.09375\", 7/64\" = 0.1094\".",
     correctFeedback: "Excellent interpolation! Just past the 3/32\" mark, reading approximately 0.094\".",
@@ -306,8 +303,7 @@ const SCENARIOS = [
     id: 4, title: "Round 4 of 7 — Parallax Error",
     prompt: "Position the ruler and measure the weld width. Use the viewing angle slider below — notice how the apparent reading shifts when you're not looking straight down. Set the angle to 0° before reading.",
     featureLabel: "Weld Width", trueValue: 0.312, tolerance: 0.005,
-    rulerStartX: 60, rulerStartY: 28, rulerStartAngle: 0,
-    featureType: "butt-weld-wide", answerMode: "numeric",
+    rulerStartX: 60, rulerStartY: 28,    featureType: "butt-weld-wide", answerMode: "numeric",
     needsDisposition: false, criteria: [], isParallax: true,
     tip: "Parallax error shifts your apparent reading. Always read with your eye directly above the measurement point — 0° viewing angle.",
     correctFeedback: "Outstanding! You set the viewing angle to 0° and read the true value: 0.312\" (5/16\").",
@@ -318,8 +314,7 @@ const SCENARIOS = [
     id: 5, title: "Round 5 of 7 — Offset Zero",
     prompt: "Measure the length of this porosity cluster. ⚠ Look carefully at where the ruler's zero mark is — it is NOT at the physical edge.",
     featureLabel: "Porosity Cluster Length", trueValue: 0.156, tolerance: 0.005,
-    rulerStartX: 30, rulerStartY: 30, rulerStartAngle: 1,
-    featureType: "porosity-cluster", answerMode: "numeric",
+    rulerStartX: 30, rulerStartY: 30,    featureType: "porosity-cluster", answerMode: "numeric",
     needsDisposition: false, criteria: [], hasOffsetZero: true,
     tip: "Many scales have zero inset from the edge. Read from the zero graduation mark — not the metal edge of the ruler.",
     correctFeedback: "Correct! The feature spans from 0.100\" to 0.256\", a length of 0.156\" (5/32\").",
@@ -330,8 +325,7 @@ const SCENARIOS = [
     id: 6, title: "Round 6 of 7 — Edge-to-Edge Pore Spacing",
     prompt: "Two porosity indications of equal size (0.025\" diameter each). Measure the EDGE-TO-EDGE clear spacing between them — not center-to-center. D17.1 requires spacing ≥ 3× the larger pore diameter.",
     featureLabel: "Pore Spacing (edge-to-edge)", trueValue: 0.062, tolerance: 0.004,
-    rulerStartX: 50, rulerStartY: 30, rulerStartAngle: 2,
-    featureType: "pore-spacing-equal", answerMode: "numeric",
+    rulerStartX: 50, rulerStartY: 30,    featureType: "pore-spacing-equal", answerMode: "numeric",
     needsDisposition: true, correctDisposition: "reject",
     pore1Diam: 0.025, pore2Diam: 0.025,
     criteria: [
@@ -349,8 +343,7 @@ const SCENARIOS = [
     id: 7, title: "Round 7 of 7 — Unequal Pore Trap",
     prompt: "Two unequal porosity indications: one 0.025\" diameter and one 0.018\" diameter. Measure the edge-to-edge spacing. D17.1 requires spacing ≥ 3× the LARGER pore diameter. Which pore diameter do you use for the calculation?",
     featureLabel: "Pore Spacing (edge-to-edge)", trueValue: 0.070, tolerance: 0.004,
-    rulerStartX: 55, rulerStartY: 28, rulerStartAngle: -1,
-    featureType: "pore-spacing-unequal", answerMode: "numeric",
+    rulerStartX: 55, rulerStartY: 28,    featureType: "pore-spacing-unequal", answerMode: "numeric",
     needsDisposition: true, correctDisposition: "reject",
     pore1Diam: 0.025, pore2Diam: 0.018,
     criteria: [
@@ -376,8 +369,8 @@ let selectedBracket = null;
 let roundResults = [];
 
 // Ruler drag state
-let ruler = { x: 80, y: 30, angle: 0, dragging: false, dragOffsetX: 0, dragOffsetY: 0 };
-let parallaxOffset = 0; // pixels of shift due to viewing angle
+let ruler = { x: 80, y: 30, dragging: false, dragOffsetX: 0, dragOffsetY: 0 };
+let parallaxOffset = 0; // pixels of shift due to viewing angle (parallax round only)
 
 // ============================================================
 // SVG COORDINATE HELPERS
@@ -801,15 +794,6 @@ function drawRulerGroup(svg, svgNS, scenario) {
     }
   }
 
-  // Rotation handle (small circle at right end)
-  const handle = document.createElementNS(svgNS,'circle');
-  handle.setAttribute('cx', rW - 8); handle.setAttribute('cy', rH / 2);
-  handle.setAttribute('r', 6); handle.setAttribute('fill','rgba(59,130,246,0.3)');
-  handle.setAttribute('stroke','rgba(59,130,246,0.6)'); handle.setAttribute('stroke-width','1.5');
-  handle.id = 'rotateHandle';
-  handle.style.cursor = 'crosshair';
-  rulerGroup.appendChild(handle);
-
   // Apply transform
   updateRulerTransform(rulerGroup);
 
@@ -819,29 +803,20 @@ function drawRulerGroup(svg, svgNS, scenario) {
 function updateRulerTransform(group) {
   if (!group) group = document.getElementById('rulerGroup');
   if (!group) return;
-  // Parallax offset: shift the ruler visually when viewing at angle
   const px = ruler.x + parallaxOffset;
-  group.setAttribute('transform', `translate(${px}, ${ruler.y}) rotate(${ruler.angle}, 275, 50)`);
+  group.setAttribute('transform', `translate(${px}, ${ruler.y})`);
 }
 
 // ============================================================
-// DRAG & ROTATE HANDLERS
+// DRAG HANDLERS
 // ============================================================
 function initDragHandlers() {
   const svg = document.getElementById('measureSvg');
-  const viewport = document.getElementById('viewport');
-  let rotating = false;
 
   svg.addEventListener('mousedown', (e) => {
     const target = e.target;
     const rulerGroup = document.getElementById('rulerGroup');
     if (!rulerGroup) return;
-
-    if (target.id === 'rotateHandle' || target.closest && target.closest('#rotateHandle')) {
-      rotating = true;
-      e.preventDefault();
-      return;
-    }
 
     // Check if click is on ruler
     if (target.closest && target.closest('#rulerGroup')) {
@@ -855,9 +830,8 @@ function initDragHandlers() {
   });
 
   svg.addEventListener('mousemove', (e) => {
-    const pt = svgPoint(svg, e.clientX, e.clientY);
-
     if (ruler.dragging) {
+      const pt = svgPoint(svg, e.clientX, e.clientY);
       ruler.x = pt.x - ruler.dragOffsetX;
       ruler.y = pt.y - ruler.dragOffsetY;
       // Clamp
@@ -865,20 +839,10 @@ function initDragHandlers() {
       ruler.y = Math.max(-150, Math.min(450, ruler.y));
       updateRulerTransform();
     }
-
-    if (rotating) {
-      // Angle based on mouse position relative to ruler center
-      const cx = ruler.x + 275;
-      const cy = ruler.y + 50;
-      const angle = Math.atan2(pt.y - cy, pt.x - cx) * 180 / Math.PI;
-      ruler.angle = Math.max(-90, Math.min(90, angle));
-      updateRulerTransform();
-    }
   });
 
   const endDrag = () => {
     ruler.dragging = false;
-    rotating = false;
     const rg = document.getElementById('rulerGroup');
     if (rg) rg.style.cursor = 'grab';
   };
@@ -886,16 +850,7 @@ function initDragHandlers() {
   svg.addEventListener('mouseup', endDrag);
   svg.addEventListener('mouseleave', endDrag);
 
-  // Scroll wheel rotation
-  viewport.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? 1 : -1;
-    ruler.angle = Math.max(-90, Math.min(90, ruler.angle + delta));
-    updateRulerTransform();
-  }, { passive: false });
-
   // Touch support
-  let touchStartX, touchStartY, touchStartAngle;
   svg.addEventListener('touchstart', (e) => {
     const touch = e.touches[0];
     const target = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -913,14 +868,6 @@ function initDragHandlers() {
       const pt = svgPoint(svg, e.touches[0].clientX, e.touches[0].clientY);
       ruler.x = Math.max(-250, Math.min(500, pt.x - ruler.dragOffsetX));
       ruler.y = Math.max(-150, Math.min(450, pt.y - ruler.dragOffsetY));
-      updateRulerTransform();
-      e.preventDefault();
-    }
-    // Two-finger rotate
-    if (e.touches.length === 2) {
-      const dx = e.touches[1].clientX - e.touches[0].clientX;
-      const dy = e.touches[1].clientY - e.touches[0].clientY;
-      ruler.angle = Math.max(-90, Math.min(90, Math.atan2(dy, dx) * 180 / Math.PI));
       updateRulerTransform();
       e.preventDefault();
     }
@@ -987,7 +934,7 @@ function loadRound(index) {
   // Reset ruler position
   ruler.x = s.rulerStartX;
   ruler.y = s.rulerStartY;
-  ruler.angle = s.rulerStartAngle;
+  // ruler stays horizontal (no rotation)
 
   // Answer mode
   const answerArea = document.getElementById('answerArea');
