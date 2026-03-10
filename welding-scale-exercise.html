@@ -24,9 +24,10 @@
   .exercise-subtitle { font-size:13px; color:var(--text-dim); margin-top:2px; }
   .round-indicator { display:flex; align-items:center; gap:8px; }
   .round-dot { width:10px; height:10px; border-radius:50%; background:var(--panel-border); transition:all .3s; }
-  .round-dot.completed { background:var(--success); }
+  .round-dot.completed { background:var(--success); cursor:pointer; }
   .round-dot.current { background:var(--accent); box-shadow:0 0 8px var(--accent-glow); }
-  .round-dot.wrong { background:var(--error); }
+  .round-dot.wrong { background:var(--error); cursor:pointer; }
+  .round-dot.completed:hover, .round-dot.wrong:hover { transform:scale(1.5); }
 
   .exercise-body { display:grid; grid-template-columns:1fr 320px; gap:0; min-height:calc(100vh - 72px); }
 
@@ -123,8 +124,11 @@
   .feedback-values { font-family:'JetBrains Mono',monospace; font-size:15px; margin:12px 0; display:flex; gap:20px; justify-content:center; flex-wrap:wrap; }
   .feedback-values span { color:var(--text-dim); }
   .feedback-values strong { color:var(--text-bright); }
-  .next-btn { margin-top:24px; padding:12px 36px; border-radius:10px; border:none; background:var(--accent); color:white; font-family:'Inter',sans-serif; font-size:14px; font-weight:600; cursor:pointer; }
+  .nav-btns { display:flex; gap:12px; margin-top:24px; justify-content:center; }
+  .next-btn { padding:12px 36px; border-radius:10px; border:none; background:var(--accent); color:white; font-family:'Inter',sans-serif; font-size:14px; font-weight:600; cursor:pointer; }
   .next-btn:hover { background:#2563eb; }
+  .back-btn { padding:12px 36px; border-radius:10px; border:2px solid var(--panel-border); background:transparent; color:var(--text-dim); font-family:'Inter',sans-serif; font-size:14px; font-weight:600; cursor:pointer; transition:all .2s; }
+  .back-btn:hover { border-color:var(--text-dim); color:var(--text); }
 
   .sidebar { background:var(--panel); border-left:1px solid var(--panel-border); padding:24px; display:flex; flex-direction:column; gap:20px; overflow-y:auto; }
   .sidebar-section h4 { font-size:11px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text-dim); margin-bottom:10px; }
@@ -230,7 +234,10 @@
       <div class="feedback-values" id="feedbackValues"></div>
       <div class="feedback-detail" id="feedbackDetail"></div>
       <div class="feedback-consequence" id="feedbackConsequence"></div>
-      <button class="next-btn" id="nextBtn" onclick="nextRound()">Next Round →</button>
+      <div class="nav-btns">
+        <button class="back-btn" id="backBtn" onclick="prevRound()" style="display:none">← Back</button>
+        <button class="next-btn" id="nextBtn" onclick="nextRound()">Next Round →</button>
+      </div>
     </div>
 
     <div class="results-screen" id="resultsScreen"></div>
@@ -917,6 +924,8 @@ function buildRoundIndicator() {
     const d = document.createElement('div');
     d.className = 'round-dot' + (i === 0 ? ' current' : '');
     d.id = `dot-${i}`;
+    d.title = `Round ${i + 1}`;
+    d.addEventListener('click', () => goToRound(i));
     c.appendChild(d);
   });
 }
@@ -1000,8 +1009,9 @@ function loadRound(index) {
   document.getElementById('rulerInstructions').style.opacity = '1';
   setTimeout(() => { document.getElementById('rulerInstructions').style.opacity = '0'; }, 4000);
 
-  // Next button text
+  // Nav buttons
   document.getElementById('nextBtn').textContent = index >= SCENARIOS.length - 1 ? 'See Results' : 'Next Round →';
+  document.getElementById('backBtn').style.display = index > 0 ? 'inline-block' : 'none';
 }
 
 function selectBracket(value) {
@@ -1093,6 +1103,20 @@ function showFeedback(isCorrect, userValueDisplay, scenario, measurementCorrect,
   else { cons.style.display = 'none'; }
 
   overlay.classList.add('visible');
+}
+
+function prevRound() {
+  if (currentRound > 0) {
+    currentRound--;
+    loadRound(currentRound);
+  }
+}
+
+function goToRound(index) {
+  if (index < currentRound && roundResults[index] !== undefined) {
+    currentRound = index;
+    loadRound(currentRound);
+  }
 }
 
 function nextRound() {
