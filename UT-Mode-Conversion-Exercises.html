@@ -58,6 +58,33 @@
 
   .tab-content { display: none; padding: 1.5rem; max-width: 960px; margin: 0 auto; }
   .tab-content.active { display: block; }
+  #simulator.active { max-width: 1280px; }
+
+  /* Side-by-side simulator layout */
+  .sim-controls-bar { margin-bottom: 1rem; }
+  .sim-layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 1rem;
+    align-items: start;
+  }
+  .sim-layout .guided-card {
+    position: sticky;
+    top: 60px;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+  }
+  .sim-diagram canvas { width: 100%; border-radius: 8px; border: 1px solid var(--border); background: #0d1b2a; }
+  @media (max-width: 860px) {
+    .sim-layout {
+      grid-template-columns: 1fr;
+    }
+    .sim-layout .guided-card {
+      position: static;
+      max-height: none;
+    }
+    #simulator.active { max-width: 960px; }
+  }
 
   .card {
     background: var(--card);
@@ -97,12 +124,82 @@
   .sim-controls { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; margin-bottom: 1rem; }
   .control-group { flex: 1; min-width: 180px; }
   .control-group label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.3rem; }
-  .control-group select, .control-group input[type=range] {
+  .control-group select {
     width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border);
     font-size: 0.9rem;
   }
-  .angle-display { font-size: 0.85rem; color: var(--primary); font-weight: 600; margin-top: 0.2rem; }
-  canvas#simCanvas { width: 100%; border-radius: 8px; border: 1px solid var(--border); background: #0d1b2a; }
+  .angle-display { font-size: 0.85rem; font-weight: 600; margin-top: 0.2rem; }
+
+  /* Canvas wrapper with slider overlay */
+  .canvas-wrapper {
+    position: relative;
+  }
+  .slider-overlay {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    background: rgba(13, 27, 42, 0.88);
+    backdrop-filter: blur(6px);
+    border-radius: 10px;
+    padding: 0.5rem 0.75rem 0.4rem;
+  }
+  .slider-label {
+    display: block;
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.75);
+    margin-bottom: 0.25rem;
+  }
+  .slider-label strong {
+    color: #ffd54f;
+    font-size: 0.95rem;
+  }
+  .slider-overlay .angle-display {
+    color: rgba(255,255,255,0.65);
+    font-size: 0.78rem;
+  }
+
+  /* Range slider — full-width thumb travel */
+  .slider-overlay input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.2);
+    outline: none;
+    margin: 0;
+    padding: 0;
+  }
+  .slider-overlay input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ffd54f;
+    cursor: pointer;
+    border: 2px solid rgba(0,0,0,0.3);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+  .slider-overlay input[type=range]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ffd54f;
+    cursor: pointer;
+    border: 2px solid rgba(0,0,0,0.3);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+  .slider-overlay input[type=range]::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 3px;
+  }
+  .slider-overlay input[type=range]::-moz-range-track {
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.2);
+  }
 
   .results-grid {
     display: grid;
@@ -335,20 +432,8 @@
 <!-- ============ SIMULATOR TAB ============ -->
 <div id="simulator" class="tab-content">
 
-  <!-- Guided Walkthrough — single-step display above the simulator -->
-  <div class="guided-card" id="guidedCard">
-    <div class="guided-top-bar">
-      <h2>Guided Walkthrough</h2>
-      <div class="step-progress" id="stepDots"></div>
-    </div>
-    <div id="stepContent"></div>
-    <div class="step-nav">
-      <button class="btn-back" id="backBtn" onclick="goBack()" disabled>&larr; Back</button>
-      <span class="step-counter" id="stepCounter">Step 1 of 6</span>
-    </div>
-  </div>
-
-  <div class="card">
+  <!-- Material selectors -->
+  <div class="card sim-controls-bar">
     <div class="sim-controls">
       <div class="control-group">
         <label>Material 1 (Wedge)</label>
@@ -366,16 +451,38 @@
           <option value="titanium">Titanium</option>
         </select>
       </div>
-      <div class="control-group">
-        <label>Incident Angle: <span id="angleVal">20</span>°</label>
-        <input type="range" id="angleSlider" min="0" max="89" value="20" step="0.1" oninput="updateSim()">
-        <div class="angle-display" id="angleHint"></div>
+    </div>
+  </div>
+
+  <!-- Side-by-side: Guided walkthrough + Diagram -->
+  <div class="sim-layout">
+
+    <!-- Left: Guided Walkthrough -->
+    <div class="guided-card" id="guidedCard">
+      <div class="guided-top-bar">
+        <h2>Guided Walkthrough</h2>
+        <div class="step-progress" id="stepDots"></div>
+      </div>
+      <div id="stepContent"></div>
+      <div class="step-nav">
+        <button class="btn-back" id="backBtn" onclick="goBack()" disabled>&larr; Back</button>
+        <span class="step-counter" id="stepCounter">Step 1 of 6</span>
       </div>
     </div>
 
-    <canvas id="simCanvas" width="800" height="450"></canvas>
+    <!-- Right: Diagram + Results -->
+    <div class="sim-diagram">
+      <div class="canvas-wrapper">
+        <canvas id="simCanvas" width="800" height="500"></canvas>
+        <div class="slider-overlay">
+          <label class="slider-label">Incident Angle: <strong><span id="angleVal">20</span>°</strong></label>
+          <input type="range" id="angleSlider" min="0" max="89" value="20" step="0.1" oninput="updateSim()">
+          <div class="angle-display" id="angleHint"></div>
+        </div>
+      </div>
+      <div class="results-grid" id="simResults"></div>
+    </div>
 
-    <div class="results-grid" id="simResults"></div>
   </div>
 
 </div>
