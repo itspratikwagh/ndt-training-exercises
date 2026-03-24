@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UT Mode Conversion — Interactive Exercises</title>
+<style>
+  :root {
+    --primary: #1a73e8;
+    --primary-light: #e8f0fe;
+    --success: #0d904f;
+    --success-light: #e6f4ea;
+    --error: #d93025;
+    --error-light: #fce8e6;
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --text: #202124;
+    --text-secondary: #5f6368;
+    --border: #dadce0;
+    --orange: #e8710a;
+    --orange-light: #fef3e6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+  header {
+    background: linear-gradient(135deg, #1a237e, #1565c0);
+    color: white;
+    padding: 2rem 1.5rem;
+    text-align: center;
+  }
+  header h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.25rem; }
+  header p { opacity: 0.85; font-size: 0.95rem; }
+
+  .tabs {
+    display: flex;
+    background: white;
+    border-bottom: 2px solid var(--border);
+    overflow-x: auto;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .tab-btn {
+    flex: 1; min-width: 140px;
+    padding: 0.85rem 1rem;
+    border: none; background: none;
+    font-size: 0.9rem; font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+  }
+  .tab-btn:hover { background: var(--primary-light); }
+  .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+  .tab-content { display: none; padding: 1.5rem; max-width: 960px; margin: 0 auto; }
+  .tab-content.active { display: block; }
+
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .card h2 { font-size: 1.2rem; margin-bottom: 0.75rem; color: #1a237e; }
+  .card h3 { font-size: 1.05rem; margin-bottom: 0.5rem; color: var(--text); }
+  .card p, .card li { font-size: 0.93rem; color: var(--text-secondary); }
+  .card ul { padding-left: 1.25rem; margin: 0.5rem 0; }
+  .card li { margin-bottom: 0.3rem; }
+
+  .formula-box {
+    background: var(--primary-light);
+    border-left: 4px solid var(--primary);
+    padding: 1rem 1.25rem;
+    border-radius: 0 8px 8px 0;
+    margin: 1rem 0;
+    font-size: 1.05rem;
+    text-align: center;
+    font-weight: 600;
+    color: #1a237e;
+  }
+  .key-point {
+    background: var(--orange-light);
+    border-left: 4px solid var(--orange);
+    padding: 0.75rem 1rem;
+    border-radius: 0 8px 8px 0;
+    margin: 0.75rem 0;
+    font-size: 0.9rem;
+  }
+
+  /* Simulator */
+  .sim-controls { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; margin-bottom: 1rem; }
+  .control-group { flex: 1; min-width: 180px; }
+  .control-group label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.3rem; }
+  .control-group select, .control-group input[type=range] {
+    width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border);
+    font-size: 0.9rem;
+  }
+  .angle-display { font-size: 0.85rem; color: var(--primary); font-weight: 600; margin-top: 0.2rem; }
+  canvas#simCanvas { width: 100%; border-radius: 8px; border: 1px solid var(--border); background: #0d1b2a; }
+
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem; margin-top: 1rem;
+  }
+  .result-box {
+    background: var(--bg); border-radius: 8px; padding: 0.75rem 1rem; text-align: center;
+  }
+  .result-box .label { font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .result-box .value { font-size: 1.3rem; font-weight: 700; color: var(--primary); margin-top: 0.2rem; }
+  .result-box .value.warn { color: var(--error); }
+
+  /* Quiz */
+  .quiz-question {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .quiz-question h3 { font-size: 0.95rem; margin-bottom: 0.75rem; }
+  .quiz-options { display: flex; flex-direction: column; gap: 0.5rem; }
+  .quiz-option {
+    display: block; width: 100%;
+    padding: 0.7rem 1rem;
+    background: var(--bg); border: 2px solid var(--border);
+    border-radius: 8px; cursor: pointer;
+    text-align: left; font-size: 0.9rem;
+    transition: all 0.15s;
+  }
+  .quiz-option:hover:not(.disabled) { border-color: var(--primary); background: var(--primary-light); }
+  .quiz-option.correct { border-color: var(--success); background: var(--success-light); }
+  .quiz-option.wrong { border-color: var(--error); background: var(--error-light); }
+  .quiz-option.disabled { cursor: default; opacity: 0.7; }
+  .quiz-option.disabled.correct { opacity: 1; }
+  .quiz-feedback {
+    margin-top: 0.75rem; padding: 0.75rem 1rem;
+    border-radius: 8px; font-size: 0.88rem;
+    display: none;
+  }
+  .quiz-feedback.show { display: block; }
+  .quiz-feedback.correct-fb { background: var(--success-light); color: #0d6b3a; }
+  .quiz-feedback.wrong-fb { background: var(--error-light); color: #a50e0e; }
+
+  .score-bar {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 1.25rem;
+  }
+  .score-bar .score-text { font-size: 1.1rem; font-weight: 700; color: var(--primary); }
+  .btn {
+    padding: 0.6rem 1.5rem; border-radius: 8px; border: none;
+    font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: 0.15s;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: #1557b0; }
+
+  /* Guided Steps */
+  .guided-card {
+    background: var(--card);
+    border-radius: 12px;
+    border: 2px solid var(--primary);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .guided-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+  }
+  .guided-top-bar h2 { margin: 0; font-size: 1.05rem; color: #1a237e; }
+  .step-progress {
+    display: flex;
+    gap: 0.35rem;
+    align-items: center;
+  }
+  .step-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+  .step-dot.done { background: var(--success); }
+  .step-dot.current { background: var(--primary); box-shadow: 0 0 0 3px rgba(26,115,232,0.25); }
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 0.5rem;
+  }
+  .step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .step-title { font-weight: 700; font-size: 0.98rem; }
+  .step-instruction { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.75rem; }
+  .step-question p { font-size: 0.9rem; margin-bottom: 0.5rem; }
+  .step-options { display: flex; flex-direction: column; gap: 0.4rem; }
+  .step-option {
+    display: block; width: 100%;
+    padding: 0.6rem 1rem;
+    background: var(--bg); border: 2px solid var(--border);
+    border-radius: 8px; cursor: pointer;
+    text-align: left; font-size: 0.88rem;
+    transition: all 0.15s;
+  }
+  .step-option:hover:not(.disabled) { border-color: var(--primary); background: var(--primary-light); }
+  .step-option.correct { border-color: var(--success); background: var(--success-light); }
+  .step-option.wrong { border-color: var(--error); background: var(--error-light); }
+  .step-option.disabled { cursor: default; opacity: 0.6; }
+  .step-option.disabled.correct { opacity: 1; }
+  .step-feedback {
+    margin-top: 0.6rem;
+    padding: 0.65rem 1rem;
+    border-radius: 8px;
+    font-size: 0.87rem;
+    display: none;
+  }
+  .step-feedback.show { display: block; }
+  .step-feedback.correct-fb { background: var(--success-light); color: #0d6b3a; }
+  .step-feedback.wrong-fb { background: var(--error-light); color: #a50e0e; }
+  .step-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+  }
+  .btn-back {
+    padding: 0.45rem 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: white;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: 0.15s;
+  }
+  .btn-back:hover { background: var(--bg); color: var(--text); }
+  .btn-back:disabled { opacity: 0.3; cursor: default; }
+  .step-counter { font-size: 0.82rem; color: var(--text-secondary); font-weight: 600; }
+  .guided-complete {
+    text-align: center;
+    padding: 1.5rem 1rem 0.5rem;
+  }
+  .complete-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: var(--success);
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+  .guided-complete h3 { color: var(--success); margin-bottom: 0.3rem; font-size: 1.05rem; }
+  .guided-complete p { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.75rem; }
+  .btn-restart {
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    border: 1px solid var(--success);
+    background: var(--success-light);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--success);
+    cursor: pointer;
+    transition: 0.15s;
+  }
+  .btn-restart:hover { background: var(--success); color: white; }
+
+  /* Progress badge */
+  .progress-badge {
+    display: inline-block; padding: 0.2rem 0.6rem;
+    border-radius: 999px; font-size: 0.75rem; font-weight: 600;
+    margin-left: 0.5rem; vertical-align: middle;
+  }
+  .badge-green { background: var(--success-light); color: var(--success); }
+
+  @media (max-width: 600px) {
+    header { padding: 1.25rem 1rem; }
+    header h1 { font-size: 1.3rem; }
+    .tab-btn { font-size: 0.8rem; padding: 0.7rem 0.5rem; min-width: 80px; }
+    .card { padding: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Ultrasonic Testing: Mode Conversion</h1>
+  <p>Interactive Exercises for UT Level I Trainees</p>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('learn')">Learn</button>
+  <button class="tab-btn" onclick="showTab('simulator')">Simulator</button>
+  <button class="tab-btn" onclick="showTab('quiz')">Quiz</button>
+</div>
+
+<!-- ============ LEARN TAB ============ -->
+<div id="learn" class="tab-content active">
+
+  <div class="card">
+    <h2>What Is Mode Conversion?</h2>
+    <p>When an ultrasonic wave hits an interface between two materials <strong>at an angle</strong>, something interesting happens: the wave doesn't just refract — it can also <strong>change its wave mode</strong>.</p>
+    <p style="margin-top:0.5rem;">A <strong>longitudinal wave</strong> (compression wave) striking an interface can produce both a <strong>refracted longitudinal wave</strong> and a <strong>refracted shear wave</strong> (transverse wave) in the second material. This splitting is called <strong>mode conversion</strong>.</p>
+    <div class="key-point">
+      <strong>Key idea:</strong> Mode conversion happens because the boundary conditions at the interface require particle motion in both directions — parallel and perpendicular to the surface.
+    </div>
+  </div>
+
+</div>
+
+<!-- ============ SIMULATOR TAB ============ -->
+<div id="simulator" class="tab-content">
+
+  <!-- Guided Walkthrough — single-step display above the simulator -->
+  <div class="guided-card" id="guidedCard">
+    <div class="guided-top-bar">
+      <h2>Guided Walkthrough</h2>
+      <div class="step-progress" id="stepDots"></div>
+    </div>
+    <div id="stepContent"></div>
+    <div class="step-nav">
+      <button class="btn-back" id="backBtn" onclick="goBack()" disabled>&larr; Back</button>
+      <span class="step-counter" id="stepCounter">Step 1 of 6</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sim-controls">
+      <div class="control-group">
+        <label>Material 1 (Wedge)</label>
+        <select id="mat1" onchange="updateSim()">
+          <option value="perspex" selected>Perspex (V<sub>L</sub>=2730)</option>
+          <option value="water">Water (V<sub>L</sub>=1480)</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Material 2 (Test Piece)</label>
+        <select id="mat2" onchange="updateSim()">
+          <option value="steel" selected>Carbon Steel</option>
+          <option value="aluminum">Aluminum</option>
+          <option value="copper">Copper</option>
+          <option value="titanium">Titanium</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Incident Angle: <span id="angleVal">20</span>°</label>
+        <input type="range" id="angleSlider" min="0" max="89" value="20" step="0.1" oninput="updateSim()">
+        <div class="angle-display" id="angleHint"></div>
+      </div>
+    </div>
+
+    <canvas id="simCanvas" width="800" height="450"></canvas>
+
+    <div class="results-grid" id="simResults"></div>
+  </div>
+
+</div>
+
+<!-- ============ QUIZ TAB ============ -->
+<div id="quiz" class="tab-content">
+
+  <div class="score-bar">
+    <div>Score: <span class="score-text" id="scoreText">0 / 0</span></div>
+    <button class="btn btn-primary" onclick="resetQuiz()">Reset Quiz</button>
+  </div>
+
+  <div id="quizContainer"></div>
+
+</div>
+
+<script>
+// ===================== MATERIAL DATA =====================
+const MATERIALS = {
+  perspex:   { name: 'Perspex',   vl: 2730, vs: 1430 },
+  water:     { name: 'Water',     vl: 1480, vs: 0    },
+  steel:     { name: 'Steel',     vl: 5920, vs: 3250 },
+  aluminum:  { name: 'Aluminum',  vl: 6320, vs: 3130 },
+  copper:    { name: 'Copper',    vl: 4700, vs: 2260 },
+  titanium:  { name: 'Titanium',  vl: 6100, vs: 3120 },
+};
+
+const DEG = Math.PI / 180;
+const RAD = 180 / Math.PI;
+
+// ===================== TAB NAVIGATION =====================
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    if (b.textContent.toLowerCase().replace(/\s/g,'') === id ||
+        b.getAttribute('onclick')?.includes(id)) b.classList.add('active');
+  });
+  if (id === 'simulator') updateSim();
+}
+
+// ===================== SIMULATOR =====================
+function updateSim() {
+  const m1key = document.getElementById('mat1').value;
+  const m2key = document.getElementById('mat2').value;
+  let angle = parseFloat(document.getElementById('angleSlider').value);
+  // Display angle — show decimal only when snapped to critical angle
+  document.getElementById('angleVal').textContent = (angle % 1 === 0) ? angle : angle.toFixed(1);
+
+  const m1 = MATERIALS[m1key];
+  const m2 = MATERIALS[m2key];
+  const v1 = m1.vl;
+  const vl2 = m2.vl;
+  const vs2 = m2.vs;
+
+  // Critical angles
+  const crit1 = Math.asin(Math.min(1, v1 / vl2)) * RAD;
+  const crit2 = Math.asin(Math.min(1, v1 / vs2)) * RAD;
+
+  // Snap to critical angles only when very close (within ±0.3°)
+  const crit1R = Math.round(crit1 * 10) / 10;
+  const crit2R = Math.round(crit2 * 10) / 10;
+  if (Math.abs(angle - crit1R) <= 0.3) angle = crit1R;
+  if (Math.abs(angle - crit2R) <= 0.3) angle = crit2R;
+
+  // Detect if we're at a critical angle (must be very close)
+  const atCrit1 = Math.abs(angle - crit1) < 0.15;
+  const atCrit2 = Math.abs(angle - crit2) < 0.15;
+
+  // Refracted angles
+  const sinInc = Math.sin(angle * DEG);
+  const sinRL = sinInc * vl2 / v1;
+  const sinRS = sinInc * vs2 / v1;
+
+  const refL = sinRL <= 1 ? Math.asin(sinRL) * RAD : null;
+  // No mode conversion at normal incidence — shear wave only exists when angle > 0
+  const refS = (angle > 0 && sinRS <= 1) ? Math.asin(sinRS) * RAD : null;
+
+  // Hint text
+  let hint = '';
+  if (angle === 0) hint = 'Normal incidence — no mode conversion, only L-wave transmitted';
+  else if (atCrit1) hint = '⬤ At 1st Critical Angle — L-wave refracts to 90° (surface wave along interface)';
+  else if (atCrit2) hint = '⬤ At 2nd Critical Angle — S-wave refracts to 90° (surface wave along interface)';
+  else if (angle < crit1) hint = 'Below 1st critical angle — both L-wave and S-wave transmitted';
+  else if (angle < crit2) hint = 'Between critical angles — only S-wave transmitted (angle-beam zone)';
+  else hint = 'Beyond 2nd critical angle — total internal reflection';
+  document.getElementById('angleHint').textContent = hint;
+
+  // Result labels for critical angle hits
+  const refLDisplay = atCrit1 ? '90.0° (surface)' : (refL !== null ? refL.toFixed(1)+'°' : 'None');
+  const refSDisplay = atCrit2 ? '90.0° (surface)' : (refS !== null ? refS.toFixed(1)+'°' : 'None');
+  const refLWarn = (!atCrit1 && refL === null) ? 'warn' : '';
+  const refSWarn = (!atCrit2 && refS === null) ? 'warn' : '';
+
+  // Highlight the matching critical angle box
+  const crit1Highlight = atCrit1 ? 'color:#0d904f;' : '';
+  const crit2Highlight = atCrit2 ? 'color:#0d904f;' : '';
+
+  // Results
+  document.getElementById('simResults').innerHTML = `
+    <div class="result-box"><div class="label">1st Critical ∠</div><div class="value" style="${crit1Highlight}">${crit1.toFixed(1)}°</div></div>
+    <div class="result-box"><div class="label">2nd Critical ∠</div><div class="value" style="${crit2Highlight}">${crit2.toFixed(1)}°</div></div>
+    <div class="result-box"><div class="label">Refracted L-wave</div><div class="value ${refLWarn}">${refLDisplay}</div></div>
+    <div class="result-box"><div class="label">Refracted S-wave</div><div class="value ${refSWarn}">${refSDisplay}</div></div>
+  `;
+
+  drawSim(angle, refL, refS, crit1, crit2, atCrit1, atCrit2);
+}
+
+function drawSim(incAngle, refL, refS, crit1, crit2, atCrit1, atCrit2) {
+  const canvas = document.getElementById('simCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const midX = W / 2, midY = H * 0.42;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Material regions
+  ctx.fillStyle = '#1b2838';
+  ctx.fillRect(0, 0, W, midY);
+  ctx.fillStyle = '#2a3a50';
+  ctx.fillRect(0, midY, W, H - midY);
+
+  // Labels
+  ctx.font = '13px Segoe UI, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.fillText('Material 1 (Wedge)', 15, 25);
+  ctx.fillText('Material 2 (Test Piece)', 15, midY + 22);
+
+  // Interface line
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath(); ctx.moveTo(0, midY); ctx.lineTo(W, midY); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Normal line
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(midX, midY - 150); ctx.lineTo(midX, midY + 180); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Normal label
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = '11px Segoe UI, sans-serif';
+  ctx.fillText('Normal', midX + 4, midY - 140);
+
+  const beamLen = 160;
+
+  // --- Incident beam ---
+  const incRad = incAngle * DEG;
+  const incX = midX - Math.sin(incRad) * beamLen;
+  const incY = midY - Math.cos(incRad) * beamLen;
+  drawBeam(ctx, incX, incY, midX, midY, '#ffd54f', 3, 'Incident L-wave');
+
+  // Angle arc for incident
+  drawArc(ctx, midX, midY, 40, -Math.PI/2, -Math.PI/2 + incRad, '#ffd54f', `${incAngle}°`, -1);
+
+  // --- Refracted L-wave (hide straight beam at 1st critical angle — surface wave replaces it) ---
+  if (refL !== null && !atCrit1) {
+    const rlRad = refL * DEG;
+    const rlX = midX + Math.sin(rlRad) * beamLen;
+    const rlY = midY + Math.cos(rlRad) * beamLen;
+    drawBeam(ctx, midX, midY, rlX, rlY, '#4fc3f7', 2.5, 'L-wave');
+    drawArc(ctx, midX, midY, 50, Math.PI/2 - rlRad, Math.PI/2, '#4fc3f7', `${refL.toFixed(1)}°`, 1);
+  }
+
+  // --- Refracted S-wave (hide straight beam at 2nd critical angle — surface wave replaces it) ---
+  if (refS !== null && !atCrit2) {
+    const rsRad = refS * DEG;
+    const rsX = midX + Math.sin(rsRad) * beamLen;
+    const rsY = midY + Math.cos(rsRad) * beamLen;
+    drawBeam(ctx, midX, midY, rsX, rsY, '#ef5350', 2.5, 'S-wave');
+    drawArc(ctx, midX, midY, 60, Math.PI/2 - rsRad, Math.PI/2, '#ef5350', `${refS.toFixed(1)}°`, 1);
+  }
+
+  // --- Surface wave at 1st Critical Angle (L-wave along interface) ---
+  if (atCrit1) {
+    drawSurfaceWave(ctx, midX, midY, W, '#4fc3f7', 'L-wave on surface');
+  }
+
+  // --- Surface wave at 2nd Critical Angle (S-wave becomes Rayleigh wave) ---
+  if (atCrit2) {
+    drawSurfaceWave(ctx, midX, midY, W, '#ef5350', 'Surface (Rayleigh) wave');
+  }
+
+  // --- Reflected beam ---
+  const reflX = midX + Math.sin(incRad) * beamLen * 0.7;
+  const reflY = midY - Math.cos(incRad) * beamLen * 0.7;
+  ctx.globalAlpha = 0.35;
+  drawBeam(ctx, midX, midY, reflX, reflY, '#ffd54f', 1.5, '');
+  ctx.globalAlpha = 1;
+
+  // Legend
+  const ly = H - 18;
+  ctx.font = '12px Segoe UI, sans-serif';
+  drawLegendDot(ctx, 20, ly, '#ffd54f', 'Incident / Reflected');
+  drawLegendDot(ctx, 185, ly, '#4fc3f7', 'Refracted L-wave');
+  drawLegendDot(ctx, 345, ly, '#ef5350', 'Refracted S-wave');
+  if (atCrit1 || atCrit2) {
+    drawLegendDot(ctx, 510, ly, atCrit1 ? '#4fc3f7' : '#ef5350', 'Surface wave');
+  }
+
+  // Zone indicator
+  let zone, zoneColor;
+  if (incAngle < crit1) { zone = 'Zone: Both waves transmitted'; zoneColor = '#4fc3f7'; }
+  else if (incAngle < crit2) { zone = 'Zone: Shear-only (angle beam)'; zoneColor = '#ef5350'; }
+  else { zone = 'Zone: Total internal reflection'; zoneColor = '#ff9800'; }
+  ctx.font = 'bold 13px Segoe UI, sans-serif';
+  ctx.fillStyle = zoneColor;
+  ctx.textAlign = 'right';
+  ctx.fillText(zone, W - 15, 25);
+  ctx.textAlign = 'left';
+}
+
+function drawBeam(ctx, x1, y1, x2, y2, color, width, label) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  // arrowhead
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const hl = 10;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - hl * Math.cos(angle - 0.3), y2 - hl * Math.sin(angle - 0.3));
+  ctx.lineTo(x2 - hl * Math.cos(angle + 0.3), y2 - hl * Math.sin(angle + 0.3));
+  ctx.fill();
+  if (label) {
+    ctx.font = '11px Segoe UI, sans-serif';
+    ctx.fillStyle = color;
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    ctx.fillText(label, mx + 8, my - 6);
+  }
+}
+
+function drawArc(ctx, cx, cy, r, startA, endA, color, label, side) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.globalAlpha = 0.6;
+  ctx.beginPath(); ctx.arc(cx, cy, r, startA, endA, startA > endA); ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+function drawSurfaceWave(ctx, startX, y, canvasW, color, label) {
+  // Draw a wavy line along the interface to represent a surface wave
+  const endX = canvasW - 20;
+  const amplitude = 5;
+  const wavelength = 18;
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(startX, y);
+  for (let x = startX; x <= endX; x += 1) {
+    const progress = (x - startX) / (endX - startX);
+    const fade = 1 - progress * 0.6; // wave fades as it travels
+    const yOff = Math.sin((x - startX) / wavelength * Math.PI * 2) * amplitude * fade;
+    ctx.lineTo(x, y + yOff);
+  }
+  ctx.stroke();
+
+  // Arrowhead at the end
+  const hl = 9;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(endX, y);
+  ctx.lineTo(endX - hl, y - hl * 0.4);
+  ctx.lineTo(endX - hl, y + hl * 0.4);
+  ctx.fill();
+
+  // Label
+  ctx.font = 'bold 11px Segoe UI, sans-serif';
+  ctx.fillStyle = color;
+  ctx.fillText(label, startX + 60, y - 12);
+}
+
+function drawLegendDot(ctx, x, y, color, text) {
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(x, y - 3, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.font = '11px Segoe UI, sans-serif';
+  ctx.fillText(text, x + 10, y);
+}
+
+// ===================== QUIZ =====================
+const QUESTIONS = [
+  {
+    q: 'What is mode conversion in ultrasonic testing?',
+    opts: [
+      'A change of wave type (e.g., longitudinal to shear) at an interface',
+      'A change in the frequency of the ultrasonic wave',
+      'A change in the amplitude of the wave due to attenuation',
+      'Switching between pulse-echo and through-transmission modes'
+    ],
+    correct: 0,
+    explain: 'Mode conversion occurs when an ultrasonic wave strikes an interface at an angle and part of its energy converts from one wave type to another — typically from longitudinal to shear (or vice versa).'
+  },
+  {
+    q: 'What law governs the refraction angles during mode conversion?',
+    opts: [
+      'Ohm\'s Law',
+      'Snell\'s Law',
+      'Hooke\'s Law',
+      'Beer-Lambert Law'
+    ],
+    correct: 1,
+    explain: 'Snell\'s Law relates the incident angle and wave velocities to the refracted angles: sin(θ₁)/V₁ = sin(θ₂)/V₂. It applies to both optics and acoustics.'
+  },
+  {
+    q: 'At the 1st critical angle, what happens to the refracted longitudinal wave?',
+    opts: [
+      'It disappears completely',
+      'It refracts at exactly 45°',
+      'It refracts to 90° and travels along the surface',
+      'It converts entirely into a surface wave'
+    ],
+    correct: 2,
+    explain: 'At the 1st critical angle, the refracted longitudinal wave bends to 90° — it grazes along the interface surface. Beyond this angle, only the shear wave is transmitted into the second material.'
+  },
+  {
+    q: 'In angle-beam weld inspection, we operate between the 1st and 2nd critical angles. Why?',
+    opts: [
+      'To generate only surface waves for surface crack detection',
+      'To ensure only a shear wave enters the test piece, giving a single clean signal',
+      'To maximize the longitudinal wave energy in the test piece',
+      'To avoid any wave entering the test piece'
+    ],
+    correct: 1,
+    explain: 'Between the 1st and 2nd critical angles, the longitudinal wave has been eliminated (refracted past 90°) and only a shear wave propagates into the material. This gives a single, unambiguous echo for flaw detection.'
+  },
+  {
+    q: 'What happens at the 2nd critical angle?',
+    opts: [
+      'The longitudinal wave re-enters the material at full strength',
+      'Total internal reflection occurs — no waves enter the material at all',
+      'Surface (Rayleigh) waves are generated as the refracted shear wave reaches 90° along the surface',
+      'The shear wave splits into two separate beams'
+    ],
+    correct: 2,
+    explain: 'At the 2nd critical angle, the refracted shear wave bends to 90° and travels along the surface of the material. This generates surface (Rayleigh) waves, which travel along the interface and are useful for detecting surface-breaking defects.'
+  },
+  {
+    q: 'Mode conversion does NOT occur when the incident wave hits the interface at:',
+    opts: [
+      '0° (normal incidence)',
+      '30°',
+      '60°',
+      '45°'
+    ],
+    correct: 0,
+    explain: 'At 0° (normal incidence), the wave hits the surface straight on. There is no angular component to create shear motion, so no mode conversion occurs — the wave passes through as a longitudinal wave only.'
+  },
+  {
+    q: 'Which velocity is ALWAYS higher in a solid material?',
+    opts: [
+      'Shear wave velocity',
+      'Longitudinal wave velocity',
+      'They are always equal',
+      'It depends on the material density'
+    ],
+    correct: 1,
+    explain: 'In any solid material, the longitudinal wave velocity is always higher than the shear wave velocity (typically about 1.8 to 2.2 times higher). This is because longitudinal waves involve both compression and shear stiffness.'
+  },
+  {
+    q: 'What happens beyond the 2nd critical angle?',
+    opts: [
+      'Only a longitudinal wave enters the material',
+      'A very strong shear wave is produced',
+      'Total internal reflection — no bulk wave enters the material',
+      'The wave frequency doubles'
+    ],
+    correct: 2,
+    explain: 'Beyond the 2nd critical angle, both the longitudinal and shear waves have been reflected. No bulk wave penetrates the second material — this is total internal reflection. Only surface (Rayleigh) waves may be generated at the interface.'
+  },
+  {
+    q: 'The "critical angle" refers to which angle?',
+    opts: [
+      'The refracted angle in Material 2',
+      'The incident angle in Material 1',
+      'The reflected angle in Material 1',
+      'The angle between the two materials'
+    ],
+    correct: 1,
+    explain: 'The critical angle is the incident angle (in Material 1) at which the refracted wave in Material 2 reaches 90°. We define it in terms of the incident beam because that is what we control — by choosing the wedge angle on our probe.'
+  },
+];
+
+let score = 0, answered = 0;
+
+function buildQuiz() {
+  const container = document.getElementById('quizContainer');
+  container.innerHTML = '';
+  score = 0; answered = 0;
+  updateScore();
+
+  QUESTIONS.forEach((q, i) => {
+    const div = document.createElement('div');
+    div.className = 'quiz-question';
+    div.innerHTML = `
+      <h3>Q${i+1}. ${q.q}</h3>
+      <div class="quiz-options" id="qOpts${i}">
+        ${q.opts.map((o, j) => `<button class="quiz-option" onclick="checkAnswer(${i},${j})">${o}</button>`).join('')}
+      </div>
+      <div class="quiz-feedback" id="qFb${i}"></div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function checkAnswer(qi, oi) {
+  const q = QUESTIONS[qi];
+  const opts = document.querySelectorAll(`#qOpts${qi} .quiz-option`);
+  const fb = document.getElementById(`qFb${qi}`);
+
+  if (opts[0].classList.contains('disabled')) return;
+
+  answered++;
+  opts.forEach((o, j) => {
+    o.classList.add('disabled');
+    if (j === q.correct) o.classList.add('correct');
+  });
+
+  if (oi === q.correct) {
+    score++;
+    opts[oi].classList.add('correct');
+    fb.className = 'quiz-feedback show correct-fb';
+    fb.innerHTML = `<strong>Correct!</strong> ${q.explain}`;
+  } else {
+    opts[oi].classList.add('wrong');
+    fb.className = 'quiz-feedback show wrong-fb';
+    fb.innerHTML = `<strong>Not quite.</strong> ${q.explain}`;
+  }
+  updateScore();
+}
+
+function updateScore() {
+  document.getElementById('scoreText').textContent = `${score} / ${answered}`;
+}
+
+function resetQuiz() {
+  buildQuiz();
+}
+
+// ===================== GUIDED STEPS =====================
+const STEPS = [
+  {
+    title: 'Set the incident angle to 0°',
+    instruction: 'Move the slider all the way to the left so the angle reads <strong>0°</strong>. This is called <em>normal incidence</em> — the wave hits the interface straight on.',
+    question: '<strong>What do you see?</strong> How many wave types appear in Material 2?',
+    opts: ['Both L-wave and S-wave', 'Only the L-wave (no S-wave)', 'Only the S-wave'],
+    correct: 1,
+    correctFb: 'Exactly! At 0° (normal incidence) there is no mode conversion. The wave passes straight through as a longitudinal wave only — no shear wave is generated.',
+    wrongFb: 'Not quite — set the slider to 0° and look again. At normal incidence the wave has no angular component to create shear motion, so only the L-wave appears.'
+  },
+  {
+    title: 'Now move the angle to 5°',
+    instruction: 'Slowly increase the slider to <strong>5°</strong>. Watch the diagram carefully as you move past 0°.',
+    question: '<strong>What changed?</strong> Compare what you see now to Step 1.',
+    opts: ['Nothing changed — still only L-wave', 'A second wave (S-wave) appeared — both are now transmitted', 'The L-wave disappeared'],
+    correct: 1,
+    correctFb: 'Right! As soon as the wave hits at an angle, mode conversion begins. You now see both a refracted longitudinal wave and a refracted shear wave — the shear wave appears at a smaller angle because its velocity is lower.',
+    wrongFb: 'Try again — set the slider to exactly 5° and compare to Step 1. You should notice a new red beam (S-wave) that wasn\'t there at 0°.'
+  },
+  {
+    title: 'Increase the angle toward the 1st Critical Angle',
+    instruction: 'Check the <strong>1st Critical Angle</strong> value shown below the diagram (for Perspex → Steel it\'s about <strong>27.5°</strong>). Slowly slide up to that value and watch the L-wave.',
+    question: '<strong>What happens to the L-wave</strong> as you reach the 1st Critical Angle?',
+    opts: ['It gets stronger and more vertical', 'It bends to nearly 90° — almost flat along the interface', 'It splits into two L-waves'],
+    correct: 1,
+    correctFb: 'Correct! The refracted L-wave bends further and further from the normal as the incident angle increases. At the 1st Critical Angle it reaches 90° — effectively skimming along the interface. This is the boundary where the L-wave can no longer penetrate the material.',
+    wrongFb: 'Look closely at the blue L-wave beam. As you approach the 1st Critical Angle, notice how it bends further away from the vertical normal line, getting closer and closer to horizontal.'
+  },
+  {
+    title: 'Go just past the 1st Critical Angle (try 30°)',
+    instruction: 'Move the slider a few degrees past the 1st Critical Angle — try <strong>30°</strong>.',
+    question: '<strong>What happened to the L-wave?</strong>',
+    opts: ['The L-wave disappeared — only the S-wave remains', 'Both waves are still visible', 'All waves disappeared'],
+    correct: 0,
+    correctFb: 'That\'s right! Once you pass the 1st Critical Angle, the L-wave can\'t enter the material anymore (it would need to refract beyond 90°, which isn\'t possible). Only the S-wave continues into the test piece. This is the start of the "angle-beam zone."',
+    wrongFb: 'Move the slider just past the 1st Critical Angle value and check the diagram — one of the beams should have disappeared from Material 2.'
+  },
+  {
+    title: 'Keep increasing toward the 2nd Critical Angle',
+    instruction: 'Find the <strong>2nd Critical Angle</strong> value shown below the diagram (for Perspex → Steel it\'s about <strong>57.1°</strong>). Slowly slide up to that value and watch the S-wave.',
+    question: '<strong>What happens to the S-wave</strong> at the 2nd Critical Angle?',
+    opts: ['It gets stronger', 'The L-wave comes back', 'The S-wave reaches 90° and travels along the surface, creating a Surface (Rayleigh) wave'],
+    correct: 2,
+    correctFb: 'Exactly! At the 2nd Critical Angle, the S-wave refracts to 90° and travels along the interface surface, creating a Rayleigh wave. Beyond this angle, no bulk wave penetrates into the material at all.',
+    wrongFb: 'Watch the red S-wave beam as you slide toward the 2nd Critical Angle. Notice how it bends further and further until it lies flat along the surface — becoming a surface wave.'
+  },
+  {
+    title: 'Find the "angle-beam sweet spot"',
+    instruction: 'In real weld inspection, we want <strong>only a shear wave</strong> in the steel — no L-wave to confuse our signals. Set the angle to <strong>45°</strong> (between the two critical angles).',
+    question: '<strong>Why is this zone ideal</strong> for angle-beam inspection?',
+    opts: ['Because both wave types give more information', 'Only one wave (S-wave) enters the material, giving a single clear echo', 'Because total reflection makes the strongest signal'],
+    correct: 1,
+    correctFb: 'Spot on! Between the two critical angles, only a single shear wave enters the steel. One wave means one echo per reflector — no confusing double signals. This is exactly why angle-beam probes (45°, 60°, 70°) are designed to operate in this zone.',
+    wrongFb: 'Think about what makes flaw detection easier: having one clean signal to interpret, or two overlapping signals from different wave types?'
+  }
+];
+
+let currentStep = 0;
+let stepCompleted = new Array(STEPS.length).fill(false);
+
+function renderStep() {
+  const total = STEPS.length;
+  const container = document.getElementById('stepContent');
+  const counter = document.getElementById('stepCounter');
+  const backBtn = document.getElementById('backBtn');
+
+  // Update dots
+  const dotsHtml = STEPS.map((_, i) => {
+    let cls = 'step-dot';
+    if (i === currentStep) cls += ' current';
+    else if (stepCompleted[i]) cls += ' done';
+    return `<span class="${cls}" onclick="goToStep(${i})" title="Step ${i+1}"></span>`;
+  }).join('');
+  document.getElementById('stepDots').innerHTML = dotsHtml;
+
+  // Back button
+  backBtn.disabled = currentStep === 0;
+
+  // Check if all done
+  if (currentStep >= total) {
+    counter.textContent = 'Complete!';
+    container.innerHTML = `
+      <div class="guided-complete">
+        <div class="complete-icon">&#10003;</div>
+        <h3>Walkthrough Complete!</h3>
+        <p>You've explored all three zones of mode conversion. Try changing the Material 2 dropdown and notice how the critical angles shift for different materials.</p>
+        <button class="btn-restart" onclick="restartWalkthrough()">Restart Walkthrough</button>
+      </div>
+    `;
+    // All dots done
+    document.getElementById('stepDots').innerHTML = STEPS.map((_, i) =>
+      `<span class="step-dot done" onclick="goToStep(${i})" title="Step ${i+1}"></span>`
+    ).join('');
+    return;
+  }
+
+  const s = STEPS[currentStep];
+  const stepNum = currentStep + 1;
+  counter.textContent = `Step ${stepNum} of ${total}`;
+
+  const optsHtml = s.opts.map((o, i) =>
+    `<button class="step-option" onclick="checkStep(${i})">${o}</button>`
+  ).join('');
+
+  container.innerHTML = `
+    <div class="step-header">
+      <span class="step-number">${stepNum}</span>
+      <span class="step-title">${s.title}</span>
+    </div>
+    <p class="step-instruction">${s.instruction}</p>
+    <div class="step-question">
+      <p>${s.question}</p>
+      <div class="step-options">${optsHtml}</div>
+      <div class="step-feedback" id="stepFb"></div>
+    </div>
+  `;
+
+  // If revisiting a completed step, show it answered
+  if (stepCompleted[currentStep]) {
+    showAnswered();
+  }
+}
+
+function showAnswered() {
+  const s = STEPS[currentStep];
+  const opts = document.querySelectorAll('#stepContent .step-option');
+  const fb = document.getElementById('stepFb');
+  opts.forEach((o, i) => {
+    o.classList.add('disabled');
+    if (i === s.correct) o.classList.add('correct');
+  });
+  fb.className = 'step-feedback show correct-fb';
+  const isLast = currentStep >= STEPS.length - 1;
+  const nextLabel = isLast ? 'Finish Walkthrough' : 'Next Step &rarr;';
+  fb.innerHTML = '<strong>Correct!</strong> ' + s.correctFb
+    + `<div style="margin-top:0.75rem;"><button class="btn btn-primary" onclick="advanceStep()">${nextLabel}</button></div>`;
+}
+
+function advanceStep() {
+  currentStep++;
+  renderStep();
+}
+
+function checkStep(optIndex) {
+  const s = STEPS[currentStep];
+  const opts = document.querySelectorAll('#stepContent .step-option');
+  const fb = document.getElementById('stepFb');
+
+  if (opts[0].classList.contains('disabled')) return;
+
+  if (optIndex === s.correct) {
+    opts.forEach((o, i) => {
+      o.classList.add('disabled');
+      if (i === s.correct) o.classList.add('correct');
+    });
+    fb.className = 'step-feedback show correct-fb';
+    const isLast = currentStep >= STEPS.length - 1;
+    const nextLabel = isLast ? 'Finish Walkthrough' : 'Next Step &rarr;';
+    fb.innerHTML = '<strong>Correct!</strong> ' + s.correctFb
+      + `<div style="margin-top:0.75rem;"><button class="btn btn-primary" onclick="advanceStep()">${nextLabel}</button></div>`;
+    stepCompleted[currentStep] = true;
+  } else {
+    opts[optIndex].classList.add('wrong');
+    fb.className = 'step-feedback show wrong-fb';
+    fb.innerHTML = '<strong>Not quite.</strong> ' + s.wrongFb;
+    // Re-enable after a moment
+    setTimeout(() => {
+      opts.forEach(o => o.classList.remove('wrong', 'disabled', 'correct'));
+      fb.className = 'step-feedback';
+    }, 2200);
+  }
+}
+
+function goBack() {
+  if (currentStep > 0) {
+    currentStep--;
+    renderStep();
+  }
+}
+
+function goToStep(i) {
+  // Allow navigating to any completed step or the current frontier
+  if (stepCompleted[i] || i <= currentStep) {
+    currentStep = i;
+    renderStep();
+  }
+}
+
+function restartWalkthrough() {
+  currentStep = 0;
+  stepCompleted = new Array(STEPS.length).fill(false);
+  renderStep();
+}
+
+// ===================== INIT =====================
+window.addEventListener('DOMContentLoaded', () => {
+  renderStep();
+  updateSim();
+  buildQuiz();
+});
+</script>
+</body>
+</html>
