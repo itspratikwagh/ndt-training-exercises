@@ -909,7 +909,9 @@ function renderStep() {
         <div class="complete-icon">&#10003;</div>
         <h3>Walkthrough Complete!</h3>
         <p>You've explored all three zones of mode conversion. Try changing the Material 2 dropdown and notice how the critical angles shift for different materials.</p>
-        <button class="btn-restart" onclick="restartWalkthrough()">Restart Walkthrough</button>
+        <p style="margin-top:0.75rem;font-weight:600;">Ready to test your knowledge?</p>
+        <button class="btn-restart" onclick="document.querySelectorAll('.tab-btn')[2].click()" style="background:var(--primary);color:#fff;margin-top:0.5rem;">Take the Quiz</button>
+        <button class="btn-restart" onclick="restartWalkthrough()" style="margin-top:0.5rem;">Restart Walkthrough</button>
       </div>
     `;
     // All dots done
