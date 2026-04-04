@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UT 6 dB Drop Sizing — Practical Test</title>
+<style>
+  :root {
+    --primary: #1a73e8;
+    --primary-light: #e8f0fe;
+    --success: #0d904f;
+    --success-light: #e6f4ea;
+    --error: #d93025;
+    --error-light: #fce8e6;
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --text: #202124;
+    --text-secondary: #5f6368;
+    --border: #dadce0;
+    --beam-gold: #ffd54f;
+    --purple: #7b1fa2;
+    --purple-dark: #4a148c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+  header {
+    background: linear-gradient(135deg, #1b5e20, #388e3c);
+    color: white; padding: 2rem 1.5rem; text-align: center;
+  }
+  header h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.25rem; }
+  header p { opacity: 0.85; font-size: 0.95rem; }
+
+  .sim-container { max-width: 1380px; margin: 0 auto; padding: 1.5rem; }
+
+  .sim-layout {
+    display: grid; grid-template-columns: 340px 1fr; gap: 1rem; align-items: start;
+  }
+  @media (max-width: 960px) {
+    .sim-layout { grid-template-columns: 1fr; }
+    .guided-card { position: static !important; max-height: none !important; }
+  }
+
+  .guided-card {
+    background: var(--card); border-radius: 12px; border: 2px solid #388e3c;
+    padding: 1.25rem 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow-y: auto;
+  }
+  .guided-top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+  .guided-top-bar h2 { margin: 0; font-size: 1.05rem; color: #1b5e20; }
+  .defect-tabs { display: flex; gap: 0.35rem; }
+  .defect-tab {
+    padding: 0.3rem 0.7rem; border-radius: 6px; border: 1px solid var(--border);
+    font-size: 0.78rem; font-weight: 600; cursor: pointer; background: white; color: var(--text-secondary);
+  }
+  .defect-tab.active { background: #388e3c; color: white; border-color: #388e3c; }
+  .defect-tab.found { background: var(--success-light); color: var(--success); border-color: var(--success); }
+
+  .step-header { display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.5rem; }
+  .step-number {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #388e3c; color: white; font-size: 0.85rem; font-weight: 700;
+  }
+  .step-title { font-weight: 700; font-size: 0.98rem; }
+  .step-instruction { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.75rem; }
+  .step-instruction strong { color: var(--text); }
+
+  .sub-step-dots { display: flex; gap: 0.3rem; margin-bottom: 0.5rem; justify-content: center; }
+  .sub-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+  .sub-dot.active { background: #388e3c; box-shadow: 0 0 0 2px rgba(56,142,60,0.25); }
+  .sub-dot.done { background: var(--success); }
+
+  .step-feedback { margin-top: 0.6rem; padding: 0.65rem 1rem; border-radius: 8px; font-size: 0.87rem; display: none; }
+  .step-feedback.show { display: block; }
+  .step-feedback.correct-fb { background: var(--success-light); color: #0d6b3a; }
+  .step-feedback.info-fb { background: var(--primary-light); color: #1a56c4; }
+  .step-feedback.warn-fb { background: var(--error-light); color: #a50e0e; }
+  .btn { padding: 0.5rem 1.25rem; border-radius: 8px; border: none; font-size: 0.88rem; font-weight: 600; cursor: pointer; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: #1557b0; }
+  .btn-success { background: var(--success); color: white; }
+  .btn-success:hover { background: #0a7a40; }
+  .btn-mark { background: var(--purple); color: white; }
+  .btn-mark:hover { background: #6a1b9a; }
+  .btn-green { background: #388e3c; color: white; }
+  .btn-green:hover { background: #2e7d32; }
+
+  .sim-right { display: flex; flex-direction: column; gap: 1rem; }
+  .panel-card {
+    background: var(--card); border-radius: 12px; border: 1px solid var(--border);
+    padding: 1rem 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .panel-card h3 { font-size: 0.95rem; color: #1b5e20; margin-bottom: 0.5rem; }
+  .canvas-wrap canvas { width: 100%; border-radius: 8px; border: 1px solid var(--border); display: block; }
+  .drag-hint { font-size: 0.78rem; color: var(--text-secondary); text-align: center; margin-top: 0.4rem; }
+  .action-bar { text-align: center; margin-top: 0.6rem; display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
+
+  .results-table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; font-size: 0.85rem; }
+  .results-table th, .results-table td { padding: 0.5rem 0.6rem; border: 1px solid var(--border); text-align: center; }
+  .results-table th { background: #e8f5e9; color: #1b5e20; font-weight: 600; }
+  .results-table .yours { background: #f3e5f5; }
+  .results-table .actual { background: #e8f5e9; }
+  .results-table .error-cell { font-weight: 600; }
+  .error-good { color: var(--success); }
+  .error-ok { color: #f57f17; }
+  .error-bad { color: var(--error); }
+
+  .defect-reveal { margin-top: 0.75rem; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid #ce93d8; background: #f3e5f5; }
+  .defect-reveal .label { font-size: 0.82rem; color: var(--text-secondary); }
+  .defect-reveal .value { font-size: 1.1rem; font-weight: 700; color: var(--purple); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>6 dB Drop Sizing — Practical Test</h1>
+  <p>Find and size 3 hidden lamination defects using the 6 dB drop technique</p>
+</header>
+
+<div class="sim-container">
+  <div class="sim-layout">
+
+    <!-- LEFT: Guided panel -->
+    <div class="guided-card" id="guidedCard">
+      <div class="guided-top-bar">
+        <h2>Test Panel</h2>
+        <div class="defect-tabs" id="defectTabs"></div>
+      </div>
+      <div id="stepContent"></div>
+    </div>
+
+    <!-- RIGHT: Visuals -->
+    <div class="sim-right">
+      <div class="panel-card">
+        <h3>Test Specimen — Cross Section</h3>
+        <div class="canvas-wrap">
+          <canvas id="blockCanvas" width="900" height="420"></canvas>
+        </div>
+        <div class="drag-hint" id="dragHint" style="display:none;">Click and drag the transducer along the surface</div>
+        <div class="action-bar" id="actionBar" style="display:none;"></div>
+      </div>
+
+      <div class="panel-card">
+        <h3>A-Scan Display</h3>
+        <div class="canvas-wrap">
+          <canvas id="ascanCanvas" width="900" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ===================== GEOMETRY =====================
+const BLOCK = { x: 60, y: 80, w: 780, h: 280 };
+const BLOCK_REAL_W = 300; // mm
+const BLOCK_REAL_H = 80;  // mm
+
+function mmToX(mm) { return BLOCK.x + (mm / BLOCK_REAL_W) * BLOCK.w; }
+function mmToY(mm) { return BLOCK.y + (mm / BLOCK_REAL_H) * BLOCK.h; }
+function xToMm(px) { return ((px - BLOCK.x) / BLOCK.w) * BLOCK_REAL_W; }
+
+const XDUCER_W_PX = 36;
+const XDUCER_H_PX = 20;
+const BEAM_HALF_ANGLE = 7;
+const DEG = Math.PI / 180;
+
+// ===================== RANDOM DEFECTS =====================
+function generateDefects() {
+  const defects = [];
+  const minGap = 20; // mm between defects
+  const minW = 25, maxW = 55;
+  const minDepth = 15, maxDepth = 60;
+
+  function rand(lo, hi) { return lo + Math.random() * (hi - lo); }
+  function overlaps(x, w) {
+    for (const d of defects) {
+      if (x < d.xMm + d.wMm + minGap && x + w > d.xMm - minGap) return true;
+    }
+    return false;
+  }
+
+  // Place 3 defects at different depths, non-overlapping horizontally
+  const depthZones = [
+    [minDepth, 28],
+    [30, 48],
+    [50, maxDepth]
+  ];
+  // Shuffle depth zones for variety
+  for (let i = depthZones.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [depthZones[i], depthZones[j]] = [depthZones[j], depthZones[i]];
+  }
+
+  for (let i = 0; i < 3; i++) {
+    let attempts = 0;
+    while (attempts < 100) {
+      const w = Math.round(rand(minW, maxW));
+      const x = Math.round(rand(20, BLOCK_REAL_W - w - 20));
+      if (!overlaps(x, w)) {
+        const depth = Math.round(rand(depthZones[i][0], depthZones[i][1]));
+        defects.push({
+          xMm: x,
+          wMm: w,
+          yMm: depth,
+          hMm: 1.5,
+          rightMm: x + w,
+          centerMm: x + w / 2
+        });
+        break;
+      }
+      attempts++;
+    }
+  }
+
+  // Sort by left edge position
+  defects.sort((a, b) => a.xMm - b.xMm);
+  return defects;
+}
+
+const DEFECTS = generateDefects();
+
+// ===================== STATE =====================
+let transducerX = mmToX(BLOCK_REAL_W / 2);
+let dragging = false;
+let animFrame = null;
+
+// Per-defect state: 0=find max, 1=mark left, 2=mark right, 3=submitted
+const defectState = DEFECTS.map(() => ({
+  subStep: 0,       // 0,1,2,3
+  maxAmplitude: 0,
+  markLeft: null,    // mm
+  markRight: null,   // mm
+  submitted: false,
+  revealed: false
+}));
+
+let activeDefect = 0; // which defect is being worked on
+let allDone = false;
+
+// ===================== SIGNAL MODEL =====================
+function getSignalForDefect(defect) {
+  const xMm = xToMm(transducerX);
+  const depth = defect.yMm;
+  const halfFootprint = depth * Math.tan(BEAM_HALF_ANGLE * DEG);
+  const beamLeft = xMm - halfFootprint;
+  const beamRight = xMm + halfFootprint;
+
+  const overlapLeft = Math.max(beamLeft, defect.xMm);
+  const overlapRight = Math.min(beamRight, defect.rightMm);
+  const overlap = Math.max(0, overlapRight - overlapLeft);
+  const beamWidth = 2 * halfFootprint;
+  const fraction = beamWidth > 0 ? overlap / beamWidth : 0;
+
+  const centerOffset = Math.abs(xMm - defect.centerMm);
+  const centerBoost = Math.exp(-0.5 * (centerOffset / (defect.wMm * 0.6)) ** 2);
+  // Depth attenuation: 1/distance beam spread + exponential material attenuation
+  const refDepth = 15; // reference depth (shallowest possible)
+  const depthFactor = (refDepth / depth) * Math.exp(-0.008 * (depth - refDepth));
+  const amplitude = 95 * Math.min(1, fraction * 1.8) * (0.3 + 0.7 * centerBoost) * Math.min(1, depthFactor);
+
+  return { amplitude: Math.max(0, amplitude), fraction, depth: defect.yMm };
+}
+
+function getCombinedSignal() {
+  const xMm = xToMm(transducerX);
+  let totalBlock = 0;
+  const echoes = [];
+
+  for (const d of DEFECTS) {
+    const sig = getSignalForDefect(d);
+    if (sig.amplitude > 0.5) {
+      echoes.push({ amplitude: sig.amplitude, depth: d.yMm });
+    }
+    // Compute blockage for back-wall
+    const depth = d.yMm;
+    const halfFootprint = depth * Math.tan(BEAM_HALF_ANGLE * DEG);
+    const beamLeft = xMm - halfFootprint;
+    const beamRight = xMm + halfFootprint;
+    const overlapLeft = Math.max(beamLeft, d.xMm);
+    const overlapRight = Math.min(beamRight, d.rightMm);
+    const overlap = Math.max(0, overlapRight - overlapLeft);
+    const beamWidth = 2 * halfFootprint;
+    const fraction = beamWidth > 0 ? overlap / beamWidth : 0;
+    totalBlock = Math.min(1, totalBlock + fraction * 1.15);
+  }
+
+  const backwallAmp = 90 * (1 - totalBlock);
+  return { echoes, backwallAmp };
+}
+
+// ===================== UI RENDERING =====================
+function renderPanel() {
+  // Defect tabs
+  const tabs = document.getElementById('defectTabs');
+  tabs.innerHTML = DEFECTS.map((_, i) => {
+    let cls = 'defect-tab';
+    if (i === activeDefect) cls += ' active';
+    else if (defectState[i].submitted) cls += ' found';
+    return `<span class="${cls}" onclick="switchDefect(${i})">#${i + 1}</span>`;
+  }).join('');
+
+  const c = document.getElementById('stepContent');
+
+  if (allDone) {
+    renderResults(c);
+    return;
+  }
+
+  const ds = defectState[activeDefect];
+  const defNum = activeDefect + 1;
+
+  // Sub-step dots
+  const dots = [0, 1, 2].map(s => {
+    let cls = 'sub-dot';
+    if (s === ds.subStep && ds.subStep < 3) cls += ' active';
+    else if (s < ds.subStep) cls += ' done';
+    return `<span class="${cls}"></span>`;
+  }).join('');
+
+  if (ds.submitted) {
+    c.innerHTML = `
+      <div class="step-header"><span class="step-number">${defNum}</span><span class="step-title">Defect #${defNum} — Submitted</span></div>
+      <div class="defect-reveal">
+        <div class="label">Your Measurements</div>
+        <div class="value">Start: ${ds.markLeft.toFixed(1)} mm &nbsp;|&nbsp; End: ${ds.markRight.toFixed(1)} mm</div>
+        <div class="value">Width: ${(ds.markRight - ds.markLeft).toFixed(1)} mm</div>
+      </div>
+      <p class="step-instruction" style="margin-top:0.75rem;">${defectState.every(d => d.submitted) ? 'All defects submitted! Click <strong>"Show Results"</strong> below.' : 'Click the button below to move on to the next defect.'}</p>
+      <div class="step-feedback" id="stepFb"></div>`;
+    enableControls(true);
+    const allSubmitted = defectState.every(d => d.submitted);
+    if (allSubmitted) {
+      updateActionBar('results');
+    } else {
+      const next = defectState.findIndex(d => !d.submitted);
+      updateActionBar('next', next);
+    }
+    return;
+  }
+
+  if (ds.subStep === 0) {
+    c.innerHTML = `
+      <div class="step-header"><span class="step-number">${defNum}</span><span class="step-title">Defect #${defNum} — Find Maximum Echo</span></div>
+      <div class="sub-step-dots">${dots}</div>
+      <p class="step-instruction">Scan the test specimen to find <strong>Defect #${defNum}</strong>. Drag the transducer until you see a strong echo on the A-scan.</p>
+      <p class="step-instruction">Position the transducer for <strong>maximum echo height</strong>, then click <strong>"Set Maximum"</strong>.</p>
+      <p class="step-instruction" style="font-size:0.82rem; color:#888;">Hint: Look for echoes at different depths — each defect is at a different depth.</p>
+      <div class="step-feedback" id="stepFb"></div>`;
+    enableControls(true);
+    updateActionBar('max');
+  } else if (ds.subStep === 1) {
+    const half = (ds.maxAmplitude / 2).toFixed(1);
+    c.innerHTML = `
+      <div class="step-header"><span class="step-number">${defNum}</span><span class="step-title">Defect #${defNum} — Mark Left Edge</span></div>
+      <div class="sub-step-dots">${dots}</div>
+      <p class="step-instruction">Move the transducer to the <strong>left</strong> until the echo at depth <strong>${DEFECTS[activeDefect].yMm} mm</strong> drops to <strong>${half}% FSH</strong> (50% of peak).</p>
+      <p class="step-instruction">Click <strong>"Mark Left Edge"</strong> at the 6 dB drop point.</p>
+      <div class="step-feedback" id="stepFb"></div>`;
+    enableControls(true);
+    updateActionBar('left');
+  } else if (ds.subStep === 2) {
+    const half = (ds.maxAmplitude / 2).toFixed(1);
+    c.innerHTML = `
+      <div class="step-header"><span class="step-number">${defNum}</span><span class="step-title">Defect #${defNum} — Mark Right Edge</span></div>
+      <div class="sub-step-dots">${dots}</div>
+      <p class="step-instruction">Now move the transducer to the <strong>right</strong> past center until the echo at depth <strong>${DEFECTS[activeDefect].yMm} mm</strong> drops to <strong>${half}% FSH</strong>.</p>
+      <p class="step-instruction">Click <strong>"Mark Right Edge"</strong>.</p>
+      <div class="step-feedback" id="stepFb"></div>`;
+    enableControls(true);
+    updateActionBar('right');
+  }
+}
+
+function renderResults(c) {
+  let rows = '';
+  DEFECTS.forEach((d, i) => {
+    const ds = defectState[i];
+    const mStart = ds.markLeft.toFixed(1);
+    const mEnd = ds.markRight.toFixed(1);
+    const mWidth = (ds.markRight - ds.markLeft).toFixed(1);
+    const aStart = d.xMm.toFixed(1);
+    const aEnd = d.rightMm.toFixed(1);
+    const aWidth = d.wMm.toFixed(1);
+    const aDepth = d.yMm.toFixed(1);
+
+    const startErr = Math.abs(ds.markLeft - d.xMm);
+    const endErr = Math.abs(ds.markRight - d.rightMm);
+    const widthErr = Math.abs((ds.markRight - ds.markLeft) - d.wMm);
+
+    function errClass(e) { return e <= 3 ? 'error-good' : e <= 8 ? 'error-ok' : 'error-bad'; }
+
+    rows += `
+      <tr>
+        <td rowspan="2" style="font-weight:700;">#${i + 1}</td>
+        <td class="yours">${mStart}</td>
+        <td class="yours">${mEnd}</td>
+        <td class="yours">${mWidth}</td>
+        <td class="yours">${aDepth}</td>
+      </tr>
+      <tr>
+        <td class="actual">${aStart} <span class="error-cell ${errClass(startErr)}">(${startErr.toFixed(1)})</span></td>
+        <td class="actual">${aEnd} <span class="error-cell ${errClass(endErr)}">(${endErr.toFixed(1)})</span></td>
+        <td class="actual">${aWidth} <span class="error-cell ${errClass(widthErr)}">(${widthErr.toFixed(1)})</span></td>
+        <td class="actual">${aDepth}</td>
+      </tr>`;
+  });
+
+  c.innerHTML = `
+    <div class="step-header"><span class="step-number" style="background:var(--success);">&#10003;</span><span class="step-title">Results — All 3 Defects</span></div>
+    <p class="step-instruction">Your measurements vs. actual defect positions. Errors in parentheses (mm).</p>
+    <table class="results-table">
+      <thead>
+        <tr><th>Defect</th><th>Start (mm)</th><th>End (mm)</th><th>Width (mm)</th><th>Depth (mm)</th></tr>
+        <tr><th></th><th colspan="4" style="font-size:0.75rem;">Top row = yours (purple) &nbsp;|&nbsp; Bottom row = actual (green) with error</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p class="step-instruction" style="margin-top:0.75rem; font-size:0.82rem;">
+      <span class="error-good">&#9679;</span> &le;3 mm &nbsp;
+      <span class="error-ok">&#9679;</span> &le;8 mm &nbsp;
+      <span class="error-bad">&#9679;</span> &gt;8 mm
+    </p>
+    <div style="margin-top:1rem; text-align:center;">
+      <button class="btn btn-green" onclick="resetTest()">&#8635; New Test (Randomized)</button>
+    </div>`;
+
+  enableControls(false);
+  updateActionBar('none');
+
+  // Reveal defects
+  defectState.forEach(d => d.revealed = true);
+  drawAll();
+}
+
+function switchDefect(i) {
+  activeDefect = i;
+  renderPanel();
+  drawAll();
+}
+
+function enableControls(on) {
+  document.getElementById('dragHint').style.display = on ? '' : 'none';
+}
+
+function updateActionBar(mode, nextIdx) {
+  const bar = document.getElementById('actionBar');
+  if (mode === 'none') { bar.style.display = 'none'; return; }
+  bar.style.display = '';
+  if (mode === 'max') {
+    bar.innerHTML = `<button class="btn btn-success" onclick="actionSetMax()">Set Maximum</button>`;
+  } else if (mode === 'left') {
+    bar.innerHTML = `<button class="btn btn-mark" onclick="actionMarkEdge('left')">Mark Left Edge</button>`;
+  } else if (mode === 'right') {
+    bar.innerHTML = `<button class="btn btn-mark" onclick="actionMarkEdge('right')">Mark Right Edge</button>`;
+  } else if (mode === 'next') {
+    bar.innerHTML = `<button class="btn btn-green" onclick="switchDefect(${nextIdx})">Next: Defect #${nextIdx + 1} &rarr;</button>`;
+  } else if (mode === 'results') {
+    bar.innerHTML = `<button class="btn btn-green" onclick="showResults()">Show Results</button>`;
+  }
+}
+
+// ===================== ACTIONS =====================
+function actionSetMax() {
+  const ds = defectState[activeDefect];
+  if (ds.subStep !== 0) return;
+  const defect = DEFECTS[activeDefect];
+  const sig = getSignalForDefect(defect);
+
+  if (sig.amplitude < 8) {
+    showFbWarn(`Echo is too weak (${sig.amplitude.toFixed(1)}%). Scan the block to find a stronger echo.`);
+    return;
+  }
+
+  // Check near center
+  const xMm = xToMm(transducerX);
+  const offCenter = Math.abs(xMm - defect.centerMm);
+  if (offCenter > defect.wMm * 0.25) {
+    // Maybe they found a different defect — check all
+    let bestIdx = -1, bestAmp = 0;
+    DEFECTS.forEach((d, i) => {
+      const s = getSignalForDefect(d);
+      if (s.amplitude > bestAmp) { bestAmp = s.amplitude; bestIdx = i; }
+    });
+    if (bestIdx !== activeDefect && bestAmp > 8) {
+      if (defectState[bestIdx].submitted) {
+        showFbWarn(`You're over Defect #${bestIdx + 1} which you've already submitted. Keep scanning to find Defect #${activeDefect + 1}.`);
+      } else {
+        showFbWarn(`That echo might be from a different defect. Try to find the maximum for this specific echo, or switch to Defect #${bestIdx + 1} tab if you want to work on that one.`);
+      }
+      return;
+    }
+    showFbWarn(`Echo is at ${sig.amplitude.toFixed(1)}% — try to find the true maximum by scanning a bit more.`);
+    return;
+  }
+
+  ds.maxAmplitude = sig.amplitude;
+  ds.subStep = 1;
+  renderPanel();
+  drawAll();
+}
+
+function actionMarkEdge(side) {
+  const ds = defectState[activeDefect];
+  const defect = DEFECTS[activeDefect];
+  const sig = getSignalForDefect(defect);
+  const target = ds.maxAmplitude / 2;
+  const tolerance = target * 0.20;
+  const diff = Math.abs(sig.amplitude - target);
+
+  if (diff > tolerance) {
+    const hint = sig.amplitude > target ? 'Move further from center — echo is still too high.' : 'Move back toward center — echo dropped too low.';
+    showFbWarn(`Echo is at ${sig.amplitude.toFixed(1)}% — 6 dB level is ${target.toFixed(1)}%. ${hint}`);
+    return;
+  }
+
+  const xMm = xToMm(transducerX);
+  if (side === 'left') {
+    if (ds.subStep !== 1) return;
+    ds.markLeft = xMm;
+    ds.subStep = 2;
+  } else {
+    if (ds.subStep !== 2) return;
+    ds.markRight = xMm;
+    ds.subStep = 3;
+    ds.submitted = true;
+  }
+  renderPanel();
+  drawAll();
+}
+
+function showResults() {
+  allDone = true;
+  renderPanel();
+  drawAll();
+}
+
+function resetTest() {
+  // Re-generate defects
+  const newDefects = generateDefects();
+  DEFECTS.length = 0;
+  newDefects.forEach(d => DEFECTS.push(d));
+
+  // Reset state
+  defectState.length = 0;
+  DEFECTS.forEach(() => defectState.push({
+    subStep: 0, maxAmplitude: 0, markLeft: null, markRight: null, submitted: false, revealed: false
+  }));
+
+  activeDefect = 0;
+  allDone = false;
+  transducerX = mmToX(BLOCK_REAL_W / 2);
+  renderPanel();
+  drawAll();
+}
+
+function showFbWarn(msg) {
+  const fb = document.getElementById('stepFb');
+  if (!fb) return;
+  fb.className = 'step-feedback show warn-fb';
+  fb.innerHTML = `<strong>Not quite.</strong> ${msg}`;
+  setTimeout(() => { if (fb) fb.className = 'step-feedback'; }, 4000);
+}
+
+// ===================== DRAG =====================
+function initDrag() {
+  const canvas = document.getElementById('blockCanvas');
+  function getX(e) {
+    const r = canvas.getBoundingClientRect();
+    return (e.clientX - r.left) * (canvas.width / r.width);
+  }
+  function getTX(e) {
+    const r = canvas.getBoundingClientRect();
+    return (e.touches[0].clientX - r.left) * (canvas.width / r.width);
+  }
+  function start(cx) {
+    if (allDone) return;
+    if (cx >= BLOCK.x && cx <= BLOCK.x + BLOCK.w) dragging = true;
+  }
+  function move(cx) {
+    if (!dragging) return;
+    transducerX = Math.max(BLOCK.x + 20, Math.min(BLOCK.x + BLOCK.w - 20, cx));
+    drawAll();
+  }
+  function end() { dragging = false; }
+
+  canvas.addEventListener('mousedown', e => start(getX(e)));
+  canvas.addEventListener('mousemove', e => { move(getX(e)); canvas.style.cursor = (!allDone && getX(e) >= BLOCK.x && getX(e) <= BLOCK.x + BLOCK.w) ? 'grab' : 'default'; });
+  canvas.addEventListener('mouseup', end);
+  canvas.addEventListener('mouseleave', end);
+  canvas.addEventListener('touchstart', e => { e.preventDefault(); start(getTX(e)); }, { passive: false });
+  canvas.addEventListener('touchmove', e => { e.preventDefault(); move(getTX(e)); }, { passive: false });
+  canvas.addEventListener('touchend', end);
+}
+
+// ===================== DRAW =====================
+function drawAll() { drawBlock(); drawAscan(); }
+
+function drawBlock() {
+  const canvas = document.getElementById('blockCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.fillStyle = '#f0f4f8';
+  ctx.fillRect(0, 0, W, H);
+
+  // Block
+  const grad = ctx.createLinearGradient(BLOCK.x, BLOCK.y, BLOCK.x, BLOCK.y + BLOCK.h);
+  grad.addColorStop(0, '#8d99ae');
+  grad.addColorStop(1, '#6b7b8d');
+  ctx.fillStyle = grad;
+  ctx.fillRect(BLOCK.x, BLOCK.y, BLOCK.w, BLOCK.h);
+  ctx.strokeStyle = '#4a5568';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(BLOCK.x, BLOCK.y, BLOCK.w, BLOCK.h);
+
+  ctx.fillStyle = '#4a5568';
+  ctx.font = '12px Segoe UI, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('Steel Test Specimen', BLOCK.x, BLOCK.y - 8);
+
+  // Depth label
+  ctx.save();
+  ctx.translate(BLOCK.x + BLOCK.w + 25, BLOCK.y + BLOCK.h / 2);
+  ctx.rotate(Math.PI / 2);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#888';
+  ctx.font = '10px Segoe UI, sans-serif';
+  ctx.fillText(`${BLOCK_REAL_H} mm`, 0, 0);
+  ctx.restore();
+
+  // Scale on bottom
+  ctx.fillStyle = '#888';
+  ctx.font = '10px Segoe UI, sans-serif';
+  ctx.textAlign = 'center';
+  for (let mm = 0; mm <= BLOCK_REAL_W; mm += 50) {
+    const x = mmToX(mm);
+    ctx.beginPath(); ctx.moveTo(x, BLOCK.y + BLOCK.h); ctx.lineTo(x, BLOCK.y + BLOCK.h + 8); ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillText(mm + 'mm', x, BLOCK.y + BLOCK.h + 20);
+  }
+
+  // Draw defects (only revealed ones)
+  const colors = ['#e91e63', '#2196f3', '#ff9800'];
+  DEFECTS.forEach((d, i) => {
+    const ds = defectState[i];
+    const dxL = mmToX(d.xMm);
+    const dxR = mmToX(d.rightMm);
+    const dy = mmToY(d.yMm);
+    const dh = Math.max(3, (d.hMm / BLOCK_REAL_H) * BLOCK.h);
+
+    if (ds.revealed) {
+      ctx.fillStyle = colors[i];
+      ctx.globalAlpha = 0.7;
+      ctx.fillRect(dxL, dy - dh / 2, dxR - dxL, dh);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = colors[i];
+      ctx.font = 'bold 10px Segoe UI, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`#${i + 1}: ${d.wMm}mm @ ${d.yMm}mm depth`, (dxL + dxR) / 2, dy - dh / 2 - 6);
+    } else {
+      // Hidden — draw in same color as block
+      ctx.fillStyle = '#1a1a2e';
+      ctx.globalAlpha = 0;
+      ctx.fillRect(dxL, dy - dh / 2, dxR - dxL, dh);
+      ctx.globalAlpha = 1;
+    }
+
+    // Draw marks if placed
+    if (ds.markLeft !== null) {
+      const mx = mmToX(ds.markLeft);
+      ctx.strokeStyle = colors[i];
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 3]);
+      ctx.beginPath(); ctx.moveTo(mx, BLOCK.y - 30); ctx.lineTo(mx, BLOCK.y + BLOCK.h + 5); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = colors[i];
+      ctx.beginPath(); ctx.moveTo(mx, BLOCK.y - 5); ctx.lineTo(mx - 6, BLOCK.y - 18); ctx.lineTo(mx + 6, BLOCK.y - 18); ctx.closePath(); ctx.fill();
+      ctx.font = 'bold 9px Segoe UI, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${i + 1}L`, mx, BLOCK.y - 22);
+    }
+    if (ds.markRight !== null) {
+      const mx = mmToX(ds.markRight);
+      ctx.strokeStyle = colors[i];
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 3]);
+      ctx.beginPath(); ctx.moveTo(mx, BLOCK.y - 30); ctx.lineTo(mx, BLOCK.y + BLOCK.h + 5); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = colors[i];
+      ctx.beginPath(); ctx.moveTo(mx, BLOCK.y - 5); ctx.lineTo(mx - 6, BLOCK.y - 18); ctx.lineTo(mx + 6, BLOCK.y - 18); ctx.closePath(); ctx.fill();
+      ctx.font = 'bold 9px Segoe UI, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${i + 1}R`, mx, BLOCK.y - 22);
+    }
+  });
+
+  // Draw transducer and beam
+  drawTransducerAndBeam(ctx);
+}
+
+function drawTransducerAndBeam(ctx) {
+  // Transducer body only — no beam or reflections (this is a test!)
+  const txL = transducerX - XDUCER_W_PX / 2;
+  const txT = BLOCK.y - XDUCER_H_PX;
+  ctx.fillStyle = '#2d3748';
+  ctx.beginPath();
+  ctx.roundRect(txL, txT, XDUCER_W_PX, XDUCER_H_PX, [4, 4, 0, 0]);
+  ctx.fill();
+  ctx.fillStyle = '#4fc3f7';
+  ctx.fillRect(txL + 6, txT + 3, XDUCER_W_PX - 12, 4);
+
+  // Cable
+  ctx.strokeStyle = '#555';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(transducerX, txT);
+  ctx.bezierCurveTo(transducerX, txT - 20, transducerX + 30, txT - 30, transducerX + 50, txT - 25);
+  ctx.stroke();
+
+  // Position label
+  ctx.fillStyle = '#4a5568';
+  ctx.font = '10px Segoe UI, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${xToMm(transducerX).toFixed(1)} mm`, transducerX, txT - 6);
+}
+
+// ===================== A-SCAN =====================
+function drawAscan() {
+  const canvas = document.getElementById('ascanCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const padL = 50, padR = 20, padT = 15, padB = 35;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxDepth = BLOCK_REAL_H;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0d1b2a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  for (let i = 0; i <= 8; i++) { const x = padL + (plotW / 8) * i; ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + plotH); ctx.stroke(); }
+  for (let i = 0; i <= 5; i++) { const y = padT + (plotH / 5) * i; ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y); ctx.stroke(); }
+
+  // Axes
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + plotH); ctx.lineTo(padL + plotW, padT + plotH); ctx.stroke();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.font = '10px Segoe UI, sans-serif';
+  ctx.textAlign = 'center';
+  for (let d = 0; d <= maxDepth; d += 10) ctx.fillText(d + '', padL + (d / maxDepth) * plotW, padT + plotH + 13);
+  ctx.fillText('Depth (mm)', padL + plotW / 2, padT + plotH + 28);
+  ctx.textAlign = 'right';
+  for (let a = 0; a <= 100; a += 20) ctx.fillText(a + '%', padL - 5, padT + plotH - (a / 100) * plotH + 3);
+
+  // Initial pulse
+  const ipX = padL;
+  const ipPulseW = 6;
+  ctx.beginPath();
+  for (let px = ipX; px <= Math.min(padL + plotW, ipX + 28); px++) {
+    const dist = px - ipX;
+    const env = Math.exp(-0.5 * (dist / ipPulseW) ** 2);
+    const rf = Math.abs(Math.sin(dist * 1.1));
+    const a = 100 * env * rf;
+    const y = padT + plotH - (a / 100) * plotH;
+    if (px === ipX) ctx.moveTo(px, padT + plotH);
+    ctx.lineTo(px, y);
+  }
+  ctx.strokeStyle = '#66bb6a';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = '10px Segoe UI, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('IP', ipX + 6, padT + 12);
+
+  const combined = getCombinedSignal();
+
+  // 6 dB reference for active defect
+  const ads = defectState[activeDefect];
+  if (ads.maxAmplitude > 0 && !allDone) {
+    const halfAmp = ads.maxAmplitude / 2;
+    const yHalf = padT + plotH - (halfAmp / 100) * plotH;
+    ctx.strokeStyle = 'rgba(233, 30, 99, 0.4)';
+    ctx.setLineDash([5, 3]);
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, yHalf); ctx.lineTo(padL + plotW, yHalf); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(233, 30, 99, 0.6)';
+    ctx.textAlign = 'left';
+    ctx.font = '10px Segoe UI, sans-serif';
+    ctx.fillText(`50% (−6 dB) = ${halfAmp.toFixed(1)}%`, padL + 4, yHalf - 4);
+  }
+
+  // Defect echoes
+  const echoColors = ['#4fc3f7', '#7c4dff', '#ff9800'];
+  combined.echoes.forEach((echo, idx) => {
+    // Find which defect this echo belongs to
+    let defIdx = DEFECTS.findIndex(d => d.yMm === echo.depth);
+    const depthX = padL + (echo.depth / maxDepth) * plotW;
+    const pulseW = 8;
+    ctx.beginPath();
+    for (let px = Math.max(padL, depthX - 35); px <= Math.min(padL + plotW, depthX + 35); px++) {
+      const dist = px - depthX;
+      const env = Math.exp(-0.5 * (dist / pulseW) ** 2);
+      const rf = Math.abs(Math.sin(dist * 0.9));
+      const a = echo.amplitude * env * rf;
+      const y = padT + plotH - (a / 100) * plotH;
+      if (px === Math.max(padL, depthX - 35)) ctx.moveTo(px, padT + plotH);
+      ctx.lineTo(px, y);
+    }
+    ctx.strokeStyle = defIdx >= 0 ? echoColors[defIdx] : '#4fc3f7';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Peak label
+    const peakY = padT + plotH - (echo.amplitude / 100) * plotH;
+    ctx.fillStyle = defIdx >= 0 ? echoColors[defIdx] : '#4fc3f7';
+    ctx.font = 'bold 11px Segoe UI, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`${echo.amplitude.toFixed(1)}%`, depthX + 12, peakY - 4);
+
+    // Depth label
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '10px Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${echo.depth}mm`, depthX, padT + 12);
+  });
+
+  // Back-wall echo
+  if (combined.backwallAmp > 3) {
+    const bwX = padL + plotW * 0.97;
+    const pulseW = 8;
+    ctx.beginPath();
+    for (let px = Math.max(padL, bwX - 35); px <= Math.min(padL + plotW, bwX + 35); px++) {
+      const dist = px - bwX;
+      const env = Math.exp(-0.5 * (dist / pulseW) ** 2);
+      const rf = Math.abs(Math.sin(dist * 0.9));
+      const a = combined.backwallAmp * env * rf;
+      const y = padT + plotH - (a / 100) * plotH;
+      if (px === Math.max(padL, bwX - 35)) ctx.moveTo(px, padT + plotH);
+      ctx.lineTo(px, y);
+    }
+    ctx.strokeStyle = 'rgba(255, 213, 79, 0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255, 213, 79, 0.5)';
+    ctx.font = '10px Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Back wall', bwX, padT + 12);
+  }
+}
+
+// ===================== INIT =====================
+initDrag();
+renderPanel();
+drawAll();
+</script>
+</body>
+</html>
