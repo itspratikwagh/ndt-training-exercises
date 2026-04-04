@@ -30,6 +30,12 @@
   }
   header h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.25rem; }
   header p { opacity: 0.85; font-size: 0.95rem; }
+  .fullscreen-btn {
+    display: inline-block; margin-top: 0.5rem; padding: 0.4rem 1rem;
+    background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  }
+  .fullscreen-btn:hover { background: rgba(255,255,255,0.35); }
 
   .sim-container { max-width: 1380px; margin: 0 auto; padding: 1.5rem; }
 
@@ -116,6 +122,7 @@
 <header>
   <h1>6 dB Drop Sizing — Practical Test</h1>
   <p>Find and size 3 hidden lamination defects using the 6 dB drop technique</p>
+  <button class="fullscreen-btn" onclick="toggleFullscreen()">&#x26F6; Enter Fullscreen</button>
 </header>
 
 <div class="sim-container">
@@ -153,6 +160,24 @@
 </div>
 
 <script>
+// ===================== FULLSCREEN =====================
+function toggleFullscreen() {
+  const btn = document.querySelector('.fullscreen-btn');
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().then(() => {
+      btn.innerHTML = '&#x2716; Exit Fullscreen';
+    }).catch(() => {});
+  } else {
+    document.exitFullscreen();
+  }
+}
+document.addEventListener('fullscreenchange', () => {
+  const btn = document.querySelector('.fullscreen-btn');
+  if (!document.fullscreenElement) {
+    btn.innerHTML = '&#x26F6; Enter Fullscreen';
+  }
+});
+
 // ===================== GEOMETRY =====================
 const BLOCK = { x: 60, y: 80, w: 780, h: 280 };
 const BLOCK_REAL_W = 300; // mm
@@ -618,7 +643,7 @@ function drawBlock() {
   ctx.strokeRect(BLOCK.x, BLOCK.y, BLOCK.w, BLOCK.h);
 
   ctx.fillStyle = '#4a5568';
-  ctx.font = '12px Segoe UI, sans-serif';
+  ctx.font = 'bold 15px Segoe UI, sans-serif';
   ctx.textAlign = 'left';
   ctx.fillText('Steel Test Specimen', BLOCK.x, BLOCK.y - 8);
 
@@ -628,18 +653,18 @@ function drawBlock() {
   ctx.rotate(Math.PI / 2);
   ctx.textAlign = 'center';
   ctx.fillStyle = '#888';
-  ctx.font = '10px Segoe UI, sans-serif';
+  ctx.font = 'bold 13px Segoe UI, sans-serif';
   ctx.fillText(`${BLOCK_REAL_H} mm`, 0, 0);
   ctx.restore();
 
   // Scale on bottom
   ctx.fillStyle = '#888';
-  ctx.font = '10px Segoe UI, sans-serif';
+  ctx.font = 'bold 13px Segoe UI, sans-serif';
   ctx.textAlign = 'center';
   for (let mm = 0; mm <= BLOCK_REAL_W; mm += 50) {
     const x = mmToX(mm);
     ctx.beginPath(); ctx.moveTo(x, BLOCK.y + BLOCK.h); ctx.lineTo(x, BLOCK.y + BLOCK.h + 8); ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.fillText(mm + 'mm', x, BLOCK.y + BLOCK.h + 20);
+    ctx.fillText(mm + 'mm', x, BLOCK.y + BLOCK.h + 22);
   }
 
   // Draw defects (only revealed ones)
@@ -657,9 +682,9 @@ function drawBlock() {
       ctx.fillRect(dxL, dy - dh / 2, dxR - dxL, dh);
       ctx.globalAlpha = 1;
       ctx.fillStyle = colors[i];
-      ctx.font = 'bold 10px Segoe UI, sans-serif';
+      ctx.font = 'bold 14px Segoe UI, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`#${i + 1}: ${d.wMm}mm @ ${d.yMm}mm depth`, (dxL + dxR) / 2, dy - dh / 2 - 6);
+      ctx.fillText(`#${i + 1}: ${d.wMm}mm @ ${d.yMm}mm depth`, (dxL + dxR) / 2, dy - dh / 2 - 8);
     } else {
       // Hidden — draw in same color as block
       ctx.fillStyle = '#1a1a2e';
@@ -678,7 +703,7 @@ function drawBlock() {
       ctx.setLineDash([]);
       ctx.fillStyle = colors[i];
       ctx.beginPath(); ctx.moveTo(mx, BLOCK.y - 5); ctx.lineTo(mx - 6, BLOCK.y - 18); ctx.lineTo(mx + 6, BLOCK.y - 18); ctx.closePath(); ctx.fill();
-      ctx.font = 'bold 9px Segoe UI, sans-serif';
+      ctx.font = 'bold 13px Segoe UI, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(`${i + 1}L`, mx, BLOCK.y - 22);
     }
@@ -691,7 +716,7 @@ function drawBlock() {
       ctx.setLineDash([]);
       ctx.fillStyle = colors[i];
       ctx.beginPath(); ctx.moveTo(mx, BLOCK.y - 5); ctx.lineTo(mx - 6, BLOCK.y - 18); ctx.lineTo(mx + 6, BLOCK.y - 18); ctx.closePath(); ctx.fill();
-      ctx.font = 'bold 9px Segoe UI, sans-serif';
+      ctx.font = 'bold 13px Segoe UI, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(`${i + 1}R`, mx, BLOCK.y - 22);
     }
@@ -722,9 +747,9 @@ function drawTransducerAndBeam(ctx) {
 
   // Position label
   ctx.fillStyle = '#4a5568';
-  ctx.font = '10px Segoe UI, sans-serif';
+  ctx.font = 'bold 14px Segoe UI, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(`${xToMm(transducerX).toFixed(1)} mm`, transducerX, txT - 6);
+  ctx.fillText(`${xToMm(transducerX).toFixed(1)} mm`, transducerX, txT - 8);
 }
 
 // ===================== A-SCAN =====================
@@ -750,13 +775,13 @@ function drawAscan() {
   ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + plotH); ctx.lineTo(padL + plotW, padT + plotH); ctx.stroke();
 
-  ctx.fillStyle = 'rgba(255,255,255,0.6)';
-  ctx.font = '10px Segoe UI, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  ctx.font = 'bold 13px Segoe UI, sans-serif';
   ctx.textAlign = 'center';
-  for (let d = 0; d <= maxDepth; d += 10) ctx.fillText(d + '', padL + (d / maxDepth) * plotW, padT + plotH + 13);
-  ctx.fillText('Depth (mm)', padL + plotW / 2, padT + plotH + 28);
+  for (let d = 0; d <= maxDepth; d += 10) ctx.fillText(d + '', padL + (d / maxDepth) * plotW, padT + plotH + 16);
+  ctx.fillText('Depth (mm)', padL + plotW / 2, padT + plotH + 30);
   ctx.textAlign = 'right';
-  for (let a = 0; a <= 100; a += 20) ctx.fillText(a + '%', padL - 5, padT + plotH - (a / 100) * plotH + 3);
+  for (let a = 0; a <= 100; a += 20) ctx.fillText(a + '%', padL - 5, padT + plotH - (a / 100) * plotH + 4);
 
   // Initial pulse
   const ipX = padL;
@@ -774,10 +799,10 @@ function drawAscan() {
   ctx.strokeStyle = '#66bb6a';
   ctx.lineWidth = 1.5;
   ctx.stroke();
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
-  ctx.font = '10px Segoe UI, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.font = 'bold 13px Segoe UI, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('IP', ipX + 6, padT + 12);
+  ctx.fillText('IP', ipX + 6, padT + 14);
 
   const combined = getCombinedSignal();
 
@@ -791,10 +816,10 @@ function drawAscan() {
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(padL, yHalf); ctx.lineTo(padL + plotW, yHalf); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = 'rgba(233, 30, 99, 0.6)';
+    ctx.fillStyle = 'rgba(233, 30, 99, 0.8)';
     ctx.textAlign = 'left';
-    ctx.font = '10px Segoe UI, sans-serif';
-    ctx.fillText(`50% (−6 dB) = ${halfAmp.toFixed(1)}%`, padL + 4, yHalf - 4);
+    ctx.font = 'bold 13px Segoe UI, sans-serif';
+    ctx.fillText(`50% (−6 dB) = ${halfAmp.toFixed(1)}%`, padL + 4, yHalf - 6);
   }
 
   // Defect echoes
@@ -821,15 +846,15 @@ function drawAscan() {
     // Peak label
     const peakY = padT + plotH - (echo.amplitude / 100) * plotH;
     ctx.fillStyle = defIdx >= 0 ? echoColors[defIdx] : '#4fc3f7';
-    ctx.font = 'bold 11px Segoe UI, sans-serif';
+    ctx.font = 'bold 14px Segoe UI, sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(`${echo.amplitude.toFixed(1)}%`, depthX + 12, peakY - 4);
+    ctx.fillText(`${echo.amplitude.toFixed(1)}%`, depthX + 14, peakY - 6);
 
     // Depth label
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.font = '10px Segoe UI, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.font = 'bold 13px Segoe UI, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`${echo.depth}mm`, depthX, padT + 12);
+    ctx.fillText(`${echo.depth}mm`, depthX, padT + 14);
   });
 
   // Back-wall echo
@@ -849,10 +874,10 @@ function drawAscan() {
     ctx.strokeStyle = 'rgba(255, 213, 79, 0.7)';
     ctx.lineWidth = 1.5;
     ctx.stroke();
-    ctx.fillStyle = 'rgba(255, 213, 79, 0.5)';
-    ctx.font = '10px Segoe UI, sans-serif';
+    ctx.fillStyle = 'rgba(255, 213, 79, 0.7)';
+    ctx.font = 'bold 13px Segoe UI, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Back wall', bwX, padT + 12);
+    ctx.fillText('Back wall', bwX, padT + 14);
   }
 }
 
