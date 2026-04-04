@@ -822,10 +822,9 @@ function drawAscan() {
     ctx.fillText(`50% (−6 dB) = ${halfAmp.toFixed(1)}%`, padL + 4, yHalf - 6);
   }
 
-  // Defect echoes
-  const echoColors = ['#4fc3f7', '#7c4dff', '#ff9800'];
+  // Defect echoes — all bright blue for visibility on dark background
+  const echoColor = '#00bfff';
   combined.echoes.forEach((echo, idx) => {
-    // Find which defect this echo belongs to
     let defIdx = DEFECTS.findIndex(d => d.yMm === echo.depth);
     const depthX = padL + (echo.depth / maxDepth) * plotW;
     const pulseW = 8;
@@ -839,13 +838,13 @@ function drawAscan() {
       if (px === Math.max(padL, depthX - 35)) ctx.moveTo(px, padT + plotH);
       ctx.lineTo(px, y);
     }
-    ctx.strokeStyle = defIdx >= 0 ? echoColors[defIdx] : '#4fc3f7';
+    ctx.strokeStyle = echoColor;
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
     // Peak label
     const peakY = padT + plotH - (echo.amplitude / 100) * plotH;
-    ctx.fillStyle = defIdx >= 0 ? echoColors[defIdx] : '#4fc3f7';
+    ctx.fillStyle = echoColor;
     ctx.font = 'bold 14px Segoe UI, sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText(`${echo.amplitude.toFixed(1)}%`, depthX + 14, peakY - 6);
