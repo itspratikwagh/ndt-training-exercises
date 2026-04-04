@@ -142,7 +142,7 @@
       <div class="panel-card">
         <h3>Test Specimen — Cross Section</h3>
         <div class="canvas-wrap">
-          <canvas id="blockCanvas" width="900" height="420"></canvas>
+          <canvas id="blockCanvas" width="900" height="300"></canvas>
         </div>
         <div class="drag-hint" id="dragHint" style="display:none;">Click and drag the transducer along the surface</div>
         <div class="action-bar" id="actionBar" style="display:none;"></div>
@@ -151,7 +151,7 @@
       <div class="panel-card">
         <h3>A-Scan Display</h3>
         <div class="canvas-wrap">
-          <canvas id="ascanCanvas" width="900" height="220"></canvas>
+          <canvas id="ascanCanvas" width="900" height="380"></canvas>
         </div>
       </div>
     </div>
@@ -179,7 +179,7 @@ document.addEventListener('fullscreenchange', () => {
 });
 
 // ===================== GEOMETRY =====================
-const BLOCK = { x: 60, y: 80, w: 780, h: 280 };
+const BLOCK = { x: 60, y: 60, w: 780, h: 180 };
 const BLOCK_REAL_W = 300; // mm
 const BLOCK_REAL_H = 80;  // mm
 
