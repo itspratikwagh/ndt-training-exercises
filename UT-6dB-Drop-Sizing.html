@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UT 6 dB Drop Sizing Technique — Interactive Exercise</title>
+<style>
+  :root {
+    --primary: #1a73e8;
+    --primary-light: #e8f0fe;
+    --success: #0d904f;
+    --success-light: #e6f4ea;
+    --error: #d93025;
+    --error-light: #fce8e6;
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --text: #202124;
+    --text-secondary: #5f6368;
+    --border: #dadce0;
+    --beam-gold: #ffd54f;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+  header {
+    background: linear-gradient(135deg, #4a148c, #7b1fa2);
+    color: white; padding: 2rem 1.5rem; text-align: center;
+  }
+  header h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.25rem; }
+  header p { opacity: 0.85; font-size: 0.95rem; }
+
+  .sim-container { max-width: 1380px; margin: 0 auto; padding: 1.5rem; }
+
+  .sim-layout {
+    display: grid; grid-template-columns: 320px 1fr; gap: 1rem; align-items: start;
+  }
+  @media (max-width: 960px) {
+    .sim-layout { grid-template-columns: 1fr; }
+    .guided-card { position: static !important; max-height: none !important; }
+  }
+
+  .guided-card {
+    background: var(--card); border-radius: 12px; border: 2px solid var(--primary);
+    padding: 1.25rem 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow-y: auto;
+  }
+  .guided-top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+  .guided-top-bar h2 { margin: 0; font-size: 1.05rem; color: #4a148c; }
+  .step-progress { display: flex; gap: 0.35rem; }
+  .step-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); cursor: pointer; transition: 0.2s; }
+  .step-dot.done { background: var(--success); }
+  .step-dot.current { background: var(--primary); box-shadow: 0 0 0 3px rgba(26,115,232,0.25); }
+  .step-header { display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.5rem; }
+  .step-number {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--primary); color: white; font-size: 0.85rem; font-weight: 700;
+  }
+  .step-title { font-weight: 700; font-size: 0.98rem; }
+  .step-instruction { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.75rem; }
+  .step-instruction strong { color: var(--text); }
+  .step-nav {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border);
+  }
+  .btn-back {
+    padding: 0.45rem 1rem; border-radius: 8px; border: 1px solid var(--border);
+    background: white; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); cursor: pointer;
+  }
+  .btn-back:disabled { opacity: 0.3; cursor: default; }
+  .step-counter { font-size: 0.82rem; color: var(--text-secondary); font-weight: 600; }
+  .step-feedback { margin-top: 0.6rem; padding: 0.65rem 1rem; border-radius: 8px; font-size: 0.87rem; display: none; }
+  .step-feedback.show { display: block; }
+  .step-feedback.correct-fb { background: var(--success-light); color: #0d6b3a; }
+  .step-feedback.info-fb { background: var(--primary-light); color: #1a56c4; }
+  .step-feedback.warn-fb { background: var(--error-light); color: #a50e0e; }
+  .btn { padding: 0.5rem 1.25rem; border-radius: 8px; border: none; font-size: 0.88rem; font-weight: 600; cursor: pointer; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: #1557b0; }
+  .btn-success { background: var(--success); color: white; }
+  .btn-success:hover { background: #0a7a40; }
+  .btn-mark { background: #7b1fa2; color: white; }
+  .btn-mark:hover { background: #6a1b9a; }
+
+  .sim-right { display: flex; flex-direction: column; gap: 1rem; }
+  .panel-card {
+    background: var(--card); border-radius: 12px; border: 1px solid var(--border);
+    padding: 1rem 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .panel-card h3 { font-size: 0.95rem; color: #4a148c; margin-bottom: 0.5rem; }
+  .canvas-wrap canvas { width: 100%; border-radius: 8px; border: 1px solid var(--border); display: block; }
+  .drag-hint { font-size: 0.78rem; color: var(--text-secondary); text-align: center; margin-top: 0.4rem; }
+  .action-bar { text-align: center; margin-top: 0.6rem; display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
+
+  .measurement-result {
+    margin-top: 0.75rem; padding: 0.75rem 1rem; border-radius: 8px;
+    background: #f3e5f5; border: 1px solid #ce93d8; text-align: center;
+  }
+  .measurement-result .value { font-size: 1.4rem; font-weight: 700; color: #7b1fa2; }
+  .measurement-result .label { font-size: 0.82rem; color: var(--text-secondary); }
+
+  .guided-complete { text-align: center; padding: 1.5rem 1rem 0.5rem; }
+  .complete-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--success); color: white; font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;
+  }
+  .guided-complete h3 { color: var(--success); margin-bottom: 0.3rem; }
+  .guided-complete p { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.75rem; }
+  .btn-restart {
+    padding: 0.5rem 1.25rem; border-radius: 8px; border: 1px solid var(--success);
+    background: var(--success-light); font-size: 0.85rem; font-weight: 600;
+    color: var(--success); cursor: pointer;
+  }
+  .btn-restart:hover { background: var(--success); color: white; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>6 dB Drop Sizing Technique</h1>
+  <p>Interactive Exercise — Straight Beam Transducer</p>
+</header>
+
+<div class="sim-container">
+  <div class="sim-layout">
+
+    <!-- LEFT -->
+    <div class="guided-card" id="guidedCard">
+      <div class="guided-top-bar">
+        <h2>Guided Walkthrough</h2>
+        <div class="step-progress" id="stepDots"></div>
+      </div>
+      <div id="stepContent"></div>
+      <div class="step-nav">
+        <button class="btn-back" id="backBtn" onclick="goBack()" disabled>&larr; Back</button>
+        <span class="step-counter" id="stepCounter"></span>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="sim-right">
+      <div class="panel-card">
+        <h3>Test Object — Cross Section</h3>
+        <div class="canvas-wrap">
+          <canvas id="blockCanvas" width="900" height="400"></canvas>
+        </div>
+        <div class="drag-hint" id="dragHint" style="display:none;">Click and drag the transducer along the surface</div>
+        <div class="action-bar" id="actionBar" style="display:none;"></div>
+      </div>
+
+      <div class="panel-card">
+        <h3>A-Scan Display</h3>
+        <div class="canvas-wrap">
+          <canvas id="ascanCanvas" width="900" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ===================== GEOMETRY =====================
+const BLOCK = { x: 60, y: 80, w: 780, h: 260 };
+const BLOCK_REAL_W = 250; // mm
+const BLOCK_REAL_H = 60;  // mm
+
+// Defect: horizontal lamination/crack halfway through, centered
+const DEFECT = {
+  xMm: 80,    // left edge in mm from block left
+  wMm: 60,    // width in mm
+  yMm: 30,    // depth from surface in mm (halfway)
+  hMm: 1.5,   // thickness
+};
+DEFECT.centerMm = DEFECT.xMm + DEFECT.wMm / 2;
+DEFECT.rightMm = DEFECT.xMm + DEFECT.wMm;
+
+function mmToX(mm) { return BLOCK.x + (mm / BLOCK_REAL_W) * BLOCK.w; }
+function mmToY(mm) { return BLOCK.y + (mm / BLOCK_REAL_H) * BLOCK.h; }
+function xToMm(px) { return ((px - BLOCK.x) / BLOCK.w) * BLOCK_REAL_W; }
+
+// Transducer
+const XDUCER_W_PX = 36;
+const XDUCER_H_PX = 20;
+const BEAM_HALF_ANGLE = 7; // degrees — cone half-angle
+const DEG = Math.PI / 180;
+
+// ===================== STATE =====================
+let transducerX = mmToX(DEFECT.centerMm); // canvas X center of transducer
+let dragging = false;
+let currentStep = 0;
+const TOTAL_STEPS = 5;
+let stepCompleted = new Array(TOTAL_STEPS).fill(false);
+let maxAmplitude = 0; // peak amplitude seen at step 1
+let markLeft = null;  // mm position of left-edge mark
+let markRight = null; // mm position of right-edge mark
+let animFrame = null;
+
+// Signal model: how much of the beam footprint overlaps the defect
+function getSignal() {
+  const xMm = xToMm(transducerX);
+  const depth = DEFECT.yMm;
+  // Beam footprint at defect depth: center ± depth * tan(halfAngle)
+  const halfFootprint = depth * Math.tan(BEAM_HALF_ANGLE * DEG);
+  const beamLeft = xMm - halfFootprint;
+  const beamRight = xMm + halfFootprint;
+
+  // Overlap between beam footprint and defect
+  const overlapLeft = Math.max(beamLeft, DEFECT.xMm);
+  const overlapRight = Math.min(beamRight, DEFECT.rightMm);
+  const overlap = Math.max(0, overlapRight - overlapLeft);
+  const beamWidth = 2 * halfFootprint;
+  const fraction = beamWidth > 0 ? overlap / beamWidth : 0;
+
+  // Weight by beam profile (stronger at center, Gaussian-ish)
+  // Approximate: integral of Gaussian-weighted overlap
+  // For simplicity: use overlap fraction but boost center
+  const centerOffset = Math.abs(xMm - DEFECT.centerMm);
+  const centerBoost = Math.exp(-0.5 * (centerOffset / (DEFECT.wMm * 0.6)) ** 2);
+  const amplitude = 95 * Math.min(1, fraction * 1.8) * (0.3 + 0.7 * centerBoost);
+
+  // Back-wall echo: full amplitude when no defect blocking, zero when fully blocked
+  // Use weighted fraction accounting for Gaussian beam profile (center carries more energy)
+  const backwallBlock = Math.min(1, fraction * 1.15); // slight boost so full overlap = full block
+  const backwallAmp = 90 * (1 - backwallBlock);
+
+  return { amplitude: Math.max(0, amplitude), backwallAmp, fraction, beamLeft, beamRight, halfFootprint };
+}
+
+// 6dB drop = 50% of peak = half amplitude
+function getHalfAmplitude() { return maxAmplitude / 2; }
+
+// ===================== GUIDED STEPS =====================
+const STEPS = [
+  {
+    title: 'Move transducer over the defect center',
+    render(c) {
+      c.innerHTML = `
+        <div class="step-header"><span class="step-number">1</span><span class="step-title">${this.title}</span></div>
+        <p class="step-instruction">A flat <strong>lamination defect</strong> is hidden inside this steel block, parallel to the surface.</p>
+        <p class="step-instruction"><strong>Drag the transducer</strong> along the top surface. Watch the A-scan — when the beam hits the defect, a strong echo will appear <em>before</em> the back-wall echo.</p>
+        <p class="step-instruction">Find the position that gives the <strong>maximum echo height</strong>, then click <strong>"Set Maximum"</strong>.</p>
+        <div class="step-feedback" id="stepFb"></div>`;
+      enableControls(true);
+      updateActionBar('max');
+      if (stepCompleted[0]) showDone(c, `Peak amplitude set at <strong>${maxAmplitude.toFixed(1)}% FSH</strong>. The 6 dB drop level (50%) is <strong>${getHalfAmplitude().toFixed(1)}%</strong>.`);
+    }
+  },
+  {
+    title: 'Move to the LEFT edge — find the 6 dB drop',
+    render(c) {
+      c.innerHTML = `
+        <div class="step-header"><span class="step-number">2</span><span class="step-title">${this.title}</span></div>
+        <p class="step-instruction">Now slowly drag the transducer to the <strong>left</strong> until the echo drops to <strong>half its peak height</strong> (${getHalfAmplitude().toFixed(1)}% FSH).</p>
+        <p class="step-instruction">This is the <strong>6 dB drop point</strong> — where the beam is half on and half off the defect edge. The dashed line on the A-scan shows the 50% level.</p>
+        <p class="step-instruction">When you're at the drop point, click <strong>"Mark Left Edge"</strong>.</p>
+        <div class="step-feedback" id="stepFb"></div>`;
+      enableControls(true);
+      updateActionBar('left');
+      if (stepCompleted[1]) showDone(c, `Left edge marked at <strong>${markLeft.toFixed(1)} mm</strong> from the block's left side.`);
+    }
+  },
+  {
+    title: 'Move to the RIGHT edge — find the 6 dB drop',
+    render(c) {
+      c.innerHTML = `
+        <div class="step-header"><span class="step-number">3</span><span class="step-title">${this.title}</span></div>
+        <p class="step-instruction">Now drag the transducer to the <strong>right</strong> past center until the echo again drops to <strong>${getHalfAmplitude().toFixed(1)}% FSH</strong> (50% of peak).</p>
+        <p class="step-instruction">Click <strong>"Mark Right Edge"</strong> when the echo is at the half-amplitude level.</p>
+        <div class="step-feedback" id="stepFb"></div>`;
+      enableControls(true);
+      updateActionBar('right');
+      if (stepCompleted[2]) showDone(c, `Right edge marked at <strong>${markRight.toFixed(1)} mm</strong>.`);
+    }
+  },
+  {
+    title: 'Review your measurement',
+    render(c) {
+      const measured = markRight !== null && markLeft !== null ? (markRight - markLeft).toFixed(1) : '—';
+      const actual = DEFECT.wMm.toFixed(1);
+      const error = markRight !== null && markLeft !== null ? Math.abs((markRight - markLeft) - DEFECT.wMm).toFixed(1) : '—';
+      c.innerHTML = `
+        <div class="step-header"><span class="step-number">4</span><span class="step-title">${this.title}</span></div>
+        <p class="step-instruction">The distance between your two marks is the <strong>6 dB drop size</strong> of the defect.</p>
+        <div class="measurement-result">
+          <div class="label">Your Measured Defect Size</div>
+          <div class="value">${measured} mm</div>
+        </div>
+        <div class="measurement-result" style="margin-top:0.5rem;">
+          <div class="label">Actual Defect Size</div>
+          <div class="value">${actual} mm</div>
+        </div>
+        <p class="step-instruction" style="margin-top:0.75rem;">Error: <strong>${error} mm</strong>. The 6 dB drop technique gives the defect size as the distance between the transducer center positions where the signal drops to half (-6 dB).</p>
+        <div class="step-feedback" id="stepFb"></div>`;
+      enableControls(false);
+      updateActionBar('none');
+      stepCompleted[3] = true;
+      showDone(c, `The 6 dB technique measures defects that are <strong>larger than the beam width</strong>. For smaller defects, the 20 dB drop or DGS method is used instead.`);
+    }
+  },
+  {
+    title: 'Why does 6 dB = half amplitude?',
+    render(c) {
+      c.innerHTML = `
+        <div class="step-header"><span class="step-number">5</span><span class="step-title">${this.title}</span></div>
+        <p class="step-instruction">A drop of <strong>6 dB</strong> corresponds to the signal falling to <strong>50%</strong> of its peak amplitude.</p>
+        <p class="step-instruction">This happens because at the defect edge, the beam is <strong>half on the defect and half off</strong> — so only half the beam energy is reflected back, producing half the echo amplitude.</p>
+        <p class="step-instruction">The transducer center position at this point corresponds to the <strong>true edge of the defect</strong>. Marking both edges gives you the defect length.</p>
+        <div style="margin-top:1.25rem; text-align:center;">
+          <button class="btn btn-primary" onclick="restartWalkthrough()" style="background:linear-gradient(135deg,#7b1fa2,#4a148c);">&#8635; Reset &amp; Try Again</button>
+        </div>
+        <div class="step-feedback" id="stepFb"></div>`;
+      enableControls(false);
+      updateActionBar('none');
+      stepCompleted[4] = true;
+    }
+  }
+];
+
+function showDone(c, msg) {
+  const fb = c.querySelector('#stepFb');
+  if (!fb) return;
+  fb.className = 'step-feedback show correct-fb';
+  const isLast = currentStep >= TOTAL_STEPS - 1;
+  fb.innerHTML = `<strong>Done!</strong> ${msg}${isLast ? '' : `<div style="margin-top:0.75rem;"><button class="btn btn-primary" onclick="advanceStep()">Next Step &rarr;</button></div>`}`;
+}
+
+function renderStep() {
+  const c = document.getElementById('stepContent');
+  document.getElementById('stepDots').innerHTML = STEPS.map((_, i) => {
+    let cls = 'step-dot';
+    if (i === currentStep) cls += ' current';
+    else if (stepCompleted[i]) cls += ' done';
+    return `<span class="${cls}" onclick="goToStep(${i})"></span>`;
+  }).join('');
+  document.getElementById('backBtn').disabled = currentStep === 0;
+  document.getElementById('stepCounter').textContent = `Step ${currentStep + 1} of ${TOTAL_STEPS}`;
+  STEPS[currentStep].render(c);
+  drawAll();
+}
+
+function advanceStep() { currentStep++; renderStep(); }
+function goBack() { if (currentStep > 0) { currentStep--; renderStep(); } }
+function goToStep(i) { if (stepCompleted[i] || i <= currentStep) { currentStep = i; renderStep(); } }
+function restartWalkthrough() {
+  currentStep = 0; stepCompleted = new Array(TOTAL_STEPS).fill(false);
+  maxAmplitude = 0; markLeft = null; markRight = null;
+  transducerX = mmToX(DEFECT.centerMm);
+  renderStep();
+}
+
+function enableControls(on) {
+  document.getElementById('dragHint').style.display = on ? '' : 'none';
+}
+
+function updateActionBar(mode) {
+  const bar = document.getElementById('actionBar');
+  if (mode === 'none') { bar.style.display = 'none'; return; }
+  bar.style.display = '';
+  if (mode === 'max') {
+    bar.innerHTML = `<button class="btn btn-success" onclick="setMaximum()">Set Maximum</button>`;
+  } else if (mode === 'left') {
+    bar.innerHTML = `<button class="btn btn-mark" onclick="markEdge('left')">Mark Left Edge</button>`;
+  } else if (mode === 'right') {
+    bar.innerHTML = `<button class="btn btn-mark" onclick="markEdge('right')">Mark Right Edge</button>`;
+  }
+}
+
+function setMaximum() {
+  if (stepCompleted[0]) return;
+  const sig = getSignal();
+  if (sig.amplitude < 50) {
+    showFbWarn('Move the transducer over the defect area — the echo is too weak. Look for a peak on the A-scan before the back-wall.');
+    return;
+  }
+  // Check if close to actual center
+  const xMm = xToMm(transducerX);
+  const offCenter = Math.abs(xMm - DEFECT.centerMm);
+  if (offCenter > DEFECT.wMm * 0.2) {
+    showFbWarn(`Echo is at ${sig.amplitude.toFixed(1)}% — try to find the true maximum by scanning a bit more. The peak should be higher.`);
+    return;
+  }
+  maxAmplitude = sig.amplitude;
+  stepCompleted[0] = true;
+  renderStep();
+}
+
+function markEdge(side) {
+  const sig = getSignal();
+  const target = getHalfAmplitude();
+  const tolerance = target * 0.18; // ±18% of the target
+  const diff = Math.abs(sig.amplitude - target);
+
+  if (diff > tolerance) {
+    const hint = sig.amplitude > target ? 'Move further away from center — the echo is still too high.' : 'Move back toward center — the echo dropped too low.';
+    showFbWarn(`Echo is at ${sig.amplitude.toFixed(1)}% — the 6 dB drop level is ${target.toFixed(1)}%. ${hint}`);
+    return;
+  }
+
+  const xMm = xToMm(transducerX);
+  if (side === 'left') {
+    markLeft = xMm;
+    stepCompleted[1] = true;
+  } else {
+    markRight = xMm;
+    stepCompleted[2] = true;
+  }
+  renderStep();
+}
+
+function showFbWarn(msg) {
+  const fb = document.getElementById('stepFb');
+  if (!fb) return;
+  fb.className = 'step-feedback show warn-fb';
+  fb.innerHTML = `<strong>Not quite.</strong> ${msg}`;
+  setTimeout(() => { if (fb) fb.className = 'step-feedback'; }, 4000);
+}
+
+// ===================== DRAG =====================
+function initDrag() {
+  const canvas = document.getElementById('blockCanvas');
+  function getX(e) {
+    const r = canvas.getBoundingClientRect();
+    return (e.clientX - r.left) * (canvas.width / r.width);
+  }
+  function getTX(e) {
+    const r = canvas.getBoundingClientRect();
+    return (e.touches[0].clientX - r.left) * (canvas.width / r.width);
+  }
+  function start(cx) {
+    if (currentStep > 2 || (stepCompleted[currentStep] && currentStep !== 0)) return;
+    if (cx >= BLOCK.x && cx <= BLOCK.x + BLOCK.w) dragging = true;
+  }
+  function move(cx) {
+    if (!dragging) return;
+    transducerX = Math.max(BLOCK.x + 20, Math.min(BLOCK.x + BLOCK.w - 20, cx));
+    drawAll();
+  }
+  function end() { dragging = false; }
+
+  canvas.addEventListener('mousedown', e => start(getX(e)));
+  canvas.addEventListener('mousemove', e => { move(getX(e)); const cx = getX(e); canvas.style.cursor = (cx >= BLOCK.x && cx <= BLOCK.x + BLOCK.w && currentStep <= 2) ? 'grab' : 'default'; });
+  canvas.addEventListener('mouseup', end);
+  canvas.addEventListener('mouseleave', end);
+  canvas.addEventListener('touchstart', e => { e.preventDefault(); start(getTX(e)); }, { passive: false });
+  canvas.addEventListener('touchmove', e => { e.preventDefault(); move(getTX(e)); }, { passive: false });
+  canvas.addEventListener('touchend', end);
+}
+
+// ===================== DRAW =====================
+function drawAll() { drawBlock(); drawAscan(); }
+
+function drawBlock() {
+  const canvas = document.getElementById('blockCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // BG
+  ctx.fillStyle = '#f0f4f8';
+  ctx.fillRect(0, 0, W, H);
+
+  // Block
+  const grad = ctx.createLinearGradient(BLOCK.x, BLOCK.y, BLOCK.x, BLOCK.y + BLOCK.h);
+  grad.addColorStop(0, '#8d99ae');
+  grad.addColorStop(1, '#6b7b8d');
+  ctx.fillStyle = grad;
+  ctx.fillRect(BLOCK.x, BLOCK.y, BLOCK.w, BLOCK.h);
+  ctx.strokeStyle = '#4a5568';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(BLOCK.x, BLOCK.y, BLOCK.w, BLOCK.h);
+
+  // Block label
+  ctx.fillStyle = '#4a5568';
+  ctx.font = '12px Segoe UI, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('Steel Test Object', BLOCK.x, BLOCK.y - 8);
+
+  // Dimension label on right
+  ctx.save();
+  ctx.translate(BLOCK.x + BLOCK.w + 25, BLOCK.y + BLOCK.h / 2);
+  ctx.rotate(Math.PI / 2);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#888';
+  ctx.font = '10px Segoe UI, sans-serif';
+  ctx.fillText(`${BLOCK_REAL_H} mm`, 0, 0);
+  ctx.restore();
+
+  // Scale on top
+  ctx.fillStyle = '#888';
+  ctx.font = '10px Segoe UI, sans-serif';
+  ctx.textAlign = 'center';
+  for (let mm = 0; mm <= BLOCK_REAL_W; mm += 50) {
+    const x = mmToX(mm);
+    ctx.beginPath(); ctx.moveTo(x, BLOCK.y + BLOCK.h); ctx.lineTo(x, BLOCK.y + BLOCK.h + 8); ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillText(mm + 'mm', x, BLOCK.y + BLOCK.h + 20);
+  }
+
+  // Defect
+  const dxL = mmToX(DEFECT.xMm);
+  const dxR = mmToX(DEFECT.rightMm);
+  const dy = mmToY(DEFECT.yMm);
+  const dh = Math.max(3, (DEFECT.hMm / BLOCK_REAL_H) * BLOCK.h);
+
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(dxL, dy - dh / 2, dxR - dxL, dh);
+
+  // Defect label (only after step 3 or if we want to keep it hidden for discovery)
+  // Show faintly for guidance
+  if (currentStep >= 3) {
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.font = '10px Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Defect: ${DEFECT.wMm}mm`, (dxL + dxR) / 2, dy - dh / 2 - 6);
+  }
+
+  // Mark lines
+  if (markLeft !== null) {
+    const mx = mmToX(markLeft);
+    ctx.strokeStyle = '#e91e63';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 3]);
+    ctx.beginPath(); ctx.moveTo(mx, BLOCK.y - 30); ctx.lineTo(mx, BLOCK.y + BLOCK.h + 5); ctx.stroke();
+    ctx.setLineDash([]);
+    // Triangle marker on top
+    ctx.fillStyle = '#e91e63';
+    ctx.beginPath(); ctx.moveTo(mx, BLOCK.y - 5); ctx.lineTo(mx - 6, BLOCK.y - 18); ctx.lineTo(mx + 6, BLOCK.y - 18); ctx.closePath(); ctx.fill();
+    ctx.font = 'bold 10px Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('L', mx, BLOCK.y - 22);
+  }
+  if (markRight !== null) {
+    const mx = mmToX(markRight);
+    ctx.strokeStyle = '#2196f3';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 3]);
+    ctx.beginPath(); ctx.moveTo(mx, BLOCK.y - 30); ctx.lineTo(mx, BLOCK.y + BLOCK.h + 5); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#2196f3';
+    ctx.beginPath(); ctx.moveTo(mx, BLOCK.y - 5); ctx.lineTo(mx - 6, BLOCK.y - 18); ctx.lineTo(mx + 6, BLOCK.y - 18); ctx.closePath(); ctx.fill();
+    ctx.font = 'bold 10px Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('R', mx, BLOCK.y - 22);
+  }
+
+  // Measured distance
+  if (markLeft !== null && markRight !== null) {
+    const lx = mmToX(markLeft);
+    const rx = mmToX(markRight);
+    const arrY = BLOCK.y + BLOCK.h + 35;
+    ctx.strokeStyle = '#7b1fa2';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(lx, arrY); ctx.lineTo(rx, arrY); ctx.stroke();
+    // arrows
+    ctx.fillStyle = '#7b1fa2';
+    ctx.beginPath(); ctx.moveTo(lx, arrY); ctx.lineTo(lx + 8, arrY - 4); ctx.lineTo(lx + 8, arrY + 4); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(rx, arrY); ctx.lineTo(rx - 8, arrY - 4); ctx.lineTo(rx - 8, arrY + 4); ctx.closePath(); ctx.fill();
+    ctx.font = 'bold 12px Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${(markRight - markLeft).toFixed(1)} mm`, (lx + rx) / 2, arrY - 8);
+  }
+
+  // Draw transducer and beam
+  drawTransducerAndBeam(ctx);
+}
+
+function drawTransducerAndBeam(ctx) {
+  const sig = getSignal();
+  const entryX = transducerX;
+  const entryY = BLOCK.y;
+
+  // Clip beam to block
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(BLOCK.x, BLOCK.y, BLOCK.w, BLOCK.h);
+  ctx.clip();
+
+  // Beam cone — stops at defect where blocked, extends to back wall where not
+  const halfAngle = BEAM_HALF_ANGLE * DEG;
+  const tanHA = Math.tan(halfAngle);
+  const blockBottomY = BLOCK.y + BLOCK.h;
+  const defectTopY = mmToY(DEFECT.yMm);
+  const defectLeftX = mmToX(DEFECT.xMm);
+  const defectRightX = mmToX(DEFECT.xMm + DEFECT.wMm);
+
+  const strips = 40;
+  for (let i = -strips; i <= strips; i++) {
+    const t = i / strips; // -1 to 1
+    const intensity = Math.exp(-3 * t * t); // Gaussian: strong at center
+
+    // Strip position at defect depth and at back-wall depth
+    const defectDepthPx = defectTopY - entryY;
+    const fullDepthPx = blockBottomY - entryY;
+    const stripXAtDefect = entryX + t * tanHA * defectDepthPx;
+    const stripXAtBottom = entryX + t * tanHA * fullDepthPx;
+
+    // Does this strip hit the defect?
+    const hitsDefect = stripXAtDefect >= defectLeftX && stripXAtDefect <= defectRightX;
+    const endY = hitsDefect ? defectTopY : blockBottomY;
+    const endDepth = endY - entryY;
+    const stripXEnd = entryX + t * tanHA * endDepth;
+
+    const stripGrad = ctx.createLinearGradient(0, entryY, 0, endY);
+    stripGrad.addColorStop(0, `rgba(255, 213, 79, ${0.5 * intensity})`);
+    stripGrad.addColorStop(0.5, `rgba(255, 213, 79, ${0.3 * intensity})`);
+    stripGrad.addColorStop(1, `rgba(255, 213, 79, ${0.05 * intensity})`);
+
+    const w = (tanHA * endDepth / strips) * 1.2;
+    ctx.fillStyle = stripGrad;
+    const topX = entryX + t * 2; // narrow at top
+    ctx.beginPath();
+    ctx.moveTo(topX - 1, entryY);
+    ctx.lineTo(topX + 1, entryY);
+    ctx.lineTo(stripXEnd + w / 2, endY);
+    ctx.lineTo(stripXEnd - w / 2, endY);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Central axis line — also stops at defect if blocked
+  const centerHitsDefect = entryX >= defectLeftX && entryX <= defectRightX;
+  const centerEndY = centerHitsDefect ? defectTopY : blockBottomY;
+  ctx.strokeStyle = 'rgba(255, 213, 79, 0.5)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(entryX, entryY); ctx.lineTo(entryX, centerEndY); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Cone edge lines — extend to back wall (they represent the full cone boundary)
+  const leftXBottom = entryX - tanHA * (blockBottomY - entryY);
+  const rightXBottom = entryX + tanHA * (blockBottomY - entryY);
+  ctx.strokeStyle = 'rgba(255, 213, 79, 0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(entryX, entryY); ctx.lineTo(leftXBottom, blockBottomY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(entryX, entryY); ctx.lineTo(rightXBottom, blockBottomY); ctx.stroke();
+
+  // If beam hits defect, show reflection
+  if (sig.amplitude > 5) {
+    const defectY = mmToY(DEFECT.yMm);
+    // Reflection glow at defect
+    const glowW = sig.fraction * (mmToX(DEFECT.rightMm) - mmToX(DEFECT.xMm));
+    const overlapCenterX = entryX; // approximate
+    ctx.fillStyle = `rgba(79, 195, 247, ${0.15 + 0.35 * (sig.amplitude / 95)})`;
+    ctx.beginPath();
+    ctx.ellipse(overlapCenterX, defectY, Math.max(5, glowW / 2), 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Animated return pulses
+    const now = Date.now() / 500;
+    for (let i = 0; i < 3; i++) {
+      const t = ((now + i * 0.33) % 1);
+      const py = defectY - (defectY - entryY) * t;
+      const alpha = (1 - t) * (sig.amplitude / 95) * 0.6;
+      ctx.beginPath();
+      ctx.arc(entryX, py, 3, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(79, 195, 247, ${alpha})`;
+      ctx.fill();
+    }
+  }
+
+  ctx.restore();
+
+  // Transducer body on surface
+  const txL = transducerX - XDUCER_W_PX / 2;
+  const txT = BLOCK.y - XDUCER_H_PX;
+  ctx.fillStyle = '#2d3748';
+  ctx.beginPath();
+  ctx.roundRect(txL, txT, XDUCER_W_PX, XDUCER_H_PX, [4, 4, 0, 0]);
+  ctx.fill();
+
+  // Crystal inside
+  ctx.fillStyle = '#4fc3f7';
+  ctx.fillRect(txL + 6, txT + 3, XDUCER_W_PX - 12, 4);
+
+  // Cable
+  ctx.strokeStyle = '#555';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(transducerX, txT);
+  ctx.bezierCurveTo(transducerX, txT - 20, transducerX + 30, txT - 30, transducerX + 50, txT - 25);
+  ctx.stroke();
+
+  // Position label
+  ctx.fillStyle = '#4a5568';
+  ctx.font = '10px Segoe UI, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${xToMm(transducerX).toFixed(1)} mm`, transducerX, txT - 6);
+
+  // Animate if active
+  if (currentStep <= 2 && !stepCompleted[currentStep]) {
+    if (animFrame) cancelAnimationFrame(animFrame);
+    animFrame = requestAnimationFrame(() => drawBlock());
+  }
+}
+
+// ===================== A-SCAN =====================
+function drawAscan() {
+  const canvas = document.getElementById('ascanCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const padL = 50, padR = 20, padT = 15, padB = 35;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxDepth = BLOCK_REAL_H;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0d1b2a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  for (let i = 0; i <= 6; i++) { const x = padL + (plotW / 6) * i; ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + plotH); ctx.stroke(); }
+  for (let i = 0; i <= 5; i++) { const y = padT + (plotH / 5) * i; ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y); ctx.stroke(); }
+
+  // Axes
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + plotH); ctx.lineTo(padL + plotW, padT + plotH); ctx.stroke();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.font = '10px Segoe UI, sans-serif';
+  ctx.textAlign = 'center';
+  for (let d = 0; d <= maxDepth; d += 10) ctx.fillText(d + '', padL + (d / maxDepth) * plotW, padT + plotH + 13);
+  ctx.fillText('Depth (mm)', padL + plotW / 2, padT + plotH + 28);
+  ctx.textAlign = 'right';
+  for (let a = 0; a <= 100; a += 20) ctx.fillText(a + '%', padL - 5, padT + plotH - (a / 100) * plotH + 3);
+
+  const sig = getSignal();
+
+  // Initial pulse (main bang) at 0 depth
+  const ipX = padL;
+  const ipPulseW = 6;
+  ctx.beginPath();
+  for (let px = ipX; px <= Math.min(padL + plotW, ipX + 28); px++) {
+    const dist = px - ipX;
+    const env = Math.exp(-0.5 * (dist / ipPulseW) ** 2);
+    const rf = Math.abs(Math.sin(dist * 1.1));
+    const a = 100 * env * rf;
+    const y = padT + plotH - (a / 100) * plotH;
+    if (px === ipX) ctx.moveTo(px, padT + plotH);
+    ctx.lineTo(px, y);
+  }
+  ctx.strokeStyle = '#66bb6a';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = '10px Segoe UI, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('IP', ipX + 6, padT + 12);
+
+  // 6 dB reference line (only after step 0 done)
+  if (maxAmplitude > 0) {
+    const halfAmp = getHalfAmplitude();
+    const yHalf = padT + plotH - (halfAmp / 100) * plotH;
+    ctx.strokeStyle = 'rgba(233, 30, 99, 0.4)';
+    ctx.setLineDash([5, 3]);
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, yHalf); ctx.lineTo(padL + plotW, yHalf); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(233, 30, 99, 0.6)';
+    ctx.textAlign = 'left';
+    ctx.font = '10px Segoe UI, sans-serif';
+    ctx.fillText(`50% (−6 dB) = ${halfAmp.toFixed(1)}%`, padL + 4, yHalf - 4);
+  }
+
+  // Defect echo
+  if (sig.amplitude > 0.5) {
+    const defDepthX = padL + (DEFECT.yMm / maxDepth) * plotW;
+    const pulseW = 8;
+    ctx.beginPath();
+    for (let px = Math.max(padL, defDepthX - 35); px <= Math.min(padL + plotW, defDepthX + 35); px++) {
+      const dist = px - defDepthX;
+      const env = Math.exp(-0.5 * (dist / pulseW) ** 2);
+      const rf = Math.abs(Math.sin(dist * 0.9));
+      const a = sig.amplitude * env * rf;
+      const y = padT + plotH - (a / 100) * plotH;
+      if (px === Math.max(padL, defDepthX - 35)) ctx.moveTo(px, padT + plotH);
+      ctx.lineTo(px, y);
+    }
+    ctx.strokeStyle = '#4fc3f7';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Peak label
+    const peakY = padT + plotH - (sig.amplitude / 100) * plotH;
+    ctx.fillStyle = '#4fc3f7';
+    ctx.font = 'bold 11px Segoe UI, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`${sig.amplitude.toFixed(1)}%`, defDepthX + 12, peakY - 4);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '10px Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Defect', defDepthX, padT + 12);
+  }
+
+  // Back-wall echo — only when beam is not fully blocked by defect
+  if (sig.backwallAmp > 3) {
+    const bwX = padL + (maxDepth / maxDepth) * plotW * 0.95; // near the right
+    const pulseW = 8;
+    ctx.beginPath();
+    for (let px = Math.max(padL, bwX - 35); px <= Math.min(padL + plotW, bwX + 35); px++) {
+      const dist = px - bwX;
+      const env = Math.exp(-0.5 * (dist / pulseW) ** 2);
+      const rf = Math.abs(Math.sin(dist * 0.9));
+      const a = sig.backwallAmp * env * rf;
+      const y = padT + plotH - (a / 100) * plotH;
+      if (px === Math.max(padL, bwX - 35)) ctx.moveTo(px, padT + plotH);
+      ctx.lineTo(px, y);
+    }
+    ctx.strokeStyle = 'rgba(255, 213, 79, 0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255, 213, 79, 0.5)';
+    ctx.font = '10px Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Back wall', bwX, padT + 12);
+  }
+}
+
+// ===================== INIT =====================
+window.addEventListener('DOMContentLoaded', () => {
+  initDrag();
+  renderStep();
+  drawAll();
+});
+</script>
+</body>
+</html>
