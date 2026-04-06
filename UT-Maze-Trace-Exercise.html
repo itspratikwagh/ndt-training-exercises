@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UT Maze Tracing — Thickness Mapping Exercise</title>
+<style>
+  :root {
+    --primary: #1a73e8;
+    --primary-light: #e8f0fe;
+    --success: #0d904f;
+    --success-light: #e6f4ea;
+    --error: #d93025;
+    --error-light: #fce8e6;
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --text: #202124;
+    --text-secondary: #5f6368;
+    --border: #dadce0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+  header {
+    background: linear-gradient(135deg, #0d47a1, #1565c0);
+    color: white; padding: 1.5rem 1.5rem; text-align: center;
+  }
+  header h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.15rem; }
+  header p { opacity: 0.85; font-size: 0.9rem; }
+
+  .sim-container { max-width: 1300px; margin: 0 auto; padding: 1rem; }
+
+  /* Instructions bar on top */
+  .instructions-bar {
+    background: var(--card); border-radius: 12px; border: 1px solid var(--border);
+    padding: 0.85rem 1.25rem; margin-bottom: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    display: flex; gap: 0.5rem; align-items: flex-start; flex-wrap: wrap;
+  }
+  .instructions-bar .inst-text { flex: 1; min-width: 300px; }
+  .instructions-bar .inst-text p { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.25rem; }
+  .instructions-bar .inst-text p strong { color: var(--text); }
+  .instructions-bar .inst-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+
+  /* Side by side: plate + A-scan */
+  .main-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start;
+  }
+  @media (max-width: 1000px) {
+    .main-row { grid-template-columns: 1fr; }
+  }
+
+  .panel-card {
+    background: var(--card); border-radius: 12px; border: 1px solid var(--border);
+    padding: 0.75rem 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .panel-card h3 { font-size: 0.9rem; color: #0d47a1; margin-bottom: 0.4rem; }
+  .canvas-wrap { position: relative; }
+  .canvas-wrap canvas { width: 100%; border-radius: 8px; border: 1px solid var(--border); display: block; }
+  #plateCanvas { cursor: crosshair; }
+
+  .btn { padding: 0.45rem 1.1rem; border-radius: 8px; border: none; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: #1557b0; }
+  .btn-success { background: var(--success); color: white; }
+  .btn-success:hover { background: #0a7a40; }
+  .btn-outline { background: white; color: var(--primary); border: 1px solid var(--primary); }
+  .btn-outline:hover { background: var(--primary-light); }
+  .btn-mark { background: #ff6f00; color: white; }
+  .btn-mark:hover { background: #e65100; }
+
+  .marker-count { font-size: 0.8rem; color: var(--text-secondary); }
+
+  /* Bottom bar: legend + score */
+  .bottom-bar {
+    display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap; align-items: start;
+  }
+  .legend-card {
+    background: var(--card); border-radius: 12px; border: 1px solid var(--border);
+    padding: 0.75rem 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); flex: 1;
+  }
+  .legend { display: flex; gap: 1rem; font-size: 0.78rem; color: var(--text-secondary); flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 0.3rem; }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--border); }
+
+  .score-card {
+    padding: 0.65rem 1rem; border-radius: 8px;
+    background: #e8f5e9; border: 1px solid #a5d6a7; text-align: center;
+  }
+  .score-card .value { font-size: 1.3rem; font-weight: 700; color: var(--success); }
+  .score-card .label { font-size: 0.78rem; color: var(--text-secondary); }
+  .score-row { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+  /* Difficulty selector */
+  .diff-bar { display: flex; gap: 0.4rem; align-items: center; }
+  .diff-bar label { font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-right: 0.2rem; }
+  .diff-btn {
+    padding: 0.3rem 0.75rem; border-radius: 6px; border: 1px solid var(--border);
+    font-size: 0.8rem; font-weight: 600; cursor: pointer; background: white; color: var(--text-secondary);
+  }
+  .diff-btn.active { background: #0d47a1; color: white; border-color: #0d47a1; }
+  .diff-btn:hover:not(.active) { background: var(--primary-light); }
+
+  /* Popup overlay */
+  .popup-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+  }
+  .popup-box {
+    background: white; border-radius: 16px; padding: 2rem 2.5rem; text-align: center;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.2); max-width: 360px;
+  }
+  .popup-box h3 { font-size: 1.15rem; color: #0d47a1; margin-bottom: 0.5rem; }
+  .popup-box p { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1.25rem; }
+  .popup-box .btn { font-size: 1rem; padding: 0.6rem 2rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>UT Maze Tracing — Thickness Mapping</h1>
+  <p>Scan a plate from the top surface and trace the hidden maze machined from the back</p>
+</header>
+
+<div class="sim-container">
+
+  <!-- Instructions + difficulty on top -->
+  <div class="instructions-bar">
+    <div class="inst-text">
+      <p>A <strong>10" × 10" steel plate</strong> (0.500" thick) has a maze machined from the back surface to 0.250" deep. Drag the transducer — where the maze is machined, the back-wall echo shifts to <strong>0.250"</strong>. Drop markers at thin spots to trace the maze, then reveal to check your work. Timer starts when you touch the transducer.</p>
+    </div>
+    <div class="diff-bar">
+      <label>Level:</label>
+      <button class="diff-btn active" id="diffEasy" onclick="setDifficulty('easy')">Easy</button>
+      <button class="diff-btn" id="diffMedium" onclick="setDifficulty('medium')">Medium</button>
+      <button class="diff-btn" id="diffHard" onclick="setDifficulty('hard')">Hard</button>
+    </div>
+  </div>
+
+  <!-- Plate (left) + A-scan (right) side by side -->
+  <div class="main-row">
+    <div class="panel-card">
+      <h3>Plate — Top View (10" × 10")</h3>
+      <div class="canvas-wrap">
+        <canvas id="plateCanvas" width="560" height="560"></canvas>
+      </div>
+      <div style="display:flex; gap:0.5rem; align-items:center; justify-content:center; margin-top:0.6rem; flex-wrap:wrap;">
+        <span style="font-family:'Courier New',monospace; font-size:1.1rem; font-weight:700; color:#0d47a1; min-width:70px; text-align:center;" id="timerDisplay">0:00</span>
+        <span style="color:var(--border);">|</span>
+        <span class="marker-count" id="markerCount">Markers: 0</span>
+        <button class="btn btn-mark" id="dropBtn" onclick="dropMarker()">Drop Marker</button>
+        <button class="btn btn-outline" id="undoBtn" onclick="undoMarker()">Undo</button>
+        <button class="btn btn-success" id="revealBtn" onclick="revealMaze()">Reveal Maze</button>
+        <button class="btn btn-primary" id="resetBtn" onclick="resetExercise()" style="display:none;">New Maze</button>
+      </div>
+    </div>
+    <div class="panel-card">
+      <h3>A-Scan Display</h3>
+      <div class="canvas-wrap">
+        <canvas id="ascanCanvas" width="560" height="560"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom: legend + score -->
+  <div class="bottom-bar">
+    <div class="legend-card">
+      <div class="legend">
+        <div class="legend-item"><div class="legend-swatch" style="background:#b0b8c4;"></div> Steel plate</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#ff6f00;"></div> Your markers</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:rgba(33,150,243,0.4);"></div> Actual maze (after reveal)</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#66bb6a; border-color:#66bb6a;"></div> Back-wall @ 0.500"</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#4fc3f7; border-color:#4fc3f7;"></div> Back-wall @ 0.250" (maze)</div>
+      </div>
+    </div>
+    <div id="scoreArea"></div>
+  </div>
+
+</div>
+
+<!-- Ready popup -->
+<div class="popup-overlay" id="readyPopup" style="display:none;">
+  <div class="popup-box">
+    <h3>Ready to start?</h3>
+    <p>The timer will begin as soon as you click Go. Scan the plate, drop markers on the maze path, and reveal when done.</p>
+    <button class="btn btn-primary" onclick="startFromPopup()">Go!</button>
+  </div>
+</div>
+
+<script>
+// ===================== CONFIG =====================
+const PLATE_SIZE_IN = 10;
+const PLATE_THICK = 0.500;
+const MAZE_DEPTH = 0.250;
+const REMAINING = PLATE_THICK - MAZE_DEPTH;
+
+const CANVAS_SIZE = 560;
+const PLATE_PAD = 40;
+const PLATE_PX = CANVAS_SIZE - PLATE_PAD * 2;
+
+let currentDifficulty = 'easy';
+// Difficulty settings: grid size, randomness (lower = more winding)
+const DIFFICULTIES = {
+  easy:   { grid: 12, randomness: 0.25, label: 'Easy' },
+  medium: { grid: 18, randomness: 0.45, label: 'Medium' },
+  hard:   { grid: 26, randomness: 0.6,  label: 'Hard' }
+};
+
+let GRID_SIZE = DIFFICULTIES[currentDifficulty].grid;
+let CELL_PX_SIZE = PLATE_PX / GRID_SIZE;
+const XDUCER_R = 16;
+
+// ===================== MAZE GENERATION =====================
+// Single winding path — no branches, no dead ends
+function generateMazeGrid(gridSize, randomness) {
+  const grid = Array.from({ length: gridSize }, () => Array(gridSize).fill(0));
+  const startR = 1 + Math.floor(Math.random() * (gridSize - 2));
+  const endR = 1 + Math.floor(Math.random() * (gridSize - 2));
+  const visited = Array.from({ length: gridSize }, () => Array(gridSize).fill(false));
+  const path = [];
+
+  let r = startR, c = 0;
+  grid[r][c] = 1;
+  visited[r][c] = true;
+  path.push([r, c]);
+
+  const maxSteps = gridSize * gridSize * 2;
+  let steps = 0;
+
+  while ((c < gridSize - 1 || r !== endR) && steps < maxSteps) {
+    steps++;
+    const dirs = [];
+    for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+      const nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && !visited[nr][nc]) {
+        let touchCount = 0;
+        for (const [tr, tc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+          const ar = nr + tr, ac = nc + tc;
+          if (ar >= 0 && ar < gridSize && ac >= 0 && ac < gridSize && grid[ar][ac] === 1) {
+            if (ar !== r || ac !== c) touchCount++;
+          }
+        }
+        if (touchCount === 0) dirs.push([dr, dc]);
+      }
+    }
+
+    if (dirs.length === 0) {
+      if (path.length <= 1) break;
+      const [br, bc] = path.pop();
+      grid[br][bc] = 0;
+      visited[br][bc] = false;
+      r = path[path.length - 1][0];
+      c = path[path.length - 1][1];
+      continue;
+    }
+
+    dirs.sort((a, b) => {
+      const scoreA = (a[1] > 0 ? 2 : 0) + (Math.abs((r + a[0]) - endR) < Math.abs(r - endR) ? 1 : 0);
+      const scoreB = (b[1] > 0 ? 2 : 0) + (Math.abs((r + b[0]) - endR) < Math.abs(r - endR) ? 1 : 0);
+      return scoreB - scoreA;
+    });
+
+    const pick = Math.random() < randomness ? dirs[Math.floor(Math.random() * dirs.length)] : dirs[0];
+    r += pick[0];
+    c += pick[1];
+    grid[r][c] = 1;
+    visited[r][c] = true;
+    path.push([r, c]);
+  }
+
+  return grid;
+}
+
+let mazeGrid = generateMazeGrid(GRID_SIZE, DIFFICULTIES[currentDifficulty].randomness);
+let markers = [];
+let revealed = false;
+let firstTouch = true; // triggers popup on first transducer interaction
+
+// Timer
+let timerRunning = false;
+let timerSeconds = 0;
+let timerInterval = null;
+
+function startTimer() {
+  if (timerRunning) return;
+  timerRunning = true;
+  timerInterval = setInterval(() => {
+    timerSeconds++;
+    const m = Math.floor(timerSeconds / 60);
+    const s = timerSeconds % 60;
+    document.getElementById('timerDisplay').textContent = `${m}:${s.toString().padStart(2, '0')}`;
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+  timerRunning = false;
+}
+
+function resetTimer() {
+  stopTimer();
+  timerSeconds = 0;
+  document.getElementById('timerDisplay').textContent = '0:00';
+}
+
+function startFromPopup() {
+  document.getElementById('readyPopup').style.display = 'none';
+  firstTouch = false;
+  startTimer();
+}
+
+function setDifficulty(level) {
+  currentDifficulty = level;
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('diff' + level.charAt(0).toUpperCase() + level.slice(1)).classList.add('active');
+  // Regenerate maze
+  GRID_SIZE = DIFFICULTIES[level].grid;
+  CELL_PX_SIZE = PLATE_PX / GRID_SIZE;
+  resetExercise();
+}
+
+// ===================== STATE =====================
+let probeX = PLATE_SIZE_IN / 2;
+let probeY = PLATE_SIZE_IN / 2;
+let dragging = false;
+
+function inToPixel(inches) { return PLATE_PAD + (inches / PLATE_SIZE_IN) * PLATE_PX; }
+function pixelToIn(px) { return ((px - PLATE_PAD) / PLATE_PX) * PLATE_SIZE_IN; }
+
+// ===================== THICKNESS MODEL =====================
+function getThicknessAt(xIn, yIn) {
+  const col = Math.floor((xIn / PLATE_SIZE_IN) * GRID_SIZE);
+  const row = Math.floor((yIn / PLATE_SIZE_IN) * GRID_SIZE);
+  if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) return PLATE_THICK;
+  return mazeGrid[row][col] === 1 ? REMAINING : PLATE_THICK;
+}
+
+function getSmoothedThickness(xIn, yIn) {
+  const beamR = 0.15;
+  const samples = [
+    [0, 0], [beamR, 0], [-beamR, 0], [0, beamR], [0, -beamR],
+    [beamR*0.7, beamR*0.7], [-beamR*0.7, beamR*0.7], [beamR*0.7, -beamR*0.7], [-beamR*0.7, -beamR*0.7]
+  ];
+  let sum = 0;
+  for (const [dx, dy] of samples) sum += getThicknessAt(xIn + dx, yIn + dy);
+  return sum / samples.length;
+}
+
+// ===================== ACTIONS =====================
+function dropMarker() {
+  if (revealed) return;
+  markers.push({ x: probeX, y: probeY });
+  updateMarkerCount();
+  drawPlate();
+}
+
+function undoMarker() {
+  if (revealed || markers.length === 0) return;
+  markers.pop();
+  updateMarkerCount();
+  drawPlate();
+}
+
+function updateMarkerCount() {
+  document.getElementById('markerCount').textContent = `Markers: ${markers.length}`;
+}
+
+function revealMaze() {
+  revealed = true;
+  stopTimer();
+  document.getElementById('revealBtn').style.display = 'none';
+  document.getElementById('dropBtn').style.display = 'none';
+  document.getElementById('undoBtn').style.display = 'none';
+  document.getElementById('resetBtn').style.display = '';
+  drawPlate();
+  computeScore();
+}
+
+function resetExercise() {
+  mazeGrid = generateMazeGrid(GRID_SIZE, DIFFICULTIES[currentDifficulty].randomness);
+  markers = [];
+  revealed = false;
+  firstTouch = true;
+  probeX = PLATE_SIZE_IN / 2;
+  probeY = PLATE_SIZE_IN / 2;
+  document.getElementById('revealBtn').style.display = '';
+  document.getElementById('dropBtn').style.display = '';
+  document.getElementById('undoBtn').style.display = '';
+  document.getElementById('resetBtn').style.display = 'none';
+  document.getElementById('scoreArea').innerHTML = '';
+  resetTimer();
+  updateMarkerCount();
+  drawAll();
+}
+
+function computeScore() {
+  let markersOnMaze = 0;
+  for (const m of markers) {
+    if (getThicknessAt(m.x, m.y) < PLATE_THICK) markersOnMaze++;
+  }
+  const accuracy = markers.length > 0 ? (markersOnMaze / markers.length * 100) : 0;
+
+  let mazeCells = 0, coveredCells = 0;
+  const coverR = 0.35;
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      if (mazeGrid[r][c] === 1) {
+        mazeCells++;
+        const cellXIn = (c + 0.5) / GRID_SIZE * PLATE_SIZE_IN;
+        const cellYIn = (r + 0.5) / GRID_SIZE * PLATE_SIZE_IN;
+        for (const m of markers) {
+          if (Math.sqrt((m.x - cellXIn) ** 2 + (m.y - cellYIn) ** 2) < coverR) { coveredCells++; break; }
+        }
+      }
+    }
+  }
+  const coverage = mazeCells > 0 ? (coveredCells / mazeCells * 100) : 0;
+
+  const tm = Math.floor(timerSeconds / 60);
+  const ts = timerSeconds % 60;
+  const timeStr = `${tm}:${ts.toString().padStart(2, '0')}`;
+  document.getElementById('scoreArea').innerHTML = `
+    <div class="score-row">
+      <div class="score-card"><div class="label">Accuracy</div><div class="value">${accuracy.toFixed(0)}%</div></div>
+      <div class="score-card"><div class="label">Coverage</div><div class="value">${coverage.toFixed(0)}%</div></div>
+      <div class="score-card"><div class="label">Time</div><div class="value">${timeStr}</div></div>
+    </div>`;
+}
+
+// ===================== DRAG =====================
+function initDrag() {
+  const canvas = document.getElementById('plateCanvas');
+  function getPos(e) {
+    const r = canvas.getBoundingClientRect();
+    const scale = canvas.width / r.width;
+    return { x: (e.clientX - r.left) * scale, y: (e.clientY - r.top) * scale };
+  }
+  function getTPos(e) {
+    const r = canvas.getBoundingClientRect();
+    const scale = canvas.width / r.width;
+    return { x: (e.touches[0].clientX - r.left) * scale, y: (e.touches[0].clientY - r.top) * scale };
+  }
+  function start(px, py) {
+    const xIn = pixelToIn(px), yIn = pixelToIn(py);
+    if (xIn >= 0 && xIn <= PLATE_SIZE_IN && yIn >= 0 && yIn <= PLATE_SIZE_IN) {
+      if (firstTouch) {
+        // Show popup — don't start dragging yet
+        document.getElementById('readyPopup').style.display = '';
+        return;
+      }
+      dragging = true;
+      probeX = Math.max(0, Math.min(PLATE_SIZE_IN, xIn));
+      probeY = Math.max(0, Math.min(PLATE_SIZE_IN, yIn));
+      drawAll();
+    }
+  }
+  function move(px, py) {
+    if (!dragging) return;
+    probeX = Math.max(0, Math.min(PLATE_SIZE_IN, pixelToIn(px)));
+    probeY = Math.max(0, Math.min(PLATE_SIZE_IN, pixelToIn(py)));
+    drawAll();
+  }
+  function end() { dragging = false; }
+
+  canvas.addEventListener('mousedown', e => { const p = getPos(e); start(p.x, p.y); });
+  canvas.addEventListener('mousemove', e => { const p = getPos(e); move(p.x, p.y); });
+  canvas.addEventListener('mouseup', end);
+  canvas.addEventListener('mouseleave', end);
+  canvas.addEventListener('touchstart', e => { e.preventDefault(); const p = getTPos(e); start(p.x, p.y); }, { passive: false });
+  canvas.addEventListener('touchmove', e => { e.preventDefault(); const p = getTPos(e); move(p.x, p.y); }, { passive: false });
+  canvas.addEventListener('touchend', end);
+}
+
+// ===================== DRAW =====================
+function drawAll() { drawPlate(); drawAscan(); }
+
+function drawPlate() {
+  const canvas = document.getElementById('plateCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+  // Background
+  ctx.fillStyle = '#f5f5f5';
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+  // Plate surface — solid grey
+  ctx.fillStyle = '#b0b8c4';
+  ctx.fillRect(PLATE_PAD, PLATE_PAD, PLATE_PX, PLATE_PX);
+  ctx.strokeStyle = '#4a5568';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(PLATE_PAD, PLATE_PAD, PLATE_PX, PLATE_PX);
+
+  // Scale markings
+  ctx.fillStyle = '#555';
+  ctx.font = '10px Segoe UI, sans-serif';
+  ctx.textAlign = 'center';
+  for (let i = 0; i <= 10; i++) {
+    const px = inToPixel(i);
+    ctx.beginPath(); ctx.moveTo(px, PLATE_PAD); ctx.lineTo(px, PLATE_PAD - 5); ctx.strokeStyle = '#999'; ctx.lineWidth = 1; ctx.stroke();
+    if (i % 2 === 0) ctx.fillText(i + '"', px, PLATE_PAD - 9);
+    ctx.beginPath(); ctx.moveTo(PLATE_PAD, px); ctx.lineTo(PLATE_PAD - 5, px); ctx.stroke();
+    if (i % 2 === 0) { ctx.textAlign = 'right'; ctx.fillText(i + '"', PLATE_PAD - 9, px + 3); ctx.textAlign = 'center'; }
+  }
+
+  // Revealed maze
+  if (revealed) {
+    const cellPx = PLATE_PX / GRID_SIZE;
+    for (let r = 0; r < GRID_SIZE; r++) {
+      for (let c = 0; c < GRID_SIZE; c++) {
+        if (mazeGrid[r][c] === 1) {
+          const x = PLATE_PAD + (c / GRID_SIZE) * PLATE_PX;
+          const y = PLATE_PAD + (r / GRID_SIZE) * PLATE_PX;
+          ctx.fillStyle = 'rgba(33, 150, 243, 0.4)';
+          ctx.fillRect(x, y, cellPx + 0.5, cellPx + 0.5);
+        }
+      }
+    }
+  }
+
+  // Markers
+  for (let i = 0; i < markers.length; i++) {
+    const m = markers[i];
+    const px = inToPixel(m.x), py = inToPixel(m.y);
+    // Connecting line
+    if (i > 0) {
+      const prev = markers[i - 1];
+      ctx.strokeStyle = 'rgba(255, 111, 0, 0.3)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(inToPixel(prev.x), inToPixel(prev.y));
+      ctx.lineTo(px, py);
+      ctx.stroke();
+    }
+    // Dot
+    ctx.fillStyle = '#ff6f00';
+    ctx.beginPath();
+    ctx.arc(px, py, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Transducer
+  const tx = inToPixel(probeX), ty = inToPixel(probeY);
+
+  // Glow
+  ctx.beginPath();
+  ctx.arc(tx, ty, XDUCER_R + 5, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(79, 195, 247, 0.15)';
+  ctx.fill();
+
+  // Body
+  ctx.beginPath();
+  ctx.arc(tx, ty, XDUCER_R, 0, Math.PI * 2);
+  ctx.fillStyle = '#2d3748';
+  ctx.fill();
+  ctx.strokeStyle = '#4fc3f7';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Crystal
+  ctx.beginPath();
+  ctx.arc(tx, ty, 6, 0, Math.PI * 2);
+  ctx.fillStyle = '#4fc3f7';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(tx, ty, 2, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+
+  // Crosshairs
+  ctx.strokeStyle = 'rgba(79, 195, 247, 0.5)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath(); ctx.moveTo(tx - XDUCER_R - 10, ty); ctx.lineTo(tx + XDUCER_R + 10, ty); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(tx, ty - XDUCER_R - 10); ctx.lineTo(tx, ty + XDUCER_R + 10); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Position label
+  ctx.fillStyle = '#333';
+  ctx.font = '10px Segoe UI, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${probeX.toFixed(1)}", ${probeY.toFixed(1)}"`, tx, ty - XDUCER_R - 10);
+}
+
+// ===================== A-SCAN (tall, with embedded reading) =====================
+function drawAscan() {
+  const canvas = document.getElementById('ascanCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // Layout: reading panel at top, A-scan plot below
+  const readingH = 70;
+  const padL = 55, padR = 20, padT = readingH + 25, padB = 35;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxThick = 0.6;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0d1b2a';
+  ctx.fillRect(0, 0, W, H);
+
+  // ---- Thickness reading panel at top ----
+  const thickness = getSmoothedThickness(probeX, probeY);
+  const isThin = thickness < PLATE_THICK * 0.95;
+
+  // Reading background
+  ctx.fillStyle = 'rgba(255,255,255,0.04)';
+  ctx.fillRect(10, 8, W - 20, readingH - 4);
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(10, 8, W - 20, readingH - 4);
+
+  // Position
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = '10px Segoe UI, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('POSITION', 25, 28);
+  ctx.fillStyle = '#ffd54f';
+  ctx.font = 'bold 18px Courier New, monospace';
+  ctx.fillText(`${probeX.toFixed(2)}",  ${probeY.toFixed(2)}"`, 25, 52);
+
+  // Thickness
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = '10px Segoe UI, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('THICKNESS', W - 25, 28);
+  ctx.fillStyle = isThin ? '#4fc3f7' : '#66bb6a';
+  ctx.font = 'bold 26px Courier New, monospace';
+  ctx.fillText(`${thickness.toFixed(3)}"`, W - 25, 55);
+
+  // Status indicator
+  if (isThin) {
+    ctx.fillStyle = '#4fc3f7';
+    ctx.font = 'bold 11px Segoe UI, sans-serif';
+    ctx.fillText('THIN SPOT', W - 25, 70);
+  }
+
+  // ---- A-scan plot ----
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 6; i++) { const x = padL + (plotW / 6) * i; ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + plotH); ctx.stroke(); }
+  for (let i = 0; i <= 5; i++) { const y = padT + (plotH / 5) * i; ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y); ctx.stroke(); }
+
+  // Axes
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + plotH); ctx.lineTo(padL + plotW, padT + plotH); ctx.stroke();
+
+  // Depth labels
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = '10px Segoe UI, sans-serif';
+  ctx.textAlign = 'center';
+  for (let d = 0; d <= maxThick; d += 0.1) {
+    const x = padL + (d / maxThick) * plotW;
+    ctx.fillText(d.toFixed(1) + '"', x, padT + plotH + 14);
+  }
+  ctx.fillText('Depth (inches)', padL + plotW / 2, padT + plotH + 30);
+  ctx.textAlign = 'right';
+  for (let a = 0; a <= 100; a += 20) ctx.fillText(a + '%', padL - 5, padT + plotH - (a / 100) * plotH + 3);
+
+  // Reference lines
+  ctx.setLineDash([4, 4]);
+  ctx.lineWidth = 1;
+  const fullX = padL + (PLATE_THICK / maxThick) * plotW;
+  ctx.strokeStyle = 'rgba(102, 187, 106, 0.25)';
+  ctx.beginPath(); ctx.moveTo(fullX, padT); ctx.lineTo(fullX, padT + plotH); ctx.stroke();
+  ctx.fillStyle = 'rgba(102, 187, 106, 0.35)';
+  ctx.font = '9px Segoe UI, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('0.500"', fullX, padT + plotH - 5);
+
+  const thinX = padL + (REMAINING / maxThick) * plotW;
+  ctx.strokeStyle = 'rgba(79, 195, 247, 0.25)';
+  ctx.beginPath(); ctx.moveTo(thinX, padT); ctx.lineTo(thinX, padT + plotH); ctx.stroke();
+  ctx.fillStyle = 'rgba(79, 195, 247, 0.35)';
+  ctx.fillText('0.250"', thinX, padT + plotH - 5);
+  ctx.setLineDash([]);
+
+  // Initial pulse
+  const ipX = padL;
+  ctx.beginPath();
+  for (let px = ipX; px <= ipX + 25; px++) {
+    const dist = px - ipX;
+    const env = Math.exp(-0.5 * (dist / 5) ** 2);
+    const rf = Math.abs(Math.sin(dist * 1.1));
+    const a = 100 * env * rf;
+    const y = padT + plotH - (a / 100) * plotH;
+    if (px === ipX) ctx.moveTo(px, padT + plotH);
+    ctx.lineTo(px, y);
+  }
+  ctx.strokeStyle = '#66bb6a';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = '10px Segoe UI, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('IP', ipX + 8, padT + 14);
+
+  // Back-wall echo
+  const bwX = padL + (thickness / maxThick) * plotW;
+  const pulseW = 9;
+  // Amplitude varies with thickness: shorter path = stronger echo (1/distance + attenuation)
+  const refThick = REMAINING; // reference = thinnest section
+  const ampFactor = (refThick / thickness) * Math.exp(-2.5 * (thickness - refThick));
+  const amp = 95 * Math.min(1, ampFactor);
+  ctx.beginPath();
+  for (let px = Math.max(padL, bwX - 40); px <= Math.min(padL + plotW, bwX + 40); px++) {
+    const dist = px - bwX;
+    const env = Math.exp(-0.5 * (dist / pulseW) ** 2);
+    const rf = Math.abs(Math.sin(dist * 0.9));
+    const a = amp * env * rf;
+    const y = padT + plotH - (a / 100) * plotH;
+    if (px === Math.max(padL, bwX - 40)) ctx.moveTo(px, padT + plotH);
+    ctx.lineTo(px, y);
+  }
+  ctx.strokeStyle = isThin ? '#4fc3f7' : 'rgba(255, 213, 79, 0.8)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Echo label
+  ctx.fillStyle = isThin ? '#4fc3f7' : 'rgba(255, 213, 79, 0.7)';
+  ctx.font = 'bold 12px Segoe UI, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${thickness.toFixed(3)}"`, bwX, padT + 14);
+}
+
+// ===================== INIT =====================
+initDrag();
+drawAll();
+</script>
+</body>
+</html>
