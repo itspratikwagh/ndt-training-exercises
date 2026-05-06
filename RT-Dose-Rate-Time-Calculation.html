@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dose Calculation Practice — Dose Rate × Time</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #faf7f2;
+    --paper-deep: #f1ece2;
+    --ink: #1a1a1a;
+    --ink-soft: #4a4a47;
+    --ink-faded: #8a8a85;
+    --rule: #d9d2c4;
+    --amber: #b54515;
+    --amber-soft: #e8a87c;
+    --amber-tint: #fdf2e6;
+    --solution-bg: #fbf6ec;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px -12px rgba(60,40,20,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Manrope', -apple-system, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.55;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(181, 69, 21, 0.04), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(181, 69, 21, 0.03), transparent 50%);
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 56px 32px 80px;
+  }
+
+  /* ===== HEADER ===== */
+  header {
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 32px;
+    margin-bottom: 40px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 32px;
+    align-items: end;
+  }
+
+  .header-text .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: clamp(32px, 5vw, 48px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    font-variation-settings: 'opsz' 144;
+    margin-bottom: 14px;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--amber);
+    font-weight: 500;
+  }
+
+  .header-text p {
+    font-size: 15px;
+    color: var(--ink-soft);
+    max-width: 580px;
+  }
+
+  /* ===== FORMULA CARD ===== */
+  .formula-card {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 18px 22px;
+    border-radius: 2px;
+    box-shadow: var(--shadow);
+    min-width: 260px;
+    position: relative;
+  }
+  .formula-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgba(232, 168, 124, 0.2);
+    border-radius: 2px;
+    pointer-events: none;
+    margin: 4px;
+  }
+  .formula-card .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--amber-soft);
+    margin-bottom: 8px;
+  }
+  .formula-card .formula {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+  .formula-card .formula b { color: var(--amber-soft); font-weight: 600; }
+
+  /* ===== TOOLBAR ===== */
+  .toolbar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 32px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .progress {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-faded);
+    margin-right: auto;
+    letter-spacing: 0.05em;
+  }
+  .progress span { color: var(--amber); font-weight: 600; }
+
+  button {
+    font-family: 'Manrope', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 10px 18px;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.18s ease;
+    border-radius: 0;
+  }
+  button:hover { background: var(--ink); color: var(--paper); }
+  button.primary { background: var(--amber); border-color: var(--amber); color: white; }
+  button.primary:hover { background: #963a11; border-color: #963a11; }
+
+  /* ===== GRID ===== */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  @media (max-width: 760px) {
+    .grid { grid-template-columns: 1fr; }
+    header { grid-template-columns: 1fr; }
+    .container { padding: 32px 18px 60px; }
+  }
+
+  /* ===== PROBLEM CARDS ===== */
+  .problem {
+    background: white;
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--ink);
+    padding: 22px 24px 22px 26px;
+    position: relative;
+    transition: border-left-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+  }
+  .problem.revealed {
+    border-left-color: var(--amber);
+    box-shadow: var(--shadow);
+  }
+
+  .problem-num {
+    position: absolute;
+    top: 18px;
+    right: 22px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-faded);
+    letter-spacing: 0.08em;
+  }
+
+  .scenario {
+    font-family: 'Fraunces', serif;
+    font-size: 17px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--ink);
+    margin-bottom: 6px;
+    padding-right: 30px;
+  }
+  .scenario .rate {
+    font-weight: 700;
+    color: var(--amber);
+    font-style: italic;
+  }
+
+  .question {
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+  .question .time { font-weight: 600; color: var(--ink); }
+
+  .blank {
+    display: inline-block;
+    min-width: 90px;
+    padding: 4px 10px;
+    margin: 0 2px;
+    text-align: center;
+    border-bottom: 2px dotted var(--ink-faded);
+    background: transparent;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--ink-faded);
+    transition: all 0.2s ease;
+    user-select: none;
+    position: relative;
+  }
+  .blank::before {
+    content: 'click to reveal';
+    font-family: 'Manrope', sans-serif;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faded);
+    opacity: 0;
+    position: absolute;
+    bottom: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+  }
+  .blank:hover {
+    background: var(--amber-tint);
+    border-bottom-color: var(--amber);
+    border-bottom-style: solid;
+    color: var(--amber);
+  }
+  .blank:hover::before { opacity: 0.7; }
+
+  .blank.revealed {
+    background: var(--amber);
+    color: white;
+    border-bottom: 2px solid var(--amber);
+    padding: 4px 12px;
+  }
+  .blank.revealed::before { display: none; }
+
+  /* ===== SOLUTION PANEL ===== */
+  .solution {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), margin 0.4s ease;
+    margin-top: 0;
+  }
+  .problem.revealed .solution {
+    max-height: 280px;
+    margin-top: 18px;
+  }
+
+  .solution-inner {
+    background: var(--solution-bg);
+    border-left: 2px solid var(--amber);
+    padding: 16px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--ink-soft);
+  }
+  .solution-inner .step-label {
+    font-family: 'Manrope', sans-serif;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 6px;
+    display: block;
+  }
+  .solution-inner .step { margin-bottom: 4px; }
+  .solution-inner .answer-line {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--rule);
+    color: var(--ink);
+    font-weight: 600;
+    font-size: 13.5px;
+  }
+  .solution-inner .answer-line b { color: var(--amber); }
+
+  /* ===== FOOTER ===== */
+  footer {
+    margin-top: 56px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-faded);
+    letter-spacing: 0.05em;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  footer .note { font-style: italic; }
+
+  /* Print friendly */
+  @media print {
+    .toolbar, footer { display: none; }
+    .problem { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="header-text">
+      <div class="eyebrow">Radiation Safety · Practice Set 01</div>
+      <h1>Calculating Dose using<br><em>Dose Rate &amp; Time</em></h1>
+      <p>Click any blank to reveal the answer and view the worked solution. Use the toolbar to reveal all answers for review, or reset to start over.</p>
+    </div>
+    <div class="formula-card">
+      <div class="label">Formula</div>
+      <div class="formula">Dose <b>(mrem)</b> = Rate <b>(mR/h)</b> × Time <b>(h)</b></div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="progress"><span id="revealed-count">0</span> / 20 revealed</div>
+    <button id="reveal-all">Reveal all</button>
+    <button id="reset-all" class="primary">Reset</button>
+  </div>
+
+  <div class="grid" id="problem-grid"></div>
+
+  <footer>
+    <span>AATA · Radiographic Testing · Dose Rate &amp; Time</span>
+    <span class="note">Note: For x-ray and gamma exposures used in industrial radiography, 1 mR ≈ 1 mrem.</span>
+  </footer>
+
+</div>
+
+<script>
+  // Problem set: [rate (mR/h), time (min)]
+  const problems = [
+    [30, 30],   [100, 60],  [100, 30],  [100, 6],   [40, 45],
+    [60, 2],    [12, 18],   [6, 120],   [222, 24],  [87, 3],
+    [130, 6],   [430, 12],  [320, 18],  [600, 24],  [554, 30],
+    [680, 36],  [140, 42],  [22, 48],   [320, 54],  [780, 1]
+  ];
+
+  // Format a number cleanly: drop trailing zeros, max 4 decimals
+  function fmt(n) {
+    return Number(n.toFixed(4)).toString();
+  }
+
+  // Build a worked solution
+  function buildSolution(rate, mins) {
+    const hours = mins / 60;
+    const dose = rate * hours;
+    const hoursStr = fmt(hours);
+    const doseStr = fmt(dose);
+
+    return `
+      <span class="step-label">Step 1 — Convert time to hours</span>
+      <div class="step">${mins} min ÷ 60 min/h = ${hoursStr} h</div>
+      <span class="step-label" style="margin-top:10px;">Step 2 — Multiply rate × time</span>
+      <div class="step">${rate} mR/h × ${hoursStr} h = ${doseStr} mR</div>
+      <div class="answer-line">Dose ≈ <b>${doseStr} mrem</b></div>
+    `;
+  }
+
+  // Render all problems
+  const grid = document.getElementById('problem-grid');
+  problems.forEach(([rate, mins], idx) => {
+    const dose = fmt(rate * (mins / 60));
+    const card = document.createElement('div');
+    card.className = 'problem';
+    card.dataset.index = idx;
+    card.innerHTML = `
+      <div class="problem-num">${String(idx + 1).padStart(2, '0')} / 20</div>
+      <div class="scenario">The radiographer is standing in an area that is <span class="rate">${rate} mR/h</span>.</div>
+      <div class="question">
+        What will their dose be after <span class="time">${mins} min</span>?
+        <span class="blank" data-answer="${dose}" tabindex="0" role="button" aria-label="Reveal answer">______</span>
+        mrem
+      </div>
+      <div class="solution"><div class="solution-inner">${buildSolution(rate, mins)}</div></div>
+    `;
+    grid.appendChild(card);
+  });
+
+  // Toggle reveal for a single problem
+  function toggleProblem(card, forceState) {
+    const blank = card.querySelector('.blank');
+    const willReveal = forceState !== undefined ? forceState : !card.classList.contains('revealed');
+    if (willReveal) {
+      card.classList.add('revealed');
+      blank.classList.add('revealed');
+      blank.textContent = blank.dataset.answer;
+    } else {
+      card.classList.remove('revealed');
+      blank.classList.remove('revealed');
+      blank.textContent = '______';
+    }
+    updateProgress();
+  }
+
+  // Click blanks
+  document.querySelectorAll('.blank').forEach(blank => {
+    blank.addEventListener('click', e => {
+      e.stopPropagation();
+      toggleProblem(blank.closest('.problem'));
+    });
+    blank.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleProblem(blank.closest('.problem'));
+      }
+    });
+  });
+
+  // Update revealed counter
+  function updateProgress() {
+    const count = document.querySelectorAll('.problem.revealed').length;
+    document.getElementById('revealed-count').textContent = count;
+    document.getElementById('reveal-all').textContent = count === 20 ? 'Hide all' : 'Reveal all';
+  }
+
+  // Toolbar buttons
+  document.getElementById('reveal-all').addEventListener('click', () => {
+    const allRevealed = document.querySelectorAll('.problem.revealed').length === 20;
+    document.querySelectorAll('.problem').forEach(card => toggleProblem(card, !allRevealed));
+  });
+
+  document.getElementById('reset-all').addEventListener('click', () => {
+    document.querySelectorAll('.problem').forEach(card => toggleProblem(card, false));
+  });
+</script>
+
+</body>
+</html>
