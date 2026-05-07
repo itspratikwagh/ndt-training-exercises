@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inverse Square Law — Solving for Distance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #faf7f2;
+    --paper-deep: #f1ece2;
+    --ink: #1a1a1a;
+    --ink-soft: #4a4a47;
+    --ink-faded: #8a8a85;
+    --rule: #d9d2c4;
+    --amber: #b54515;
+    --amber-soft: #e8a87c;
+    --amber-tint: #fdf2e6;
+    --solution-bg: #fbf6ec;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px -12px rgba(60,40,20,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Manrope', -apple-system, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.55;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(181, 69, 21, 0.04), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(181, 69, 21, 0.03), transparent 50%);
+  }
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 56px 32px 80px;
+  }
+
+  /* ===== HEADER ===== */
+  header {
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 32px;
+    margin-bottom: 40px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 32px;
+    align-items: end;
+  }
+  .header-text .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: clamp(32px, 5vw, 48px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    font-variation-settings: 'opsz' 144;
+    margin-bottom: 14px;
+  }
+  h1 em {
+    font-style: italic;
+    color: var(--amber);
+    font-weight: 500;
+  }
+  .header-text p {
+    font-size: 15px;
+    color: var(--ink-soft);
+    max-width: 580px;
+  }
+
+  /* ===== FORMULA CARD ===== */
+  .formula-card {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 18px 24px;
+    border-radius: 2px;
+    box-shadow: var(--shadow);
+    min-width: 260px;
+    position: relative;
+  }
+  .formula-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgba(232, 168, 124, 0.2);
+    border-radius: 2px;
+    pointer-events: none;
+    margin: 4px;
+  }
+  .formula-card .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--amber-soft);
+    margin-bottom: 14px;
+  }
+  .formula-card .formula-render {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    color: var(--paper);
+  }
+  .formula-card .formula-render .frac .num,
+  .formula-card .formula-render .frac .den {
+    color: var(--paper);
+  }
+  .formula-card .formula-render .frac .num { border-color: var(--amber-soft); }
+
+  /* ===== PROBLEM CARD ===== */
+  .problem {
+    background: white;
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--ink);
+    padding: 26px 28px;
+    position: relative;
+    margin-bottom: 20px;
+    transition: border-left-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  .problem.revealed {
+    border-left-color: var(--amber);
+    box-shadow: var(--shadow);
+  }
+  .problem-num {
+    position: absolute;
+    top: 18px;
+    right: 22px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-faded);
+    letter-spacing: 0.08em;
+  }
+  .scenario {
+    font-family: 'Fraunces', serif;
+    font-size: 19px;
+    line-height: 1.5;
+    color: var(--ink);
+    margin-bottom: 18px;
+    padding-right: 60px;
+    max-width: 720px;
+  }
+  .scenario .val {
+    color: var(--amber);
+    font-style: italic;
+    font-weight: 600;
+  }
+  .reveal-btn {
+    font-family: 'Manrope', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 10px 18px;
+    background: transparent;
+    border: 1px solid var(--ink);
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
+  .reveal-btn:hover { background: var(--ink); color: var(--paper); }
+  .problem.revealed .reveal-btn {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: white;
+  }
+
+  /* ===== SOLUTION (collapsible) ===== */
+  .solution {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s cubic-bezier(0.4,0,0.2,1), margin 0.4s ease;
+    margin-top: 0;
+  }
+  .problem.revealed .solution {
+    max-height: 1800px;
+    margin-top: 24px;
+  }
+
+  /* ===== STEPS ===== */
+  .step {
+    border-top: 1px dashed var(--rule);
+    padding: 22px 0 20px;
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+  .step:first-child {
+    border-top: none;
+    padding-top: 6px;
+  }
+  .step-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--amber);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+    line-height: 1.4;
+    padding-top: 6px;
+  }
+  .step-label .step-num {
+    display: block;
+    color: var(--ink-faded);
+    font-weight: 500;
+    margin-bottom: 4px;
+    font-size: 9.5px;
+    letter-spacing: 0.15em;
+  }
+  .step-body {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    color: var(--ink);
+    line-height: 1.6;
+  }
+
+  /* ===== STEP 1 — Variable list ===== */
+  .var-list {
+    display: inline-grid;
+    grid-template-columns: auto auto auto;
+    gap: 8px 14px;
+    font-family: 'Fraunces', serif;
+    font-size: 19px;
+  }
+  .var-list .var-name {
+    text-align: right;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+  .var-list .eq {
+    color: var(--ink-faded);
+  }
+  .var-list .var-val {
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .var-list .var-val.unknown {
+    color: var(--amber);
+    font-style: italic;
+    font-weight: 600;
+  }
+
+  /* ===== Fraction (proportion) ===== */
+  .frac {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    vertical-align: middle;
+    margin: 0 4px;
+  }
+  .frac .num, .frac .den {
+    padding: 3px 14px;
+    min-width: 56px;
+    text-align: center;
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    line-height: 1.3;
+  }
+  .frac .num {
+    border-bottom: 1.5px solid currentColor;
+  }
+  .frac .new {
+    color: var(--amber);
+    font-weight: 600;
+    font-style: normal;
+  }
+
+  .equation {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    flex-wrap: wrap;
+  }
+  .equation .eq-sign {
+    font-size: 24px;
+    color: var(--ink-soft);
+    margin: 0 6px;
+  }
+
+  /* ===== STEP 5 — Fish technique ===== */
+  .fish-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .fish-container {
+    position: relative;
+    display: inline-block;
+    padding: 32px 50px 32px 90px;
+    align-self: flex-start;
+  }
+  .fish-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+  }
+  .fish-svg .fish-path {
+    fill: none;
+    stroke: var(--amber);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.9;
+  }
+  .problem.revealed .fish-svg .fish-path {
+    animation: fishDrawLoop 7s linear infinite;
+  }
+  @keyframes fishDrawLoop {
+    0%   { stroke-dashoffset: var(--path-length); }
+    45%  { stroke-dashoffset: 0; }
+    65%  { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: var(--path-length-neg); }
+  }
+  .fish-svg .fish-eye {
+    fill: var(--amber);
+    stroke: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .problem.revealed .fish-svg .fish-eye {
+    opacity: 0.7;
+    transition-delay: 3.2s;
+  }
+  .fish-result {
+    font-family: 'Fraunces', serif;
+    font-size: 19px;
+    color: var(--ink);
+    line-height: 1.7;
+  }
+  .fish-result .formula-line {
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+    font-size: 15px;
+    font-style: italic;
+  }
+  .fish-result b {
+    color: var(--amber);
+    font-weight: 600;
+  }
+
+  /* ===== STEP 6 — Final answer ===== */
+  .final-answer {
+    background: var(--amber);
+    color: white;
+    display: inline-block;
+    padding: 8px 16px;
+    margin-top: 8px;
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  /* ===== FOOTER ===== */
+  footer {
+    margin-top: 56px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-faded);
+    letter-spacing: 0.05em;
+  }
+
+  @media (max-width: 760px) {
+    header { grid-template-columns: 1fr; }
+    .container { padding: 32px 18px 60px; }
+    .step { grid-template-columns: 1fr; gap: 10px; }
+    .step-label { padding-top: 0; }
+    .scenario { padding-right: 0; font-size: 17px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="header-text">
+      <div class="eyebrow">Radiation Safety · Inverse Square Law · Set 01</div>
+      <h1>Solving for <em>Distance</em></h1>
+      <p>Use the inverse square law to find the new distance, D₂. Round all answers to one decimal place. Click "Reveal solution" to walk through each step.</p>
+    </div>
+    <div class="formula-card">
+      <div class="label">Inverse Square Law</div>
+      <div class="formula-render">
+        <span class="frac">
+          <span class="num">I₁</span>
+          <span class="den">I₂</span>
+        </span>
+        <span>=</span>
+        <span class="frac">
+          <span class="num">D₂²</span>
+          <span class="den">D₁²</span>
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <div id="problem-grid"></div>
+
+  <footer>
+    AATA · Radiographic Testing · Inverse Square Law (Solving for Distance)
+  </footer>
+
+</div>
+
+<script>
+  // ============ PROBLEM DATA ============
+  // Each entry: I₁ (mR/h), D₁ (ft), I₂ (mR/h)  →  solve for D₂ (ft)
+  const problems = [
+    { I1: 400, D1: 50, I2: 10  },
+    { I1: 60,  D1: 30, I2: 5   },
+    { I1: 100, D1: 10, I2: 5   },
+    { I1: 600, D1: 25, I2: 100 },
+    { I1: 58,  D1: 50, I2: 8   },
+    { I1: 90,  D1: 25, I2: 2   },
+    { I1: 200, D1: 25, I2: 100 }
+  ];
+
+  // ============ HELPERS ============
+  const fmtInt = n => n.toLocaleString('en-US');             // 100000 → "100,000"
+  const truncate3 = n => {                                   // 316.2277 → "316.227"
+    return (Math.floor(n * 1000) / 1000).toFixed(3);
+  };
+  const round1 = n => n.toFixed(1);                          // 316.2278 → "316.2"
+
+  // ============ TEMPLATE ============
+  function buildCard(p, idx, total) {
+    const D1sq = p.D1 * p.D1;
+    const D2sq = (p.I1 * D1sq) / p.I2;
+    const D2   = Math.sqrt(D2sq);
+    const num  = String(idx + 1).padStart(2, '0');
+    const tot  = String(total).padStart(2, '0');
+
+    return `
+      <div class="problem" data-index="${idx}">
+        <div class="problem-num">${num} / ${tot}</div>
+        <div class="scenario">If an intensity is <span class="val">${p.I1} mR/h</span> at a distance of <span class="val">${p.D1} ft</span>, at what distance will the intensity decrease to <span class="val">${p.I2} mR/h</span>?</div>
+        <button class="reveal-btn">Reveal solution</button>
+
+        <div class="solution">
+
+          <div class="step">
+            <div class="step-label"><span class="step-num">Step 01</span>Identify variables</div>
+            <div class="step-body">
+              <div class="var-list">
+                <span class="var-name">I₁</span><span class="eq">=</span><span class="var-val">${p.I1} mR/h</span>
+                <span class="var-name">D₁</span><span class="eq">=</span><span class="var-val">${p.D1} ft</span>
+                <span class="var-name">I₂</span><span class="eq">=</span><span class="var-val">${p.I2} mR/h</span>
+                <span class="var-name">D₂</span><span class="eq">=</span><span class="var-val unknown">?</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-label"><span class="step-num">Step 02</span>Write the formula</div>
+            <div class="step-body">
+              <div class="equation">
+                <span class="frac"><span class="num">I₁</span><span class="den">I₂</span></span>
+                <span class="eq-sign">=</span>
+                <span class="frac"><span class="num">D₂²</span><span class="den">D₁²</span></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-label"><span class="step-num">Step 03</span>Substitute values</div>
+            <div class="step-body">
+              <div class="equation">
+                <span class="frac"><span class="num new">${p.I1}</span><span class="den new">${p.I2}</span></span>
+                <span class="eq-sign">=</span>
+                <span class="frac"><span class="num">D₂²</span><span class="den new">${p.D1}²</span></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-label"><span class="step-num">Step 04</span>Simplify the squares</div>
+            <div class="step-body">
+              <div class="equation">
+                <span class="frac"><span class="num">${p.I1}</span><span class="den">${p.I2}</span></span>
+                <span class="eq-sign">=</span>
+                <span class="frac"><span class="num">D₂²</span><span class="den new">${fmtInt(D1sq)}</span></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-label"><span class="step-num">Step 05</span>Fish technique</div>
+            <div class="step-body">
+              <div class="fish-wrap">
+                <div class="fish-container">
+                  <svg class="fish-svg" viewBox="0 0 360 110" preserveAspectRatio="xMidYMid meet">
+                    <path class="fish-path" d="M 250 80 C 200 75, 160 50, 115 35 Q 35 22, 15 55 Q 35 90, 115 80 C 160 70, 200 45, 250 35" />
+                    <circle class="fish-eye" cx="55" cy="48" r="2.4" />
+                  </svg>
+                  <div class="equation" style="position: relative; z-index: 1;">
+                    <span class="frac"><span class="num">${p.I1}</span><span class="den">${p.I2}</span></span>
+                    <span class="eq-sign">=</span>
+                    <span class="frac"><span class="num">D₂²</span><span class="den">${fmtInt(D1sq)}</span></span>
+                  </div>
+                </div>
+                <div class="fish-result">
+                  <div class="formula-line">Trace the fish: multiply tail-to-mouth, divide by the mouth-bottom, land on the unknown.</div>
+                  D₂² &nbsp;=&nbsp; <b>${fmtInt(D1sq)} × ${p.I1}</b> &nbsp;÷&nbsp; <b>${p.I2}</b> &nbsp;=&nbsp; <b>${fmtInt(D2sq)}</b>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-label"><span class="step-num">Step 06</span>Take the square root</div>
+            <div class="step-body">
+              <div>D₂ = √${fmtInt(D2sq)} = ${truncate3(D2)}…</div>
+              <div class="final-answer">D₂ ≈ ${round1(D2)} ft</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    `;
+  }
+
+  // ============ RENDER ============
+  document.getElementById('problem-grid').innerHTML =
+    problems.map((p, i) => buildCard(p, i, problems.length)).join('');
+
+  // ============ WIRE UP ============
+  function setupProblem(card) {
+    const btn  = card.querySelector('.reveal-btn');
+    const path = card.querySelector('.fish-path');
+
+    if (path) {
+      const length = path.getTotalLength();
+      path.style.strokeDasharray  = length;
+      path.style.strokeDashoffset = length;
+      path.style.setProperty('--path-length',     length);
+      path.style.setProperty('--path-length-neg', -length);
+    }
+
+    btn.addEventListener('click', () => {
+      const isRevealed = card.classList.toggle('revealed');
+      btn.textContent = isRevealed ? 'Hide solution' : 'Reveal solution';
+    });
+  }
+
+  document.querySelectorAll('.problem').forEach(setupProblem);
+</script>
+
+</body>
+</html>
