@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Atomic Structure – Interactive Diagram</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f9f9f8;
+      color: #1a1a18;
+      padding: 24px 16px;
+      min-height: 100vh;
+    }
+
+    .widget {
+      max-width: 720px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid #e4e4e0;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+
+    h1 {
+      font-size: 17px;
+      font-weight: 600;
+      color: #1a1a18;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 16px;
+    }
+
+    .btn-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .part-btn {
+      background: #f4f4f2;
+      border: 1px solid #e0e0da;
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      color: #555;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      user-select: none;
+    }
+    .part-btn:hover { background: #ececea; border-color: #ccc; }
+    .part-btn.active { border-width: 2px; font-weight: 500; }
+
+    .clear-btn {
+      font-size: 12px;
+      color: #aaa;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px 6px;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      margin-left: auto;
+    }
+    .clear-btn:hover { color: #666; }
+
+    svg { display: block; width: 100%; }
+
+    .hint {
+      font-size: 12px;
+      color: #aaa;
+      text-align: center;
+      margin: 4px 0 0;
+    }
+
+    .info-card {
+      background: #fafaf8;
+      border: 1px solid #e4e4e0;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-top: 14px;
+      min-height: 80px;
+    }
+
+    .placeholder-text {
+      color: #bbb;
+      font-style: italic;
+      font-size: 14px;
+    }
+
+    .info-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .info-block {
+      background: #ffffff;
+      border: 1px solid #e4e4e0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .info-tag {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 9px;
+      border-radius: 20px;
+      margin-bottom: 6px;
+    }
+
+    .info-block-title  { font-size: 14px; font-weight: 600; margin: 0 0 4px; color: #1a1a18; }
+    .info-block-body   { font-size: 13px; line-height: 1.6; color: #444; margin: 0; }
+    .info-block-charge { font-size: 12px; margin-top: 6px; color: #888; }
+    .info-block-analogy{ font-size: 12px; margin-top: 5px; color: #aaa; font-style: italic; }
+  </style>
+</head>
+<body>
+<div class="widget">
+  <h1>Atomic Structure</h1>
+  <p class="subtitle">Click any part of the atom to learn about it. Select multiple to compare.</p>
+
+  <div class="btn-row">
+    <button class="part-btn" id="btn-proton"   onclick="toggle('proton')">Proton</button>
+    <button class="part-btn" id="btn-neutron"  onclick="toggle('neutron')">Neutron</button>
+    <button class="part-btn" id="btn-electron" onclick="toggle('electron')">Electron</button>
+    <button class="part-btn" id="btn-nucleus"  onclick="toggle('nucleus')">Nucleus</button>
+    <button class="part-btn" id="btn-shell"    onclick="toggle('shell')">Electron shell</button>
+    <button class="clear-btn" onclick="clearAll()">Clear all</button>
+  </div>
+
+  <svg viewBox="0 0 680 340" role="img" xmlns="http://www.w3.org/2000/svg">
+    <title>Atom structure diagram</title>
+    <desc>A stylised atom with a central nucleus containing protons and neutrons, surrounded by two electron shells.</desc>
+
+    <!-- Shell glow fills -->
+    <ellipse id="shell2-fill" cx="340" cy="170" rx="230" ry="90" fill="#7F77DD" fill-opacity="0" stroke="none"/>
+    <ellipse id="shell1-fill" cx="340" cy="170" rx="145" ry="55"  fill="#7F77DD" fill-opacity="0" stroke="none"/>
+
+    <!-- Shell rings base -->
+    <g id="svg-shell-base" style="pointer-events:none">
+      <ellipse cx="340" cy="170" rx="230" ry="90" fill="none" stroke="#7F77DD" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.45"/>
+      <ellipse cx="340" cy="170" rx="145" ry="55"  fill="none" stroke="#7F77DD" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.45"/>
+    </g>
+
+    <!-- Shell rings highlighted -->
+    <g id="svg-shell-highlight" style="opacity:0;pointer-events:none;transition:opacity 0.18s">
+      <ellipse cx="340" cy="170" rx="230" ry="90" fill="none" stroke="#534AB7" stroke-width="4"/>
+      <ellipse cx="340" cy="170" rx="145" ry="55"  fill="none" stroke="#534AB7" stroke-width="4"/>
+    </g>
+
+    <!-- Shell click targets -->
+    <g id="svg-shell" style="cursor:pointer">
+      <ellipse cx="340" cy="170" rx="230" ry="90" fill="none" stroke="transparent" stroke-width="20" onclick="toggle('shell')"/>
+      <ellipse cx="340" cy="170" rx="145" ry="55"  fill="none" stroke="transparent" stroke-width="20" onclick="toggle('shell')"/>
+    </g>
+
+    <!-- Electrons -->
+    <g id="svg-electron" style="cursor:pointer">
+      <g onclick="toggle('electron')"><circle cx="110" cy="170" r="9" fill="#534AB7" opacity="0.88"/><text x="110" y="174" text-anchor="middle" fill="white" font-size="10" font-family="sans-serif">e⁻</text></g>
+      <g onclick="toggle('electron')"><circle cx="570" cy="170" r="9" fill="#534AB7" opacity="0.88"/><text x="570" y="174" text-anchor="middle" fill="white" font-size="10" font-family="sans-serif">e⁻</text></g>
+      <g onclick="toggle('electron')"><circle cx="250" cy="86"  r="9" fill="#534AB7" opacity="0.88"/><text x="250" y="90"  text-anchor="middle" fill="white" font-size="10" font-family="sans-serif">e⁻</text></g>
+      <g onclick="toggle('electron')"><circle cx="430" cy="254" r="9" fill="#534AB7" opacity="0.88"/><text x="430" y="258" text-anchor="middle" fill="white" font-size="10" font-family="sans-serif">e⁻</text></g>
+      <g onclick="toggle('electron')"><circle cx="197" cy="170" r="9" fill="#534AB7" opacity="0.88"/><text x="197" y="174" text-anchor="middle" fill="white" font-size="10" font-family="sans-serif">e⁻</text></g>
+      <g onclick="toggle('electron')"><circle cx="483" cy="170" r="9" fill="#534AB7" opacity="0.88"/><text x="483" y="174" text-anchor="middle" fill="white" font-size="10" font-family="sans-serif">e⁻</text></g>
+    </g>
+
+    <!-- Nucleus background -->
+    <g id="svg-nucleus" onclick="toggle('nucleus')" style="cursor:pointer">
+      <circle cx="340" cy="170" r="46" fill="#FAECE7" stroke="#D85A30" stroke-width="1.2"/>
+    </g>
+
+    <!-- Nucleus highlight ring -->
+    <circle id="svg-nucleus-highlight" cx="340" cy="170" r="48" fill="none" stroke="#D85A30" stroke-width="4" opacity="0" style="pointer-events:none;transition:opacity 0.18s"/>
+
+    <!-- Protons -->
+    <g id="svg-proton" style="cursor:pointer">
+      <g onclick="toggle('proton')"><circle cx="326" cy="158" r="13" fill="#D85A30"/><text x="326" y="162" text-anchor="middle" fill="white" font-size="10" font-family="sans-serif" font-weight="500">p⁺</text></g>
+      <g onclick="toggle('proton')"><circle cx="354" cy="158" r="13" fill="#D85A30"/><text x="354" y="162" text-anchor="middle" fill="white" font-size="10" font-family="sans-serif" font-weight="500">p⁺</text></g>
+    </g>
+
+    <!-- Proton highlight rings -->
+    <g id="svg-proton-highlight" style="opacity:0;pointer-events:none;transition:opacity 0.18s">
+      <circle cx="326" cy="158" r="16" fill="none" stroke="#D85A30" stroke-width="3"/>
+      <circle cx="354" cy="158" r="16" fill="none" stroke="#D85A30" stroke-width="3"/>
+    </g>
+
+    <!-- Neutrons -->
+    <g id="svg-neutron" style="cursor:pointer">
+      <g onclick="toggle('neutron')"><circle cx="326" cy="184" r="13" fill="#888780"/><text x="326" y="188" text-anchor="middle" fill="white" font-size="10" font-family="sans-serif" font-weight="500">n⁰</text></g>
+      <g onclick="toggle('neutron')"><circle cx="354" cy="184" r="13" fill="#888780"/><text x="354" y="188" text-anchor="middle" fill="white" font-size="10" font-family="sans-serif" font-weight="500">n⁰</text></g>
+    </g>
+
+    <!-- Neutron highlight rings -->
+    <g id="svg-neutron-highlight" style="opacity:0;pointer-events:none;transition:opacity 0.18s">
+      <circle cx="326" cy="184" r="16" fill="none" stroke="#888780" stroke-width="3"/>
+      <circle cx="354" cy="184" r="16" fill="none" stroke="#888780" stroke-width="3"/>
+    </g>
+
+    <!-- Electron highlight rings -->
+    <g id="svg-electron-highlight" style="opacity:0;pointer-events:none;transition:opacity 0.18s">
+      <circle cx="110" cy="170" r="13" fill="none" stroke="#534AB7" stroke-width="3"/>
+      <circle cx="570" cy="170" r="13" fill="none" stroke="#534AB7" stroke-width="3"/>
+      <circle cx="250" cy="86"  r="13" fill="none" stroke="#534AB7" stroke-width="3"/>
+      <circle cx="430" cy="254" r="13" fill="none" stroke="#534AB7" stroke-width="3"/>
+      <circle cx="197" cy="170" r="13" fill="none" stroke="#534AB7" stroke-width="3"/>
+      <circle cx="483" cy="170" r="13" fill="none" stroke="#534AB7" stroke-width="3"/>
+    </g>
+
+    <!-- Static labels -->
+    <line x1="569" y1="84" x2="548" y2="108" stroke="#bbb" stroke-width="0.5" stroke-dasharray="3 3"/>
+    <text x="574" y="81" text-anchor="start" fill="#bbb" font-size="11" font-family="sans-serif">Electron shells</text>
+    <line x1="292" y1="130" x2="308" y2="150" stroke="#bbb" stroke-width="0.5" stroke-dasharray="3 3"/>
+    <text x="218" y="127" text-anchor="middle" fill="#bbb" font-size="11" font-family="sans-serif">Nucleus</text>
+  </svg>
+
+  <p class="hint">Click any component — or use the buttons — to highlight it. Click again to deselect. Select multiple to compare.</p>
+
+  <div class="info-card" id="info-card">
+    <p class="placeholder-text" id="placeholder">Select one or more components to see their descriptions here.</p>
+    <div class="info-row" id="info-row" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+const data = {
+  proton:   { tag:'Inside the nucleus',   tagBg:'#FAECE7', tagColor:'#993C1D', title:'Proton',         body:'Lives inside the nucleus. The number of protons defines which element an atom is — change the proton count and you get a different element entirely.', charge:'Charge: positive (+1)  |  Symbol: p⁺', analogy:'Think of protons as the atom\'s ID card — count them and you know the element.' },
+  neutron:  { tag:'Inside the nucleus',   tagBg:'#F1EFE8', tagColor:'#444441', title:'Neutron',        body:'Also lives in the nucleus alongside protons. Helps hold the nucleus together. Adding or removing neutrons creates isotopes — different versions of the same element.', charge:'Charge: neutral (0)  |  Symbol: n⁰', analogy:'The peacekeepers — no charge, but they stabilise the nucleus so the protons don\'t repel each other apart.' },
+  electron: { tag:'Orbiting the nucleus', tagBg:'#EEEDFE', tagColor:'#3C3489', title:'Electron',       body:'Orbits the nucleus in shells. Extremely light compared to protons and neutrons. In a neutral atom, electron count always equals proton count.', charge:'Charge: negative (−1)  |  Symbol: e⁻', analogy:'If the nucleus were a basketball, an electron would be a grain of sand orbiting it from across a football field.' },
+  nucleus:  { tag:'Core of the atom',     tagBg:'#FAECE7', tagColor:'#993C1D', title:'Nucleus',        body:'The dense core at the centre of the atom. Contains all protons and neutrons. Holds nearly all of the atom\'s mass. In radiation work, an unstable nucleus is the source of radiation.', charge:'Contains: protons (p⁺) and neutrons (n⁰)', analogy:'Like the Sun — everything orbits it, and it\'s where the energy comes from.' },
+  shell:    { tag:'Around the nucleus',   tagBg:'#EEEDFE', tagColor:'#3C3489', title:'Electron shell', body:'Regions around the nucleus where electrons are found. Each shell holds a limited number: the first holds up to 2, the second up to 8. Shells fill from the inside out.', charge:'Shell 1: max 2 electrons  |  Shell 2: max 8 electrons', analogy:'Like seating rows in a theatre — row 1 fills first, then row 2.' }
+};
+
+const btnColors = {
+  proton:   { bg:'#FAECE7', border:'#D85A30', color:'#993C1D' },
+  neutron:  { bg:'#F1EFE8', border:'#888780', color:'#444441' },
+  electron: { bg:'#EEEDFE', border:'#534AB7', color:'#3C3489' },
+  nucleus:  { bg:'#FAECE7', border:'#D85A30', color:'#993C1D' },
+  shell:    { bg:'#EEEDFE', border:'#534AB7', color:'#3C3489' }
+};
+
+const highlightIds = {
+  proton:   'svg-proton-highlight',
+  neutron:  'svg-neutron-highlight',
+  electron: 'svg-electron-highlight',
+  nucleus:  'svg-nucleus-highlight',
+  shell:    'svg-shell-highlight'
+};
+
+const allBase = ['svg-shell-base','svg-electron','svg-proton','svg-neutron','svg-nucleus'];
+const selected = new Set();
+
+function updateDiagram() {
+  const highlighted = new Set();
+  selected.forEach(part => {
+    if (part === 'proton')   { highlighted.add('svg-proton');   highlighted.add('svg-nucleus'); }
+    if (part === 'neutron')  { highlighted.add('svg-neutron');  highlighted.add('svg-nucleus'); }
+    if (part === 'electron') { highlighted.add('svg-electron'); }
+    if (part === 'nucleus')  { highlighted.add('svg-nucleus');  highlighted.add('svg-proton'); highlighted.add('svg-neutron'); }
+    if (part === 'shell')    { highlighted.add('svg-shell-base'); }
+  });
+
+  allBase.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.opacity = (selected.size === 0 || highlighted.has(id)) ? '1' : '0.1';
+  });
+
+  const shellSel = selected.has('shell');
+  document.getElementById('shell2-fill').setAttribute('fill-opacity', shellSel ? '0.12' : '0');
+  document.getElementById('shell1-fill').setAttribute('fill-opacity', shellSel ? '0.12' : '0');
+
+  Object.keys(highlightIds).forEach(part => {
+    const el = document.getElementById(highlightIds[part]);
+    if (el) el.style.opacity = selected.has(part) ? '1' : '0';
+  });
+}
+
+function updateButtons() {
+  Object.keys(data).forEach(part => {
+    const btn = document.getElementById('btn-' + part);
+    if (selected.has(part)) {
+      btn.classList.add('active');
+      const c = btnColors[part];
+      btn.style.background  = c.bg;
+      btn.style.borderColor = c.border;
+      btn.style.color       = c.color;
+    } else {
+      btn.classList.remove('active');
+      btn.style.background = btn.style.borderColor = btn.style.color = '';
+    }
+  });
+}
+
+function updateCards() {
+  const row = document.getElementById('info-row');
+  const placeholder = document.getElementById('placeholder');
+  if (selected.size === 0) {
+    row.style.display = 'none';
+    placeholder.style.display = 'block';
+    return;
+  }
+  placeholder.style.display = 'none';
+  row.style.display = 'flex';
+  row.innerHTML = '';
+  ['proton','neutron','nucleus','electron','shell'].forEach(part => {
+    if (!selected.has(part)) return;
+    const d = data[part];
+    const c = btnColors[part];
+    const block = document.createElement('div');
+    block.className = 'info-block';
+    block.style.borderTop = '2px solid ' + c.border;
+    block.innerHTML = `<span class="info-tag" style="background:${d.tagBg};color:${d.tagColor}">${d.tag}</span><p class="info-block-title">${d.title}</p><p class="info-block-body">${d.body}</p><p class="info-block-charge">${d.charge}</p><p class="info-block-analogy">${d.analogy}</p>`;
+    row.appendChild(block);
+  });
+}
+
+function toggle(part) {
+  selected.has(part) ? selected.delete(part) : selected.add(part);
+  updateDiagram(); updateButtons(); updateCards();
+}
+
+function clearAll() {
+  selected.clear();
+  updateDiagram(); updateButtons(); updateCards();
+}
+</script>
+</body>
+</html>

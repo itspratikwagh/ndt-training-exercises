@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anode Heel Effect — NDT Interactive</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f4f3ef;
+      --bg-tube: rgba(210,228,242,0.45);
+      --text-primary: #1a1a18;
+      --text-secondary: #606060;
+      --text-muted: #606060;
+      --border: #d0cec8;
+      --anode-fill: #1a4898;
+      --anode-stroke: #0a3080;
+      --anode-face: #2050c0;
+      --tube-border: #5a80a0;
+      --cathode-fill: #1a4898;
+      --film-fill: #a8a49a;
+      --beam-cathode: rgba(25,110,220,0.48);
+      --beam-anode-dim: rgba(25,110,220,0.13);
+      --absorbed: #cc2200;
+      --electron: rgba(150,80,0,0.70);
+      --electron-label: rgba(120,60,0,0.80);
+      --focal: #c07010;
+      --angle-color: #b06010;
+      --filament: #c0d8ff;
+      --face-highlight: #2050c0;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1a1a1a;
+        --bg-secondary: #252525;
+        --bg-tube: rgba(20,30,45,0.55);
+        --text-primary: #d0cfc8;
+        --text-secondary: #888880;
+        --text-muted: #888880;
+        --border: #3a3a38;
+        --anode-fill: #1a3868;
+        --anode-stroke: #4a70c0;
+        --anode-face: #5090e0;
+        --tube-border: #3a5878;
+        --cathode-fill: #1a3868;
+        --film-fill: #404040;
+        --beam-cathode: rgba(100,205,255,0.60);
+        --beam-anode-dim: rgba(70,165,255,0.14);
+        --absorbed: #ff5533;
+        --electron: rgba(255,200,60,0.80);
+        --electron-label: rgba(255,200,60,0.85);
+        --focal: #c07010;
+        --angle-color: #b06010;
+        --filament: #90c0f8;
+        --face-highlight: #70a0f0;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      padding: 1.25rem 1rem 1rem;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 17px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      border-radius: 8px;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 10px 0 8px;
+    }
+
+    .slider-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      min-width: 88px;
+    }
+
+    .slider-val {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+      min-width: 34px;
+      text-align: right;
+    }
+
+    input[type=range] {
+      flex: 1;
+      accent-color: #1a4898;
+    }
+
+    .info-box {
+      background: var(--bg-secondary);
+      border: 0.5px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 13px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      margin-bottom: 8px;
+    }
+
+    .info-box strong {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .rules {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .rule-item {
+      flex: 1;
+      background: var(--bg-secondary);
+      border: 0.5px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+
+    .rule-item span {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 1px;
+    }
+
+    .rule-note {
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-align: center;
+      padding-top: 8px;
+      border-top: 0.5px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Anode heel effect</h1>
+  <p class="subtitle">Electrons travel from cathode to anode, striking the inclined target surface at the focal spot. X-rays emit downward from there into the detector below.</p>
+
+  <canvas id="c" height="520"></canvas>
+
+  <div class="slider-row">
+    <span class="slider-label">Anode angle</span>
+    <input type="range" id="sl" min="6" max="20" value="12" step="1">
+    <span class="slider-val" id="av">12°</span>
+  </div>
+
+  <div id="ib" class="info-box"></div>
+
+  <div class="rules">
+    <div class="rule-item"><span>Smaller angle</span>Stronger heel effect · narrower field</div>
+    <div class="rule-item"><span>Larger angle</span>Weaker heel effect · wider field</div>
+  </div>
+
+  <p class="rule-note">Anode angle and heel effect have an inverse relationship. As anode angle decreases, heel effect increases.</p>
+
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const slider = document.getElementById('sl');
+  const avEl = document.getElementById('av');
+  const ibEl = document.getElementById('ib');
+  const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  function arrowHead(x1, y1, x2, y2, sz, col) {
+    const dx = x2-x1, dy = y2-y1, len = Math.sqrt(dx*dx+dy*dy);
+    if (len < 1) return;
+    const ux = dx/len, uy = dy/len;
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - ux*sz - uy*sz*0.5, y2 - uy*sz + ux*sz*0.5);
+    ctx.lineTo(x2 - ux*sz + uy*sz*0.5, y2 - uy*sz - ux*sz*0.5);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function draw(angleDeg) {
+    const cssW = canvas.offsetWidth;
+    const cssH = 520;
+    const DPR = window.devicePixelRatio || 1;
+    canvas.width  = cssW * DPR;
+    canvas.height = cssH * DPR;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+    const W = cssW, H = cssH;
+
+    const t = (angleDeg - 6) / 14;
+    const heelStrength    = lerp(0.90, 0.18, t);
+    const halfBeamAngle   = lerp(13, 38, t) * Math.PI / 180;
+    const angleRad        = angleDeg * Math.PI / 180;
+
+    const tubeW   = W * 0.72;
+    const tubeH   = 110;
+    const tubeX   = (W - tubeW) / 2;
+    const tubeY   = 20;
+    const tubeMidY = tubeY + tubeH / 2;
+
+    const pivotX = tubeX + tubeW * 0.36;
+    const pivotY = tubeMidY;
+
+    const faceLenUp   = tubeH * 0.50;
+    const faceLenDown = tubeH * 0.28;
+
+    const faceTopX = pivotX + faceLenUp   * Math.sin(angleRad);
+    const faceTopY = pivotY - faceLenUp   * Math.cos(angleRad);
+    const faceBotX = pivotX - faceLenDown * Math.sin(angleRad);
+    const faceBotY = pivotY + faceLenDown * Math.cos(angleRad);
+
+    const focalX = pivotX;
+    const focalY = pivotY;
+
+    const aTopLX = tubeX + 4, aTopLY = tubeY + 4;
+    const aBotLX = tubeX + 4, aBotLY = tubeY + tubeH - 4;
+
+    const filmY  = H - 60;
+    const beamLen = filmY - focalY;
+    const bL = Math.max(focalX - Math.tan(halfBeamAngle) * beamLen, 6);
+    const bR = Math.min(focalX + Math.tan(halfBeamAngle) * beamLen, W - 6);
+
+    const anodeAlpha = (1 - heelStrength) * 0.14;
+    ctx.fillStyle = dark
+      ? `rgba(70,165,255,${anodeAlpha})`
+      : `rgba(25,110,220,${anodeAlpha})`;
+    ctx.beginPath();
+    ctx.moveTo(focalX, focalY); ctx.lineTo(bL, filmY); ctx.lineTo(focalX, filmY);
+    ctx.closePath(); ctx.fill();
+
+    ctx.fillStyle = dark ? 'rgba(70,165,255,0.14)' : 'rgba(25,110,220,0.13)';
+    ctx.beginPath();
+    ctx.moveTo(focalX, focalY); ctx.lineTo(focalX, filmY); ctx.lineTo(bR, filmY);
+    ctx.closePath(); ctx.fill();
+
+    ctx.strokeStyle = dark ? 'rgba(80,180,255,0.22)' : 'rgba(25,110,220,0.17)';
+    ctx.lineWidth = 1; ctx.setLineDash([5, 4]);
+    ctx.beginPath(); ctx.moveTo(focalX, focalY); ctx.lineTo(bL, filmY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(focalX, focalY); ctx.lineTo(bR, filmY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    const nC = 7;
+    for (let i = 0; i < nC; i++) {
+      const frac = (i + 1) / (nC + 1), ra = halfBeamAngle * frac;
+      const ex = focalX + Math.sin(ra) * beamLen * 0.76;
+      const ey = focalY + Math.cos(ra) * beamLen * 0.76;
+      const a  = dark ? 0.60 : 0.48;
+      const c2 = dark ? `rgba(100,205,255,${a})` : `rgba(25,110,220,${a})`;
+      ctx.strokeStyle = c2; ctx.lineWidth = 1.1;
+      ctx.beginPath(); ctx.moveTo(focalX, focalY); ctx.lineTo(ex, ey); ctx.stroke();
+      arrowHead(focalX, focalY, ex, ey, 6, c2);
+    }
+
+    const nA = Math.max(1, Math.round(7 * (1 - heelStrength)));
+    for (let i = 0; i < nA; i++) {
+      const frac = (i + 1) / (nA + 1), ra = halfBeamAngle * frac;
+      const ex = focalX - Math.sin(ra) * beamLen * 0.76;
+      const ey = focalY + Math.cos(ra) * beamLen * 0.76;
+      const a  = dark ? 0.32 : 0.24;
+      const c2 = dark ? `rgba(100,205,255,${a})` : `rgba(25,110,220,${a})`;
+      ctx.strokeStyle = c2; ctx.lineWidth = 1.1;
+      ctx.beginPath(); ctx.moveTo(focalX, focalY); ctx.lineTo(ex, ey); ctx.stroke();
+      arrowHead(focalX, focalY, ex, ey, 6, c2);
+    }
+
+    const nAbs = Math.round(heelStrength * 5);
+    for (let i = 0; i < nAbs; i++) {
+      const frac = (i + 0.5) / nAbs;
+      const ax = focalX - 12 - frac * 22;
+      const ay = focalY + 6  + frac * 18;
+      ctx.strokeStyle = dark ? '#ff5533' : '#cc2200';
+      ctx.lineWidth = 1.4; ctx.globalAlpha = 0.78;
+      ctx.beginPath(); ctx.moveTo(ax-5, ay-5); ctx.lineTo(ax+5, ay+5); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ax+5, ay-5); ctx.lineTo(ax-5, ay+5); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.fillStyle = dark ? 'rgba(20,30,45,0.55)' : 'rgba(210,228,242,0.45)';
+    ctx.beginPath(); ctx.roundRect(tubeX, tubeY, tubeW, tubeH, 8); ctx.fill();
+
+    ctx.fillStyle   = dark ? '#1a3868' : '#1a4898';
+    ctx.beginPath();
+    ctx.moveTo(aTopLX,   aTopLY);
+    ctx.lineTo(faceTopX, faceTopY);
+    ctx.lineTo(faceBotX, faceBotY);
+    ctx.lineTo(aBotLX,   aBotLY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = dark ? '#4a70c0' : '#0a3080';
+    ctx.lineWidth = 1.2; ctx.stroke();
+
+    ctx.strokeStyle = dark ? '#70a0f0' : '#2050c0';
+    ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(faceTopX, faceTopY); ctx.lineTo(faceBotX, faceBotY); ctx.stroke();
+    ctx.lineCap = 'butt';
+
+    const arcR = 28;
+    const faceDX  = faceTopX - focalX, faceDY = faceTopY - focalY;
+    const faceDLen = Math.sqrt(faceDX*faceDX + faceDY*faceDY);
+    const faceUX  = faceDX / faceDLen, faceUY = faceDY / faceDLen;
+
+    ctx.strokeStyle = dark ? '#ffc040' : '#b06010'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(focalX, focalY); ctx.lineTo(focalX, focalY - arcR); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(focalX, focalY);
+    ctx.lineTo(focalX + faceUX*arcR, focalY + faceUY*arcR); ctx.stroke();
+
+    const faceAngle = Math.atan2(faceUY, faceUX);
+    const vertAngle = -Math.PI / 2;
+    ctx.beginPath();
+    ctx.arc(focalX, focalY, arcR, Math.min(faceAngle, vertAngle), Math.max(faceAngle, vertAngle));
+    ctx.stroke();
+
+    const midAngle = (faceAngle + vertAngle) / 2;
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillStyle = dark ? '#ffc040' : '#b06010';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(angleDeg + '°',
+      focalX + Math.cos(midAngle) * (arcR + 13),
+      focalY + Math.sin(midAngle) * (arcR + 13));
+    ctx.textBaseline = 'alphabetic';
+
+    ctx.beginPath(); ctx.arc(focalX, focalY, 4.5, 0, Math.PI*2);
+    ctx.fillStyle = dark ? '#ffc040' : '#c07010'; ctx.fill();
+
+    const eStartX = tubeX + tubeW - 8;
+    const eEndX   = focalX + 2;
+    const eY      = tubeMidY;
+
+    ctx.strokeStyle = dark ? 'rgba(255,200,60,0.80)' : 'rgba(150,80,0,0.70)';
+    ctx.lineWidth = 1.8; ctx.setLineDash([7, 4]);
+    ctx.beginPath(); ctx.moveTo(eStartX, eY); ctx.lineTo(eEndX, eY); ctx.stroke();
+    ctx.setLineDash([]);
+    arrowHead(eStartX, eY, eEndX, eY, 8,
+      dark ? 'rgba(255,200,60,0.88)' : 'rgba(150,80,0,0.78)');
+
+    ctx.font = '10px sans-serif';
+    ctx.fillStyle = dark ? 'rgba(255,200,60,0.85)' : 'rgba(120,60,0,0.80)';
+    ctx.textAlign = 'center';
+    ctx.fillText('electron beam', (eStartX + eEndX) / 2, eY - 8);
+
+    const cupRX = tubeX + tubeW - 6, cupCY = tubeMidY;
+    const cupD = 26, cupHH = 18, wallT = 7;
+
+    ctx.fillStyle   = dark ? '#1a3868' : '#1a4898';
+    ctx.strokeStyle = dark ? '#4a70c0' : '#0a3080';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(cupRX,             cupCY - cupHH - wallT);
+    ctx.lineTo(cupRX - cupD - wallT, cupCY - cupHH - wallT);
+    ctx.lineTo(cupRX - cupD - wallT, cupCY + cupHH + wallT);
+    ctx.lineTo(cupRX,             cupCY + cupHH + wallT);
+    ctx.lineTo(cupRX,             cupCY + cupHH);
+    ctx.lineTo(cupRX - cupD,      cupCY + cupHH);
+    ctx.lineTo(cupRX - cupD,      cupCY - cupHH);
+    ctx.lineTo(cupRX,             cupCY - cupHH);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+
+    ctx.strokeStyle = dark ? '#90c0f8' : '#c0d8ff'; ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    const coilX = cupRX - wallT - 5;
+    const coilT = cupCY - cupHH + 4, coilBB = cupCY + cupHH - 4;
+    for (let i = 0; i <= 7; i++) {
+      const cy = coilT + i*(coilBB - coilT)/7;
+      const cx = coilX + (i % 2 === 0 ? 0 : -6);
+      i === 0 ? ctx.moveTo(cx, cy) : ctx.lineTo(cx, cy);
+    }
+    ctx.stroke();
+
+    ctx.strokeStyle = dark ? '#3a5878' : '#5a80a0';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(tubeX, tubeY, tubeW, tubeH, 8); ctx.stroke();
+
+    const lM = dark ? '#888880' : '#606060';
+    const lB = dark ? '#d0cfc8' : '#1a1a18';
+
+    ctx.font = '500 12px sans-serif';
+    ctx.fillStyle = lB; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillText('Anode (+)', tubeX - 7, tubeMidY);
+    ctx.textAlign = 'left';
+    ctx.fillText('Cathode (−)', tubeX + tubeW + 7, tubeMidY);
+    ctx.textBaseline = 'alphabetic';
+
+    ctx.font = '11px sans-serif';
+    ctx.fillStyle = dark ? '#70a0f0' : '#2050c0';
+    ctx.textAlign = 'center';
+    ctx.fillText('target face', aTopLX + (faceBotX - aTopLX)*0.5 - 8, tubeY + tubeH + 14);
+
+    ctx.fillStyle = dark ? '#ffc040' : '#b06010';
+    ctx.textAlign = 'left';
+    ctx.fillText('focal spot', focalX + 8, focalY - 10);
+
+    ctx.fillStyle = dark ? '#ff6644' : '#cc2200';
+    ctx.textAlign = 'right';
+    ctx.fillText('x = absorbed photon', W - 6, 14);
+
+    const filmBL = Math.max(bL - 10, 4);
+    const filmBR = Math.min(bR + 10, W - 4);
+    ctx.fillStyle = dark ? '#404040' : '#a8a49a';
+    ctx.beginPath(); ctx.roundRect(filmBL, filmY, filmBR - filmBL, 8, 2); ctx.fill();
+
+    ctx.font = '11px sans-serif'; ctx.fillStyle = lM;
+    ctx.textAlign = 'left'; ctx.fillText('Detector / film', 6, filmY + 22);
+
+    const barY = filmY + 32, barH2 = 12;
+    const dimA = (1 - heelStrength) * 0.55 + 0.12;
+    const bg = ctx.createLinearGradient(bL, 0, bR, 0);
+    bg.addColorStop(0, dark ? `rgba(60,170,255,${dimA})` : `rgba(25,110,220,${dimA * 0.8})`);
+    bg.addColorStop(1, dark ? 'rgba(60,170,255,0.88)' : 'rgba(25,110,220,0.82)');
+    ctx.fillStyle = bg;
+    ctx.beginPath(); ctx.roundRect(bL, barY, bR - bL, barH2, 3); ctx.fill();
+
+    ctx.font = '11px sans-serif'; ctx.fillStyle = lM;
+    ctx.textAlign = 'center';
+    ctx.fillText('Beam intensity', (bL + bR) / 2, barY - 4);
+    ctx.textAlign = 'right'; ctx.fillText('Lower', bL - 4, barY + barH2/2 + 4);
+    ctx.textAlign = 'left';  ctx.fillText('Higher', bR + 4, barY + barH2/2 + 4);
+
+    const brkY = barY + barH2 + 14;
+    ctx.strokeStyle = lM; ctx.lineWidth = 0.8; ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(bL, barY + barH2 + 4); ctx.lineTo(bL, brkY);
+    ctx.moveTo(bR, barY + barH2 + 4); ctx.lineTo(bR, brkY);
+    ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(bL, brkY); ctx.lineTo(bR, brkY); ctx.stroke();
+
+    ctx.font = '11px sans-serif'; ctx.fillStyle = lM;
+    ctx.textAlign = 'left'; ctx.fillText('Usable field width', 6, brkY + 13);
+  }
+
+  function updateInfo(a) {
+    const t  = (a - 6) / 14;
+    const hs = lerp(0.90, 0.18, t);
+    const pct = Math.round((1 - hs) * 100);
+    let lv, tx;
+    if (a <= 9) {
+      lv = 'Strong heel effect';
+      tx = `At ${a}°, the steep target face means anode-side photons must travel through more material. Only ~${pct}% of cathode-side intensity exits the anode side. Usable field is narrow.`;
+    } else if (a <= 14) {
+      lv = 'Moderate heel effect';
+      tx = `At ${a}°, the anode side receives ~${pct}% of cathode-side intensity. A noticeable difference, but a wider usable area than at small angles.`;
+    } else {
+      lv = 'Weak heel effect';
+      tx = `At ${a}°, the shallower target face reduces heel absorption. The anode side receives ~${pct}% of cathode-side intensity with a wide usable field.`;
+    }
+    ibEl.innerHTML = `<strong>${lv}</strong> — anode side ~${pct}% of cathode intensity. ${tx}`;
+  }
+
+  function update() {
+    const a = parseInt(slider.value, 10);
+    avEl.textContent = a + '°';
+    draw(a);
+    updateInfo(a);
+  }
+
+  slider.addEventListener('input', update);
+  window.addEventListener('resize', update);
+  update();
+</script>
+</body>
+</html>
