@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Radiography Calculators</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #faf7f2;
+    --paper-deep: #f1ece2;
+    --ink: #1a1a1a;
+    --ink-soft: #4a4a47;
+    --ink-faded: #8a8a85;
+    --rule: #d9d2c4;
+    --amber: #b54515;
+    --amber-soft: #e8a87c;
+    --amber-tint: #fdf2e6;
+    --solution-bg: #fbf6ec;
+    --good: #2e7d4f;
+    --warn: #b07a18;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px -12px rgba(60,40,20,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Manrope', -apple-system, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.55;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(181, 69, 21, 0.04), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(181, 69, 21, 0.03), transparent 50%);
+  }
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 56px 32px 80px;
+  }
+
+  /* ===== HEADER ===== */
+  header {
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 32px;
+    margin-bottom: 32px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 32px;
+    align-items: end;
+  }
+  .header-text .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: clamp(32px, 5vw, 48px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    font-variation-settings: 'opsz' 144;
+    margin-bottom: 14px;
+  }
+  h1 em {
+    font-style: italic;
+    color: var(--amber);
+    font-weight: 500;
+  }
+  .header-text p {
+    font-size: 15px;
+    color: var(--ink-soft);
+    max-width: 580px;
+  }
+
+  /* ===== FORMULA CARD ===== */
+  .formula-card {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 18px 24px;
+    border-radius: 2px;
+    box-shadow: var(--shadow);
+    min-width: 240px;
+    position: relative;
+  }
+  .formula-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgba(232, 168, 124, 0.2);
+    border-radius: 2px;
+    pointer-events: none;
+    margin: 4px;
+  }
+  .formula-card .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--amber-soft);
+    margin-bottom: 12px;
+  }
+  .formula-card .formula-render {
+    font-family: 'Fraunces', serif;
+    font-size: 19px;
+    line-height: 1.45;
+    color: var(--paper);
+  }
+  .formula-card .formula-render .accent { color: var(--amber-soft); font-style: italic; }
+
+  /* ===== TABS ===== */
+  .tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 0;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 28px;
+  }
+  .tab {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faded);
+    cursor: pointer;
+    padding: 14px 18px;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color 0.18s ease, border-color 0.18s ease;
+    font-weight: 500;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab[aria-selected="true"] {
+    color: var(--amber);
+    border-bottom-color: var(--amber);
+    font-weight: 600;
+  }
+
+  /* ===== CALCULATOR CARD ===== */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .calc {
+    background: white;
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--amber);
+    padding: 28px 30px;
+    box-shadow: var(--shadow);
+  }
+  .calc-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-faded);
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+  .calc h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 26px;
+    line-height: 1.2;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .calc h2 em { font-style: italic; color: var(--amber); }
+  .calc .scenario {
+    font-family: 'Fraunces', serif;
+    font-size: 17px;
+    color: var(--ink-soft);
+    margin-bottom: 22px;
+    max-width: 720px;
+  }
+
+  /* ===== INPUT GRID ===== */
+  .inputs {
+    display: grid;
+    gap: 18px 24px;
+    grid-template-columns: 1fr;
+    margin-bottom: 24px;
+  }
+  @media (min-width: 620px) {
+    .inputs.two { grid-template-columns: 1fr 1fr; }
+  }
+
+  .field {
+    display: block;
+  }
+  .field-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--ink-faded);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .field-label .sym {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    color: var(--ink-soft);
+    font-size: 14px;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .input-row {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    transition: border-color 0.18s ease;
+  }
+  .input-row:focus-within { border-color: var(--amber); }
+  .input-row input[type="number"],
+  .input-row select {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--ink);
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 500;
+    padding: 12px 14px;
+  }
+  .input-row select {
+    font-size: 16px;
+    font-family: 'Manrope', sans-serif;
+    cursor: pointer;
+    appearance: none;
+    background-image:
+      linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%),
+      linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+    background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
+    background-size: 5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 38px;
+  }
+  .input-row input[type="number"]::-webkit-outer-spin-button,
+  .input-row input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .input-row input[type="number"] { -moz-appearance: textfield; }
+  .unit {
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    border-left: 1px solid var(--rule);
+    background: var(--solution-bg);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+  }
+
+  /* ===== UNIT TOGGLE ===== */
+  .unit-toggle {
+    display: inline-flex;
+    gap: 0;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+  }
+  .unit-toggle button {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    padding: 4px 10px;
+    font-weight: 500;
+  }
+  .unit-toggle button[aria-pressed="true"] {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  /* ===== RESULT ===== */
+  .result {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px 24px;
+    padding: 20px 0 6px;
+    border-top: 1px dashed var(--rule);
+  }
+  .result-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--amber);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .final-answer {
+    background: var(--amber);
+    color: white;
+    display: inline-block;
+    padding: 8px 18px;
+    font-family: 'Fraunces', serif;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+  .final-answer .unit-suffix {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    margin-left: 6px;
+    opacity: 0.85;
+    text-transform: uppercase;
+  }
+
+  /* ===== STATUS BADGE ===== */
+  .status {
+    display: inline-block;
+    margin-top: 14px;
+    padding: 5px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+  .status.good   { background: #e6f1ea; color: var(--good); border-color: #b7d8c2; }
+  .status.warn   { background: #fbf2e0; color: var(--warn); border-color: #e2c98a; }
+  .status.danger { background: #fdecec; color: #a02525; border-color: #e8b8b8; }
+
+  /* ===== ASME TABLE ===== */
+  .asme {
+    margin-top: 26px;
+    border-top: 1px dashed var(--rule);
+    padding-top: 22px;
+  }
+  .asme-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--ink-faded);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  table.asme-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Fraunces', serif;
+  }
+  table.asme-table th,
+  table.asme-table td {
+    text-align: left;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 16px;
+  }
+  table.asme-table th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--ink-faded);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  table.asme-table td:last-child { text-align: right; font-weight: 600; color: var(--ink); }
+  table.asme-table tr.active td {
+    color: var(--amber);
+    font-weight: 600;
+  }
+
+  .footnote {
+    margin-top: 18px;
+    font-size: 13px;
+    color: var(--ink-faded);
+    font-style: italic;
+    max-width: 700px;
+    line-height: 1.5;
+  }
+
+  /* ===== FOOTER ===== */
+  footer {
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-faded);
+    letter-spacing: 0.05em;
+  }
+
+  @media (max-width: 760px) {
+    header { grid-template-columns: 1fr; }
+    .container { padding: 32px 18px 60px; }
+    .calc { padding: 22px 20px; }
+    .formula-card { min-width: 0; width: 100%; }
+    .tabs { gap: 0; }
+    .tab { padding: 12px 12px; font-size: 10.5px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="header-text">
+      <div class="eyebrow">Radiographic Testing · Field Calculators</div>
+      <h1>Radiography <em>Calculators</em></h1>
+      <p>Geometric unsharpness, minimum SOD, source decay, and the inverse square law — built from the standard radiography formulas with ASME Section V limits where applicable.</p>
+    </div>
+    <div class="formula-card">
+      <div class="label" id="fc-label">Active Formula</div>
+      <div class="formula-render" id="fc-formula">
+        U<span class="accent">g</span> = (f · t) / SOD
+      </div>
+    </div>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true"  data-target="ug">Geometric Unsharpness</button>
+    <button class="tab" role="tab" aria-selected="false" data-target="sod">Minimum SOD</button>
+    <button class="tab" role="tab" aria-selected="false" data-target="hl">Half Life</button>
+    <button class="tab" role="tab" aria-selected="false" data-target="isl">Inverse Square Law</button>
+  </div>
+
+  <!-- ============ Geometric Unsharpness ============ -->
+  <section id="ug" class="panel active" role="tabpanel">
+    <div class="calc">
+      <div class="calc-num">01 · GEOMETRIC UNSHARPNESS</div>
+      <h2>Compute <em>Ug</em> from source size, thickness, and SOD</h2>
+      <div class="scenario">A smaller source, thinner part, or longer source-to-object distance reduces geometric unsharpness. ASME Section V sets the maximum Ug by material thickness.</div>
+
+      <div class="inputs two">
+        <label class="field">
+          <div class="field-label">Source Size <span class="sym">f</span></div>
+          <div class="input-row"><input type="number" id="ug-source" value="0.25" step="any" inputmode="decimal"><span class="unit">in</span></div>
+        </label>
+        <label class="field">
+          <div class="field-label">Material Thickness <span class="sym">t</span></div>
+          <div class="input-row"><input type="number" id="ug-thick" value="0.87" step="any" inputmode="decimal"><span class="unit">in</span></div>
+        </label>
+        <label class="field" style="grid-column:1/-1;max-width:50%">
+          <div class="field-label">Source-to-Object Distance <span class="sym">SOD</span></div>
+          <div class="input-row"><input type="number" id="ug-sod" value="10" step="any" inputmode="decimal"><span class="unit">in</span></div>
+        </label>
+      </div>
+
+      <div class="result">
+        <div>
+          <div class="result-label">Geometric Unsharpness</div>
+          <div class="status" id="ug-status">—</div>
+        </div>
+        <div class="final-answer"><span id="ug-out">—</span><span class="unit-suffix">in</span></div>
+      </div>
+
+      <div class="asme">
+        <div class="asme-title">ASME Section V · Maximum Permitted Ug</div>
+        <table class="asme-table">
+          <thead><tr><th>Material Thickness</th><th>Max Ug (in)</th></tr></thead>
+          <tbody id="ug-asme-body">
+            <tr data-min="0"   data-max="2"  ><td>Under 2″</td><td>0.020</td></tr>
+            <tr data-min="2"   data-max="3"  ><td>2″ through 3″</td><td>0.030</td></tr>
+            <tr data-min="3"   data-max="4"  ><td>Over 3″ through 4″</td><td>0.040</td></tr>
+            <tr data-min="4"   data-max="999"><td>Greater than 4″</td><td>0.070</td></tr>
+          </tbody>
+        </table>
+        <p class="footnote">The highlighted row matches the entered thickness; the status badge above compares the computed Ug to that row's limit.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Minimum SOD ============ -->
+  <section id="sod" class="panel" role="tabpanel">
+    <div class="calc">
+      <div class="calc-num">02 · MINIMUM SOD</div>
+      <h2>Find the minimum <em>source-to-object distance</em></h2>
+      <div class="scenario">Given the source size, part thickness, and the maximum permitted Ug, solve for the SOD that keeps unsharpness at or below the limit.</div>
+
+      <div class="inputs two">
+        <label class="field">
+          <div class="field-label">Source Size <span class="sym">f</span></div>
+          <div class="input-row"><input type="number" id="sod-source" value="0.117" step="any" inputmode="decimal"><span class="unit">in</span></div>
+        </label>
+        <label class="field">
+          <div class="field-label">Material Thickness <span class="sym">t</span></div>
+          <div class="input-row"><input type="number" id="sod-thick" value="3.425" step="any" inputmode="decimal"><span class="unit">in</span></div>
+        </label>
+        <label class="field">
+          <div class="field-label">Max Permitted Ug <span class="sym">U<sub>g,max</sub></span></div>
+          <div class="input-row"><input type="number" id="sod-ug" value="0.04" step="any" inputmode="decimal"><span class="unit">in</span></div>
+        </label>
+        <label class="field">
+          <div class="field-label">Auto-fill from ASME</div>
+          <div class="input-row">
+            <select id="sod-asme">
+              <option value="">— pick by thickness —</option>
+              <option value="0.02">Under 2″ → 0.020</option>
+              <option value="0.03">2″ through 3″ → 0.030</option>
+              <option value="0.04" selected>Over 3″ through 4″ → 0.040</option>
+              <option value="0.07">Greater than 4″ → 0.070</option>
+            </select>
+          </div>
+        </label>
+      </div>
+
+      <div class="result">
+        <div class="result-label">Minimum SOD</div>
+        <div class="final-answer"><span id="sod-out">—</span><span class="unit-suffix">in</span></div>
+      </div>
+      <p class="footnote">Derived by rearranging Ug = (f · t) / SOD &nbsp;→&nbsp; SOD = (f · t) / Ug.</p>
+    </div>
+  </section>
+
+  <!-- ============ Half Life ============ -->
+  <section id="hl" class="panel" role="tabpanel">
+    <div class="calc">
+      <div class="calc-num">03 · SOURCE DECAY</div>
+      <h2>Activity after <em>N</em> half-lives have elapsed</h2>
+      <div class="scenario">Radioactive sources decay exponentially. Each half-life cuts the activity in half. Use matching units (days or years) for both the half-life and elapsed time.</div>
+
+      <div class="inputs two">
+        <label class="field">
+          <div class="field-label">Original Activity <span class="sym">A₀</span></div>
+          <div class="input-row"><input type="number" id="hl-a0" value="50" step="any" inputmode="decimal"><span class="unit">Ci</span></div>
+        </label>
+        <label class="field">
+          <div class="field-label">
+            Half Life <span class="sym">T½</span>
+            <span class="unit-toggle" role="group" aria-label="Time units">
+              <button type="button" data-hl-unit="days" aria-pressed="true">Days</button>
+              <button type="button" data-hl-unit="years" aria-pressed="false">Years</button>
+            </span>
+          </div>
+          <div class="input-row"><input type="number" id="hl-t" value="75" step="any" inputmode="decimal"><span class="unit" id="hl-t-unit">days</span></div>
+        </label>
+        <label class="field">
+          <div class="field-label">Elapsed Time <span class="sym">N</span></div>
+          <div class="input-row"><input type="number" id="hl-n" value="150" step="any" inputmode="decimal"><span class="unit" id="hl-n-unit">days</span></div>
+        </label>
+        <label class="field">
+          <div class="field-label">Quick-pick Isotope</div>
+          <div class="input-row">
+            <select id="hl-iso">
+              <option value="">— pick an isotope —</option>
+              <option value="74|days">Ir-192 (74 days)</option>
+              <option value="5.27|years">Co-60 (5.27 years)</option>
+              <option value="30.17|years">Cs-137 (30.17 years)</option>
+              <option value="120|days">Se-75 (120 days)</option>
+            </select>
+          </div>
+        </label>
+      </div>
+
+      <div class="result">
+        <div class="result-label">Activity after <span id="hl-period">days</span></div>
+        <div class="final-answer"><span id="hl-out">—</span><span class="unit-suffix">Ci</span></div>
+      </div>
+      <p class="footnote">A = A₀ · (½)<sup>N/T½</sup>. Choosing an isotope above auto-fills the half-life and switches the time unit.</p>
+    </div>
+  </section>
+
+  <!-- ============ Inverse Square Law ============ -->
+  <section id="isl" class="panel" role="tabpanel">
+    <div class="calc">
+      <div class="calc-num">04 · INVERSE SQUARE LAW</div>
+      <h2>Intensity scales with <em>1 / distance²</em></h2>
+      <div class="scenario">Doubling the distance from a point source cuts the intensity to one quarter. Solve for the intensity at a new distance.</div>
+
+      <div class="inputs two">
+        <label class="field">
+          <div class="field-label">Intensity at D₁ <span class="sym">I₁</span></div>
+          <div class="input-row"><input type="number" id="isl-i1" value="55" step="any" inputmode="decimal"><span class="unit">R/h</span></div>
+        </label>
+        <label class="field">
+          <div class="field-label">Distance 1 <span class="sym">D₁</span></div>
+          <div class="input-row"><input type="number" id="isl-d1" value="1" step="any" inputmode="decimal"><span class="unit">ft</span></div>
+        </label>
+        <label class="field">
+          <div class="field-label">Distance 2 <span class="sym">D₂</span></div>
+          <div class="input-row"><input type="number" id="isl-d2" value="100" step="any" inputmode="decimal"><span class="unit">ft</span></div>
+        </label>
+      </div>
+
+      <div class="result">
+        <div class="result-label">Intensity at D₂</div>
+        <div class="final-answer"><span id="isl-out">—</span><span class="unit-suffix">R/h</span></div>
+      </div>
+      <p class="footnote">I₂ = I₁ · (D₁ / D₂)². Units of I₁ and I₂ match; units of D₁ and D₂ must match each other but can be different from the intensity unit.</p>
+    </div>
+  </section>
+
+  <footer>
+    AATA · Radiographic Testing · Field Calculators
+  </footer>
+
+</div>
+
+<script>
+(() => {
+  // ===== Tabs + formula card =====
+  const formulas = {
+    ug:  { label: 'Geometric Unsharpness', html: 'U<span class="accent">g</span> = (f · t) / SOD' },
+    sod: { label: 'Minimum SOD',           html: 'SOD = (f · t) / U<span class="accent">g</span>' },
+    hl:  { label: 'Source Decay',          html: 'A = A<span class="accent">₀</span> · (½)<sup>N / T½</sup>' },
+    isl: { label: 'Inverse Square Law',    html: 'I<span class="accent">₂</span> = I<span class="accent">₁</span> · (D<span class="accent">₁</span> / D<span class="accent">₂</span>)²' },
+  };
+  const fcLabel = document.getElementById('fc-label');
+  const fcFormula = document.getElementById('fc-formula');
+  const tabs = document.querySelectorAll('.tab');
+  const panels = document.querySelectorAll('.panel');
+  tabs.forEach(t => t.addEventListener('click', () => {
+    tabs.forEach(x => x.setAttribute('aria-selected', x === t ? 'true' : 'false'));
+    panels.forEach(p => p.classList.toggle('active', p.id === t.dataset.target));
+    const f = formulas[t.dataset.target];
+    fcLabel.textContent = f.label;
+    fcFormula.innerHTML = f.html;
+  }));
+
+  // ===== Helpers =====
+  const num = id => parseFloat(document.getElementById(id).value);
+  const fmt = (n, d = 4) => {
+    if (!isFinite(n)) return '—';
+    if (n === 0) return '0';
+    const abs = Math.abs(n);
+    if (abs >= 100000 || abs < 0.0001) return n.toExponential(3);
+    return n.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: 0 });
+  };
+
+  // ===== Geometric Unsharpness =====
+  const ugOut = document.getElementById('ug-out');
+  const ugStatus = document.getElementById('ug-status');
+  const asmeRows = document.querySelectorAll('#ug-asme-body tr');
+  const asmeLimit = t => t < 2 ? 0.02 : t <= 3 ? 0.03 : t <= 4 ? 0.04 : 0.07;
+  const calcUg = () => {
+    const s = num('ug-source'), t = num('ug-thick'), d = num('ug-sod');
+    const ug = (s * t) / d;
+    ugOut.textContent = fmt(ug, 5);
+    asmeRows.forEach(r => {
+      const min = +r.dataset.min, max = +r.dataset.max;
+      r.classList.toggle('active', t >= min && t <= max);
+    });
+    if (!isFinite(ug) || !isFinite(t)) {
+      ugStatus.textContent = '—';
+      ugStatus.className = 'status';
+      return;
+    }
+    const lim = asmeLimit(t);
+    if (ug <= lim) {
+      ugStatus.textContent = `Within limit · ${lim.toFixed(3)} max`;
+      ugStatus.className = 'status good';
+    } else if (ug <= lim * 1.25) {
+      ugStatus.textContent = `Marginal · limit ${lim.toFixed(3)}`;
+      ugStatus.className = 'status warn';
+    } else {
+      ugStatus.textContent = `Exceeds limit · ${lim.toFixed(3)}`;
+      ugStatus.className = 'status danger';
+    }
+  };
+  ['ug-source','ug-thick','ug-sod'].forEach(id =>
+    document.getElementById(id).addEventListener('input', calcUg));
+  calcUg();
+
+  // ===== Minimum SOD =====
+  const sodOut = document.getElementById('sod-out');
+  const calcSod = () => {
+    const s = num('sod-source'), t = num('sod-thick'), ug = num('sod-ug');
+    sodOut.textContent = fmt((s * t) / ug, 4);
+  };
+  ['sod-source','sod-thick','sod-ug'].forEach(id =>
+    document.getElementById(id).addEventListener('input', calcSod));
+  document.getElementById('sod-asme').addEventListener('change', e => {
+    if (e.target.value) {
+      document.getElementById('sod-ug').value = e.target.value;
+      calcSod();
+    }
+  });
+  calcSod();
+
+  // ===== Half Life =====
+  const hlOut = document.getElementById('hl-out');
+  const hlPeriod = document.getElementById('hl-period');
+  const hlTUnit = document.getElementById('hl-t-unit');
+  const hlNUnit = document.getElementById('hl-n-unit');
+  const calcHl = () => {
+    const a0 = num('hl-a0'), t = num('hl-t'), n = num('hl-n');
+    hlOut.textContent = fmt(a0 * Math.pow(0.5, n / t), 4);
+  };
+  ['hl-a0','hl-t','hl-n'].forEach(id =>
+    document.getElementById(id).addEventListener('input', calcHl));
+  const setHlUnit = (u) => {
+    document.querySelectorAll('[data-hl-unit]').forEach(b =>
+      b.setAttribute('aria-pressed', b.dataset.hlUnit === u ? 'true' : 'false'));
+    hlTUnit.textContent = u;
+    hlNUnit.textContent = u;
+    hlPeriod.textContent = u;
+  };
+  document.querySelectorAll('[data-hl-unit]').forEach(btn =>
+    btn.addEventListener('click', () => setHlUnit(btn.dataset.hlUnit)));
+  document.getElementById('hl-iso').addEventListener('change', e => {
+    if (!e.target.value) return;
+    const [val, unit] = e.target.value.split('|');
+    document.getElementById('hl-t').value = val;
+    setHlUnit(unit);
+    calcHl();
+  });
+  calcHl();
+
+  // ===== Inverse Square Law =====
+  const islOut = document.getElementById('isl-out');
+  const calcIsl = () => {
+    const i1 = num('isl-i1'), d1 = num('isl-d1'), d2 = num('isl-d2');
+    islOut.textContent = fmt(i1 * d1 * d1 / (d2 * d2), 5);
+  };
+  ['isl-i1','isl-d1','isl-d2'].forEach(id =>
+    document.getElementById(id).addEventListener('input', calcIsl));
+  calcIsl();
+})();
+</script>
+
+</body>
+</html>
