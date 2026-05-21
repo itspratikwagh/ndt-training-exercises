@@ -157,6 +157,7 @@
     border-left: 3px solid var(--amber);
     padding: 28px 30px;
     box-shadow: var(--shadow);
+    position: relative;
   }
   .calc-num {
     font-family: 'JetBrains Mono', monospace;
@@ -165,6 +166,29 @@
     letter-spacing: 0.08em;
     margin-bottom: 8px;
   }
+  .reset-btn {
+    position: absolute;
+    top: 22px;
+    right: 24px;
+    appearance: none;
+    background: transparent;
+    border: 1px solid var(--rule);
+    color: var(--ink-soft);
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 7px 12px;
+    transition: all 0.18s ease;
+  }
+  .reset-btn:hover {
+    border-color: var(--amber);
+    color: var(--amber);
+    background: var(--amber-tint);
+  }
+  .reset-btn:active { transform: translateY(1px); }
   .calc h2 {
     font-family: 'Fraunces', serif;
     font-weight: 500;
@@ -446,6 +470,7 @@
   <!-- ============ Geometric Unsharpness ============ -->
   <section id="ug" class="panel active" role="tabpanel">
     <div class="calc">
+      <button type="button" class="reset-btn" data-reset="ug">Reset</button>
       <div class="calc-num">01 · GEOMETRIC UNSHARPNESS</div>
       <h2>Compute <em>Ug</em> from source size, thickness, and SOD</h2>
       <div class="scenario">A smaller source, thinner part, or longer source-to-object distance reduces geometric unsharpness. ASME Section V sets the maximum Ug by material thickness.</div>
@@ -453,15 +478,15 @@
       <div class="inputs two">
         <label class="field">
           <div class="field-label">Source Size <span class="sym">f</span></div>
-          <div class="input-row"><input type="number" id="ug-source" value="0.25" step="any" inputmode="decimal"><span class="unit">in</span></div>
+          <div class="input-row"><input type="number" id="ug-source" value="0" step="any" inputmode="decimal"><span class="unit">in</span></div>
         </label>
         <label class="field">
           <div class="field-label">Material Thickness <span class="sym">t</span></div>
-          <div class="input-row"><input type="number" id="ug-thick" value="0.87" step="any" inputmode="decimal"><span class="unit">in</span></div>
+          <div class="input-row"><input type="number" id="ug-thick" value="0" step="any" inputmode="decimal"><span class="unit">in</span></div>
         </label>
         <label class="field" style="grid-column:1/-1;max-width:50%">
           <div class="field-label">Source-to-Object Distance <span class="sym">SOD</span></div>
-          <div class="input-row"><input type="number" id="ug-sod" value="10" step="any" inputmode="decimal"><span class="unit">in</span></div>
+          <div class="input-row"><input type="number" id="ug-sod" value="0" step="any" inputmode="decimal"><span class="unit">in</span></div>
         </label>
       </div>
 
@@ -492,6 +517,7 @@
   <!-- ============ Minimum SOD ============ -->
   <section id="sod" class="panel" role="tabpanel">
     <div class="calc">
+      <button type="button" class="reset-btn" data-reset="sod">Reset</button>
       <div class="calc-num">02 · MINIMUM SOD</div>
       <h2>Find the minimum <em>source-to-object distance</em></h2>
       <div class="scenario">Given the source size, part thickness, and the maximum permitted Ug, solve for the SOD that keeps unsharpness at or below the limit.</div>
@@ -499,24 +525,24 @@
       <div class="inputs two">
         <label class="field">
           <div class="field-label">Source Size <span class="sym">f</span></div>
-          <div class="input-row"><input type="number" id="sod-source" value="0.117" step="any" inputmode="decimal"><span class="unit">in</span></div>
+          <div class="input-row"><input type="number" id="sod-source" value="0" step="any" inputmode="decimal"><span class="unit">in</span></div>
         </label>
         <label class="field">
           <div class="field-label">Material Thickness <span class="sym">t</span></div>
-          <div class="input-row"><input type="number" id="sod-thick" value="3.425" step="any" inputmode="decimal"><span class="unit">in</span></div>
+          <div class="input-row"><input type="number" id="sod-thick" value="0" step="any" inputmode="decimal"><span class="unit">in</span></div>
         </label>
         <label class="field">
           <div class="field-label">Max Permitted Ug <span class="sym">U<sub>g,max</sub></span></div>
-          <div class="input-row"><input type="number" id="sod-ug" value="0.04" step="any" inputmode="decimal"><span class="unit">in</span></div>
+          <div class="input-row"><input type="number" id="sod-ug" value="0" step="any" inputmode="decimal"><span class="unit">in</span></div>
         </label>
         <label class="field">
           <div class="field-label">Auto-fill from ASME</div>
           <div class="input-row">
             <select id="sod-asme">
-              <option value="">— pick by thickness —</option>
+              <option value="" selected>— pick by thickness —</option>
               <option value="0.02">Under 2″ → 0.020</option>
               <option value="0.03">2″ through 3″ → 0.030</option>
-              <option value="0.04" selected>Over 3″ through 4″ → 0.040</option>
+              <option value="0.04">Over 3″ through 4″ → 0.040</option>
               <option value="0.07">Greater than 4″ → 0.070</option>
             </select>
           </div>
@@ -534,6 +560,7 @@
   <!-- ============ Half Life ============ -->
   <section id="hl" class="panel" role="tabpanel">
     <div class="calc">
+      <button type="button" class="reset-btn" data-reset="hl">Reset</button>
       <div class="calc-num">03 · SOURCE DECAY</div>
       <h2>Activity after <em>N</em> half-lives have elapsed</h2>
       <div class="scenario">Radioactive sources decay exponentially. Each half-life cuts the activity in half. Use matching units (days or years) for both the half-life and elapsed time.</div>
@@ -541,7 +568,7 @@
       <div class="inputs two">
         <label class="field">
           <div class="field-label">Original Activity <span class="sym">A₀</span></div>
-          <div class="input-row"><input type="number" id="hl-a0" value="50" step="any" inputmode="decimal"><span class="unit">Ci</span></div>
+          <div class="input-row"><input type="number" id="hl-a0" value="0" step="any" inputmode="decimal"><span class="unit">Ci</span></div>
         </label>
         <label class="field">
           <div class="field-label">
@@ -551,17 +578,17 @@
               <button type="button" data-hl-unit="years" aria-pressed="false">Years</button>
             </span>
           </div>
-          <div class="input-row"><input type="number" id="hl-t" value="75" step="any" inputmode="decimal"><span class="unit" id="hl-t-unit">days</span></div>
+          <div class="input-row"><input type="number" id="hl-t" value="0" step="any" inputmode="decimal"><span class="unit" id="hl-t-unit">days</span></div>
         </label>
         <label class="field">
           <div class="field-label">Elapsed Time <span class="sym">N</span></div>
-          <div class="input-row"><input type="number" id="hl-n" value="150" step="any" inputmode="decimal"><span class="unit" id="hl-n-unit">days</span></div>
+          <div class="input-row"><input type="number" id="hl-n" value="0" step="any" inputmode="decimal"><span class="unit" id="hl-n-unit">days</span></div>
         </label>
         <label class="field">
           <div class="field-label">Quick-pick Isotope</div>
           <div class="input-row">
             <select id="hl-iso">
-              <option value="">— pick an isotope —</option>
+              <option value="" selected>— pick an isotope —</option>
               <option value="74|days">Ir-192 (74 days)</option>
               <option value="5.27|years">Co-60 (5.27 years)</option>
               <option value="30.17|years">Cs-137 (30.17 years)</option>
@@ -582,6 +609,7 @@
   <!-- ============ Inverse Square Law ============ -->
   <section id="isl" class="panel" role="tabpanel">
     <div class="calc">
+      <button type="button" class="reset-btn" data-reset="isl">Reset</button>
       <div class="calc-num">04 · INVERSE SQUARE LAW</div>
       <h2>Intensity scales with <em>1 / distance²</em></h2>
       <div class="scenario">Doubling the distance from a point source cuts the intensity to one quarter. Solve for the intensity at a new distance.</div>
@@ -589,15 +617,15 @@
       <div class="inputs two">
         <label class="field">
           <div class="field-label">Intensity at D₁ <span class="sym">I₁</span></div>
-          <div class="input-row"><input type="number" id="isl-i1" value="55" step="any" inputmode="decimal"><span class="unit">R/h</span></div>
+          <div class="input-row"><input type="number" id="isl-i1" value="0" step="any" inputmode="decimal"><span class="unit">R/h</span></div>
         </label>
         <label class="field">
           <div class="field-label">Distance 1 <span class="sym">D₁</span></div>
-          <div class="input-row"><input type="number" id="isl-d1" value="1" step="any" inputmode="decimal"><span class="unit">ft</span></div>
+          <div class="input-row"><input type="number" id="isl-d1" value="0" step="any" inputmode="decimal"><span class="unit">ft</span></div>
         </label>
         <label class="field">
           <div class="field-label">Distance 2 <span class="sym">D₂</span></div>
-          <div class="input-row"><input type="number" id="isl-d2" value="100" step="any" inputmode="decimal"><span class="unit">ft</span></div>
+          <div class="input-row"><input type="number" id="isl-d2" value="0" step="any" inputmode="decimal"><span class="unit">ft</span></div>
         </label>
       </div>
 
@@ -734,6 +762,22 @@
   ['isl-i1','isl-d1','isl-d2'].forEach(id =>
     document.getElementById(id).addEventListener('input', calcIsl));
   calcIsl();
+
+  // ===== Reset buttons =====
+  const resetMap = {
+    ug:  { inputs: ['ug-source','ug-thick','ug-sod'], recalc: calcUg },
+    sod: { inputs: ['sod-source','sod-thick','sod-ug'], selects: ['sod-asme'], recalc: calcSod },
+    hl:  { inputs: ['hl-a0','hl-t','hl-n'], selects: ['hl-iso'], recalc: calcHl, extra: () => setHlUnit('days') },
+    isl: { inputs: ['isl-i1','isl-d1','isl-d2'], recalc: calcIsl },
+  };
+  document.querySelectorAll('.reset-btn').forEach(btn => btn.addEventListener('click', () => {
+    const cfg = resetMap[btn.dataset.reset];
+    if (!cfg) return;
+    cfg.inputs.forEach(id => { document.getElementById(id).value = '0'; });
+    (cfg.selects || []).forEach(id => { document.getElementById(id).value = ''; });
+    if (cfg.extra) cfg.extra();
+    cfg.recalc();
+  }));
 })();
 </script>
 
