@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NDT Tutor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #faf7f2;
+    --paper-deep: #f1ece2;
+    --ink: #1a1a1a;
+    --ink-soft: #4a4a47;
+    --ink-faded: #8a8a85;
+    --rule: #d9d2c4;
+    --amber: #b54515;
+    --amber-soft: #e8a87c;
+    --amber-tint: #fdf2e6;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px -12px rgba(60,40,20,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Manrope', -apple-system, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.55;
+    display: flex;
+    flex-direction: column;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(181, 69, 21, 0.04), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(181, 69, 21, 0.03), transparent 50%);
+  }
+  .topbar {
+    border-bottom: 1px solid var(--rule);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--paper);
+  }
+  .topbar .brand {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 20px;
+  }
+  .topbar .brand em { color: var(--amber); font-style: italic; font-weight: 500; }
+  .topbar .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber);
+  }
+  .topbar .spacer { flex: 1; }
+  .topbar a, .topbar button {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    text-decoration: none;
+    background: none;
+    border: 1px solid var(--rule);
+    padding: 8px 12px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .topbar a:hover, .topbar button:hover { border-color: var(--amber); color: var(--amber); }
+
+  main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px 0;
+  }
+  #chat {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .msg {
+    padding: 14px 18px;
+    border-radius: 2px;
+    max-width: 92%;
+    box-shadow: var(--shadow);
+    font-size: 15px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .msg.user {
+    background: var(--amber-tint);
+    border: 1px solid var(--amber-soft);
+    align-self: flex-end;
+  }
+  .msg.assistant {
+    background: var(--paper-deep);
+    border: 1px solid var(--rule);
+    align-self: flex-start;
+  }
+  .msg.system {
+    background: transparent;
+    border: 1px dashed var(--rule);
+    color: var(--ink-faded);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    text-align: center;
+    align-self: center;
+    max-width: 100%;
+  }
+  .msg.error {
+    background: #fff5f0;
+    border: 1px solid var(--amber);
+    color: var(--amber);
+    align-self: center;
+    max-width: 100%;
+  }
+  .msg pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 12px 14px;
+    border-radius: 2px;
+    overflow-x: auto;
+    margin: 8px 0;
+  }
+  .msg p + p { margin-top: 10px; }
+  .msg .role {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faded);
+    margin-bottom: 6px;
+  }
+  .msg.user .role { color: var(--amber); }
+  .typing { font-style: italic; color: var(--ink-faded); }
+
+  .composer {
+    border-top: 1px solid var(--rule);
+    background: var(--paper);
+    padding: 18px 24px;
+  }
+  .composer-inner {
+    max-width: 760px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: end;
+  }
+  textarea#input {
+    font-family: 'Manrope', sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    resize: none;
+    width: 100%;
+    min-height: 52px;
+    max-height: 200px;
+    padding: 14px 16px;
+    background: var(--paper-deep);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  textarea#input:focus { border-color: var(--amber); }
+  button#send {
+    font-family: 'Manrope', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 14px 22px;
+    background: var(--amber);
+    color: var(--paper);
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.15s;
+    height: 52px;
+  }
+  button#send:hover:not(:disabled) { background: #9a3a12; }
+  button#send:disabled { background: var(--ink-faded); cursor: not-allowed; }
+  .hint {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faded);
+    text-align: center;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div>
+      <div class="eyebrow">NDT</div>
+      <div class="brand">The <em>Tutor</em></div>
+    </div>
+    <div class="spacer"></div>
+    <button id="clear" type="button">Clear chat</button>
+    <a href="index.html">← Index</a>
+  </div>
+
+  <main>
+    <div id="chat"></div>
+  </main>
+
+  <div class="composer">
+    <div class="composer-inner">
+      <textarea id="input" placeholder="Ask anything about RT, UT, weld inspection… (Enter sends, Shift+Enter for newline)"></textarea>
+      <button id="send" type="button">Send</button>
+    </div>
+    <div class="hint">Replies are AI-generated. Verify safety-critical details with your instructor or code.</div>
+  </div>
+
+<script>
+  // Set this once after deploying the Cloudflare Worker.
+  const WORKER_URL = "https://ndt-tutor.YOUR-SUBDOMAIN.workers.dev/chat";
+
+  const MAX_TURNS = 20;
+  const STORAGE_KEY = "ndt-tutor-history-v1";
+
+  const chatEl = document.getElementById("chat");
+  const inputEl = document.getElementById("input");
+  const sendBtn = document.getElementById("send");
+  const clearBtn = document.getElementById("clear");
+
+  let messages = [];
+  let inFlight = false;
+
+  function loadHistory() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) messages = JSON.parse(raw);
+    } catch (e) { messages = []; }
+    if (!messages.length) {
+      renderSystem("Hi — I'm your NDT tutor. Ask about radiography math, ultrasonic flaw sizing, weld geometry, or anything else from today's exercises.");
+    } else {
+      messages.forEach(m => renderBubble(m.role, m.content));
+    }
+  }
+
+  function saveHistory() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(messages)); } catch (e) {}
+  }
+
+  function renderBubble(role, text) {
+    const div = document.createElement("div");
+    div.className = "msg " + role;
+    const roleEl = document.createElement("div");
+    roleEl.className = "role";
+    roleEl.textContent = role === "user" ? "You" : "Tutor";
+    div.appendChild(roleEl);
+    renderBody(div, text);
+    chatEl.appendChild(div);
+    scrollToBottom();
+    return div;
+  }
+
+  function renderSystem(text) {
+    const div = document.createElement("div");
+    div.className = "msg system";
+    div.textContent = text;
+    chatEl.appendChild(div);
+    scrollToBottom();
+  }
+
+  function renderError(text) {
+    const div = document.createElement("div");
+    div.className = "msg error";
+    div.textContent = text;
+    chatEl.appendChild(div);
+    scrollToBottom();
+  }
+
+  function renderBody(container, text) {
+    // Lightweight rendering: fenced code blocks + paragraphs. Uses textContent (XSS-safe).
+    const parts = text.split(/```/);
+    parts.forEach((part, i) => {
+      if (i % 2 === 1) {
+        const pre = document.createElement("pre");
+        pre.textContent = part.replace(/^[a-zA-Z0-9_+-]*\n/, "");
+        container.appendChild(pre);
+      } else {
+        part.split(/\n\n+/).forEach(para => {
+          if (!para.trim()) return;
+          const p = document.createElement("p");
+          p.textContent = para;
+          container.appendChild(p);
+        });
+      }
+    });
+  }
+
+  function scrollToBottom() {
+    const main = document.querySelector("main");
+    main.scrollTop = main.scrollHeight;
+  }
+
+  function autoGrow() {
+    inputEl.style.height = "auto";
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 200) + "px";
+  }
+
+  async function send() {
+    const text = inputEl.value.trim();
+    if (!text || inFlight) return;
+
+    messages.push({ role: "user", content: text });
+    renderBubble("user", text);
+    inputEl.value = "";
+    autoGrow();
+    saveHistory();
+
+    // Trim to last MAX_TURNS messages (keep pairs ideally, but a hard cap is fine).
+    const toSend = messages.slice(-MAX_TURNS);
+
+    inFlight = true;
+    sendBtn.disabled = true;
+    sendBtn.textContent = "…";
+
+    const thinking = document.createElement("div");
+    thinking.className = "msg assistant";
+    const role = document.createElement("div");
+    role.className = "role"; role.textContent = "Tutor";
+    const body = document.createElement("p");
+    body.className = "typing"; body.textContent = "thinking…";
+    thinking.appendChild(role); thinking.appendChild(body);
+    chatEl.appendChild(thinking);
+    scrollToBottom();
+
+    try {
+      const res = await fetch(WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: toSend }),
+      });
+      thinking.remove();
+
+      if (res.status === 429) {
+        const ra = res.headers.get("Retry-After") || "a minute";
+        renderError(`You're sending messages too quickly. Try again in ${ra}s.`);
+        return;
+      }
+      if (!res.ok) {
+        renderError("The tutor is temporarily unavailable. Flag your instructor or try again in a moment.");
+        return;
+      }
+
+      const data = await res.json();
+      const reply = (data && data.reply) || "(no reply)";
+      messages.push({ role: "assistant", content: reply });
+      renderBubble("assistant", reply);
+      saveHistory();
+    } catch (err) {
+      thinking.remove();
+      renderError("Network error. Check your connection and try again.");
+    } finally {
+      inFlight = false;
+      sendBtn.disabled = false;
+      sendBtn.textContent = "Send";
+      inputEl.focus();
+    }
+  }
+
+  inputEl.addEventListener("input", autoGrow);
+  inputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+  });
+  sendBtn.addEventListener("click", send);
+  clearBtn.addEventListener("click", () => {
+    if (!confirm("Clear the chat history?")) return;
+    messages = [];
+    chatEl.innerHTML = "";
+    saveHistory();
+    renderSystem("Chat cleared. Ask away.");
+  });
+
+  loadHistory();
+  inputEl.focus();
+</script>
+</body>
+</html>

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NDT Training — Exercise Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #faf7f2;
+    --paper-deep: #f1ece2;
+    --ink: #1a1a1a;
+    --ink-soft: #4a4a47;
+    --ink-faded: #8a8a85;
+    --rule: #d9d2c4;
+    --amber: #b54515;
+    --amber-soft: #e8a87c;
+    --amber-tint: #fdf2e6;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px -12px rgba(60,40,20,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Manrope', -apple-system, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.55;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(181, 69, 21, 0.04), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(181, 69, 21, 0.03), transparent 50%);
+  }
+  .container { max-width: 1000px; margin: 0 auto; padding: 56px 32px 80px; }
+
+  header {
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 32px;
+    margin-bottom: 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: clamp(32px, 5vw, 48px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    font-variation-settings: 'opsz' 144;
+    margin-bottom: 14px;
+  }
+  h1 em { font-style: italic; color: var(--amber); font-weight: 500; }
+  header p { font-size: 15px; color: var(--ink-soft); max-width: 580px; }
+
+  .tutor-cta {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 28px 32px;
+    border-radius: 2px;
+    box-shadow: var(--shadow);
+    margin-bottom: 48px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: center;
+    position: relative;
+  }
+  .tutor-cta::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgba(232, 168, 124, 0.2);
+    border-radius: 2px;
+    pointer-events: none;
+    margin: 4px;
+  }
+  .tutor-cta .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--amber-soft);
+    margin-bottom: 8px;
+  }
+  .tutor-cta h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 24px;
+    margin-bottom: 6px;
+  }
+  .tutor-cta p { color: var(--paper-deep); font-size: 14px; }
+  .tutor-cta a.btn {
+    background: var(--amber);
+    color: var(--paper);
+    padding: 14px 24px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+    border-radius: 2px;
+    transition: background 0.15s;
+  }
+  .tutor-cta a.btn:hover { background: #9a3a12; }
+
+  section.discipline { margin-bottom: 44px; }
+  section.discipline h3 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 22px;
+    margin-bottom: 4px;
+  }
+  section.discipline h3 em { color: var(--amber); font-style: italic; }
+  section.discipline > p {
+    font-size: 13px;
+    color: var(--ink-faded);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+  }
+  .grid a {
+    display: block;
+    padding: 16px 18px;
+    background: var(--paper-deep);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    color: var(--ink);
+    text-decoration: none;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .grid a:hover {
+    border-color: var(--amber);
+    transform: translateY(-1px);
+  }
+  .grid a .name {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 2px;
+  }
+  .grid a .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faded);
+  }
+
+  footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    font-size: 12px;
+    color: var(--ink-faded);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="eyebrow">Non-Destructive Testing</div>
+      <h1>Training <em>Exercise Hub</em></h1>
+      <p>Interactive practice for radiographic, ultrasonic, and weld inspection topics. Work through the exercises below; ask the tutor when you get stuck.</p>
+    </header>
+
+    <div class="tutor-cta">
+      <div>
+        <div class="label">Stuck on something?</div>
+        <h2>Ask the NDT Tutor</h2>
+        <p>An on-demand assistant for technical questions about the exercises and underlying physics.</p>
+      </div>
+      <a class="btn" href="tutor.html">Open Tutor →</a>
+    </div>
+
+    <section class="discipline">
+      <h3>Radiographic <em>Testing</em></h3>
+      <p>RT · 8 exercises</p>
+      <div class="grid">
+        <a href="RT-Half-Value-Layer.html"><div class="name">Half-Value Layer</div><div class="meta">Exposure calculation</div></a>
+        <a href="RT-Half-Value-Layer-Counting.html"><div class="name">HVL — Counting</div><div class="meta">Layer counting practice</div></a>
+        <a href="RT-Half-Value-Layer-Reduction.html"><div class="name">HVL — Reduction</div><div class="meta">Intensity reduction</div></a>
+        <a href="RT-Dose-Rate-Time-Calculation.html"><div class="name">Dose Rate &amp; Time</div><div class="meta">Exposure timing</div></a>
+        <a href="RT-Inverse-Square-Law-Distance.html"><div class="name">Inverse Square — Distance</div><div class="meta">Solve for distance</div></a>
+        <a href="RT-Inverse-Square-Law-Intensity.html"><div class="name">Inverse Square — Intensity</div><div class="meta">Solve for intensity</div></a>
+        <a href="RT-Radiography-Calculator.html"><div class="name">Radiography Calculator</div><div class="meta">Combined parameters</div></a>
+        <a href="RT_Distance_Exercises.html"><div class="name">Distance Exercises</div><div class="meta">Practice set</div></a>
+      </div>
+    </section>
+
+    <section class="discipline">
+      <h3>Ultrasonic <em>Testing</em></h3>
+      <p>UT · 4 exercises</p>
+      <div class="grid">
+        <a href="UT-6dB-Drop-Sizing.html"><div class="name">6dB Drop Sizing</div><div class="meta">Flaw sizing technique</div></a>
+        <a href="UT-6dB-Drop-Sizing-Test.html"><div class="name">6dB Drop — Test</div><div class="meta">Practice test</div></a>
+        <a href="UT-Maze-Trace-Exercise.html"><div class="name">Maze Trace</div><div class="meta">Sound path tracing</div></a>
+        <a href="UT-Mode-Conversion-Exercises.html"><div class="name">Mode Conversion</div><div class="meta">L-wave / S-wave</div></a>
+      </div>
+    </section>
+
+    <section class="discipline">
+      <h3>Weld &amp; <em>Materials</em></h3>
+      <p>General · 6 exercises</p>
+      <div class="grid">
+        <a href="anode-heel-effect.html"><div class="name">Anode Heel Effect</div><div class="meta">X-ray tube geometry</div></a>
+        <a href="atomic-structure-diagram.html"><div class="name">Atomic Structure</div><div class="meta">Diagram builder</div></a>
+        <a href="isotope-builder.html"><div class="name">Isotope Builder</div><div class="meta">Ir-192 / Co-60 / Se-75</div></a>
+        <a href="welding-scale-exercise.html"><div class="name">Welding Scale</div><div class="meta">Measurement practice</div></a>
+        <a href="concavity-gauge-exercise.html"><div class="name">Concavity Gauge</div><div class="meta">Weld profile</div></a>
+        <a href="fillet-gauge-exercise.html"><div class="name">Fillet Gauge</div><div class="meta">Fillet weld sizing</div></a>
+      </div>
+    </section>
+
+    <footer>NDT Training · 18 exercises · Tutor powered by Claude</footer>
+  </div>
+</body>
+</html>
