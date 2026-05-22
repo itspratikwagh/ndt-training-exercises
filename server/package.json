@@ -1,0 +1,17 @@
+{
+  "name": "ndt-tutor-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Railway-hosted proxy that forwards NDT tutor chat requests to the Anthropic API.",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

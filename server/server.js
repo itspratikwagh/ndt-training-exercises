@@ -1,20 +1,27 @@
-// Cloudflare Worker — NDT Tutor proxy
+// NDT Tutor — Railway-hosted proxy
 //
-// Deploy this to Cloudflare Workers. It holds your Anthropic API key as a
-// secret so students never see it. The frontend on GitHub Pages calls
-// POST /chat with { messages: [...] } and gets back { reply, usage }.
+// Holds the Anthropic API key as an env var so students never see it.
+// The frontend (tutor.html on GitHub Pages) calls POST /chat with
+// { messages: [...] } and gets back { reply, usage }.
 //
-// Required setup (see SETUP.md):
-//   1. Replace ALLOWED_ORIGIN with your GitHub Pages URL.
-//   2. Bind a KV namespace named "RL" for rate limiting.
-//   3. Set secret ANTHROPIC_API_KEY.
+// Required env vars (set in Railway → Variables):
+//   ANTHROPIC_API_KEY   your Anthropic key
+//   ALLOWED_ORIGIN      your GitHub Pages origin, e.g. https://janedoe.github.io
+//
+// Optional:
+//   MODEL               defaults to claude-haiku-4-5-20251001
+//   PORT                Railway sets this automatically
 
-const ALLOWED_ORIGIN = "https://YOUR-GITHUB-USERNAME.github.io";
-const MODEL = "claude-haiku-4-5-20251001";
+import express from "express";
+
+const PORT = process.env.PORT || 8080;
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "";
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const MODEL = process.env.MODEL || "claude-haiku-4-5-20251001";
 const MAX_TOKENS = 1024;
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 
-// Rate limits per IP.
+// Per-IP rate limits.
 const RL_PER_MIN = 12;
 const RL_PER_HOUR = 200;
 
@@ -81,53 +88,35 @@ Politely redirect off-topic asks like general programming, homework for other cl
 
 Patient, direct, encouraging. Treat students as adults who are here to learn. Keep replies focused — a typical answer is 3–8 sentences plus any worked math. Avoid long preambles. Don't apologize unnecessarily.`;
 
-function corsHeaders(extra = {}) {
-  return {
-    "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "content-type",
-    "Access-Control-Max-Age": "86400",
-    "Vary": "Origin",
-    ...extra,
-  };
-}
+// In-memory rate limiter. Railway runs a single instance for the free/hobby
+// tier, so this is sufficient for a 20-student classroom.
+const rlState = new Map(); // ip -> { minuteBucket, minCount, hourBucket, hourCount }
 
-function json(status, body, extra = {}) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json", ...corsHeaders(extra) },
-  });
-}
-
-async function rateLimit(env, ip) {
-  if (!env.RL) return { ok: true }; // KV not bound — fail open with a console warning
+function checkRate(ip) {
   const now = Date.now();
   const minuteBucket = Math.floor(now / 60000);
   const hourBucket = Math.floor(now / 3600000);
-  const minKey = `rl:m:${ip}:${minuteBucket}`;
-  const hourKey = `rl:h:${ip}:${hourBucket}`;
-
-  const [minStr, hourStr] = await Promise.all([
-    env.RL.get(minKey),
-    env.RL.get(hourKey),
-  ]);
-  const minCount = parseInt(minStr || "0", 10);
-  const hourCount = parseInt(hourStr || "0", 10);
-
-  if (minCount >= RL_PER_MIN) {
-    return { ok: false, retryAfter: 60 - Math.floor((now % 60000) / 1000) };
+  let s = rlState.get(ip);
+  if (!s) {
+    s = { minuteBucket, minCount: 0, hourBucket, hourCount: 0 };
+    rlState.set(ip, s);
   }
-  if (hourCount >= RL_PER_HOUR) {
-    return { ok: false, retryAfter: 3600 - Math.floor((now % 3600000) / 1000) };
-  }
-
-  // Increment (best-effort; KV is eventually consistent — fine for classroom anti-abuse).
-  await Promise.all([
-    env.RL.put(minKey, String(minCount + 1), { expirationTtl: 120 }),
-    env.RL.put(hourKey, String(hourCount + 1), { expirationTtl: 4000 }),
-  ]);
+  if (s.minuteBucket !== minuteBucket) { s.minuteBucket = minuteBucket; s.minCount = 0; }
+  if (s.hourBucket !== hourBucket) { s.hourBucket = hourBucket; s.hourCount = 0; }
+  if (s.minCount >= RL_PER_MIN) return { ok: false, retryAfter: 60 - Math.floor((now % 60000) / 1000) };
+  if (s.hourCount >= RL_PER_HOUR) return { ok: false, retryAfter: 3600 - Math.floor((now % 3600000) / 1000) };
+  s.minCount++;
+  s.hourCount++;
   return { ok: true };
 }
+
+// Periodic cleanup so the Map doesn't grow unbounded.
+setInterval(() => {
+  const cutoff = Math.floor(Date.now() / 3600000);
+  for (const [ip, s] of rlState) {
+    if (s.hourBucket < cutoff) rlState.delete(ip);
+  }
+}, 600000).unref();
 
 function validateMessages(input) {
   if (!input || !Array.isArray(input.messages)) return "messages must be an array";
@@ -141,77 +130,84 @@ function validateMessages(input) {
   return null;
 }
 
-export default {
-  async fetch(req, env, ctx) {
-    const url = new URL(req.url);
+const app = express();
+app.set("trust proxy", true); // Railway sits behind a proxy; honor X-Forwarded-For
+app.use(express.json({ limit: "200kb" }));
 
-    if (req.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: corsHeaders() });
-    }
-    if (req.method !== "POST" || url.pathname !== "/chat") {
-      return json(405, { error: "method not allowed" });
-    }
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (ALLOWED_ORIGIN && origin === ALLOWED_ORIGIN) {
+    res.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "content-type");
+    res.setHeader("Access-Control-Max-Age", "86400");
+  }
+  if (req.method === "OPTIONS") return res.status(204).end();
+  next();
+});
 
-    const origin = req.headers.get("Origin");
-    if (origin && origin !== ALLOWED_ORIGIN) {
-      return json(403, { error: "forbidden origin" });
-    }
+app.get("/health", (req, res) => res.json({ ok: true }));
 
-    const ip = req.headers.get("CF-Connecting-IP") || "unknown";
-    const rl = await rateLimit(env, ip);
-    if (!rl.ok) {
-      return json(429, { error: "rate limited" }, { "Retry-After": String(rl.retryAfter || 60) });
-    }
+app.post("/chat", async (req, res) => {
+  const origin = req.headers.origin;
+  if (ALLOWED_ORIGIN && origin && origin !== ALLOWED_ORIGIN) {
+    return res.status(403).json({ error: "forbidden origin" });
+  }
+  if (!ANTHROPIC_API_KEY) {
+    console.error("ANTHROPIC_API_KEY not set");
+    return res.status(500).json({ error: "server misconfigured" });
+  }
 
-    let body;
-    try {
-      body = await req.json();
-    } catch (e) {
-      return json(400, { error: "invalid json" });
-    }
-    const invalid = validateMessages(body);
-    if (invalid) return json(400, { error: invalid });
+  const ip = req.ip || "unknown";
+  const rl = checkRate(ip);
+  if (!rl.ok) {
+    res.setHeader("Retry-After", String(rl.retryAfter || 60));
+    return res.status(429).json({ error: "rate limited" });
+  }
 
-    if (!env.ANTHROPIC_API_KEY) {
-      console.error("ANTHROPIC_API_KEY secret not set");
-      return json(500, { error: "server misconfigured" });
-    }
+  const invalid = validateMessages(req.body);
+  if (invalid) return res.status(400).json({ error: invalid });
 
-    let upstream;
-    try {
-      upstream = await fetch(ANTHROPIC_URL, {
-        method: "POST",
-        headers: {
-          "x-api-key": env.ANTHROPIC_API_KEY,
-          "anthropic-version": "2023-06-01",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          max_tokens: MAX_TOKENS,
-          system: [
-            {
-              type: "text",
-              text: SYSTEM_PROMPT,
-              cache_control: { type: "ephemeral" },
-            },
-          ],
-          messages: body.messages,
-        }),
-      });
-    } catch (e) {
-      console.error("upstream fetch failed", e);
-      return json(502, { error: "upstream" });
-    }
+  try {
+    const upstream = await fetch(ANTHROPIC_URL, {
+      method: "POST",
+      headers: {
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: MAX_TOKENS,
+        system: [
+          {
+            type: "text",
+            text: SYSTEM_PROMPT,
+            cache_control: { type: "ephemeral" },
+          },
+        ],
+        messages: req.body.messages,
+      }),
+    });
 
     if (!upstream.ok) {
       const text = await upstream.text();
       console.error("upstream non-ok", upstream.status, text);
-      return json(502, { error: "upstream" });
+      return res.status(502).json({ error: "upstream" });
     }
 
     const data = await upstream.json();
     const reply = (data.content && data.content[0] && data.content[0].text) || "";
-    return json(200, { reply, usage: data.usage || null });
-  },
-};
+    return res.json({ reply, usage: data.usage || null });
+  } catch (err) {
+    console.error("upstream fetch failed", err);
+    return res.status(502).json({ error: "upstream" });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`NDT tutor server listening on :${PORT}`);
+  console.log(`ALLOWED_ORIGIN = ${ALLOWED_ORIGIN || "(not set — CORS will block all browsers!)"}`);
+  console.log(`MODEL = ${MODEL}`);
+});
