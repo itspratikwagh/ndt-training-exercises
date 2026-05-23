@@ -10,6 +10,10 @@ This guide walks you through deploying the shared classroom Q&A tutor. Total tim
 
 Every student gets the same URL. When one asks a question, the answer streams live to everybody — building a shared knowledge feed for the day.
 
+The feed is **scoped by NDT method** (RT, UT, MT, PT, VT, ET), not by cohort. Each method is its own persistent knowledge base: a new cohort starting on UT inherits every UT question and answer from prior cohorts. Cohort (day class, night class, etc.) is recorded as metadata on each post so you can see who asked — but it doesn't fragment the feed.
+
+Students pick their current method via the tabs at the top of the page, or via a URL like `tutor.html?method=ut`. You can also pre-fill their class label with `?cohort=day-fall-2025` so each cohort gets a one-click bookmark.
+
 ---
 
 ## 1. Get an Anthropic API key
@@ -104,11 +108,21 @@ Set a Railway variable `MODEL` to `claude-sonnet-4-6` (or another Claude model) 
 
 ## Resetting the feed between classes
 
-The Q&A feed accumulates over time. To clear it before a new class:
+The Q&A feed accumulates over time — that's the design, so each cohort inherits the prior cohorts' knowledge base. To clear it anyway:
 
 1. Open your Postgres service in Railway → **Data** tab
-2. Run: `DELETE FROM messages; DELETE FROM threads;`
-3. (Or just leave history — it's a nice resource for the next cohort.)
+2. Wipe everything: `DELETE FROM messages; DELETE FROM threads;`
+3. Wipe one method only: `DELETE FROM threads WHERE method = 'rt';` (message rows cascade)
+4. (Or just leave history — it's a nice resource for the next cohort.)
+
+## Sharing the right link with each cohort
+
+Each cohort can be handed a tailored link so they land on the right method tab and get auto-tagged. Examples:
+
+- Day class, RT week: `https://YOURNAME.github.io/ndt-training-exercises/tutor.html?method=rt&cohort=day-fall-2025`
+- Night class, UT week: `https://YOURNAME.github.io/ndt-training-exercises/tutor.html?method=ut&cohort=night-fall-2025`
+
+`?cohort=...` only pre-fills the cohort field once (on first visit). Students can edit it later via the "Change name / class" button.
 
 ## Local development (optional)
 

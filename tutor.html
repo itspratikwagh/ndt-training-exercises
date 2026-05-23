@@ -89,6 +89,54 @@
   .topbar button:hover, .topbar a:hover { border-color: var(--amber); color: var(--amber); }
   .topbar .me { color: var(--ink-soft); font-family: 'Manrope', sans-serif; font-size: 13px; text-transform: none; letter-spacing: 0; }
   .topbar .me strong { color: var(--ink); font-weight: 600; }
+  .topbar .me .cohort {
+    color: var(--ink-faded);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    margin-left: 6px;
+  }
+
+  /* ===== method tabs ===== */
+  .method-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--rule);
+    background: var(--paper);
+    padding: 0 24px;
+    overflow-x: auto;
+  }
+  .method-tab {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faded);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 14px 16px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .method-tab:hover { color: var(--ink-soft); }
+  .method-tab.active {
+    color: var(--amber);
+    border-bottom-color: var(--amber);
+    font-weight: 600;
+  }
+  .method-tab .full {
+    color: var(--ink-faded);
+    margin-left: 6px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0.04em;
+  }
+  .method-tab.active .full { color: var(--ink-soft); }
+  @media (max-width: 760px) {
+    .method-tab .full { display: none; }
+    .method-tab { padding: 12px 12px; }
+  }
 
   /* ===== layout ===== */
   .app {
@@ -156,9 +204,11 @@
     text-transform: uppercase;
     color: var(--ink-faded);
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
   }
   .thread-row .row-meta .asker { color: var(--amber); }
+  .thread-row .row-meta .cohort { color: var(--ink-soft); }
   .threads-empty {
     padding: 32px 18px;
     text-align: center;
@@ -246,6 +296,13 @@
   }
   .msg.user .role { color: var(--amber); }
   .msg .role .when { color: var(--ink-faded); font-weight: 400; }
+  .msg .role .cohort {
+    color: var(--ink-soft);
+    text-transform: none;
+    letter-spacing: 0.04em;
+    margin-left: 8px;
+    font-weight: 400;
+  }
   .msg pre {
     font-family: 'JetBrains Mono', monospace;
     font-size: 13px;
@@ -352,7 +409,7 @@
     border: 1px solid var(--rule);
     border-radius: 2px;
     padding: 32px;
-    max-width: 420px;
+    max-width: 440px;
     width: 90%;
     box-shadow: var(--shadow);
   }
@@ -371,6 +428,16 @@
     margin-bottom: 8px;
   }
   .modal p { font-size: 14px; color: var(--ink-soft); margin-bottom: 18px; }
+  .modal label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+    margin-top: 12px;
+  }
   .modal input {
     width: 100%;
     padding: 12px 14px;
@@ -380,10 +447,10 @@
     font-family: 'Manrope', sans-serif;
     font-size: 15px;
     outline: none;
-    margin-bottom: 16px;
   }
   .modal input:focus { border-color: var(--amber); }
   .modal button {
+    margin-top: 18px;
     background: var(--amber);
     color: var(--paper);
     border: none;
@@ -395,16 +462,6 @@
     cursor: pointer;
   }
   .modal button:hover { background: #9a3a12; }
-
-  .hint {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--ink-faded);
-    text-align: center;
-    margin-top: 8px;
-  }
 </style>
 </head>
 <body>
@@ -416,10 +473,12 @@
   </div>
   <div class="spacer"></div>
   <div class="me" id="me-display"></div>
-  <button id="rename" type="button">Change name</button>
+  <button id="rename" type="button">Change name / class</button>
   <div class="conn" id="conn"><span class="dot"></span><span id="conn-text">connecting…</span></div>
   <a href="index.html">← Index</a>
 </div>
+
+<div class="method-tabs" id="method-tabs"></div>
 
 <div class="app" id="app">
   <aside class="threads-pane">
@@ -443,7 +502,7 @@
     <div class="messages" id="messages">
       <div class="thread-empty" id="thread-empty">
         <h2>Pick a question — or ask your own</h2>
-        <p>Every question in this class is shared. When you ask, the whole room sees the answer, and you can follow up on anyone else's question too.</p>
+        <p>Every question in this feed is shared across all cohorts studying this method. Your question and the tutor's reply will be visible to everyone.</p>
       </div>
     </div>
 
@@ -464,9 +523,12 @@
 <div class="modal-backdrop" id="name-modal" style="display:none">
   <div class="modal">
     <div class="eyebrow">Welcome</div>
-    <h2>What's your first name?</h2>
-    <p>So the class knows who's asking. You can post anonymously per-question with the toggle.</p>
+    <h2>Tell us who you are</h2>
+    <p>So the class knows who's asking. You can post anonymously per-question with the toggle. Your class label helps the rest of the cohort recognize you in the shared feed.</p>
+    <label for="name-input">First name</label>
     <input id="name-input" type="text" maxlength="40" placeholder="e.g. Alex" autocomplete="given-name">
+    <label for="cohort-input">Which class are you in?</label>
+    <input id="cohort-input" type="text" maxlength="40" placeholder="e.g. day class, night class fall 2025">
     <button id="name-save">Continue</button>
   </div>
 </div>
@@ -475,9 +537,24 @@
   // Set this once after deploying the Railway service.
   const API_URL = "https://YOUR-RAILWAY-URL.up.railway.app";
 
-  const NAME_KEY = "ndt-tutor-name-v1";
+  const NAME_KEY   = "ndt-tutor-name-v1";
+  const COHORT_KEY = "ndt-tutor-cohort-v1";
+  const METHOD_KEY = "ndt-tutor-method-v1";
+
+  // Methods + labels are duplicated client-side so tabs render before /methods
+  // returns. Server is the source of truth — these are just the initial render.
+  const METHODS = [
+    { id: "rt", label: "Radiographic Testing",      short: "RT" },
+    { id: "ut", label: "Ultrasonic Testing",        short: "UT" },
+    { id: "mt", label: "Magnetic Particle Testing", short: "MT" },
+    { id: "pt", label: "Liquid Penetrant Testing",  short: "PT" },
+    { id: "vt", label: "Visual Testing",            short: "VT" },
+    { id: "et", label: "Eddy Current Testing",      short: "ET" },
+  ];
+  const METHOD_IDS = METHODS.map(m => m.id);
 
   const el = {
+    methodTabs: document.getElementById("method-tabs"),
     threadsList: document.getElementById("threads-list"),
     messages: document.getElementById("messages"),
     threadEmpty: document.getElementById("thread-empty"),
@@ -492,6 +569,7 @@
     newThread: document.getElementById("new-thread"),
     nameModal: document.getElementById("name-modal"),
     nameInput: document.getElementById("name-input"),
+    cohortInput: document.getElementById("cohort-input"),
     nameSave: document.getElementById("name-save"),
     meDisplay: document.getElementById("me-display"),
     rename: document.getElementById("rename"),
@@ -501,38 +579,98 @@
     connText: document.getElementById("conn-text"),
   };
 
-  let threads = [];            // {id, title, asker_name, message_count, updated_at}
-  let messagesByThread = {};   // threadId -> [{id, role, author_name, content, created_at}]
-  let currentThreadId = null;  // null = composing a brand-new question, or no selection
+  let threads = [];            // current method's threads only
+  let messagesByThread = {};   // threadId -> [messages] (any method we've opened)
+  let currentMethod = "rt";
+  let currentThreadId = null;
   let composeMode = "new";     // "new" | "followup"
   let pendingAssistant = false;
   let myName = null;
+  let myCohort = null;
 
-  // ---------- name ----------
-  function loadName() {
-    myName = localStorage.getItem(NAME_KEY);
+  // ---------- URL ----------
+  function readUrlParams() {
+    const u = new URL(location.href);
+    return {
+      method: u.searchParams.get("method"),
+      cohort: u.searchParams.get("cohort"),
+    };
+  }
+  function updateUrl() {
+    const u = new URL(location.href);
+    u.searchParams.set("method", currentMethod);
+    history.replaceState(null, "", u.toString());
+  }
+
+  // ---------- name + cohort ----------
+  function loadIdentity() {
+    myName   = localStorage.getItem(NAME_KEY);
+    myCohort = localStorage.getItem(COHORT_KEY);
+    const params = readUrlParams();
+    if (params.cohort && !myCohort) {
+      myCohort = params.cohort.slice(0, 40);
+      localStorage.setItem(COHORT_KEY, myCohort);
+    }
     if (myName) {
-      el.meDisplay.innerHTML = `Posting as <strong>${escapeHtml(myName)}</strong>`;
+      renderMe();
     } else {
       el.nameModal.style.display = "flex";
       el.nameInput.focus();
     }
   }
-  el.nameSave.addEventListener("click", saveName);
-  el.nameInput.addEventListener("keydown", e => { if (e.key === "Enter") saveName(); });
-  function saveName() {
-    const v = el.nameInput.value.trim().slice(0, 40);
-    if (!v) { el.nameInput.focus(); return; }
-    myName = v;
-    localStorage.setItem(NAME_KEY, v);
-    el.meDisplay.innerHTML = `Posting as <strong>${escapeHtml(v)}</strong>`;
+  function renderMe() {
+    const namePart = `Posting as <strong>${escapeHtml(myName || "—")}</strong>`;
+    const cohortPart = myCohort ? `<span class="cohort">· ${escapeHtml(myCohort)}</span>` : "";
+    el.meDisplay.innerHTML = namePart + cohortPart;
+  }
+  el.nameSave.addEventListener("click", saveIdentity);
+  el.nameInput.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); el.cohortInput.focus(); } });
+  el.cohortInput.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); saveIdentity(); } });
+  function saveIdentity() {
+    const n = el.nameInput.value.trim().slice(0, 40);
+    const c = el.cohortInput.value.trim().slice(0, 40);
+    if (!n) { el.nameInput.focus(); return; }
+    myName = n;
+    myCohort = c || null;
+    localStorage.setItem(NAME_KEY, n);
+    if (c) localStorage.setItem(COHORT_KEY, c);
+    else localStorage.removeItem(COHORT_KEY);
+    renderMe();
     el.nameModal.style.display = "none";
   }
   el.rename.addEventListener("click", () => {
     el.nameInput.value = myName || "";
+    el.cohortInput.value = myCohort || "";
     el.nameModal.style.display = "flex";
     el.nameInput.focus();
   });
+
+  // ---------- method tabs ----------
+  function renderTabs() {
+    el.methodTabs.innerHTML = METHODS.map(m => `
+      <button class="method-tab ${m.id === currentMethod ? 'active' : ''}" data-method="${m.id}">
+        ${m.short}<span class="full">${escapeHtml(m.label)}</span>
+      </button>
+    `).join("");
+    el.methodTabs.querySelectorAll(".method-tab").forEach(btn => {
+      btn.addEventListener("click", () => switchMethod(btn.dataset.method));
+    });
+  }
+  function switchMethod(method) {
+    if (!METHOD_IDS.includes(method) || method === currentMethod) return;
+    currentMethod = method;
+    localStorage.setItem(METHOD_KEY, method);
+    currentThreadId = null;
+    composeMode = "new";
+    pendingAssistant = false;
+    showError("");
+    updateUrl();
+    renderTabs();
+    threads = [];
+    renderThreadList();
+    renderThread();
+    fetchThreads();
+  }
 
   // ---------- rendering ----------
   function escapeHtml(s) {
@@ -553,11 +691,12 @@
 
   function renderThreadList() {
     if (!threads.length) {
-      el.threadsList.innerHTML = `<div class="threads-empty">No questions yet. Be the first!</div>`;
+      el.threadsList.innerHTML = `<div class="threads-empty">No questions yet in this feed. Be the first!</div>`;
       return;
     }
     el.threadsList.innerHTML = threads.map(t => {
       const asker = t.asker_name ? escapeHtml(t.asker_name) : "anonymous";
+      const cohort = t.cohort ? `<span class="cohort">${escapeHtml(t.cohort)}</span>` : "";
       const active = t.id === currentThreadId ? "active" : "";
       const count = Number(t.message_count) || 0;
       return `
@@ -565,6 +704,7 @@
           <div class="row-title">${escapeHtml(t.title)}</div>
           <div class="row-meta">
             <span class="asker">${asker}</span>
+            ${cohort}
             <span>${count} msg${count === 1 ? "" : "s"}</span>
             <span>${timeShort(t.updated_at)}</span>
           </div>
@@ -593,6 +733,11 @@
     });
   }
 
+  function methodLabel(id) {
+    const m = METHODS.find(x => x.id === id);
+    return m ? m.label : id;
+  }
+
   function renderThread() {
     const inner = document.createElement("div");
     inner.className = "messages-inner";
@@ -600,10 +745,10 @@
     if (composeMode === "new") {
       el.threadHeader.style.display = "none";
       el.composer.style.display = "block";
-      el.input.placeholder = "Ask a new NDT question for the whole class…";
+      el.input.placeholder = `Ask a new ${methodLabel(currentMethod)} question for the whole class…`;
       el.threadEmpty.style.display = "block";
-      el.threadEmpty.querySelector("h2").textContent = "Ask a new question";
-      el.threadEmpty.querySelector("p").textContent = "Your question and the tutor's reply will be visible to everyone in class.";
+      el.threadEmpty.querySelector("h2").textContent = `Ask a new ${methodLabel(currentMethod)} question`;
+      el.threadEmpty.querySelector("p").textContent = "Your question and the tutor's reply will be visible to everyone studying this method — across all cohorts.";
       el.messages.innerHTML = "";
       el.messages.appendChild(el.threadEmpty);
       el.app.classList.add("viewing-thread");
@@ -616,8 +761,8 @@
       el.messages.innerHTML = "";
       el.messages.appendChild(el.threadEmpty);
       el.threadEmpty.style.display = "block";
-      el.threadEmpty.querySelector("h2").textContent = "Pick a question — or ask your own";
-      el.threadEmpty.querySelector("p").textContent = "Every question in this class is shared. When you ask, the whole room sees the answer, and you can follow up on anyone else's question too.";
+      el.threadEmpty.querySelector("h2").textContent = `Pick a question — or ask your own`;
+      el.threadEmpty.querySelector("p").textContent = `You're browsing the ${methodLabel(currentMethod)} feed. Every question here is shared across all cohorts studying this method.`;
       el.app.classList.remove("viewing-thread");
       return;
     }
@@ -628,8 +773,11 @@
     el.threadHeader.style.display = "flex";
     el.composer.style.display = "block";
     el.threadTitle.textContent = t ? t.title : "";
+    const askerLabel = t
+      ? `${t.asker_name || "anonymous"}${t.cohort ? " · " + t.cohort : ""}`
+      : "";
     el.threadMeta.textContent = t
-      ? `Asked by ${t.asker_name || "anonymous"} · ${msgs.length} messages`
+      ? `Asked by ${askerLabel} · ${msgs.length} messages`
       : "";
     el.input.placeholder = "Add a follow-up (the whole class sees it)…";
 
@@ -640,9 +788,16 @@
       const role = document.createElement("div");
       role.className = "role";
       const who = document.createElement("span");
-      who.textContent = m.role === "assistant"
+      const whoText = m.role === "assistant"
         ? "Tutor"
         : (m.author_name ? m.author_name : "anonymous");
+      who.textContent = whoText;
+      if (m.role !== "assistant" && m.cohort) {
+        const c = document.createElement("span");
+        c.className = "cohort";
+        c.textContent = m.cohort;
+        who.appendChild(c);
+      }
       const when = document.createElement("span");
       when.className = "when";
       when.textContent = timeShort(m.created_at);
@@ -668,7 +823,7 @@
   // ---------- data fetching ----------
   async function fetchThreads() {
     try {
-      const r = await fetch(API_URL + "/threads");
+      const r = await fetch(API_URL + "/threads?method=" + encodeURIComponent(currentMethod));
       const data = await r.json();
       threads = data.threads || [];
       renderThreadList();
@@ -717,6 +872,7 @@
 
     const anon = el.anon.checked;
     const authorName = anon ? null : myName;
+    const cohort = anon ? null : (myCohort || null);
     showError("");
 
     el.send.disabled = true;
@@ -729,13 +885,13 @@
         res = await fetch(API_URL + "/threads", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: text, author_name: authorName }),
+          body: JSON.stringify({ content: text, author_name: authorName, cohort, method: currentMethod }),
         });
       } else {
         res = await fetch(API_URL + "/threads/" + currentThreadId + "/messages", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: text, author_name: authorName }),
+          body: JSON.stringify({ content: text, author_name: authorName, cohort }),
         });
       }
 
@@ -755,7 +911,6 @@
         currentThreadId = data.thread_id;
         composeMode = "followup";
       }
-      // SSE will refresh thread content, but also fetch to be safe.
       await fetchThread(currentThreadId);
       await fetchThreads();
     } catch (e) {
@@ -800,24 +955,27 @@
       let event;
       try { event = JSON.parse(ev.data); } catch { return; }
       if (event.type === "thread_created") {
-        // prepend or update threads list
+        // Only mirror into the visible feed if it matches the current method.
+        if (event.thread.method !== currentMethod) return;
         threads = threads.filter(t => t.id !== event.thread.id);
         threads.unshift(event.thread);
         messagesByThread[event.thread.id] = [event.message];
         renderThreadList();
       } else if (event.type === "message_added") {
         const tid = event.message.thread_id;
+        // Always update the message cache (so if the user opens that thread
+        // later they see it), but only refresh the visible list if the thread
+        // is in the current method.
         const arr = messagesByThread[tid] || [];
         if (!arr.find(m => m.id === event.message.id)) arr.push(event.message);
         messagesByThread[tid] = arr;
-        // bump updated_at + count
         const t = threads.find(x => x.id === tid);
         if (t) {
           t.updated_at = event.message.created_at;
           t.message_count = (Number(t.message_count) || 0) + 1;
           threads.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+          renderThreadList();
         }
-        renderThreadList();
         if (tid === currentThreadId) {
           if (event.message.role === "assistant") pendingAssistant = false;
           renderThread();
@@ -827,7 +985,17 @@
   }
 
   // ---------- init ----------
-  loadName();
+  function pickInitialMethod() {
+    const params = readUrlParams();
+    if (params.method && METHOD_IDS.includes(params.method)) return params.method;
+    const stored = localStorage.getItem(METHOD_KEY);
+    if (stored && METHOD_IDS.includes(stored)) return stored;
+    return "rt";
+  }
+  currentMethod = pickInitialMethod();
+  updateUrl();
+  renderTabs();
+  loadIdentity();
   fetchThreads();
   connectSSE();
   renderThread();

@@ -18,5 +18,13 @@ CREATE TABLE IF NOT EXISTS messages (
   content     TEXT NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_messages_thread     ON messages(thread_id, created_at);
-CREATE INDEX IF NOT EXISTS idx_threads_updated     ON threads(updated_at DESC);
+-- Method scope: one shared knowledge feed per NDT method, persisting across
+-- cohorts so a new class inherits everything prior classes asked.
+-- Cohort is metadata for attribution (e.g. "day-fall-2025"), not a filter.
+ALTER TABLE threads  ADD COLUMN IF NOT EXISTS method TEXT NOT NULL DEFAULT 'rt';
+ALTER TABLE threads  ADD COLUMN IF NOT EXISTS cohort TEXT;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS cohort TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_messages_thread          ON messages(thread_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_threads_updated          ON threads(updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_threads_method_updated   ON threads(method, updated_at DESC);
