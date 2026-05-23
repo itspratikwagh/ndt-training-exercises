@@ -541,19 +541,22 @@
   const COHORT_KEY = "ndt-tutor-cohort-v1";
   const METHOD_KEY = "ndt-tutor-method-v1";
 
-  // One tab per week of the 10-week curriculum. Codes mirror the server and
-  // are persisted in threads.method — reorder freely, rename never.
+  // One tab per topic in the 10-topic program. The day cohort covers these in
+  // 10 weeks (8 hr/day); the night cohort in 16 weeks (5 hr/day). Both cover
+  // the same topics in the same order, so the tabs are topic-named, not
+  // week-numbered. Codes mirror the server and are persisted in
+  // threads.method — reorder freely, rename never.
   const METHODS = [
-    { id: "pt",   week: 1,  short: "W1 · PT",     label: "Liquid Penetrant Testing"          },
-    { id: "mt",   week: 2,  short: "W2 · MT",     label: "Magnetic Particle Testing"         },
-    { id: "rs",   week: 3,  short: "W3 · RS",     label: "Radiation Safety"                  },
-    { id: "rt1",  week: 4,  short: "W4 · RT-1",   label: "Radiographic Testing — Level 1"    },
-    { id: "rt2",  week: 5,  short: "W5 · RT-2",   label: "Radiographic Testing — Level 2"    },
-    { id: "cdr",  week: 6,  short: "W6 · CR/DR",  label: "Computer & Digital Radiography"    },
-    { id: "vt",   week: 7,  short: "W7 · VT",     label: "Visual Testing"                    },
-    { id: "ut1",  week: 8,  short: "W8 · UT-1",   label: "Ultrasonic Testing — Level 1"      },
-    { id: "ut2",  week: 9,  short: "W9 · UT-2",   label: "Ultrasonic Testing — Level 2"      },
-    { id: "paut", week: 10, short: "W10 · PAUT",  label: "Phased Array UT"                   },
+    { id: "pt",   short: "PT",     label: "Liquid Penetrant Testing"          },
+    { id: "mt",   short: "MT",     label: "Magnetic Particle Testing"         },
+    { id: "rs",   short: "RS",     label: "Radiation Safety"                  },
+    { id: "rt1",  short: "RT-1",   label: "Radiographic Testing — Level 1"    },
+    { id: "rt2",  short: "RT-2",   label: "Radiographic Testing — Level 2"    },
+    { id: "cdr",  short: "CR/DR",  label: "Computer & Digital Radiography"    },
+    { id: "vt",   short: "VT",     label: "Visual Testing"                    },
+    { id: "ut1",  short: "UT-1",   label: "Ultrasonic Testing — Level 1"      },
+    { id: "ut2",  short: "UT-2",   label: "Ultrasonic Testing — Level 2"      },
+    { id: "paut", short: "PAUT",   label: "Phased Array UT"                   },
   ];
   const METHOD_IDS = METHODS.map(m => m.id);
   // Migrate older bookmarked URLs / stored prefs from the prior 6-method scheme.

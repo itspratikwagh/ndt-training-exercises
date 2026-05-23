@@ -10,26 +10,28 @@ This guide walks you through deploying the shared classroom Q&A tutor. Total tim
 
 Every student gets the same URL. When one asks a question, the answer streams live to everybody — building a shared knowledge feed for the day.
 
-The feed is **scoped by week of the 10-week curriculum**, not by cohort:
+The feed is **scoped by topic**, not by cohort. The program covers these 10 topics in order:
 
-| Week | Tab code | Topic |
+| # | Tab code | Topic |
 |---|---|---|
-| 1 | `pt`   | Liquid Penetrant Testing |
-| 2 | `mt`   | Magnetic Particle Testing |
-| 3 | `rs`   | Radiation Safety |
-| 4 | `rt1`  | Radiographic Testing — Level 1 |
-| 5 | `rt2`  | Radiographic Testing — Level 2 |
-| 6 | `cdr`  | Introduction to Computer & Digital Radiography |
-| 7 | `vt`   | Visual Testing |
-| 8 | `ut1`  | Ultrasonic Testing — Level 1 |
-| 9 | `ut2`  | Ultrasonic Testing — Level 2 |
+| 1  | `pt`   | Liquid Penetrant Testing |
+| 2  | `mt`   | Magnetic Particle Testing |
+| 3  | `rs`   | Radiation Safety |
+| 4  | `rt1`  | Radiographic Testing — Level 1 |
+| 5  | `rt2`  | Radiographic Testing — Level 2 |
+| 6  | `cdr`  | Introduction to Computer & Digital Radiography |
+| 7  | `vt`   | Visual Testing |
+| 8  | `ut1`  | Ultrasonic Testing — Level 1 |
+| 9  | `ut2`  | Ultrasonic Testing — Level 2 |
 | 10 | `paut` | Introduction to Phased Array UT |
 
-Each week is its own persistent feed: a new cohort starting week 4 inherits every RT-1 question every prior cohort asked, but isn't overwhelmed by RT-2 or PAUT material they haven't been taught yet. The system prompt for each week is calibrated to that week's depth, with explicit instructions not to dump later-week content on earlier-week students.
+Tabs are topic-named (not "Week 4 / RT-1") because cohorts run on different pacing — the day class typically covers all 10 topics in ~10 weeks at 8 hr/day, the night class in ~16 weeks at 5 hr/day. Both cohorts share the same per-topic feed, so any topic-specific question one cohort asks is available to the other.
+
+Each topic is its own persistent feed: a new cohort reaching RT-1 inherits every RT-1 question every prior cohort asked, but isn't overwhelmed by RT-2 or PAUT material they haven't been taught yet. The system prompt for each topic is calibrated to that topic's depth, with explicit instructions not to dump later-topic content on students who haven't gotten there.
 
 Cohort (day class, night class, etc.) is recorded as metadata on each post so you can see who asked — but it doesn't fragment the feed.
 
-Students pick their current week via the tabs at the top of the page, or via a URL like `tutor.html?method=ut1`. You can also pre-fill their class label with `?cohort=day-fall-2025` so each cohort gets a one-click bookmark.
+Students pick their current topic via the tabs at the top of the page, or via a URL like `tutor.html?method=ut1`. You can also pre-fill their class label with `?cohort=day-fall-2025` so each cohort gets a one-click bookmark.
 
 ---
 
@@ -129,16 +131,16 @@ The Q&A feed accumulates over time — that's the design, so each cohort inherit
 
 1. Open your Postgres service in Railway → **Data** tab
 2. Wipe everything: `DELETE FROM messages; DELETE FROM threads;`
-3. Wipe one week only: `DELETE FROM threads WHERE method = 'ut1';` (message rows cascade)
+3. Wipe one topic only: `DELETE FROM threads WHERE method = 'ut1';` (message rows cascade)
 4. (Or just leave history — it's a nice resource for the next cohort.)
 
 ## Sharing the right link with each cohort
 
-Each cohort can be handed a tailored link so they land on the right week's tab and get auto-tagged. Examples:
+Each cohort can be handed a tailored link so they land on the right topic tab and get auto-tagged. Examples:
 
-- Day class, RT-1 week: `https://YOURNAME.github.io/ndt-training-exercises/tutor.html?method=rt1&cohort=day-fall-2025`
-- Night class, UT-1 week: `https://YOURNAME.github.io/ndt-training-exercises/tutor.html?method=ut1&cohort=night-fall-2025`
-- Night class, PAUT week: `https://YOURNAME.github.io/ndt-training-exercises/tutor.html?method=paut&cohort=night-fall-2025`
+- Day class, on RT-1: `https://YOURNAME.github.io/ndt-training-exercises/tutor.html?method=rt1&cohort=day-fall-2025`
+- Night class, on UT-1: `https://YOURNAME.github.io/ndt-training-exercises/tutor.html?method=ut1&cohort=night-fall-2025`
+- Night class, on PAUT: `https://YOURNAME.github.io/ndt-training-exercises/tutor.html?method=paut&cohort=night-fall-2025`
 
 `?cohort=...` only pre-fills the cohort field once (on first visit). Students can edit it later via the "Change name / class" button.
 
