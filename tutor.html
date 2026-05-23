@@ -215,6 +215,63 @@
     color: var(--ink-faded);
     font-size: 13px;
   }
+  .search-row {
+    padding: 10px 18px 0;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .search-input {
+    flex: 1;
+    padding: 8px 10px;
+    font-family: 'Manrope', sans-serif;
+    font-size: 13px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    color: var(--ink);
+  }
+  .search-input:focus { outline: none; border-color: var(--amber); }
+  .search-clear {
+    background: transparent;
+    border: 1px solid var(--rule);
+    color: var(--ink-soft);
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 6px 9px;
+    cursor: pointer;
+    border-radius: 2px;
+  }
+  .search-clear:hover { border-color: var(--amber); color: var(--amber); }
+  .search-status {
+    padding: 8px 18px 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faded);
+  }
+  .thread-row .row-method {
+    color: var(--brick);
+    font-weight: 600;
+  }
+  .thread-row .row-snippet {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-top: 4px;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .thread-row .row-snippet mark {
+    background: var(--amber-tint);
+    color: var(--ink);
+    padding: 0 1px;
+  }
 
   /* ===== thread view ===== */
   .thread-pane {
@@ -513,6 +570,11 @@
   <aside class="threads-pane">
     <div class="threads-header">
       <button class="ask-btn" id="new-thread">+ Ask a new question</button>
+      <div class="search-row">
+        <input id="search-input" class="search-input" type="search" placeholder="Search all questions…" maxlength="100" autocomplete="off">
+        <button id="search-clear" class="search-clear" type="button" style="display:none">Clear</button>
+      </div>
+      <div id="search-status" class="search-status" style="display:none"></div>
     </div>
     <div class="threads-list" id="threads-list">
       <div class="threads-empty">Loading…</div>
@@ -642,6 +704,9 @@
     teacherError: document.getElementById("teacher-error"),
     teacherSubmit: document.getElementById("teacher-submit"),
     teacherCancel: document.getElementById("teacher-cancel"),
+    searchInput: document.getElementById("search-input"),
+    searchClear: document.getElementById("search-clear"),
+    searchStatus: document.getElementById("search-status"),
   };
 
   let threads = [];            // current method's threads only
@@ -654,6 +719,9 @@
   let pendingAssistant = false;
   let myName = null;
   let myCohort = null;
+  let searchMode = false;
+  let searchResults = [];
+  let searchTimer = null;
 
   // ---------- URL ----------
   function readUrlParams() {
@@ -726,6 +794,7 @@
   function switchMethod(method) {
     method = normalizeMethodId(method);
     if (!method || method === currentMethod) return;
+    if (searchMode) exitSearch();
     currentMethod = method;
     localStorage.setItem(METHOD_KEY, method);
     currentThreadId = null;
@@ -758,6 +827,7 @@
   }
 
   function renderThreadList() {
+    if (searchMode) { renderSearchResults(); return; }
     if (!threads.length) {
       el.threadsList.innerHTML = `<div class="threads-empty">No questions yet in this feed. Be the first!</div>`;
       return;
@@ -798,6 +868,50 @@
     });
   }
 
+  function renderInline(parent, text) {
+    const re = /(\*\*([^*\n]+?)\*\*|\*([^*\n]+?)\*|_([^_\n]+?)_|`([^`\n]+?)`|\n)/;
+    let rest = String(text);
+    while (rest.length) {
+      const m = re.exec(rest);
+      if (!m) { parent.appendChild(document.createTextNode(rest)); break; }
+      if (m.index > 0) parent.appendChild(document.createTextNode(rest.slice(0, m.index)));
+      if (m[2]) { const e = document.createElement("strong"); e.textContent = m[2]; parent.appendChild(e); }
+      else if (m[3]) { const e = document.createElement("em"); e.textContent = m[3]; parent.appendChild(e); }
+      else if (m[4]) { const e = document.createElement("em"); e.textContent = m[4]; parent.appendChild(e); }
+      else if (m[5]) { const e = document.createElement("code"); e.textContent = m[5]; parent.appendChild(e); }
+      else if (m[1] === "\n") parent.appendChild(document.createElement("br"));
+      rest = rest.slice(m.index + m[0].length);
+    }
+  }
+
+  function renderBlock(container, block) {
+    const lines = block.split("\n");
+    const nonEmpty = lines.filter(l => l.trim());
+    const isUL = nonEmpty.length > 0 && nonEmpty.every(l => /^\s*[-*]\s+/.test(l));
+    const isOL = nonEmpty.length > 0 && nonEmpty.every(l => /^\s*\d+\.\s+/.test(l));
+    if (isUL) {
+      const ul = document.createElement("ul");
+      nonEmpty.forEach(l => {
+        const li = document.createElement("li");
+        renderInline(li, l.replace(/^\s*[-*]\s+/, ""));
+        ul.appendChild(li);
+      });
+      container.appendChild(ul);
+    } else if (isOL) {
+      const ol = document.createElement("ol");
+      nonEmpty.forEach(l => {
+        const li = document.createElement("li");
+        renderInline(li, l.replace(/^\s*\d+\.\s+/, ""));
+        ol.appendChild(li);
+      });
+      container.appendChild(ol);
+    } else {
+      const p = document.createElement("p");
+      renderInline(p, block);
+      container.appendChild(p);
+    }
+  }
+
   function renderBody(container, text) {
     const parts = String(text || "").split(/```/);
     parts.forEach((part, i) => {
@@ -806,11 +920,9 @@
         pre.textContent = part.replace(/^[a-zA-Z0-9_+-]*\n/, "");
         container.appendChild(pre);
       } else {
-        part.split(/\n\n+/).forEach(para => {
-          if (!para.trim()) return;
-          const p = document.createElement("p");
-          p.textContent = para;
-          container.appendChild(p);
+        part.split(/\n\n+/).forEach(block => {
+          if (!block.trim()) return;
+          renderBlock(container, block);
         });
       }
     });
@@ -819,6 +931,94 @@
   function methodLabel(id) {
     const m = METHODS.find(x => x.id === id);
     return m ? m.label : id;
+  }
+
+  function highlightSnippet(text, q) {
+    if (!q) return escapeHtml(text);
+    const reSafe = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp("(" + reSafe + ")", "gi");
+    return String(text).split(re).map((chunk, i) =>
+      i % 2 === 1 ? "<mark>" + escapeHtml(chunk) + "</mark>" : escapeHtml(chunk)
+    ).join("");
+  }
+
+  function renderSearchResults() {
+    const q = el.searchInput.value.trim();
+    if (!searchResults.length) {
+      el.threadsList.innerHTML = `<div class="threads-empty">No matches for &ldquo;${escapeHtml(q)}&rdquo;.</div>`;
+      return;
+    }
+    el.threadsList.innerHTML = searchResults.map(r => {
+      const asker = r.asker_name ? escapeHtml(r.asker_name) : "anonymous";
+      const cohort = r.cohort ? `<span class="cohort">${escapeHtml(r.cohort)}</span>` : "";
+      const count = Number(r.message_count) || 0;
+      const snippet = r.matched_in === "message" && r.snippet
+        ? `<div class="row-snippet">${highlightSnippet(r.snippet, q)}</div>`
+        : "";
+      const titleHtml = r.matched_in === "title" ? highlightSnippet(r.title, q) : escapeHtml(r.title);
+      return `
+        <div class="thread-row" data-id="${r.id}" data-method="${escapeHtml(r.method)}">
+          <div class="row-title">${titleHtml}</div>
+          <div class="row-meta">
+            <span class="row-method">${escapeHtml(methodLabel(r.method))}</span>
+            <span class="asker">${asker}</span>
+            ${cohort}
+            <span>${count} msg${count === 1 ? "" : "s"}</span>
+            <span>${timeShort(r.updated_at)}</span>
+          </div>
+          ${snippet}
+        </div>`;
+    }).join("");
+    el.threadsList.querySelectorAll(".thread-row").forEach(row => {
+      row.addEventListener("click", () => {
+        const id = parseInt(row.dataset.id, 10);
+        const method = row.dataset.method;
+        openSearchResult(id, method);
+      });
+    });
+  }
+
+  async function doSearch(q) {
+    try {
+      const r = await fetch(API_URL + "/search?q=" + encodeURIComponent(q));
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        el.searchStatus.textContent = err.error || "search failed";
+        searchResults = [];
+        renderSearchResults();
+        return;
+      }
+      const data = await r.json();
+      // Ignore stale responses if the input changed while we were waiting.
+      if (data.query !== el.searchInput.value.trim()) return;
+      searchResults = data.results || [];
+      el.searchStatus.style.display = searchResults.length ? "block" : "none";
+      el.searchStatus.textContent = searchResults.length
+        ? `${searchResults.length} match${searchResults.length === 1 ? "" : "es"} across all topics`
+        : "";
+      renderSearchResults();
+    } catch (e) {
+      console.error("search failed", e);
+      el.searchStatus.textContent = "search failed";
+      searchResults = [];
+      renderSearchResults();
+    }
+  }
+
+  function exitSearch() {
+    searchMode = false;
+    searchResults = [];
+    el.searchInput.value = "";
+    el.searchClear.style.display = "none";
+    el.searchStatus.style.display = "none";
+    el.searchStatus.textContent = "";
+    renderThreadList();
+  }
+
+  function openSearchResult(id, method) {
+    exitSearch();
+    if (method && method !== currentMethod) switchMethod(method);
+    selectThread(id);
   }
 
   function renderThread() {
@@ -944,6 +1144,25 @@
   el.back.addEventListener("click", () => {
     el.app.classList.remove("viewing-thread");
   });
+
+  el.searchInput.addEventListener("input", () => {
+    const q = el.searchInput.value.trim();
+    clearTimeout(searchTimer);
+    if (q.length < 2) {
+      if (searchMode) exitSearch();
+      else el.searchClear.style.display = q ? "inline-block" : "none";
+      return;
+    }
+    searchMode = true;
+    el.searchClear.style.display = "inline-block";
+    el.searchStatus.style.display = "block";
+    el.searchStatus.textContent = "Searching…";
+    searchTimer = setTimeout(() => doSearch(q), 250);
+  });
+  el.searchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") exitSearch();
+  });
+  el.searchClear.addEventListener("click", exitSearch);
 
   // ---------- sending ----------
   function showError(msg) {

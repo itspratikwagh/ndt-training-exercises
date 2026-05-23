@@ -524,6 +524,53 @@ app.get("/threads", async (req, res) => {
   }
 });
 
+// Search threads by title or message content across all methods.
+app.get("/search", async (req, res) => {
+  const q = String(req.query.q || "").trim();
+  if (q.length < 2) return res.status(400).json({ error: "q must be at least 2 chars" });
+  if (q.length > 100) return res.status(400).json({ error: "q too long" });
+  const pattern = "%" + q.replace(/[\\%_]/g, c => "\\" + c) + "%";
+  try {
+    const { rows } = await pool.query(
+      `SELECT t.id, t.title, t.method, t.cohort, t.updated_at, t.asker_name,
+              (SELECT COUNT(*) FROM messages m WHERE m.thread_id = t.id) AS message_count,
+              CASE WHEN t.title ILIKE $1 THEN 'title' ELSE 'message' END AS matched_in
+       FROM threads t
+       WHERE t.title ILIKE $1
+          OR EXISTS (SELECT 1 FROM messages m WHERE m.thread_id = t.id AND m.content ILIKE $1)
+       ORDER BY t.updated_at DESC
+       LIMIT 50`,
+      [pattern]
+    );
+    const messageMatchIds = rows.filter(r => r.matched_in === "message").map(r => r.id);
+    if (messageMatchIds.length) {
+      const { rows: msgRows } = await pool.query(
+        `SELECT DISTINCT ON (m.thread_id) m.thread_id, m.content
+         FROM messages m
+         WHERE m.thread_id = ANY($1::int[]) AND m.content ILIKE $2
+         ORDER BY m.thread_id, m.created_at ASC`,
+        [messageMatchIds, pattern]
+      );
+      const snippets = new Map();
+      const needle = q.toLowerCase();
+      for (const m of msgRows) {
+        const idx = m.content.toLowerCase().indexOf(needle);
+        if (idx < 0) continue;
+        const start = Math.max(0, idx - 50);
+        const end = Math.min(m.content.length, idx + q.length + 110);
+        snippets.set(m.thread_id, (start > 0 ? "…" : "") + m.content.slice(start, end) + (end < m.content.length ? "…" : ""));
+      }
+      for (const r of rows) {
+        if (r.matched_in === "message") r.snippet = snippets.get(r.id) || null;
+      }
+    }
+    res.json({ query: q, results: rows });
+  } catch (err) {
+    console.error("search failed", err);
+    res.status(500).json({ error: "db error" });
+  }
+});
+
 // Full thread with all messages.
 app.get("/threads/:id", async (req, res) => {
   const id = parseInt(req.params.id, 10);
