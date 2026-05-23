@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NDT Tutor</title>
+<title>NDT Tutor — Class Q&amp;A</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -33,20 +33,16 @@
       radial-gradient(ellipse at top left, rgba(181, 69, 21, 0.04), transparent 50%),
       radial-gradient(ellipse at bottom right, rgba(181, 69, 21, 0.03), transparent 50%);
   }
+
+  /* ===== top bar ===== */
   .topbar {
     border-bottom: 1px solid var(--rule);
-    padding: 16px 24px;
+    padding: 14px 24px;
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
     background: var(--paper);
   }
-  .topbar .brand {
-    font-family: 'Fraunces', serif;
-    font-weight: 600;
-    font-size: 20px;
-  }
-  .topbar .brand em { color: var(--amber); font-style: italic; font-weight: 500; }
   .topbar .eyebrow {
     font-family: 'JetBrains Mono', monospace;
     font-size: 10px;
@@ -54,8 +50,29 @@
     text-transform: uppercase;
     color: var(--amber);
   }
+  .topbar .brand {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 20px;
+  }
+  .topbar .brand em { color: var(--amber); font-style: italic; font-weight: 500; }
   .topbar .spacer { flex: 1; }
-  .topbar a, .topbar button {
+  .topbar .conn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faded);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .conn .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--ink-faded);
+  }
+  .conn.live .dot { background: #2a8a3a; box-shadow: 0 0 0 3px rgba(42,138,58,0.15); }
+  .topbar button, .topbar a {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
     letter-spacing: 0.1em;
@@ -69,57 +86,166 @@
     cursor: pointer;
     transition: border-color 0.15s, color 0.15s;
   }
-  .topbar a:hover, .topbar button:hover { border-color: var(--amber); color: var(--amber); }
+  .topbar button:hover, .topbar a:hover { border-color: var(--amber); color: var(--amber); }
+  .topbar .me { color: var(--ink-soft); font-family: 'Manrope', sans-serif; font-size: 13px; text-transform: none; letter-spacing: 0; }
+  .topbar .me strong { color: var(--ink); font-weight: 600; }
 
-  main {
+  /* ===== layout ===== */
+  .app {
     flex: 1;
-    overflow-y: auto;
-    padding: 32px 0;
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    min-height: 0;
   }
-  #chat {
-    max-width: 760px;
-    margin: 0 auto;
-    padding: 0 24px;
+  @media (max-width: 760px) {
+    .app { grid-template-columns: 1fr; }
+    .app.viewing-thread .threads-pane { display: none; }
+    .app:not(.viewing-thread) .thread-pane { display: none; }
+  }
+
+  /* ===== threads list ===== */
+  .threads-pane {
+    border-right: 1px solid var(--rule);
+    background: var(--paper-deep);
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    min-height: 0;
+  }
+  .threads-header {
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .ask-btn {
+    width: 100%;
+    background: var(--amber);
+    color: var(--paper);
+    border: none;
+    padding: 12px 16px;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .ask-btn:hover { background: #9a3a12; }
+  .threads-list { flex: 1; overflow-y: auto; }
+  .thread-row {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--rule);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .thread-row:hover { background: var(--amber-tint); }
+  .thread-row.active { background: var(--paper); border-left: 3px solid var(--amber); padding-left: 15px; }
+  .thread-row .row-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--ink);
+    margin-bottom: 4px;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .thread-row .row-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faded);
+    display: flex;
+    gap: 10px;
+  }
+  .thread-row .row-meta .asker { color: var(--amber); }
+  .threads-empty {
+    padding: 32px 18px;
+    text-align: center;
+    color: var(--ink-faded);
+    font-size: 13px;
+  }
+
+  /* ===== thread view ===== */
+  .thread-pane {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .thread-header {
+    border-bottom: 1px solid var(--rule);
+    padding: 16px 24px;
+    background: var(--paper);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .thread-header .back {
+    display: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: none;
+    border: 1px solid var(--rule);
+    padding: 6px 10px;
+    border-radius: 2px;
+    cursor: pointer;
+    color: var(--ink-soft);
+  }
+  @media (max-width: 760px) { .thread-header .back { display: inline-block; } }
+  .thread-header .title-block { flex: 1; min-width: 0; }
+  .thread-header .title {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 18px;
+    color: var(--ink);
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .thread-header .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faded);
+    margin-top: 4px;
+  }
+
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+  }
+  .messages-inner {
+    max-width: 760px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
   }
   .msg {
     padding: 14px 18px;
     border-radius: 2px;
-    max-width: 92%;
     box-shadow: var(--shadow);
     font-size: 15px;
-    white-space: pre-wrap;
     word-wrap: break-word;
   }
-  .msg.user {
-    background: var(--amber-tint);
-    border: 1px solid var(--amber-soft);
-    align-self: flex-end;
-  }
-  .msg.assistant {
-    background: var(--paper-deep);
-    border: 1px solid var(--rule);
-    align-self: flex-start;
-  }
-  .msg.system {
-    background: transparent;
-    border: 1px dashed var(--rule);
-    color: var(--ink-faded);
+  .msg.user { background: var(--amber-tint); border: 1px solid var(--amber-soft); margin-right: 40px; }
+  .msg.assistant { background: var(--paper-deep); border: 1px solid var(--rule); margin-left: 40px; }
+  .msg .role {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    text-align: center;
-    align-self: center;
-    max-width: 100%;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faded);
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
   }
-  .msg.error {
-    background: #fff5f0;
-    border: 1px solid var(--amber);
-    color: var(--amber);
-    align-self: center;
-    max-width: 100%;
-  }
+  .msg.user .role { color: var(--amber); }
+  .msg .role .when { color: var(--ink-faded); font-weight: 400; }
   .msg pre {
     font-family: 'JetBrains Mono', monospace;
     font-size: 13px;
@@ -131,31 +257,38 @@
     margin: 8px 0;
   }
   .msg p + p { margin-top: 10px; }
-  .msg .role {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
+  .msg.typing {
+    background: transparent;
+    border: 1px dashed var(--rule);
     color: var(--ink-faded);
-    margin-bottom: 6px;
+    font-style: italic;
+    margin-left: 40px;
   }
-  .msg.user .role { color: var(--amber); }
-  .typing { font-style: italic; color: var(--ink-faded); }
+  .thread-empty {
+    text-align: center;
+    padding: 80px 24px;
+    color: var(--ink-faded);
+  }
+  .thread-empty h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 24px;
+    margin-bottom: 8px;
+    color: var(--ink-soft);
+  }
+  .thread-empty p { font-size: 14px; max-width: 380px; margin: 0 auto; }
 
+  /* ===== composer ===== */
   .composer {
     border-top: 1px solid var(--rule);
     background: var(--paper);
-    padding: 18px 24px;
+    padding: 16px 24px;
   }
   .composer-inner {
     max-width: 760px;
     margin: 0 auto;
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 12px;
-    align-items: end;
   }
-  textarea#input {
+  .composer textarea {
     font-family: 'Manrope', sans-serif;
     font-size: 15px;
     line-height: 1.5;
@@ -171,22 +304,98 @@
     outline: none;
     transition: border-color 0.15s;
   }
-  textarea#input:focus { border-color: var(--amber); }
-  button#send {
+  .composer textarea:focus { border-color: var(--amber); }
+  .composer-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 10px;
+  }
+  .anon-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    user-select: none;
+  }
+  .anon-toggle input { accent-color: var(--amber); }
+  .composer .spacer { flex: 1; }
+  .composer .send {
     font-family: 'Manrope', sans-serif;
     font-weight: 600;
     font-size: 14px;
-    padding: 14px 22px;
+    padding: 12px 22px;
     background: var(--amber);
     color: var(--paper);
     border: none;
     border-radius: 2px;
     cursor: pointer;
     transition: background 0.15s;
-    height: 52px;
   }
-  button#send:hover:not(:disabled) { background: #9a3a12; }
-  button#send:disabled { background: var(--ink-faded); cursor: not-allowed; }
+  .composer .send:hover:not(:disabled) { background: #9a3a12; }
+  .composer .send:disabled { background: var(--ink-faded); cursor: not-allowed; }
+  .composer .error { color: var(--amber); font-size: 12px; margin-top: 6px; }
+
+  /* ===== modal (name prompt) ===== */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(26, 26, 26, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+  }
+  .modal {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 32px;
+    max-width: 420px;
+    width: 90%;
+    box-shadow: var(--shadow);
+  }
+  .modal .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 10px;
+  }
+  .modal h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 22px;
+    margin-bottom: 8px;
+  }
+  .modal p { font-size: 14px; color: var(--ink-soft); margin-bottom: 18px; }
+  .modal input {
+    width: 100%;
+    padding: 12px 14px;
+    background: var(--paper-deep);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    font-family: 'Manrope', sans-serif;
+    font-size: 15px;
+    outline: none;
+    margin-bottom: 16px;
+  }
+  .modal input:focus { border-color: var(--amber); }
+  .modal button {
+    background: var(--amber);
+    color: var(--paper);
+    border: none;
+    padding: 12px 22px;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  .modal button:hover { background: #9a3a12; }
+
   .hint {
     font-family: 'JetBrains Mono', monospace;
     font-size: 10px;
@@ -199,91 +408,175 @@
 </style>
 </head>
 <body>
-  <div class="topbar">
-    <div>
-      <div class="eyebrow">NDT</div>
-      <div class="brand">The <em>Tutor</em></div>
-    </div>
-    <div class="spacer"></div>
-    <button id="clear" type="button">Clear chat</button>
-    <a href="index.html">← Index</a>
-  </div>
 
-  <main>
-    <div id="chat"></div>
-  </main>
-
-  <div class="composer">
-    <div class="composer-inner">
-      <textarea id="input" placeholder="Ask anything about RT, UT, weld inspection… (Enter sends, Shift+Enter for newline)"></textarea>
-      <button id="send" type="button">Send</button>
-    </div>
-    <div class="hint">Replies are AI-generated. Verify safety-critical details with your instructor or code.</div>
+<div class="topbar">
+  <div>
+    <div class="eyebrow">NDT</div>
+    <div class="brand">Class <em>Q&amp;A</em></div>
   </div>
+  <div class="spacer"></div>
+  <div class="me" id="me-display"></div>
+  <button id="rename" type="button">Change name</button>
+  <div class="conn" id="conn"><span class="dot"></span><span id="conn-text">connecting…</span></div>
+  <a href="index.html">← Index</a>
+</div>
+
+<div class="app" id="app">
+  <aside class="threads-pane">
+    <div class="threads-header">
+      <button class="ask-btn" id="new-thread">+ Ask a new question</button>
+    </div>
+    <div class="threads-list" id="threads-list">
+      <div class="threads-empty">Loading…</div>
+    </div>
+  </aside>
+
+  <section class="thread-pane">
+    <div class="thread-header" id="thread-header" style="display:none">
+      <button class="back" id="back-btn">← Back</button>
+      <div class="title-block">
+        <div class="title" id="thread-title"></div>
+        <div class="meta" id="thread-meta"></div>
+      </div>
+    </div>
+
+    <div class="messages" id="messages">
+      <div class="thread-empty" id="thread-empty">
+        <h2>Pick a question — or ask your own</h2>
+        <p>Every question in this class is shared. When you ask, the whole room sees the answer, and you can follow up on anyone else's question too.</p>
+      </div>
+    </div>
+
+    <div class="composer" id="composer" style="display:none">
+      <div class="composer-inner">
+        <textarea id="input" placeholder="Type your message… (Enter sends, Shift+Enter for newline)"></textarea>
+        <div class="composer-row">
+          <label class="anon-toggle"><input type="checkbox" id="anon"> Post anonymously</label>
+          <div class="spacer"></div>
+          <button class="send" id="send" type="button">Send</button>
+        </div>
+        <div class="error" id="error" style="display:none"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="modal-backdrop" id="name-modal" style="display:none">
+  <div class="modal">
+    <div class="eyebrow">Welcome</div>
+    <h2>What's your first name?</h2>
+    <p>So the class knows who's asking. You can post anonymously per-question with the toggle.</p>
+    <input id="name-input" type="text" maxlength="40" placeholder="e.g. Alex" autocomplete="given-name">
+    <button id="name-save">Continue</button>
+  </div>
+</div>
 
 <script>
-  // Set this once after deploying the Cloudflare Worker.
-  const WORKER_URL = "https://ndt-tutor.YOUR-SUBDOMAIN.workers.dev/chat";
+  // Set this once after deploying the Railway service.
+  const API_URL = "https://YOUR-RAILWAY-URL.up.railway.app";
 
-  const MAX_TURNS = 20;
-  const STORAGE_KEY = "ndt-tutor-history-v1";
+  const NAME_KEY = "ndt-tutor-name-v1";
 
-  const chatEl = document.getElementById("chat");
-  const inputEl = document.getElementById("input");
-  const sendBtn = document.getElementById("send");
-  const clearBtn = document.getElementById("clear");
+  const el = {
+    threadsList: document.getElementById("threads-list"),
+    messages: document.getElementById("messages"),
+    threadEmpty: document.getElementById("thread-empty"),
+    threadHeader: document.getElementById("thread-header"),
+    threadTitle: document.getElementById("thread-title"),
+    threadMeta: document.getElementById("thread-meta"),
+    composer: document.getElementById("composer"),
+    input: document.getElementById("input"),
+    send: document.getElementById("send"),
+    anon: document.getElementById("anon"),
+    errorBox: document.getElementById("error"),
+    newThread: document.getElementById("new-thread"),
+    nameModal: document.getElementById("name-modal"),
+    nameInput: document.getElementById("name-input"),
+    nameSave: document.getElementById("name-save"),
+    meDisplay: document.getElementById("me-display"),
+    rename: document.getElementById("rename"),
+    back: document.getElementById("back-btn"),
+    app: document.getElementById("app"),
+    conn: document.getElementById("conn"),
+    connText: document.getElementById("conn-text"),
+  };
 
-  let messages = [];
-  let inFlight = false;
+  let threads = [];            // {id, title, asker_name, message_count, updated_at}
+  let messagesByThread = {};   // threadId -> [{id, role, author_name, content, created_at}]
+  let currentThreadId = null;  // null = composing a brand-new question, or no selection
+  let composeMode = "new";     // "new" | "followup"
+  let pendingAssistant = false;
+  let myName = null;
 
-  function loadHistory() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) messages = JSON.parse(raw);
-    } catch (e) { messages = []; }
-    if (!messages.length) {
-      renderSystem("Hi — I'm your NDT tutor. Ask about radiography math, ultrasonic flaw sizing, weld geometry, or anything else from today's exercises.");
+  // ---------- name ----------
+  function loadName() {
+    myName = localStorage.getItem(NAME_KEY);
+    if (myName) {
+      el.meDisplay.innerHTML = `Posting as <strong>${escapeHtml(myName)}</strong>`;
     } else {
-      messages.forEach(m => renderBubble(m.role, m.content));
+      el.nameModal.style.display = "flex";
+      el.nameInput.focus();
     }
   }
+  el.nameSave.addEventListener("click", saveName);
+  el.nameInput.addEventListener("keydown", e => { if (e.key === "Enter") saveName(); });
+  function saveName() {
+    const v = el.nameInput.value.trim().slice(0, 40);
+    if (!v) { el.nameInput.focus(); return; }
+    myName = v;
+    localStorage.setItem(NAME_KEY, v);
+    el.meDisplay.innerHTML = `Posting as <strong>${escapeHtml(v)}</strong>`;
+    el.nameModal.style.display = "none";
+  }
+  el.rename.addEventListener("click", () => {
+    el.nameInput.value = myName || "";
+    el.nameModal.style.display = "flex";
+    el.nameInput.focus();
+  });
 
-  function saveHistory() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(messages)); } catch (e) {}
+  // ---------- rendering ----------
+  function escapeHtml(s) {
+    const d = document.createElement("div");
+    d.textContent = s == null ? "" : String(s);
+    return d.innerHTML;
+  }
+  function timeShort(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const now = new Date();
+    const diff = (now - d) / 1000;
+    if (diff < 60) return "just now";
+    if (diff < 3600) return Math.floor(diff / 60) + "m ago";
+    if (diff < 86400) return Math.floor(diff / 3600) + "h ago";
+    return d.toLocaleDateString();
   }
 
-  function renderBubble(role, text) {
-    const div = document.createElement("div");
-    div.className = "msg " + role;
-    const roleEl = document.createElement("div");
-    roleEl.className = "role";
-    roleEl.textContent = role === "user" ? "You" : "Tutor";
-    div.appendChild(roleEl);
-    renderBody(div, text);
-    chatEl.appendChild(div);
-    scrollToBottom();
-    return div;
-  }
-
-  function renderSystem(text) {
-    const div = document.createElement("div");
-    div.className = "msg system";
-    div.textContent = text;
-    chatEl.appendChild(div);
-    scrollToBottom();
-  }
-
-  function renderError(text) {
-    const div = document.createElement("div");
-    div.className = "msg error";
-    div.textContent = text;
-    chatEl.appendChild(div);
-    scrollToBottom();
+  function renderThreadList() {
+    if (!threads.length) {
+      el.threadsList.innerHTML = `<div class="threads-empty">No questions yet. Be the first!</div>`;
+      return;
+    }
+    el.threadsList.innerHTML = threads.map(t => {
+      const asker = t.asker_name ? escapeHtml(t.asker_name) : "anonymous";
+      const active = t.id === currentThreadId ? "active" : "";
+      const count = Number(t.message_count) || 0;
+      return `
+        <div class="thread-row ${active}" data-id="${t.id}">
+          <div class="row-title">${escapeHtml(t.title)}</div>
+          <div class="row-meta">
+            <span class="asker">${asker}</span>
+            <span>${count} msg${count === 1 ? "" : "s"}</span>
+            <span>${timeShort(t.updated_at)}</span>
+          </div>
+        </div>`;
+    }).join("");
+    el.threadsList.querySelectorAll(".thread-row").forEach(row => {
+      row.addEventListener("click", () => selectThread(parseInt(row.dataset.id, 10)));
+    });
   }
 
   function renderBody(container, text) {
-    // Lightweight rendering: fenced code blocks + paragraphs. Uses textContent (XSS-safe).
-    const parts = text.split(/```/);
+    const parts = String(text || "").split(/```/);
     parts.forEach((part, i) => {
       if (i % 2 === 1) {
         const pre = document.createElement("pre");
@@ -300,95 +593,244 @@
     });
   }
 
-  function scrollToBottom() {
-    const main = document.querySelector("main");
-    main.scrollTop = main.scrollHeight;
+  function renderThread() {
+    const inner = document.createElement("div");
+    inner.className = "messages-inner";
+
+    if (composeMode === "new") {
+      el.threadHeader.style.display = "none";
+      el.composer.style.display = "block";
+      el.input.placeholder = "Ask a new NDT question for the whole class…";
+      el.threadEmpty.style.display = "block";
+      el.threadEmpty.querySelector("h2").textContent = "Ask a new question";
+      el.threadEmpty.querySelector("p").textContent = "Your question and the tutor's reply will be visible to everyone in class.";
+      el.messages.innerHTML = "";
+      el.messages.appendChild(el.threadEmpty);
+      el.app.classList.add("viewing-thread");
+      return;
+    }
+
+    if (!currentThreadId) {
+      el.threadHeader.style.display = "none";
+      el.composer.style.display = "none";
+      el.messages.innerHTML = "";
+      el.messages.appendChild(el.threadEmpty);
+      el.threadEmpty.style.display = "block";
+      el.threadEmpty.querySelector("h2").textContent = "Pick a question — or ask your own";
+      el.threadEmpty.querySelector("p").textContent = "Every question in this class is shared. When you ask, the whole room sees the answer, and you can follow up on anyone else's question too.";
+      el.app.classList.remove("viewing-thread");
+      return;
+    }
+
+    const t = threads.find(x => x.id === currentThreadId);
+    const msgs = messagesByThread[currentThreadId] || [];
+    el.threadEmpty.style.display = "none";
+    el.threadHeader.style.display = "flex";
+    el.composer.style.display = "block";
+    el.threadTitle.textContent = t ? t.title : "";
+    el.threadMeta.textContent = t
+      ? `Asked by ${t.asker_name || "anonymous"} · ${msgs.length} messages`
+      : "";
+    el.input.placeholder = "Add a follow-up (the whole class sees it)…";
+
+    el.messages.innerHTML = "";
+    msgs.forEach(m => {
+      const div = document.createElement("div");
+      div.className = "msg " + m.role;
+      const role = document.createElement("div");
+      role.className = "role";
+      const who = document.createElement("span");
+      who.textContent = m.role === "assistant"
+        ? "Tutor"
+        : (m.author_name ? m.author_name : "anonymous");
+      const when = document.createElement("span");
+      when.className = "when";
+      when.textContent = timeShort(m.created_at);
+      role.appendChild(who);
+      role.appendChild(when);
+      div.appendChild(role);
+      renderBody(div, m.content);
+      inner.appendChild(div);
+    });
+
+    if (pendingAssistant && msgs.length && msgs[msgs.length - 1].role === "user") {
+      const div = document.createElement("div");
+      div.className = "msg typing";
+      div.textContent = "Tutor is thinking…";
+      inner.appendChild(div);
+    }
+
+    el.messages.appendChild(inner);
+    el.messages.scrollTop = el.messages.scrollHeight;
+    el.app.classList.add("viewing-thread");
   }
 
-  function autoGrow() {
-    inputEl.style.height = "auto";
-    inputEl.style.height = Math.min(inputEl.scrollHeight, 200) + "px";
+  // ---------- data fetching ----------
+  async function fetchThreads() {
+    try {
+      const r = await fetch(API_URL + "/threads");
+      const data = await r.json();
+      threads = data.threads || [];
+      renderThreadList();
+    } catch (e) { console.error(e); }
+  }
+  async function fetchThread(id) {
+    try {
+      const r = await fetch(API_URL + "/threads/" + id);
+      const data = await r.json();
+      messagesByThread[id] = data.messages || [];
+      renderThread();
+    } catch (e) { console.error(e); }
+  }
+  function selectThread(id) {
+    currentThreadId = id;
+    composeMode = "followup";
+    pendingAssistant = false;
+    showError("");
+    renderThreadList();
+    fetchThread(id);
+  }
+  el.newThread.addEventListener("click", () => {
+    currentThreadId = null;
+    composeMode = "new";
+    pendingAssistant = false;
+    showError("");
+    renderThreadList();
+    renderThread();
+    el.input.focus();
+  });
+  el.back.addEventListener("click", () => {
+    el.app.classList.remove("viewing-thread");
+  });
+
+  // ---------- sending ----------
+  function showError(msg) {
+    if (!msg) { el.errorBox.style.display = "none"; el.errorBox.textContent = ""; return; }
+    el.errorBox.style.display = "block";
+    el.errorBox.textContent = msg;
   }
 
   async function send() {
-    const text = inputEl.value.trim();
-    if (!text || inFlight) return;
+    const text = el.input.value.trim();
+    if (!text || pendingAssistant) return;
+    if (!myName) { el.nameModal.style.display = "flex"; el.nameInput.focus(); return; }
 
-    messages.push({ role: "user", content: text });
-    renderBubble("user", text);
-    inputEl.value = "";
-    autoGrow();
-    saveHistory();
+    const anon = el.anon.checked;
+    const authorName = anon ? null : myName;
+    showError("");
 
-    // Trim to last MAX_TURNS messages (keep pairs ideally, but a hard cap is fine).
-    const toSend = messages.slice(-MAX_TURNS);
-
-    inFlight = true;
-    sendBtn.disabled = true;
-    sendBtn.textContent = "…";
-
-    const thinking = document.createElement("div");
-    thinking.className = "msg assistant";
-    const role = document.createElement("div");
-    role.className = "role"; role.textContent = "Tutor";
-    const body = document.createElement("p");
-    body.className = "typing"; body.textContent = "thinking…";
-    thinking.appendChild(role); thinking.appendChild(body);
-    chatEl.appendChild(thinking);
-    scrollToBottom();
+    el.send.disabled = true;
+    el.send.textContent = "…";
+    pendingAssistant = true;
 
     try {
-      const res = await fetch(WORKER_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: toSend }),
-      });
-      thinking.remove();
+      let res;
+      if (composeMode === "new") {
+        res = await fetch(API_URL + "/threads", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: text, author_name: authorName }),
+        });
+      } else {
+        res = await fetch(API_URL + "/threads/" + currentThreadId + "/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: text, author_name: authorName }),
+        });
+      }
 
       if (res.status === 429) {
         const ra = res.headers.get("Retry-After") || "a minute";
-        renderError(`You're sending messages too quickly. Try again in ${ra}s.`);
+        showError(`You're sending too quickly — wait ${ra}s.`);
         return;
       }
       if (!res.ok) {
-        renderError("The tutor is temporarily unavailable. Flag your instructor or try again in a moment.");
+        showError("The tutor is temporarily unavailable. Try again in a moment.");
         return;
       }
-
       const data = await res.json();
-      const reply = (data && data.reply) || "(no reply)";
-      messages.push({ role: "assistant", content: reply });
-      renderBubble("assistant", reply);
-      saveHistory();
-    } catch (err) {
-      thinking.remove();
-      renderError("Network error. Check your connection and try again.");
+      el.input.value = "";
+      autoGrow();
+      if (composeMode === "new") {
+        currentThreadId = data.thread_id;
+        composeMode = "followup";
+      }
+      // SSE will refresh thread content, but also fetch to be safe.
+      await fetchThread(currentThreadId);
+      await fetchThreads();
+    } catch (e) {
+      showError("Network error. Check your connection and try again.");
     } finally {
-      inFlight = false;
-      sendBtn.disabled = false;
-      sendBtn.textContent = "Send";
-      inputEl.focus();
+      el.send.disabled = false;
+      el.send.textContent = "Send";
+      pendingAssistant = false;
+      renderThread();
     }
   }
 
-  inputEl.addEventListener("input", autoGrow);
-  inputEl.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      send();
-    }
+  el.send.addEventListener("click", send);
+  el.input.addEventListener("input", autoGrow);
+  el.input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
   });
-  sendBtn.addEventListener("click", send);
-  clearBtn.addEventListener("click", () => {
-    if (!confirm("Clear the chat history?")) return;
-    messages = [];
-    chatEl.innerHTML = "";
-    saveHistory();
-    renderSystem("Chat cleared. Ask away.");
-  });
+  function autoGrow() {
+    el.input.style.height = "auto";
+    el.input.style.height = Math.min(el.input.scrollHeight, 200) + "px";
+  }
 
-  loadHistory();
-  inputEl.focus();
+  // ---------- SSE live updates ----------
+  function connectSSE() {
+    let es;
+    try {
+      es = new EventSource(API_URL + "/events");
+    } catch (e) {
+      el.connText.textContent = "offline";
+      setTimeout(connectSSE, 5000);
+      return;
+    }
+    es.onopen = () => {
+      el.conn.classList.add("live");
+      el.connText.textContent = "live";
+    };
+    es.onerror = () => {
+      el.conn.classList.remove("live");
+      el.connText.textContent = "reconnecting…";
+    };
+    es.onmessage = (ev) => {
+      let event;
+      try { event = JSON.parse(ev.data); } catch { return; }
+      if (event.type === "thread_created") {
+        // prepend or update threads list
+        threads = threads.filter(t => t.id !== event.thread.id);
+        threads.unshift(event.thread);
+        messagesByThread[event.thread.id] = [event.message];
+        renderThreadList();
+      } else if (event.type === "message_added") {
+        const tid = event.message.thread_id;
+        const arr = messagesByThread[tid] || [];
+        if (!arr.find(m => m.id === event.message.id)) arr.push(event.message);
+        messagesByThread[tid] = arr;
+        // bump updated_at + count
+        const t = threads.find(x => x.id === tid);
+        if (t) {
+          t.updated_at = event.message.created_at;
+          t.message_count = (Number(t.message_count) || 0) + 1;
+          threads.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+        }
+        renderThreadList();
+        if (tid === currentThreadId) {
+          if (event.message.role === "assistant") pendingAssistant = false;
+          renderThread();
+        }
+      }
+    };
+  }
+
+  // ---------- init ----------
+  loadName();
+  fetchThreads();
+  connectSSE();
+  renderThread();
 </script>
 </body>
 </html>
