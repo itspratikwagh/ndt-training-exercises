@@ -541,17 +541,28 @@
   const COHORT_KEY = "ndt-tutor-cohort-v1";
   const METHOD_KEY = "ndt-tutor-method-v1";
 
-  // Methods + labels are duplicated client-side so tabs render before /methods
-  // returns. Server is the source of truth — these are just the initial render.
+  // One tab per week of the 10-week curriculum. Codes mirror the server and
+  // are persisted in threads.method — reorder freely, rename never.
   const METHODS = [
-    { id: "rt", label: "Radiographic Testing",      short: "RT" },
-    { id: "ut", label: "Ultrasonic Testing",        short: "UT" },
-    { id: "mt", label: "Magnetic Particle Testing", short: "MT" },
-    { id: "pt", label: "Liquid Penetrant Testing",  short: "PT" },
-    { id: "vt", label: "Visual Testing",            short: "VT" },
-    { id: "et", label: "Eddy Current Testing",      short: "ET" },
+    { id: "pt",   week: 1,  short: "W1 · PT",     label: "Liquid Penetrant Testing"          },
+    { id: "mt",   week: 2,  short: "W2 · MT",     label: "Magnetic Particle Testing"         },
+    { id: "rs",   week: 3,  short: "W3 · RS",     label: "Radiation Safety"                  },
+    { id: "rt1",  week: 4,  short: "W4 · RT-1",   label: "Radiographic Testing — Level 1"    },
+    { id: "rt2",  week: 5,  short: "W5 · RT-2",   label: "Radiographic Testing — Level 2"    },
+    { id: "cdr",  week: 6,  short: "W6 · CR/DR",  label: "Computer & Digital Radiography"    },
+    { id: "vt",   week: 7,  short: "W7 · VT",     label: "Visual Testing"                    },
+    { id: "ut1",  week: 8,  short: "W8 · UT-1",   label: "Ultrasonic Testing — Level 1"      },
+    { id: "ut2",  week: 9,  short: "W9 · UT-2",   label: "Ultrasonic Testing — Level 2"      },
+    { id: "paut", week: 10, short: "W10 · PAUT",  label: "Phased Array UT"                   },
   ];
   const METHOD_IDS = METHODS.map(m => m.id);
+  // Migrate older bookmarked URLs / stored prefs from the prior 6-method scheme.
+  const LEGACY_METHOD_REMAP = { rt: "rt1", ut: "ut1" };
+  function normalizeMethodId(id) {
+    if (!id) return null;
+    const remapped = LEGACY_METHOD_REMAP[id] || id;
+    return METHOD_IDS.includes(remapped) ? remapped : null;
+  }
 
   const el = {
     methodTabs: document.getElementById("method-tabs"),
@@ -657,7 +668,8 @@
     });
   }
   function switchMethod(method) {
-    if (!METHOD_IDS.includes(method) || method === currentMethod) return;
+    method = normalizeMethodId(method);
+    if (!method || method === currentMethod) return;
     currentMethod = method;
     localStorage.setItem(METHOD_KEY, method);
     currentThreadId = null;
@@ -987,10 +999,11 @@
   // ---------- init ----------
   function pickInitialMethod() {
     const params = readUrlParams();
-    if (params.method && METHOD_IDS.includes(params.method)) return params.method;
-    const stored = localStorage.getItem(METHOD_KEY);
-    if (stored && METHOD_IDS.includes(stored)) return stored;
-    return "rt";
+    const fromUrl = normalizeMethodId(params.method);
+    if (fromUrl) return fromUrl;
+    const fromStore = normalizeMethodId(localStorage.getItem(METHOD_KEY));
+    if (fromStore) return fromStore;
+    return "pt";
   }
   currentMethod = pickInitialMethod();
   updateUrl();
