@@ -76,6 +76,7 @@ On the **service** (not the database) → Variables tab → add:
 | `ANTHROPIC_API_KEY` | your key from step 1 |
 | `ALLOWED_ORIGIN` | your Pages origin from step 2, e.g. `https://janedoe.github.io` |
 | `DATABASE_URL` | reference to Postgres (from step 4) |
+| `TEACHER_PASSWORD` (optional) | a password only you know — unlocks the in-UI "Delete thread" button. Leave unset to disable teacher mode entirely. Rotate between cohorts by changing it. |
 
 Railway will redeploy automatically when variables change. Watch the Deployments tab for `Schema initialized.` and `NDT tutor server listening on :PORT` in the logs.
 
@@ -143,6 +144,18 @@ Each cohort can be handed a tailored link so they land on the right topic tab an
 - Night class, on PAUT: `https://YOURNAME.github.io/ndt-training-exercises/tutor.html?method=paut&cohort=night-fall-2025`
 
 `?cohort=...` only pre-fills the cohort field once (on first visit). Students can edit it later via the "Change name / class" button.
+
+## Teacher mode (delete-thread button)
+
+If you set `TEACHER_PASSWORD` in Railway, a small "Teacher mode" button appears in the top bar of `tutor.html`. Click it, enter the password, and a `DELETE` button appears on every thread row plus a `DELETE THREAD` button in the open-thread header. Students never see any of this — without the password, the UI shows nothing.
+
+How it works:
+- The password lives only in your Railway env var and your browser's localStorage (once you've unlocked it). It's never embedded in the deployed frontend bundle.
+- Every delete request re-validates the password server-side, so a clever student fiddling with their browser cannot bypass the check.
+- Delete is a **hard delete** — the thread and all its messages are gone. A confirmation dialog is the only safety net. If you want it back, you don't — that was the design choice.
+- The deletion broadcasts over SSE, so every connected browser instantly drops the row from view.
+
+To rotate the password (recommended between cohorts): change `TEACHER_PASSWORD` in Railway. Railway redeploys; all stale tokens immediately fail, and you re-enter the new password once.
 
 ## Local development (optional)
 

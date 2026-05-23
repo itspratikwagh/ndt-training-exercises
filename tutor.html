@@ -462,6 +462,34 @@
     cursor: pointer;
   }
   .modal button:hover { background: #9a3a12; }
+  .modal .error {
+    color: var(--amber);
+    font-size: 12px;
+    margin-top: 8px;
+    min-height: 16px;
+  }
+
+  /* ===== teacher mode ===== */
+  .topbar button#teacher-toggle.active {
+    color: var(--amber);
+    border-color: var(--amber);
+    background: var(--amber-tint);
+  }
+  .delete-thread-btn {
+    background: none;
+    border: 1px solid var(--rule);
+    color: var(--ink-faded);
+    padding: 3px 7px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    border-radius: 2px;
+    cursor: pointer;
+    letter-spacing: 0.06em;
+    transition: color 0.1s, border-color 0.1s;
+  }
+  .delete-thread-btn:hover { color: #b22222; border-color: #b22222; }
+  .thread-row .row-meta .delete-thread-btn { margin-left: auto; }
+  .thread-header .delete-thread-btn { margin-left: 8px; }
 </style>
 </head>
 <body>
@@ -474,6 +502,7 @@
   <div class="spacer"></div>
   <div class="me" id="me-display"></div>
   <button id="rename" type="button">Change name / class</button>
+  <button id="teacher-toggle" type="button" style="display:none">Teacher mode</button>
   <div class="conn" id="conn"><span class="dot"></span><span id="conn-text">connecting…</span></div>
   <a href="index.html">← Index</a>
 </div>
@@ -497,6 +526,7 @@
         <div class="title" id="thread-title"></div>
         <div class="meta" id="thread-meta"></div>
       </div>
+      <button class="delete-thread-btn" id="thread-delete-btn" style="display:none">DELETE THREAD</button>
     </div>
 
     <div class="messages" id="messages">
@@ -533,13 +563,27 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="teacher-modal" style="display:none">
+  <div class="modal">
+    <div class="eyebrow">Teacher mode</div>
+    <h2>Enter teacher password</h2>
+    <p>Teacher mode lets you delete threads. The password is set in your Railway env vars; rotate it between cohorts.</p>
+    <label for="teacher-pw">Password</label>
+    <input id="teacher-pw" type="password" autocomplete="off">
+    <div class="error" id="teacher-error"></div>
+    <button id="teacher-submit">Unlock</button>
+    <button id="teacher-cancel" type="button" style="background:none; color:var(--ink-soft); border:1px solid var(--rule); margin-left:8px;">Cancel</button>
+  </div>
+</div>
+
 <script>
   // Set this once after deploying the Railway service.
   const API_URL = "https://YOUR-RAILWAY-URL.up.railway.app";
 
-  const NAME_KEY   = "ndt-tutor-name-v1";
-  const COHORT_KEY = "ndt-tutor-cohort-v1";
-  const METHOD_KEY = "ndt-tutor-method-v1";
+  const NAME_KEY    = "ndt-tutor-name-v1";
+  const COHORT_KEY  = "ndt-tutor-cohort-v1";
+  const METHOD_KEY  = "ndt-tutor-method-v1";
+  const TEACHER_KEY = "ndt-tutor-teacher-token-v1";
 
   // One tab per topic in the 10-topic program. The day cohort covers these in
   // 10 weeks (8 hr/day); the night cohort in 16 weeks (5 hr/day). Both cover
@@ -591,10 +635,19 @@
     app: document.getElementById("app"),
     conn: document.getElementById("conn"),
     connText: document.getElementById("conn-text"),
+    threadDeleteBtn: document.getElementById("thread-delete-btn"),
+    teacherToggle: document.getElementById("teacher-toggle"),
+    teacherModal: document.getElementById("teacher-modal"),
+    teacherPw: document.getElementById("teacher-pw"),
+    teacherError: document.getElementById("teacher-error"),
+    teacherSubmit: document.getElementById("teacher-submit"),
+    teacherCancel: document.getElementById("teacher-cancel"),
   };
 
   let threads = [];            // current method's threads only
   let messagesByThread = {};   // threadId -> [messages] (any method we've opened)
+  let teacherToken = null;     // set when "Teacher mode" is unlocked
+  let teacherModeAvailable = false; // true if server has TEACHER_PASSWORD set
   let currentMethod = "rt";
   let currentThreadId = null;
   let composeMode = "new";     // "new" | "followup"
@@ -714,6 +767,9 @@
       const cohort = t.cohort ? `<span class="cohort">${escapeHtml(t.cohort)}</span>` : "";
       const active = t.id === currentThreadId ? "active" : "";
       const count = Number(t.message_count) || 0;
+      const deleteBtn = teacherToken
+        ? `<button class="delete-thread-btn" data-delete-id="${t.id}" title="Delete thread">DELETE</button>`
+        : "";
       return `
         <div class="thread-row ${active}" data-id="${t.id}">
           <div class="row-title">${escapeHtml(t.title)}</div>
@@ -722,11 +778,23 @@
             ${cohort}
             <span>${count} msg${count === 1 ? "" : "s"}</span>
             <span>${timeShort(t.updated_at)}</span>
+            ${deleteBtn}
           </div>
         </div>`;
     }).join("");
     el.threadsList.querySelectorAll(".thread-row").forEach(row => {
-      row.addEventListener("click", () => selectThread(parseInt(row.dataset.id, 10)));
+      row.addEventListener("click", (e) => {
+        if (e.target.closest(".delete-thread-btn")) return;
+        selectThread(parseInt(row.dataset.id, 10));
+      });
+    });
+    el.threadsList.querySelectorAll(".delete-thread-btn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const id = parseInt(btn.dataset.deleteId, 10);
+        const t = threads.find(x => x.id === id);
+        deleteThread(id, t && t.title);
+      });
     });
   }
 
@@ -794,6 +862,10 @@
     el.threadMeta.textContent = t
       ? `Asked by ${askerLabel} · ${msgs.length} messages`
       : "";
+    el.threadDeleteBtn.style.display = (teacherToken && t) ? "" : "none";
+    el.threadDeleteBtn.onclick = (t && teacherToken)
+      ? (e) => { e.stopPropagation(); deleteThread(t.id, t.title); }
+      : null;
     el.input.placeholder = "Add a follow-up (the whole class sees it)…";
 
     el.messages.innerHTML = "";
@@ -995,8 +1067,128 @@
           if (event.message.role === "assistant") pendingAssistant = false;
           renderThread();
         }
+      } else if (event.type === "thread_deleted") {
+        const tid = event.thread_id;
+        delete messagesByThread[tid];
+        threads = threads.filter(t => t.id !== tid);
+        if (currentThreadId === tid) {
+          currentThreadId = null;
+          composeMode = "new";
+          pendingAssistant = false;
+        }
+        renderThreadList();
+        renderThread();
       }
     };
+  }
+
+  // ---------- teacher mode ----------
+  function renderTeacherButton() {
+    if (!teacherModeAvailable) {
+      el.teacherToggle.style.display = "none";
+      return;
+    }
+    el.teacherToggle.style.display = "";
+    if (teacherToken) {
+      el.teacherToggle.textContent = "Exit teacher mode";
+      el.teacherToggle.classList.add("active");
+    } else {
+      el.teacherToggle.textContent = "Teacher mode";
+      el.teacherToggle.classList.remove("active");
+    }
+  }
+  function setTeacherToken(token) {
+    teacherToken = token || null;
+    if (teacherToken) localStorage.setItem(TEACHER_KEY, teacherToken);
+    else localStorage.removeItem(TEACHER_KEY);
+    renderTeacherButton();
+    renderThreadList();
+    renderThread();
+  }
+  el.teacherToggle.addEventListener("click", () => {
+    if (teacherToken) {
+      setTeacherToken(null);
+      return;
+    }
+    el.teacherError.textContent = "";
+    el.teacherPw.value = "";
+    el.teacherModal.style.display = "flex";
+    setTimeout(() => el.teacherPw.focus(), 0);
+  });
+  el.teacherCancel.addEventListener("click", () => {
+    el.teacherModal.style.display = "none";
+  });
+  el.teacherPw.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); submitTeacherPassword(); }
+    else if (e.key === "Escape") { el.teacherModal.style.display = "none"; }
+  });
+  el.teacherSubmit.addEventListener("click", submitTeacherPassword);
+  async function submitTeacherPassword() {
+    const pw = el.teacherPw.value;
+    if (!pw) return;
+    el.teacherError.textContent = "";
+    el.teacherSubmit.disabled = true;
+    try {
+      const r = await fetch(API_URL + "/teacher/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pw }),
+      });
+      if (r.status === 429) {
+        el.teacherError.textContent = "Too many attempts — wait a minute and try again.";
+        return;
+      }
+      if (!r.ok) {
+        el.teacherError.textContent = "Wrong password.";
+        return;
+      }
+      setTeacherToken(pw);
+      el.teacherModal.style.display = "none";
+    } catch {
+      el.teacherError.textContent = "Network error. Try again.";
+    } finally {
+      el.teacherSubmit.disabled = false;
+    }
+  }
+
+  async function deleteThread(threadId, titleHint) {
+    if (!teacherToken) return;
+    const label = titleHint ? `"${titleHint}"` : "this thread";
+    if (!confirm(`Delete ${label} and all its messages? This cannot be undone.`)) return;
+    try {
+      const r = await fetch(API_URL + "/threads/" + threadId, {
+        method: "DELETE",
+        headers: { "Authorization": "Bearer " + teacherToken },
+      });
+      if (r.status === 401) {
+        alert("Teacher password is no longer valid (it may have been rotated). Please re-enter.");
+        setTeacherToken(null);
+        return;
+      }
+      if (!r.ok) {
+        alert("Delete failed. Check the server logs.");
+        return;
+      }
+      // SSE will broadcast thread_deleted and the UI will update; no further
+      // local mutation needed here.
+    } catch {
+      alert("Network error while deleting. Try again.");
+    }
+  }
+
+  async function loadTeacherAvailability() {
+    try {
+      const r = await fetch(API_URL + "/methods");
+      const data = await r.json();
+      teacherModeAvailable = !!data.teacher_mode_enabled;
+    } catch {
+      teacherModeAvailable = false;
+    }
+    teacherToken = teacherModeAvailable ? (localStorage.getItem(TEACHER_KEY) || null) : null;
+    if (!teacherModeAvailable) localStorage.removeItem(TEACHER_KEY);
+    renderTeacherButton();
+    // If we restored a stale token from a prior session, surface it on
+    // first delete attempt rather than silently failing.
   }
 
   // ---------- init ----------
@@ -1012,6 +1204,7 @@
   updateUrl();
   renderTabs();
   loadIdentity();
+  loadTeacherAvailability();
   fetchThreads();
   connectSSE();
   renderThread();

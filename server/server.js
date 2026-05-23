@@ -18,6 +18,7 @@ import pg from "pg";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { timingSafeEqual } from "node:crypto";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -27,6 +28,10 @@ const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const MODEL = process.env.MODEL || "claude-haiku-4-5-20251001";
 const MAX_TOKENS = 1024;
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+
+// Teacher mode: if TEACHER_PASSWORD is set, the UI exposes a delete-thread
+// affordance gated on this password. Empty string = teacher mode disabled.
+const TEACHER_PASSWORD = process.env.TEACHER_PASSWORD || "";
 
 const RL_PER_MIN = 12;
 const RL_PER_HOUR = 200;
@@ -401,6 +406,22 @@ function validateContent(text) {
   return null;
 }
 
+// Constant-time check of the supplied teacher password against the env var.
+// Returns true only when teacher mode is configured and the strings match.
+function checkTeacherPassword(provided) {
+  if (!TEACHER_PASSWORD) return false;
+  if (typeof provided !== "string" || !provided) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(TEACHER_PASSWORD);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
+function extractBearer(req) {
+  const h = req.headers.authorization || "";
+  return h.startsWith("Bearer ") ? h.slice(7) : "";
+}
+
 async function callAnthropic(method, messages) {
   const systemPrompt = SYSTEM_PROMPTS[method];
   if (!systemPrompt) throw new Error(`no system prompt for method ${method}`);
@@ -448,8 +469,8 @@ app.use((req, res, next) => {
   if (ALLOWED_ORIGIN && origin === ALLOWED_ORIGIN) {
     res.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
     res.setHeader("Vary", "Origin");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "content-type");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "content-type, authorization");
     res.setHeader("Access-Control-Max-Age", "86400");
   }
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -462,7 +483,24 @@ app.get("/health", (req, res) => res.json({ ok: true }));
 app.get("/methods", (req, res) => {
   res.json({
     methods: METHODS.map((m) => ({ id: m, label: METHOD_LABELS[m] })),
+    teacher_mode_enabled: !!TEACHER_PASSWORD,
   });
+});
+
+// Verify a teacher password. Rate-limited by the shared per-IP bucket so
+// brute force is bounded. The real authorization check is on DELETE itself —
+// this endpoint is just a UI convenience so the teacher learns immediately
+// whether their password is right.
+app.post("/teacher/verify", (req, res) => {
+  const ip = req.ip || "unknown";
+  const rl = checkRate(ip);
+  if (!rl.ok) {
+    res.setHeader("Retry-After", String(rl.retryAfter || 60));
+    return res.status(429).json({ error: "rate limited" });
+  }
+  if (!TEACHER_PASSWORD) return res.status(503).json({ error: "teacher mode not configured on server" });
+  if (!checkTeacherPassword(req.body?.password)) return res.status(401).json({ error: "invalid password" });
+  res.json({ ok: true });
 });
 
 // List threads for a given method, newest activity first.
@@ -624,6 +662,25 @@ app.post("/threads/:id/messages", async (req, res) => {
   }
 });
 
+// Teacher-only thread deletion. The token must match TEACHER_PASSWORD —
+// localStorage tampering on the client cannot bypass this. Messages are
+// hard-deleted via ON DELETE CASCADE on the FK.
+app.delete("/threads/:id", async (req, res) => {
+  if (!TEACHER_PASSWORD) return res.status(503).json({ error: "teacher mode not configured on server" });
+  if (!checkTeacherPassword(extractBearer(req))) return res.status(401).json({ error: "unauthorized" });
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: "bad id" });
+  try {
+    const r = await pool.query(`DELETE FROM threads WHERE id = $1 RETURNING id`, [id]);
+    if (!r.rows.length) return res.status(404).json({ error: "not found" });
+    sseBroadcast({ type: "thread_deleted", thread_id: id });
+    res.json({ ok: true, thread_id: id });
+  } catch (err) {
+    console.error("delete thread failed", err);
+    res.status(500).json({ error: "db error" });
+  }
+});
+
 // SSE stream — every event carries thread.method (on thread_created) or
 // message.method (on message_added); the client filters to its current tab.
 app.get("/events", (req, res) => {
@@ -664,5 +721,6 @@ app.get("/events", (req, res) => {
     console.log(`ALLOWED_ORIGIN = ${ALLOWED_ORIGIN || "(not set — CORS will block all browsers!)"}`);
     console.log(`MODEL = ${MODEL}`);
     console.log(`METHODS = ${METHODS.join(", ")}`);
+    console.log(`TEACHER_MODE = ${TEACHER_PASSWORD ? "enabled" : "disabled (set TEACHER_PASSWORD to enable)"}`);
   });
 })();
