@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Radiation Safety Triads: Match the Three</title>
+<style>
+  /* ── Reset & base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #F5F4F0;
+    --surface:   #FFFFFF;
+    --border:    #DDD9D0;
+    --text:      #1A1A18;
+    --muted:     #6B6860;
+    --accent:    #1B5E45;
+    --accent-lt: #E4F0EB;
+    --accent-bd: #2D8A65;
+    --sel-bg:    #EBF3FF;
+    --sel-bd:    #3A7FD4;
+    --sel-tx:    #0B3A74;
+    --ok-bg:     #E4F0EB;
+    --ok-bd:     #2D8A65;
+    --ok-tx:     #0F3D28;
+    --err-bg:    #FCEAEA;
+    --err-bd:    #C84B4B;
+    --err-tx:    #5A1212;
+    --radius:    10px;
+    --font:      'Georgia', 'Times New Roman', serif;
+    --font-ui:   system-ui, -apple-system, sans-serif;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .shell {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+  }
+
+  .hdr {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .hdr-kicker {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .hdr h1 {
+    font-family: var(--font);
+    font-size: clamp(18px, 4vw, 24px);
+    font-weight: normal;
+    color: var(--text);
+    line-height: 1.25;
+  }
+
+  .prog-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .prog-track {
+    height: 5px;
+    background: var(--border);
+    border-radius: 99px;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .prog-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 99px;
+    transition: width .4s ease;
+  }
+
+  .q-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .q-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .q-title {
+    font-family: var(--font);
+    font-size: clamp(16px, 3.5vw, 20px);
+    color: var(--text);
+    font-weight: normal;
+    margin-bottom: 14px;
+    line-height: 1.3;
+  }
+  .q-instruction {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .slots {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .slot {
+    flex: 1;
+    min-height: 52px;
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    padding: 8px 6px;
+    line-height: 1.3;
+    transition: background .15s, border-color .15s;
+  }
+  .slot.filled {
+    border-style: solid;
+    border-color: var(--sel-bd);
+    background: var(--sel-bg);
+    color: var(--sel-tx);
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .slot.ok { border-color: var(--ok-bd); background: var(--ok-bg); color: var(--ok-tx); }
+  .slot.err { border-color: var(--err-bd); background: var(--err-bg); color: var(--err-tx); }
+
+  .counter { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+
+  .bank {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .term {
+    padding: 9px 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 13.5px;
+    color: var(--text);
+    cursor: pointer;
+    user-select: none;
+    transition: background .12s, border-color .12s, color .12s, box-shadow .12s;
+    line-height: 1.3;
+    text-align: center;
+  }
+  .term:hover:not(.locked) { background: #F0EDE8; border-color: #B8B4AC; }
+  .term.selected {
+    background: var(--sel-bg);
+    border-color: var(--sel-bd);
+    color: var(--sel-tx);
+    font-weight: 600;
+    box-shadow: 0 0 0 2px rgba(58,127,212,.18);
+  }
+  .term.ok { background: var(--ok-bg); border-color: var(--ok-bd); color: var(--ok-tx); font-weight: 600; cursor: default; }
+  .term.err { background: var(--err-bg); border-color: var(--err-bd); color: var(--err-tx); cursor: default; }
+  .term.locked { cursor: default; }
+  .term.locked:not(.ok):not(.err) { opacity: .55; }
+
+  .actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .spacer { flex: 1; }
+
+  button {
+    padding: 9px 18px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 13.5px;
+    font-family: var(--font-ui);
+    color: var(--text);
+    cursor: pointer;
+    transition: background .12s, border-color .12s;
+    white-space: nowrap;
+  }
+  button:hover { background: #F0EDE8; border-color: #B8B4AC; }
+  button:active { transform: scale(.98); }
+  button:disabled { opacity: .38; cursor: not-allowed; transform: none; }
+
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+  .btn-primary:hover { background: #154D38; border-color: #154D38; }
+  .btn-primary:disabled { background: var(--accent); border-color: var(--accent); }
+
+  .feedback {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    background: var(--bg);
+    margin-bottom: 4px;
+  }
+  .feedback-status {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .feedback-status.ok { color: var(--ok-tx); }
+  .feedback-status.err { color: var(--err-tx); }
+  .feedback-body { font-size: 13px; color: var(--muted); line-height: 1.65; }
+
+  .complete {
+    text-align: center;
+    padding: 32px 16px;
+  }
+  .score-ring {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    border: 3px solid var(--accent);
+    background: var(--accent-lt);
+    font-family: var(--font);
+    font-size: 26px;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+  .complete h2 { font-family: var(--font); font-weight: normal; font-size: 22px; margin-bottom: 8px; }
+  .complete p { color: var(--muted); font-size: 14px; margin-bottom: 24px; max-width: 340px; margin-left: auto; margin-right: auto; }
+  .complete-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  @media (max-width: 480px) {
+    .slots { flex-direction: column; }
+    .slot { min-height: 44px; }
+    .actions { gap: 6px; }
+    button { padding: 9px 12px; font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="hdr">
+    <div class="hdr-kicker">NDT Radiation Safety</div>
+    <h1>Radiation Safety Triads<br>Match the Three</h1>
+  </header>
+
+  <div id="app"></div>
+
+</div>
+
+<script>
+const TRIADS = [
+  {
+    category: "Parts of an atom",
+    correct: ["Proton", "Neutron", "Electron"],
+    distractors: ["Photon", "Quark", "Isotope"],
+    explanation: "Every atom is built from three subatomic particles. Protons and neutrons cluster in the nucleus and determine the element and isotope. Electrons orbit the nucleus and govern chemical bonding — and how ionizing radiation interacts with tissue."
+  },
+  {
+    category: "ALARA exposure controls",
+    correct: ["Time", "Distance", "Shielding"],
+    distractors: ["Dosimetry", "Filtration", "Collimation"],
+    explanation: "ALARA (As Low As Reasonably Achievable) is managed with three practical controls. Minimize time in the radiation field, maximize distance from the source (dose follows the inverse square law), and use shielding appropriate to the radiation type."
+  },
+  {
+    category: "Hydrogen isotopes",
+    correct: ["Hydrogen", "Deuterium", "Tritium"],
+    distractors: ["Helium", "Protium", "Uranium"],
+    explanation: "All three are hydrogen — same atomic number (1 proton), different neutron count. Ordinary hydrogen has none. Deuterium has one, used in heavy water reactors. Tritium has two and is radioactive, making it significant in radiation safety."
+  },
+  {
+    category: "Requirements for X-ray production",
+    correct: ["Source of free electrons", "Acceleration of electrons", "Deceleration of electrons"],
+    distractors: ["Magnetic field", "Ionization chamber", "Radioactive source"],
+    explanation: "An X-ray tube must do three things: generate free electrons via thermionic emission at the cathode filament, accelerate them across a high-voltage gap toward the anode, then decelerate them suddenly on impact with the target — that deceleration produces X-rays."
+  },
+  {
+    category: "Common radiation types",
+    correct: ["Alpha", "Beta", "Gamma"],
+    distractors: ["Delta", "Neutron", "Sigma"],
+    explanation: "Alpha, beta, and gamma are the three classical ionizing radiation types. Alpha particles are heavy and stopped by a sheet of paper. Beta particles need plastic or aluminum shielding. Gamma rays are highly penetrating electromagnetic radiation requiring lead or concrete."
+  },
+  {
+    category: "X-ray tube target interaction concepts",
+    correct: ["Bremsstrahlung radiation", "Characteristic radiation", "Heat production"],
+    distractors: ["Compton scattering", "Photoelectric effect", "Pair production"],
+    explanation: "When electrons strike the anode target, three things happen simultaneously. Bremsstrahlung produces a continuous spectrum as electrons decelerate near nuclei. Characteristic radiation is emitted when inner-shell electrons are displaced. The majority of energy — roughly 99% — is lost as heat."
+  }
+];
+
+let current = 0, score = 0, selected = [], submitted = false, cardOrder = [];
+let scored = new Array(TRIADS.length).fill(false);
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function icon(type) {
+  if (type === 'check') return `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="7.5" stroke="#2D8A65"/><path d="M4.5 8l2.5 2.5 4.5-5" stroke="#2D8A65" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  if (type === 'x')     return `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="7.5" stroke="#C84B4B"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#C84B4B" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+  if (type === 'back')  return `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 2L4 7l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  if (type === 'retry') return `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7a5 5 0 1 0 1-3M2 2v3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  return '';
+}
+
+function render() {
+  const app = document.getElementById('app');
+  if (current >= TRIADS.length) { renderComplete(app); return; }
+  const triad = TRIADS[current];
+  const pct = Math.round((current / TRIADS.length) * 100);
+  const isFirst = current === 0, isLast = current === TRIADS.length - 1;
+
+  let slotsHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const term = selected[i];
+    let cls = 'slot';
+    if (term) { cls += ' filled'; if (submitted) cls += triad.correct.includes(term) ? ' ok' : ' err'; }
+    slotsHTML += `<div class="${cls}" aria-label="${term ? 'Selected: ' + term : 'Empty slot'}">${term || '<span aria-hidden="true">—</span>'}</div>`;
+  }
+
+  let bankHTML = '';
+  cardOrder.forEach(term => {
+    const isSel = selected.includes(term), isCorrect = triad.correct.includes(term);
+    let cls = 'term';
+    if (submitted) { cls += ' locked'; if (isSel) cls += isCorrect ? ' ok' : ' err'; }
+    else if (isSel) cls += ' selected';
+    const clickAttr = (!submitted) ? `onclick="toggleTerm(this, '${term.replace(/'/g, "\\'")}')"`  : '';
+    const ariaPressed = (!submitted) ? `aria-pressed="${isSel}"` : '';
+    const role = (!submitted) ? 'role="checkbox"' : '';
+    bankHTML += `<div class="${cls}" ${role} ${ariaPressed} ${clickAttr} tabindex="${submitted ? -1 : 0}" onkeydown="if(!${submitted} && (event.key==='Enter'||event.key===' ')){toggleTerm(this,'${term.replace(/'/g, "\\'")}')}">${term}</div>`;
+  });
+
+  let feedbackHTML = '';
+  if (submitted) {
+    const allOk = selected.length === 3 && selected.every(t => triad.correct.includes(t));
+    feedbackHTML = `<div class="feedback" role="alert"><div class="feedback-status ${allOk ? 'ok' : 'err'}">${icon(allOk ? 'check' : 'x')} ${allOk ? 'Correct!' : 'Not quite — correct answers are highlighted green above.'}</div><div class="feedback-body">${triad.explanation}</div></div>`;
+  }
+
+  let actionsHTML = '';
+  if (!submitted) {
+    actionsHTML = `<button onclick="goBack()" ${isFirst ? 'disabled' : ''}>${icon('back')} Back</button><button onclick="retryTriad()">${icon('retry')} Retry</button><div class="spacer"></div><button onclick="clearSel()">Clear</button><button class="btn-primary" onclick="submitAnswer()" ${selected.length === 3 ? '' : 'disabled'}>Check answer</button>`;
+  } else {
+    actionsHTML = `<button onclick="goBack()">${icon('back')} Back</button><button onclick="retryTriad()">${icon('retry')} Retry</button><div class="spacer"></div><button class="btn-primary" onclick="nextTriad()">${isLast ? 'See results' : 'Next triad →'}</button>`;
+  }
+
+  app.innerHTML = `<div class="prog-row"><span>Triad ${current + 1} of ${TRIADS.length}</span><span>${score} correct</span></div><div class="prog-track"><div class="prog-fill" style="width:${pct}%"></div></div><div class="q-card"><div class="q-label">Category</div><div class="q-title">${triad.category}</div><div class="q-instruction">Select the three terms that belong to this group.</div></div><div class="slots" aria-label="Selected answers">${slotsHTML}</div><div class="counter" aria-live="polite">${selected.length} of 3 selected</div><div class="bank" role="group" aria-label="Answer cards">${bankHTML}</div><div class="actions">${actionsHTML}</div>${feedbackHTML}`;
+}
+
+function renderComplete(app) {
+  const pct = Math.round((score / TRIADS.length) * 100);
+  const msg = pct === 100 ? 'Perfect score — outstanding work!' : pct >= 70 ? 'Great job! Review any missed triads and try again.' : 'Keep studying — radiation safety is built on these fundamentals.';
+  app.innerHTML = `<div class="prog-row"><span>Complete</span><span>${score} of ${TRIADS.length} correct</span></div><div class="prog-track"><div class="prog-fill" style="width:100%"></div></div><div class="complete"><div class="score-ring" aria-label="Score: ${score} out of ${TRIADS.length}">${score}/${TRIADS.length}</div><h2>Exercise complete</h2><p>${msg}</p><div class="complete-btns"><button onclick="goBack()">${icon('back')} Back</button><button class="btn-primary" onclick="restart()">${icon('retry')} Try again</button></div></div>`;
+}
+
+function toggleTerm(el, term) {
+  if (submitted) return;
+  selected = selected.includes(term) ? selected.filter(t => t !== term) : selected.length < 3 ? [...selected, term] : selected;
+  render();
+}
+function clearSel() { selected = []; render(); }
+function submitAnswer() {
+  if (selected.length !== 3 || submitted) return;
+  submitted = true;
+  const allOk = selected.every(t => TRIADS[current].correct.includes(t));
+  if (allOk && !scored[current]) { score++; scored[current] = true; }
+  if (allOk) playCheer(); else playBuzzer();
+  render();
+}
+function nextTriad() {
+  current++; selected = []; submitted = false;
+  if (current < TRIADS.length) cardOrder = shuffle([...TRIADS[current].correct, ...TRIADS[current].distractors]);
+  render();
+}
+function retryTriad() {
+  if (submitted && scored[current]) { score--; scored[current] = false; }
+  selected = []; submitted = false;
+  cardOrder = shuffle([...TRIADS[current].correct, ...TRIADS[current].distractors]);
+  render();
+}
+function goBack() {
+  if (current === 0 && !submitted) return;
+  if (submitted) {
+    if (scored[current]) { score--; scored[current] = false; }
+    selected = []; submitted = false;
+    cardOrder = shuffle([...TRIADS[current].correct, ...TRIADS[current].distractors]);
+    render(); return;
+  }
+  current--; submitted = true; selected = [...TRIADS[current].correct];
+  cardOrder = shuffle([...TRIADS[current].correct, ...TRIADS[current].distractors]);
+  render();
+}
+function restart() {
+  current = 0; score = 0; selected = []; submitted = false;
+  scored = new Array(TRIADS.length).fill(false);
+  cardOrder = shuffle([...TRIADS[0].correct, ...TRIADS[0].distractors]);
+  render();
+}
+
+let audioCtx = null;
+function getCtx() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); return audioCtx; }
+function playCheer() {
+  try {
+    const ctx = getCtx(), now = ctx.currentTime;
+    [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine'; osc.frequency.setValueAtTime(freq, now + i * 0.1);
+      gain.gain.setValueAtTime(0, now + i * 0.1);
+      gain.gain.linearRampToValueAtTime(0.28, now + i * 0.1 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.35);
+      osc.start(now + i * 0.1); osc.stop(now + i * 0.1 + 0.4);
+    });
+    for (let s = 0; s < 6; s++) {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine'; osc.frequency.value = 2000 + Math.random() * 2000;
+      const t = now + 0.25 + s * 0.06;
+      gain.gain.setValueAtTime(0, t); gain.gain.linearRampToValueAtTime(0.06, t + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+      osc.start(t); osc.stop(t + 0.2);
+    }
+  } catch(e) {}
+}
+function playBuzzer() {
+  try {
+    const ctx = getCtx(), now = ctx.currentTime;
+    const osc = ctx.createOscillator(), gain = ctx.createGain(), dist = ctx.createWaveShaper();
+    const curve = new Float32Array(256);
+    for (let i = 0; i < 256; i++) { const x = (i * 2) / 256 - 1; curve[i] = (Math.PI + 80) * x / (Math.PI + 80 * Math.abs(x)); }
+    dist.curve = curve;
+    osc.connect(dist); dist.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(220, now); osc.frequency.exponentialRampToValueAtTime(90, now + 0.4);
+    gain.gain.setValueAtTime(0.35, now); gain.gain.setValueAtTime(0.35, now + 0.08);
+    gain.gain.setValueAtTime(0, now + 0.12); gain.gain.setValueAtTime(0.35, now + 0.16);
+    gain.gain.setValueAtTime(0, now + 0.20); gain.gain.setValueAtTime(0.30, now + 0.24);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+    osc.start(now); osc.stop(now + 0.6);
+  } catch(e) {}
+}
+
+cardOrder = shuffle([...TRIADS[0].correct, ...TRIADS[0].distractors]);
+render();
+</script>
+</body>
+</html>
