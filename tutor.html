@@ -273,6 +273,95 @@
     padding: 0 1px;
   }
 
+  /* ===== tour ===== */
+  .tour-overlay {
+    position: fixed; inset: 0;
+    z-index: 10000;
+    display: none;
+    pointer-events: auto;
+    font-family: 'Manrope', sans-serif;
+  }
+  .tour-overlay.active { display: block; }
+  .tour-spotlight {
+    position: absolute;
+    border-radius: 4px;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6), 0 0 0 3px var(--amber);
+    pointer-events: none;
+    background: transparent;
+    transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
+  }
+  .tour-tooltip {
+    position: absolute;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 18px 22px 14px;
+    max-width: 320px;
+    pointer-events: auto;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+    transition: top 0.25s ease, left 0.25s ease;
+  }
+  .tour-tooltip h3 {
+    margin: 0 0 6px;
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .tour-tooltip p {
+    margin: 0 0 14px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+  .tour-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .tour-counter {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-faded);
+    letter-spacing: 0.08em;
+    margin-right: auto;
+  }
+  .tour-button {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--rule);
+    color: var(--ink-soft);
+    padding: 6px 10px;
+    cursor: pointer;
+    border-radius: 2px;
+  }
+  .tour-button:hover { border-color: var(--amber); color: var(--amber); }
+  .tour-button.primary {
+    background: var(--brick);
+    color: white;
+    border-color: var(--brick);
+  }
+  .tour-button.primary:hover { background: #9a3a12; border-color: #9a3a12; color: white; }
+  .tour-skip {
+    position: absolute;
+    top: 14px; right: 18px;
+    z-index: 10001;
+    background: transparent;
+    border: none;
+    color: var(--paper);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    opacity: 0.75;
+    padding: 6px 10px;
+  }
+  .tour-skip:hover { opacity: 1; }
+
   /* ===== thread view ===== */
   .thread-pane {
     display: flex;
@@ -559,6 +648,7 @@
   <div class="spacer"></div>
   <div class="me" id="me-display"></div>
   <button id="rename" type="button">Change name / class</button>
+  <button id="tour-btn" type="button">Tour</button>
   <button id="teacher-toggle" type="button" style="display:none">Teacher mode</button>
   <div class="conn" id="conn"><span class="dot"></span><span id="conn-text">connecting…</span></div>
   <a href="index.html">← Index</a>
@@ -707,6 +797,7 @@
     searchInput: document.getElementById("search-input"),
     searchClear: document.getElementById("search-clear"),
     searchStatus: document.getElementById("search-status"),
+    tourBtn: document.getElementById("tour-btn"),
   };
 
   let threads = [];            // current method's threads only
@@ -722,6 +813,17 @@
   let searchMode = false;
   let searchResults = [];
   let searchTimer = null;
+  const TOUR_KEY = "ndt-tour-seen-v1";
+  const TOUR_STEPS = [
+    { selector: ".method-tabs",   title: "Pick your topic",         body: "Ten NDT subjects, one feed each. Tap any tab to switch. Every cohort moves through the same sequence at their own pace.", position: "below" },
+    { selector: "#new-thread",    title: "Ask a new question",      body: "Your question — and the tutor's reply — go to the shared feed for this topic. Every student studying this method sees them.", position: "right" },
+    { selector: "#rename",        title: "Your name & class",       body: "Your name shows up on posts so others know who asked. Need privacy on a specific question? Use the “Post anonymously” checkbox on the composer.", position: "below" },
+    { selector: "#search-input",  title: "Search past questions",   body: "Search across all ten topics. Useful before posting — your question may already have a thread with the answer.", position: "right" },
+    { selector: "#composer",      title: "Follow up to dig deeper", body: "Open any thread and this box becomes a follow-up. Keep asking until you understand — the tutor remembers everything earlier in the thread.", position: "above" }
+  ];
+  let tourActive = false;
+  let tourStep = 0;
+  let tourOverlay = null;
 
   // ---------- URL ----------
   function readUrlParams() {
@@ -748,6 +850,7 @@
     }
     if (myName) {
       renderMe();
+      maybeStartTour();
     } else {
       el.nameModal.style.display = "flex";
       el.nameInput.focus();
@@ -772,7 +875,12 @@
     else localStorage.removeItem(COHORT_KEY);
     renderMe();
     el.nameModal.style.display = "none";
+    maybeStartTour();
   }
+  el.tourBtn.addEventListener("click", () => {
+    localStorage.removeItem(TOUR_KEY);
+    startTour();
+  });
   el.rename.addEventListener("click", () => {
     el.nameInput.value = myName || "";
     el.cohortInput.value = myCohort || "";
@@ -1019,6 +1127,123 @@
     exitSearch();
     if (method && method !== currentMethod) switchMethod(method);
     selectThread(id);
+  }
+
+  // ---------- tour ----------
+  function startTour() {
+    if (tourActive) return;
+    if (el.nameModal && el.nameModal.style.display !== "none") return; // wait for welcome
+    tourActive = true;
+    tourStep = 0;
+    if (searchMode) exitSearch();
+    buildTourOverlay();
+    renderTourStep();
+    window.addEventListener("resize", renderTourStep);
+    window.addEventListener("keydown", tourKeyHandler);
+  }
+  function buildTourOverlay() {
+    if (tourOverlay) tourOverlay.remove();
+    tourOverlay = document.createElement("div");
+    tourOverlay.className = "tour-overlay active";
+    tourOverlay.innerHTML = `
+      <div class="tour-spotlight"></div>
+      <button class="tour-skip" type="button">Skip tour ×</button>
+      <div class="tour-tooltip">
+        <h3></h3>
+        <p></p>
+        <div class="tour-actions">
+          <span class="tour-counter"></span>
+          <button class="tour-button" data-tour="back">Back</button>
+          <button class="tour-button primary" data-tour="next">Next</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(tourOverlay);
+    tourOverlay.querySelector(".tour-skip").addEventListener("click", endTour);
+    tourOverlay.querySelector('[data-tour="back"]').addEventListener("click", prevTourStep);
+    tourOverlay.querySelector('[data-tour="next"]').addEventListener("click", nextTourStep);
+  }
+  function renderTourStep() {
+    if (!tourActive || !tourOverlay) return;
+    const step = TOUR_STEPS[tourStep];
+    const target = document.querySelector(step.selector);
+    if (!target) { nextTourStep(); return; }
+    const r = target.getBoundingClientRect();
+    const spotlight = tourOverlay.querySelector(".tour-spotlight");
+    spotlight.style.left = (r.left - 6) + "px";
+    spotlight.style.top = (r.top - 6) + "px";
+    spotlight.style.width = (r.width + 12) + "px";
+    spotlight.style.height = (r.height + 12) + "px";
+    const tooltip = tourOverlay.querySelector(".tour-tooltip");
+    tooltip.querySelector("h3").textContent = step.title;
+    tooltip.querySelector("p").textContent = step.body;
+    tooltip.querySelector(".tour-counter").textContent = `${tourStep + 1} of ${TOUR_STEPS.length}`;
+    const backBtn = tooltip.querySelector('[data-tour="back"]');
+    backBtn.style.visibility = tourStep === 0 ? "hidden" : "visible";
+    const nextBtn = tooltip.querySelector('[data-tour="next"]');
+    nextBtn.textContent = tourStep === TOUR_STEPS.length - 1 ? "Got it" : "Next";
+    positionTourTooltip(tooltip, r, step.position);
+  }
+  function positionTourTooltip(tooltip, r, pos) {
+    tooltip.style.visibility = "hidden";
+    tooltip.style.left = "0px";
+    tooltip.style.top = "0px";
+    requestAnimationFrame(() => {
+      const tr = tooltip.getBoundingClientRect();
+      const m = 16;
+      let left, top;
+      if (pos === "below") {
+        top = r.bottom + m;
+        left = Math.min(r.left, window.innerWidth - tr.width - m);
+      } else if (pos === "above") {
+        top = r.top - tr.height - m;
+        left = Math.min(r.left, window.innerWidth - tr.width - m);
+      } else if (pos === "right") {
+        top = Math.min(r.top, window.innerHeight - tr.height - m);
+        left = r.right + m;
+        if (left + tr.width > window.innerWidth - m) {
+          top = r.bottom + m;
+          left = Math.min(r.left, window.innerWidth - tr.width - m);
+        }
+      } else {
+        top = r.bottom + m;
+        left = r.left;
+      }
+      left = Math.max(m, left);
+      top = Math.max(m, Math.min(top, window.innerHeight - tr.height - m));
+      tooltip.style.left = left + "px";
+      tooltip.style.top = top + "px";
+      tooltip.style.visibility = "visible";
+    });
+  }
+  function nextTourStep() {
+    if (tourStep >= TOUR_STEPS.length - 1) { endTour(); return; }
+    tourStep++;
+    renderTourStep();
+  }
+  function prevTourStep() {
+    if (tourStep === 0) return;
+    tourStep--;
+    renderTourStep();
+  }
+  function tourKeyHandler(e) {
+    if (!tourActive) return;
+    if (e.key === "Escape") endTour();
+    else if (e.key === "ArrowRight") nextTourStep();
+    else if (e.key === "ArrowLeft") prevTourStep();
+  }
+  function endTour() {
+    if (!tourActive) return;
+    tourActive = false;
+    localStorage.setItem(TOUR_KEY, "1");
+    if (tourOverlay) { tourOverlay.remove(); tourOverlay = null; }
+    window.removeEventListener("resize", renderTourStep);
+    window.removeEventListener("keydown", tourKeyHandler);
+  }
+  function maybeStartTour() {
+    if (!localStorage.getItem(TOUR_KEY)) {
+      setTimeout(startTour, 400);
+    }
   }
 
   function renderThread() {
