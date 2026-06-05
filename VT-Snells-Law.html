@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snell's Law — Solving for Refraction Angle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #faf7f2;
+    --paper-deep: #f1ece2;
+    --ink: #1a1a1a;
+    --ink-soft: #4a4a47;
+    --ink-faded: #8a8a85;
+    --rule: #d9d2c4;
+    --amber: #b54515;
+    --amber-soft: #e8a87c;
+    --amber-tint: #fdf2e6;
+    --solution-bg: #fbf6ec;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px -12px rgba(60,40,20,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Manrope', -apple-system, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.55;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(181, 69, 21, 0.04), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(181, 69, 21, 0.03), transparent 50%);
+  }
+  .container { max-width: 1000px; margin: 0 auto; padding: 56px 32px 80px; }
+
+  header {
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 32px;
+    margin-bottom: 40px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 32px;
+    align-items: end;
+  }
+  .header-text .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: clamp(32px, 5vw, 48px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    font-variation-settings: 'opsz' 144;
+    margin-bottom: 14px;
+  }
+  h1 em { font-style: italic; color: var(--amber); font-weight: 500; }
+  .header-text p { font-size: 15px; color: var(--ink-soft); max-width: 580px; }
+
+  .formula-card {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 18px 24px;
+    border-radius: 2px;
+    box-shadow: var(--shadow);
+    min-width: 240px;
+    position: relative;
+  }
+  .formula-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgba(232, 168, 124, 0.2);
+    border-radius: 2px;
+    pointer-events: none;
+    margin: 4px;
+  }
+  .formula-card .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--amber-soft);
+    margin-bottom: 14px;
+  }
+  .formula-card .formula-render {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    color: var(--paper);
+  }
+  .formula-card .formula-render .frac .num,
+  .formula-card .formula-render .frac .den { color: var(--paper); }
+  .formula-card .formula-render .frac .num { border-color: var(--amber-soft); }
+
+  .problem {
+    background: white;
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--ink);
+    padding: 26px 28px;
+    position: relative;
+    margin-bottom: 20px;
+    transition: border-left-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  .problem.revealed {
+    border-left-color: var(--amber);
+    box-shadow: var(--shadow);
+  }
+  .problem-num {
+    position: absolute;
+    top: 18px;
+    right: 22px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-faded);
+    letter-spacing: 0.08em;
+  }
+  .scenario {
+    font-family: 'Fraunces', serif;
+    font-size: 19px;
+    line-height: 1.5;
+    color: var(--ink);
+    margin-bottom: 18px;
+    padding-right: 60px;
+    max-width: 760px;
+  }
+  .scenario .val { color: var(--amber); font-style: italic; font-weight: 600; }
+  .reveal-btn {
+    font-family: 'Manrope', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 10px 18px;
+    background: transparent;
+    border: 1px solid var(--ink);
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
+  .reveal-btn:hover { background: var(--ink); color: var(--paper); }
+  .problem.revealed .reveal-btn { background: var(--amber); border-color: var(--amber); color: white; }
+
+  .solution {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s cubic-bezier(0.4,0,0.2,1), margin 0.4s ease;
+    margin-top: 0;
+  }
+  .problem.revealed .solution { max-height: 1800px; margin-top: 24px; }
+
+  .step {
+    border-top: 1px dashed var(--rule);
+    padding: 22px 0 20px;
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+  .step:first-child { border-top: none; padding-top: 6px; }
+  .step-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--amber);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+    line-height: 1.4;
+    padding-top: 6px;
+  }
+  .step-label .step-num {
+    display: block;
+    color: var(--ink-faded);
+    font-weight: 500;
+    margin-bottom: 4px;
+    font-size: 9.5px;
+    letter-spacing: 0.15em;
+  }
+  .step-body {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    color: var(--ink);
+    line-height: 1.6;
+  }
+
+  .var-list {
+    display: inline-grid;
+    grid-template-columns: auto auto auto;
+    gap: 8px 14px;
+    font-family: 'Fraunces', serif;
+    font-size: 19px;
+  }
+  .var-list .var-name { text-align: right; color: var(--ink-soft); font-style: italic; }
+  .var-list .eq { color: var(--ink-faded); }
+  .var-list .var-val { font-weight: 600; color: var(--ink); }
+  .var-list .var-val .ctx {
+    color: var(--ink-faded);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 0.85em;
+    margin-left: 6px;
+  }
+  .var-list .var-val.unknown { color: var(--amber); font-style: italic; font-weight: 600; }
+
+  /* Fraction (proportion) */
+  .frac {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    vertical-align: middle;
+    margin: 0 4px;
+  }
+  .frac .num, .frac .den {
+    padding: 3px 14px;
+    min-width: 80px;
+    text-align: center;
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    line-height: 1.3;
+    white-space: nowrap;
+  }
+  .frac .num { border-bottom: 1.5px solid currentColor; }
+  .frac .new { color: var(--amber); font-weight: 600; font-style: normal; }
+
+  .equation {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    flex-wrap: wrap;
+  }
+  .equation .eq-sign {
+    font-size: 24px;
+    color: var(--ink-soft);
+    margin: 0 6px;
+  }
+
+  /* ===== STEP 5 — Fish technique (mouth on RIGHT) ===== */
+  .fish-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .fish-container {
+    position: relative;
+    display: inline-block;
+    padding: 32px 90px 32px 50px;   /* extra padding on RIGHT for the mouth */
+    align-self: flex-start;
+  }
+  .fish-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+  }
+  .fish-svg .fish-path {
+    fill: none;
+    stroke: var(--amber);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.9;
+  }
+  .problem.revealed .fish-svg .fish-path {
+    animation: fishDrawLoop 7s linear infinite;
+  }
+  @keyframes fishDrawLoop {
+    0%   { stroke-dashoffset: var(--path-length); }
+    45%  { stroke-dashoffset: 0; }
+    65%  { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: var(--path-length-neg); }
+  }
+  .fish-svg .fish-eye {
+    fill: var(--amber);
+    stroke: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .problem.revealed .fish-svg .fish-eye {
+    opacity: 0.7;
+    transition-delay: 3.2s;
+  }
+
+  .fish-result {
+    font-family: 'Fraunces', serif;
+    font-size: 19px;
+    color: var(--ink);
+    line-height: 1.7;
+  }
+  .fish-result .formula-line {
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+    font-size: 15px;
+    font-style: italic;
+  }
+  .fish-result b { color: var(--amber); font-weight: 600; }
+
+  .final-answer {
+    background: var(--amber);
+    color: white;
+    display: inline-block;
+    padding: 8px 16px;
+    margin-top: 8px;
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  /* Calculator-mode tip in Step 04 */
+  .calc-note {
+    margin-top: 16px;
+    padding: 10px 14px;
+    background: var(--amber-tint);
+    border-left: 2px solid var(--amber);
+    font-family: 'Manrope', sans-serif;
+    font-size: 13px;
+    color: var(--ink-soft);
+    max-width: 520px;
+    line-height: 1.55;
+  }
+  .calc-note .calc-note-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-right: 10px;
+  }
+  .calc-note b { color: var(--ink); font-weight: 700; }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-faded);
+    letter-spacing: 0.05em;
+  }
+
+  @media (max-width: 760px) {
+    header { grid-template-columns: 1fr; }
+    .container { padding: 32px 18px 60px; }
+    .step { grid-template-columns: 1fr; gap: 10px; }
+    .step-label { padding-top: 0; }
+    .scenario { padding-right: 0; font-size: 17px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="header-text">
+      <div class="eyebrow">Visual Testing · Snell's Law · Set 01</div>
+      <h1>Solving for the <em>Refraction Angle</em></h1>
+      <p>Use Snell's Law to find the angle of light inside the second medium, α₂. Round all answers to one decimal place. Click "Reveal solution" to walk through each step.</p>
+    </div>
+    <div class="formula-card">
+      <div class="label">Snell's Law</div>
+      <div class="formula-render">
+        <span class="frac">
+          <span class="num">sin α₁</span>
+          <span class="den">sin α₂</span>
+        </span>
+        <span>=</span>
+        <span class="frac">
+          <span class="num">n₂</span>
+          <span class="den">n₁</span>
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <div id="problem-grid"></div>
+
+  <footer>
+    AATA · Visual Testing · Snell's Law (Solving for Refraction Angle)
+  </footer>
+
+</div>
+
+<script>
+  // ============ PROBLEM DATA ============
+  // Each entry: alpha1 (deg), n1, n2, material1, material2
+  const problems = [
+    { alpha1: 45, n1: 1, n2: 1.565, material1: 'air', material2: 'boron glass' },
+    { alpha1: 30, n1: 1, n2: 2.42,  material1: 'air', material2: 'diamond' },
+    { alpha1: 60, n1: 1, n2: 1.33,  material1: 'air', material2: 'water' },
+    { alpha1: 45, n1: 1, n2: 1.66,  material1: 'air', material2: 'flint glass' },
+    { alpha1: 20, n1: 1, n2: 1.50,  material1: 'air', material2: 'crown glass' },
+    { alpha1: 50, n1: 1, n2: 1.77,  material1: 'air', material2: 'sapphire' }
+  ];
+
+  // ============ HELPERS ============
+  const toRad = d => d * Math.PI / 180;
+  const toDeg = r => r * 180 / Math.PI;
+  const sinDeg = d => Math.sin(toRad(d));
+  const asinDeg = v => toDeg(Math.asin(v));
+
+  const fmtSin = n => Number(n.toFixed(4)).toString();
+  const fmtN   = n => Number(n.toString()).toString();
+  const fmtAngle = n => n.toFixed(1);
+  const truncate3 = n => (Math.floor(n * 1000) / 1000).toFixed(3);
+
+  // ============ TEMPLATE ============
+  function buildCard(p, idx, total) {
+    const sinA1 = sinDeg(p.alpha1);
+    const sinA2 = sinA1 * p.n1 / p.n2;
+    const alpha2 = asinDeg(sinA2);
+
+    const sinA1Str = fmtSin(sinA1);
+    const sinA2Str = fmtSin(sinA2);
+    const n1Str = fmtN(p.n1);
+    const n2Str = fmtN(p.n2);
+    const a2Trunc = truncate3(alpha2);
+    const a2Round = fmtAngle(alpha2);
+
+    const num = String(idx + 1).padStart(2, '0');
+    const tot = String(total).padStart(2, '0');
+
+    return `
+      <div class="problem" data-index="${idx}">
+        <div class="problem-num">${num} / ${tot}</div>
+        <div class="scenario">A light with an incident angle of <span class="val">α₁ = ${p.alpha1}°</span> travels from ${p.material1} into ${p.material2}. Under what angle will it travel in the ${p.material2}? Refractive index of ${p.material1} = <span class="val">${n1Str}</span> and ${p.material2} = <span class="val">${n2Str}</span>.</div>
+        <button class="reveal-btn">Reveal solution</button>
+
+        <div class="solution">
+
+          <div class="step">
+            <div class="step-label"><span class="step-num">Step 01</span>Identify variables</div>
+            <div class="step-body">
+              <div class="var-list">
+                <span class="var-name">α₁</span><span class="eq">=</span><span class="var-val">${p.alpha1}°<span class="ctx">(angle in ${p.material1})</span></span>
+                <span class="var-name">n₁</span><span class="eq">=</span><span class="var-val">${n1Str}<span class="ctx">(refractive index of ${p.material1})</span></span>
+                <span class="var-name">n₂</span><span class="eq">=</span><span class="var-val">${n2Str}<span class="ctx">(refractive index of ${p.material2})</span></span>
+                <span class="var-name">α₂</span><span class="eq">=</span><span class="var-val unknown">?</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-label"><span class="step-num">Step 02</span>Write the formula</div>
+            <div class="step-body">
+              <div class="equation">
+                <span class="frac"><span class="num">sin α₁</span><span class="den">sin α₂</span></span>
+                <span class="eq-sign">=</span>
+                <span class="frac"><span class="num">n₂</span><span class="den">n₁</span></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-label"><span class="step-num">Step 03</span>Substitute values</div>
+            <div class="step-body">
+              <div class="equation">
+                <span class="frac"><span class="num new">sin ${p.alpha1}°</span><span class="den">sin α₂</span></span>
+                <span class="eq-sign">=</span>
+                <span class="frac"><span class="num new">${n2Str}</span><span class="den new">${n1Str}</span></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-label"><span class="step-num">Step 04</span>Compute the sine</div>
+            <div class="step-body">
+              <div class="equation">
+                <span class="frac"><span class="num new">${sinA1Str}</span><span class="den">sin α₂</span></span>
+                <span class="eq-sign">=</span>
+                <span class="frac"><span class="num">${n2Str}</span><span class="den">${n1Str}</span></span>
+              </div>
+              <div class="calc-note">
+                <span class="calc-note-tag">Calculator tip</span>
+                Make sure your calculator is in <b>DEG</b> mode, not RAD. In RAD mode, sin(${p.alpha1}) will give a completely different value — you won't get ${sinA1Str}.
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-label"><span class="step-num">Step 05</span>Fish technique</div>
+            <div class="step-body">
+              <div class="fish-wrap">
+                <div class="fish-container">
+                  <svg class="fish-svg" viewBox="0 0 360 110" preserveAspectRatio="xMidYMid meet">
+                    <!-- Mirror image of inverse-square-law fish: mouth on RIGHT, tail on LEFT.
+                         Trace: sin α₁ (TL, tail) → n₁ (BR) → mouth tip (right) → n₂ (TR) → sin α₂ (BL, tail = unknown) -->
+                    <path class="fish-path" d="
+                      M 115 35
+                      C 160 50, 200 65, 245 80
+                      Q 325 90, 345 55
+                      Q 325 22, 245 35
+                      C 200 50, 160 65, 115 80
+                    " />
+                    <!-- Eye on the head side (right) -->
+                    <circle class="fish-eye" cx="305" cy="48" r="2.4" />
+                  </svg>
+                  <div class="equation" style="position: relative; z-index: 1;">
+                    <span class="frac"><span class="num">${sinA1Str}</span><span class="den">sin α₂</span></span>
+                    <span class="eq-sign">=</span>
+                    <span class="frac"><span class="num">${n2Str}</span><span class="den">${n1Str}</span></span>
+                  </div>
+                </div>
+                <div class="fish-result">
+                  <div class="formula-line">Trace the fish: multiply tail-to-mouth (top diagonal), divide by the mouth-top, land on the unknown (bottom tail).</div>
+                  sin α₂ &nbsp;=&nbsp; <b>${sinA1Str} × ${n1Str}</b> &nbsp;÷&nbsp; <b>${n2Str}</b> &nbsp;=&nbsp; <b>${sinA2Str}</b>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-label"><span class="step-num">Step 06</span>Take the arcsin</div>
+            <div class="step-body">
+              <div>α₂ = arcsin(${sinA2Str}) = ${a2Trunc}…</div>
+              <div class="final-answer">α₂ ≈ ${a2Round}°</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    `;
+  }
+
+  // ============ RENDER ============
+  document.getElementById('problem-grid').innerHTML =
+    problems.map((p, i) => buildCard(p, i, problems.length)).join('');
+
+  // ============ WIRE UP ============
+  function setupProblem(card) {
+    const btn = card.querySelector('.reveal-btn');
+    const path = card.querySelector('.fish-path');
+
+    if (path) {
+      const length = path.getTotalLength();
+      path.style.strokeDasharray = length;
+      path.style.strokeDashoffset = length;
+      path.style.setProperty('--path-length', length);
+      path.style.setProperty('--path-length-neg', -length);
+    }
+
+    btn.addEventListener('click', () => {
+      const isRevealed = card.classList.toggle('revealed');
+      btn.textContent = isRevealed ? 'Hide solution' : 'Reveal solution';
+    });
+  }
+
+  document.querySelectorAll('.problem').forEach(setupProblem);
+</script>
+
+</body>
+</html>
