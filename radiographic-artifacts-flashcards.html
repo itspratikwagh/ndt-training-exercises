@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Radiographic Artifacts Flashcards</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+:root {
+  --bg:       #f5f2ed;
+  --paper:    #fdfbf8;
+  --ink:      #1a1612;
+  --ink2:     #3d3530;
+  --muted:    #8c7e72;
+  --border:   #d8d0c4;
+  --accent:   #c0392b;
+  --accent2:  #1a6b8a;
+  --green:    #2e7d4f;
+  --amber:    #9c6a00;
+  --shadow:   0 2px 12px rgba(26,22,18,0.10);
+  --shadow-lg:0 8px 40px rgba(26,22,18,0.15);
+  --r:        10px;
+
+  --cat-film:       #b44c20;
+  --cat-processing: #1a6b8a;
+  --cat-screen:     #2e7d4f;
+  --cat-exposure:   #7a3bb1;
+  --cat-digital:    #9c6a00;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: var(--bg);
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(192,57,43,0.04) 0%, transparent 60%),
+    radial-gradient(circle at 80% 20%, rgba(26,107,138,0.04) 0%, transparent 60%);
+  color: var(--ink);
+  min-height: 100vh;
+  padding-bottom: 60px;
+}
+
+header {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 20px 24px 16px;
+  text-align: center;
+}
+header h1 {
+  font-family: 'Bitter', Georgia, serif;
+  font-size: clamp(1.15rem, 3.5vw, 1.65rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 5px;
+}
+.header-sub {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  color: #8a8078;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.reminder {
+  margin: 10px auto 0;
+  max-width: 640px;
+  background: rgba(192,57,43,0.15);
+  border: 1px solid rgba(192,57,43,0.3);
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 0.72rem;
+  color: #e8a89e;
+  font-family: 'IBM Plex Mono', monospace;
+  line-height: 1.5;
+}
+.reminder strong { color: #f5c5be; }
+
+.mode-bar {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  max-width: 360px;
+  margin: 18px auto 0;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+}
+.mode-btn {
+  flex: 1;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--muted);
+  transition: all 0.18s;
+}
+.mode-btn.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.filter-bar {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 860px;
+  margin: 10px auto 0;
+  padding: 0 18px;
+}
+.filter-pill {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 500;
+  padding: 5px 13px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--paper);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.03em;
+}
+.filter-pill:hover { border-color: var(--ink2); color: var(--ink); }
+.filter-pill.active {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.filter-pill[data-cat="film"].active       { background: var(--cat-film);       border-color: var(--cat-film); }
+.filter-pill[data-cat="processing"].active { background: var(--cat-processing);  border-color: var(--cat-processing); }
+.filter-pill[data-cat="screen"].active     { background: var(--cat-screen);      border-color: var(--cat-screen); }
+.filter-pill[data-cat="exposure"].active   { background: var(--cat-exposure);    border-color: var(--cat-exposure); }
+.filter-pill[data-cat="digital"].active    { background: var(--cat-digital);     border-color: var(--cat-digital); }
+.filter-pill[data-cat="review"].active     { background: var(--accent);          border-color: var(--accent); }
+
+.progress-wrap {
+  max-width: 620px;
+  margin: 8px auto 0;
+  padding: 0 18px;
+}
+.progress-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.progress-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+.review-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  padding: 2px 10px;
+  border-radius: 20px;
+  background: rgba(192,57,43,0.12);
+  color: var(--accent);
+  border: 1px solid rgba(192,57,43,0.25);
+}
+.progress-track {
+  height: 4px;
+  background: var(--border);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent2), var(--accent));
+  border-radius: 99px;
+  transition: width 0.35s ease;
+}
+
+.card-stage {
+  display: block;
+  max-width: 620px;
+  width: 100%;
+  margin: 10px auto 0;
+  padding: 0 18px;
+  box-sizing: border-box;
+}
+
+.card-wrap {
+  position: relative;
+  width: 100%;
+  min-height: 360px;
+  perspective: 1400px;
+  transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+@media (max-width: 520px) { .card-wrap { min-height: 480px; } }
+
+.card-wrap.flipped { transform: rotateY(180deg); }
+
+.card-face {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: var(--r);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.card-front {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 22px 24px 36px;
+  text-align: center;
+  position: relative;
+}
+.cat-stripe {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 5px;
+}
+.review-flag {
+  position: absolute;
+  top: 14px; right: 14px;
+  font-size: 1rem;
+  opacity: 0.25;
+  transition: opacity 0.2s;
+}
+.review-flag.flagged { opacity: 1; }
+
+.card-icon-big {
+  font-size: 2.2rem;
+  margin-bottom: 12px;
+  line-height: 1;
+}
+.card-front-name {
+  font-family: 'Bitter', Georgia, serif;
+  font-size: clamp(1.2rem, 4vw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.card-cat-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 3px 12px;
+  border-radius: 20px;
+  color: var(--paper);
+  margin-bottom: 18px;
+  display: inline-block;
+}
+.front-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-bottom: 16px;
+}
+.front-divider {
+  width: 100%;
+  height: 1px;
+  background: var(--border);
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+.front-question {
+  width: 100%;
+  text-align: left;
+  margin-bottom: 16px;
+}
+.front-q-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.front-q-text {
+  font-size: 0.88rem;
+  font-style: italic;
+  color: var(--ink2);
+  line-height: 1.5;
+}
+.front-fields-hint {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: auto;
+}
+.hint-field {
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 7px;
+  padding: 8px 12px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace;
+}
+.flip-hint {
+  position: absolute;
+  bottom: 10px;
+  right: 16px;
+  font-size: 0.62rem;
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--border);
+  letter-spacing: 0.06em;
+}
+
+.card-back {
+  background: var(--ink);
+  color: var(--paper);
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 24px;
+  overflow-y: auto;
+}
+.back-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  flex-shrink: 0;
+}
+.back-name {
+  font-family: 'Bitter', Georgia, serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--paper);
+  flex: 1;
+}
+.back-cat-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 3px 10px;
+  border-radius: 20px;
+  color: var(--paper);
+  opacity: 0.9;
+  flex-shrink: 0;
+}
+
+.back-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  flex: 1;
+}
+@media (max-width: 480px) { .back-fields { grid-template-columns: 1fr; } }
+
+.field {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 7px;
+  padding: 10px 13px;
+}
+.field-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 5px;
+}
+.field-value {
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: rgba(255,255,255,0.88);
+}
+
+.controls {
+  max-width: 620px;
+  margin: 10px auto 0;
+  padding: 0 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 9px 18px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn-dark {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.btn-dark:hover { background: var(--ink2); }
+.btn-outline {
+  background: var(--paper);
+  color: var(--ink);
+  border-color: var(--border);
+}
+.btn-outline:hover { border-color: var(--ink2); background: var(--bg); }
+.btn-review {
+  background: var(--paper);
+  color: var(--accent);
+  border-color: rgba(192,57,43,0.35);
+}
+.btn-review:hover { background: rgba(192,57,43,0.07); }
+.btn-review.flagged {
+  background: var(--accent);
+  color: var(--paper);
+  border-color: var(--accent);
+}
+.btn-nav {
+  background: var(--paper);
+  color: var(--ink);
+  border-color: var(--border);
+  font-size: 1rem;
+  padding: 8px 16px;
+}
+.btn-nav:hover { border-color: var(--ink); }
+.btn-nav:disabled { opacity: 0.3; cursor: default; }
+
+.nav-group { display: flex; gap: 6px; align-items: center; }
+.spacer { flex: 1; min-width: 10px; }
+
+.quiz-wrap {
+  max-width: 620px;
+  margin: 22px auto 0;
+  padding: 0 18px;
+}
+.quiz-card {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-lg);
+  padding: 28px 28px 24px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.quiz-stripe {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 5px;
+}
+.quiz-q-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.quiz-artifact-icon { font-size: 2rem; margin-bottom: 10px; }
+.quiz-artifact-name {
+  font-family: 'Bitter', Georgia, serif;
+  font-size: clamp(1.3rem, 4vw, 1.9rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+.quiz-prompt {
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-style: italic;
+  margin-bottom: 22px;
+}
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.quiz-option {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 11px 18px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+.quiz-option:hover:not(:disabled) { border-color: var(--ink2); background: var(--paper); }
+.quiz-option.correct { background: rgba(46,125,79,0.12); border-color: var(--green); color: var(--green); font-weight: 600; }
+.quiz-option.incorrect { background: rgba(192,57,43,0.10); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.quiz-option:disabled { cursor: default; }
+
+.quiz-feedback {
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 7px;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  text-align: left;
+  display: none;
+}
+.quiz-feedback.show { display: block; }
+.quiz-feedback.correct-fb { background: rgba(46,125,79,0.1); border: 1px solid rgba(46,125,79,0.3); color: #1d5432; }
+.quiz-feedback.incorrect-fb { background: rgba(192,57,43,0.08); border: 1px solid rgba(192,57,43,0.25); color: #8c2318; }
+
+.quiz-score-bar {
+  max-width: 620px;
+  margin: 12px auto 0;
+  padding: 0 18px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.score-chip {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  padding: 4px 14px;
+  border-radius: 20px;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.score-chip span { color: var(--ink); font-weight: 500; }
+
+.empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--muted);
+}
+.empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+.empty-state p { font-size: 0.85rem; }
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.card-stage, .quiz-wrap { animation: slide-in 0.3s ease; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Radiographic Artifacts Flashcards</h1>
+  <div class="header-sub">NDT Radiographic Testing — Level 2 &nbsp;·&nbsp; Artifact Recognition</div>
+  <div class="reminder">
+    <strong>Key Reminder:</strong> Artifacts are unwanted marks, patterns, or density changes that are <em>not</em> caused by actual discontinuities in the test object.
+  </div>
+</header>
+
+<div class="mode-bar">
+  <button class="mode-btn active" id="mode-study" onclick="setMode('study')">&#x1F4D6; Study</button>
+  <button class="mode-btn"        id="mode-quiz"  onclick="setMode('quiz')">&#x1F3AF; Quiz</button>
+</div>
+
+<div class="filter-bar" id="filter-bar">
+  <button class="filter-pill active" data-cat="all"        onclick="setFilter('all')">All Cards</button>
+  <button class="filter-pill"        data-cat="film"       onclick="setFilter('film')">Film Handling</button>
+  <button class="filter-pill"        data-cat="processing" onclick="setFilter('processing')">Processing</button>
+  <button class="filter-pill"        data-cat="screen"     onclick="setFilter('screen')">Screen / Cassette</button>
+  <button class="filter-pill"        data-cat="exposure"   onclick="setFilter('exposure')">Exposure / Technique</button>
+  <button class="filter-pill"        data-cat="digital"    onclick="setFilter('digital')">Digital / CR / DR</button>
+  <button class="filter-pill"        data-cat="review"     onclick="setFilter('review')">&#x2691; Needs Review</button>
+</div>
+
+<div class="progress-wrap">
+  <div class="progress-row">
+    <span class="progress-label" id="progress-label">Card 1 of 21</span>
+    <span class="review-badge"   id="review-badge" style="display:none">&#x2691; 0 flagged</span>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+</div>
+
+<div id="study-ui">
+  <div class="card-stage" id="card-stage"></div>
+  <div class="controls">
+    <div class="nav-group">
+      <button class="btn btn-nav" id="btn-prev" onclick="navigate(-1)">←</button>
+      <button class="btn btn-nav" id="btn-next" onclick="navigate(1)">→</button>
+    </div>
+    <button class="btn btn-dark"    onclick="flipCard()">↩ Flip</button>
+    <button class="btn btn-review"  id="btn-review" onclick="toggleReview()">&#x2691; Needs Review</button>
+    <div class="spacer"></div>
+    <button class="btn btn-outline" onclick="shuffle()">⇄ Shuffle</button>
+    <button class="btn btn-outline" onclick="resetAll()">↺ Reset</button>
+  </div>
+</div>
+
+<div id="quiz-ui" style="display:none">
+  <div class="quiz-score-bar">
+    <span class="score-chip">Correct: <span id="q-correct">0</span></span>
+    <span class="score-chip">Incorrect: <span id="q-incorrect">0</span></span>
+    <span class="score-chip">Remaining: <span id="q-remaining">—</span></span>
+    <button class="btn btn-outline" style="margin-left:auto" onclick="resetQuiz()">↺ Reset Quiz</button>
+  </div>
+  <div class="quiz-wrap" id="quiz-wrap"></div>
+</div>
+
+<script>
+const CATEGORIES = {
+  film:       { label: 'Film Handling',        color: '#b44c20' },
+  processing: { label: 'Processing / Chemical',color: '#1a6b8a' },
+  screen:     { label: 'Screen / Cassette',    color: '#2e7d4f' },
+  exposure:   { label: 'Exposure / Technique', color: '#7a3bb1' },
+  digital:    { label: 'Digital / CR / DR',    color: '#9c6a00' },
+};
+
+const CARDS = [
+  { id:'scratches', name:'Scratches', category:'film', icon:'✏️',
+    prompt:'What causes this artifact, and how does it appear?',
+    definition:'Physical damage to the film emulsion or imaging plate surface, creating marks unrelated to the test object.',
+    cause:'Rough handling, sharp edges, or abrasive contact during loading, unloading, or processing.',
+    appearance:'Appears as irregular lines or linear marks at varying densities across the image.',
+    prevention:'Handle film and plates gently; use clean, smooth cassettes and processing equipment.' },
+  { id:'fingerprints', name:'Fingerprints', category:'film', icon:'🖐️',
+    prompt:'What causes this artifact, and how does it appear?',
+    definition:'Contamination of the film emulsion by skin oils, salts, or other residues from bare or dirty hands.',
+    cause:'Touching film or imaging plates with ungloved or contaminated hands before or after exposure.',
+    appearance:'Visible as circular or partial print-shaped density changes or stains on the image.',
+    prevention:'Always handle film with clean cotton gloves; avoid touching the emulsion surface.' },
+  { id:'static', name:'Static Marks', category:'film', icon:'⚡',
+    prompt:'What causes this artifact, and how does it appear?',
+    definition:'Marks created by electrostatic discharge on the film surface.',
+    cause:'Static electricity from rapid film removal from packaging, low humidity, or contact with synthetic materials.',
+    appearance:'Branching, tree-like, or lightning bolt–shaped dark marks on the processed image.',
+    prevention:'Handle film slowly; maintain humidity above 40%; ground equipment appropriately.' },
+  { id:'pressure', name:'Pressure Marks', category:'film', icon:'👊',
+    prompt:'What causes this artifact, and how does it appear?',
+    definition:'Localized density changes caused by mechanical stress applied to film before or during exposure.',
+    cause:'Bending, pressing, rolling, or stressing the film or imaging plate.',
+    appearance:'Localised areas of increased or decreased density depending on the type of pressure applied.',
+    prevention:'Store and handle film flat; avoid excessive stacking or pressure on cassettes.' },
+  { id:'crimp', name:'Crimp Marks', category:'film', icon:'📎',
+    prompt:'What causes this artifact, and how does it appear?',
+    definition:'A specific type of pressure mark caused by a sharp bend or crease in the film.',
+    cause:'Sharply folding or bending film corners during darkroom handling, especially when loading cassettes.',
+    appearance:'Crescent-shaped dark marks, typically near film edges or corners.',
+    prevention:'Use proper film-handling technique; do not bend or fold film edges during loading.' },
+  { id:'waterspots', name:'Water Spots', category:'processing', icon:'💧',
+    prompt:'What causes this artifact, and how does it appear?',
+    definition:'Surface marks caused by uneven evaporation of water or fixer droplets on the film.',
+    cause:'Inadequate or uneven drying; water or fixer drops contacting the film surface after washing.',
+    appearance:'Circular or irregular ring-shaped marks visible on the film surface after drying.',
+    prevention:'Ensure consistent drying; use wetting agent in final rinse; avoid drips during handling.' },
+  { id:'chemstains', name:'Chemical Stains', category:'processing', icon:'🧪',
+    prompt:'What causes this artifact, and how does it appear?',
+    definition:'Discoloration or density changes from improper processing chemistry or contamination.',
+    cause:'Exhausted, contaminated, or incorrectly mixed developer or fixer solutions; inadequate washing.',
+    appearance:'Uneven discoloration, yellowish or brownish staining, or irregular density patches.',
+    prevention:'Maintain fresh, correctly mixed chemistry; monitor replenishment rates; ensure thorough washing.' },
+  { id:'streaks', name:'Processing Streaks', category:'processing', icon:'〰️',
+    prompt:'What causes this artifact, and how does it appear?',
+    definition:'Directional density variations caused by uneven chemical action during processing.',
+    cause:'Poor agitation in tank processing; faulty transport rollers or guides in automatic processors.',
+    appearance:'Parallel or directional streaks of varying density running along the film.',
+    prevention:'Use proper agitation technique; regularly clean and maintain automatic processor rollers.' },
+  { id:'fog', name:'Fog', category:'processing', icon:'🌫️',
+    prompt:'What causes this artifact, and how does it appear?',
+    definition:'Unwanted overall or partial increase in film density not caused by the intended exposure.',
+    cause:'Accidental light exposure, stray scatter radiation, expired or improperly stored film, or processing issues.',
+    appearance:'Overall increased density (darkening) reducing contrast and obscuring relevant detail.',
+    prevention:'Check darkroom integrity; store film properly; use appropriate scatter control; check safelight.' },
+  { id:'lightleaks', name:'Light Leaks', category:'film', icon:'☀️',
+    prompt:'What causes this artifact, and how does it appear?',
+    definition:'Localised or overall fogging from accidental exposure of film to visible light.',
+    cause:'Faulty cassette seals, darkroom light leaks, or premature film exposure to ambient light.',
+    appearance:'Localised or edge-fogging as areas of increased density not related to the radiographic setup.',
+    prevention:'Inspect cassettes regularly for light-tightness; perform darkroom integrity checks.' },
+  { id:'dirt', name:'Dirt or Dust Marks', category:'screen', icon:'🌀',
+    prompt:'What causes this artifact, and how does it appear?',
+    definition:'Foreign particles between the film, screen, or detector that block exposure locally.',
+    cause:'Dust, debris, or dirt on the intensifying screen, imaging plate, or inside the cassette.',
+    appearance:'White (unexposed) spots or specks on the processed image at the location of the particle.',
+    prevention:'Clean screens and cassettes regularly; store in a clean, dust-controlled environment.' },
+  { id:'poorcontact', name:'Poor Film-Screen Contact', category:'screen', icon:'📐',
+    prompt:'What causes this artifact, and how does it appear?',
+    definition:'Inadequate contact between the film and intensifying screen causing local image unsharpness.',
+    cause:'Warped cassette, foreign material inside, worn foam backing, or damaged hinges.',
+    appearance:'Localised blurring or unsharpness in specific areas of the image (not overall blur).',
+    prevention:'Perform wire-mesh contact tests regularly; inspect and replace damaged cassettes.' },
+  { id:'motion', name:'Motion Blur', category:'exposure', icon:'💨',
+    prompt:'What causes this artifact, and how does it appear?',
+    definition:'Image unsharpness caused by relative movement between the source, object, or film during exposure.',
+    cause:'Movement of the test object, x-ray tube, or film/detector during the exposure time.',
+    appearance:'Smeared or blurred image lacking sharp edges; indications are difficult to define.',
+    prevention:'Secure the object and film firmly; use shortest practical exposure time.' },
+  { id:'double', name:'Double Exposure', category:'exposure', icon:'2️⃣',
+    prompt:'What causes this artifact, and how does it appear?',
+    definition:'Two unintended exposures recorded on the same film or detector.',
+    cause:'Re-using an exposed film; forgetting a prior exposure; equipment malfunction causing repeat exposure.',
+    appearance:'Two overlapping or superimposed images making interpretation unreliable.',
+    prevention:'Mark exposed film/cassettes clearly; implement strict job tracking procedures.' },
+  { id:'underexposure', name:'Underexposure', category:'exposure', icon:'🔅',
+    prompt:'What causes this artifact, and how does it appear?',
+    definition:'Insufficient radiation reaching the film or detector to produce an adequate image.',
+    cause:'Too low mAs or kVp; excessive source-to-film distance; incorrect exposure settings.',
+    appearance:'Image is too light (low density) with poor contrast and insufficient penetration of material.',
+    prevention:'Verify exposure parameters before shooting; use correct technique charts.' },
+  { id:'overexposure', name:'Overexposure', category:'exposure', icon:'🔆',
+    prompt:'What causes this artifact, and how does it appear?',
+    definition:'Excess radiation reaching the film or detector, degrading image quality.',
+    cause:'Too high mAs or kVp; source too close; incorrect exposure settings.',
+    appearance:'Image is too dark (high density); relevant detail lost in saturated regions.',
+    prevention:'Verify exposure parameters; use calibrated technique charts; check source integrity.' },
+  { id:'backscatter', name:'Backscatter', category:'exposure', icon:'🔄',
+    prompt:'What causes this artifact, and how does it appear?',
+    definition:'Scattered radiation reflected back toward the film or detector from structures behind it.',
+    cause:'High-density materials (walls, floors, structures) behind the cassette scattering radiation back.',
+    appearance:'Unwanted density increase, sometimes showing the outline of cassette backing or structural elements.',
+    prevention:'Use lead backing in cassettes; place lead sheet behind cassette during exposure.' },
+  { id:'scanner', name:'Scanner Artifacts', category:'digital', icon:'📡',
+    prompt:'What causes this artifact, and how does it appear?',
+    definition:'Systematic image defects introduced during the CR readout scanning process.',
+    cause:"Faults in the CR scanner's laser, optics, or mechanical transport system.",
+    appearance:'Banding, lines, or non-uniform density patterns running in the scan direction.',
+    prevention:'Regularly service and calibrate CR scanners; perform quality control tests.' },
+  { id:'deadpixels', name:'Dead Pixels', category:'digital', icon:'🟥',
+    prompt:'What causes this artifact, and how does it appear?',
+    definition:'Non-functional detector elements in a digital flat-panel detector that do not respond to radiation.',
+    cause:'Detector element failure from age, radiation damage, manufacturing defect, or physical impact.',
+    appearance:'Fixed bright or dark spots at the same location across all images from that detector.',
+    prevention:'Perform regular detector QC; apply dead-pixel correction maps in software.' },
+  { id:'lag', name:'Lag / Ghost Image', category:'digital', icon:'👻',
+    prompt:'What causes this artifact, and how does it appear?',
+    definition:'Residual signal from a previous exposure that persists into the current image.',
+    cause:'Incomplete erasure of a CR plate; inadequate detector reset time in DR systems.',
+    appearance:'Faint superimposed image of a previous exposure visible in the current radiograph.',
+    prevention:'Fully erase CR plates before reuse; allow adequate detector reset time between exposures.' },
+  { id:'imageplate', name:'Image Plate Artifacts', category:'digital', icon:'💿',
+    prompt:'What causes this artifact, and how does it appear?',
+    definition:'Defects in the CR imaging plate itself that create recurring image anomalies.',
+    cause:'Scratches, creases, dirt, physical damage, or chemical contamination of the phosphor plate.',
+    appearance:'Repeating marks, lines, or spots that appear consistently on images from the affected plate.',
+    prevention:'Handle CR plates carefully; inspect regularly; retire plates showing damage or wear.' },
+];
+
+let deck = [...CARDS], deckIndex = 0, isFlipped = false;
+let reviewSet = new Set(), currentFilter = 'all', currentMode = 'study';
+let quizDeck = [], quizIndex = 0, quizCorrect = 0, quizIncorrect = 0, quizAnswered = false;
+
+function buildDeck() {
+  if (currentFilter === 'all') deck = [...CARDS];
+  else if (currentFilter === 'review') deck = CARDS.filter(c => reviewSet.has(c.id));
+  else deck = CARDS.filter(c => c.category === currentFilter);
+  deckIndex = 0; isFlipped = false;
+}
+
+function catColor(catId) { return CATEGORIES[catId]?.color || '#555'; }
+function catLabel(catId) { return CATEGORIES[catId]?.label || catId; }
+
+function renderStudy() {
+  const stage = document.getElementById('card-stage');
+  if (deck.length === 0) {
+    stage.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>No cards match this filter.<br>Try a different category or clear the filter.</p></div>';
+    updateProgress(); return;
+  }
+  const card = deck[deckIndex], cc = catColor(card.category), cl = catLabel(card.category);
+  const flagged = reviewSet.has(card.id);
+  stage.innerHTML = `
+    <div class="card-wrap ${isFlipped ? 'flipped' : ''}" id="card-wrap" onclick="flipCard()">
+      <div class="card-face card-front">
+        <div class="cat-stripe" style="background:${cc}"></div>
+        <span class="review-flag ${flagged ? 'flagged' : ''}" title="${flagged ? 'Flagged for review' : ''}">⚑</span>
+        <div class="front-top">
+          <div class="card-icon-big">${card.icon}</div>
+          <div class="card-front-name">${card.name}</div>
+          <span class="card-cat-label" style="background:${cc}">${cl}</span>
+        </div>
+        <div class="front-divider"></div>
+        <div class="front-question">
+          <div class="front-q-label">Study Question</div>
+          <div class="front-q-text">${card.prompt}</div>
+        </div>
+        <div class="front-fields-hint">
+          <div class="hint-field">📋 Definition</div>
+          <div class="hint-field">⚗️ Cause</div>
+          <div class="hint-field">👁 Appearance</div>
+          <div class="hint-field">🛡 Prevention</div>
+        </div>
+        <div class="flip-hint">click to flip ↩</div>
+      </div>
+      <div class="card-face card-back">
+        <div class="back-header">
+          <span class="back-name">${card.icon} ${card.name}</span>
+          <span class="back-cat-label" style="background:${cc}">${cl}</span>
+        </div>
+        <div class="back-fields">
+          <div class="field"><div class="field-label">📋 Definition</div><div class="field-value">${card.definition}</div></div>
+          <div class="field"><div class="field-label">⚗️ Common Cause</div><div class="field-value">${card.cause}</div></div>
+          <div class="field"><div class="field-label">👁 Appearance</div><div class="field-value">${card.appearance}</div></div>
+          <div class="field"><div class="field-label">🛡 Prevention</div><div class="field-value">${card.prevention}</div></div>
+        </div>
+      </div>
+    </div>`;
+  const rb = document.getElementById('btn-review');
+  rb.classList.toggle('flagged', flagged);
+  rb.textContent = flagged ? '⚑ Flagged' : '⚑ Needs Review';
+  document.getElementById('btn-prev').disabled = deckIndex === 0;
+  document.getElementById('btn-next').disabled = deckIndex === deck.length - 1;
+  updateProgress();
+}
+
+function updateProgress() {
+  const total = deck.length, current = total === 0 ? 0 : deckIndex + 1;
+  document.getElementById('progress-label').textContent =
+    currentMode === 'quiz' ? `Quiz: ${quizIndex + 1} of ${quizDeck.length}` : `Card ${current} of ${total}`;
+  document.getElementById('progress-fill').style.width = total === 0 ? '0%' : `${Math.round(current / total * 100)}%`;
+  const rb = document.getElementById('review-badge');
+  if (reviewSet.size > 0) { rb.style.display = 'inline-block'; rb.textContent = `⚑ ${reviewSet.size} flagged`; }
+  else rb.style.display = 'none';
+}
+
+function flipCard() {
+  isFlipped = !isFlipped;
+  const wrap = document.getElementById('card-wrap');
+  if (wrap) wrap.classList.toggle('flipped', isFlipped);
+}
+
+function navigate(dir) {
+  deckIndex = Math.max(0, Math.min(deck.length - 1, deckIndex + dir));
+  isFlipped = false; renderStudy();
+}
+
+function shuffle() {
+  for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
+  deckIndex = 0; isFlipped = false; renderStudy();
+}
+
+function toggleReview() {
+  if (deck.length === 0) return;
+  const id = deck[deckIndex].id;
+  if (reviewSet.has(id)) reviewSet.delete(id); else reviewSet.add(id);
+  renderStudy();
+  if (currentFilter === 'review') { buildDeck(); renderStudy(); }
+}
+
+function resetAll() { reviewSet.clear(); buildDeck(); shuffle(); }
+
+function setFilter(cat) {
+  currentFilter = cat;
+  document.querySelectorAll('.filter-pill').forEach(p => p.classList.toggle('active', p.dataset.cat === cat));
+  buildDeck(); renderStudy();
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('mode-study').classList.toggle('active', mode === 'study');
+  document.getElementById('mode-quiz').classList.toggle('active', mode === 'quiz');
+  document.getElementById('study-ui').style.display = mode === 'study' ? '' : 'none';
+  document.getElementById('quiz-ui').style.display  = mode === 'quiz'  ? '' : 'none';
+  if (mode === 'quiz') resetQuiz(); else renderStudy();
+}
+
+function buildQuizDeck() {
+  const source = currentFilter === 'all' ? [...CARDS]
+               : currentFilter === 'review' ? CARDS.filter(c => reviewSet.has(c.id))
+               : CARDS.filter(c => c.category === currentFilter);
+  for (let i = source.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [source[i], source[j]] = [source[j], source[i]]; }
+  return source;
+}
+
+function resetQuiz() {
+  quizDeck = buildQuizDeck(); quizIndex = 0; quizCorrect = 0; quizIncorrect = 0; quizAnswered = false;
+  document.getElementById('q-correct').textContent = 0;
+  document.getElementById('q-incorrect').textContent = 0;
+  document.getElementById('q-remaining').textContent = quizDeck.length;
+  renderQuiz();
+}
+
+function renderQuiz() {
+  const wrap = document.getElementById('quiz-wrap');
+  if (quizDeck.length === 0) { wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>No cards for this filter.</p></div>'; return; }
+  if (quizIndex >= quizDeck.length) {
+    const pct = Math.round(quizCorrect / quizDeck.length * 100);
+    const emoji = pct === 100 ? '🏆' : pct >= 70 ? '👍' : '\ud83d�';
+    wrap.innerHTML = `<div class="quiz-card" style="text-align:center; padding:40px 28px;">
+      <div style="font-size:3rem; margin-bottom:12px;">${emoji}</div>
+      <div style="font-family:'Bitter',Georgia,serif; font-size:1.5rem; font-weight:700; margin-bottom:8px;">Quiz Complete!</div>
+      <div style="color:var(--muted); font-size:0.85rem; margin-bottom:18px;">You scored <strong>${quizCorrect} of ${quizDeck.length}</strong> (${pct}%)</div>
+      <button class="btn btn-dark" onclick="resetQuiz()">Try Again</button></div>`;
+    document.getElementById('progress-label').textContent = 'Quiz complete!';
+    document.getElementById('progress-fill').style.width = '100%';
+    return;
+  }
+  const card = quizDeck[quizIndex], cc = catColor(card.category);
+  document.getElementById('progress-label').textContent = `Quiz: ${quizIndex + 1} of ${quizDeck.length}`;
+  document.getElementById('progress-fill').style.width = `${Math.round((quizIndex) / quizDeck.length * 100)}%`;
+  document.getElementById('q-remaining').textContent = quizDeck.length - quizIndex;
+  const allCats = Object.keys(CATEGORIES), wrongCats = allCats.filter(c => c !== card.category);
+  const sArr = arr => { for (let i = arr.length-1; i>0; i--) { const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; };
+  const choices = sArr([card.category, ...sArr(wrongCats).slice(0, 3)]);
+  const optionsHtml = choices.map(cat => `<button class="quiz-option" data-cat="${cat}" onclick="answerQuiz('${cat}','${card.category}')">${catLabel(cat)}</button>`).join('');
+  wrap.innerHTML = `<div class="quiz-card">
+    <div class="quiz-stripe" style="background:${cc}"></div>
+    <div class="quiz-q-label">Which category does this artifact belong to?</div>
+    <div class="quiz-artifact-icon">${card.icon}</div>
+    <div class="quiz-artifact-name">${card.name}</div>
+    <div class="quiz-prompt">${card.prompt}</div>
+    <div class="quiz-options">${optionsHtml}</div>
+    <div class="quiz-feedback" id="quiz-feedback"></div></div>`;
+}
+
+function answerQuiz(chosen, correct) {
+  if (quizAnswered) return;
+  quizAnswered = true;
+  const isCorrect = chosen === correct;
+  if (isCorrect) { quizCorrect++; document.getElementById('q-correct').textContent = quizCorrect; }
+  else { quizIncorrect++; document.getElementById('q-incorrect').textContent = quizIncorrect; }
+  document.querySelectorAll('.quiz-option').forEach(btn => {
+    btn.disabled = true;
+    if (btn.dataset.cat === correct) btn.classList.add('correct');
+    else if (btn.dataset.cat === chosen && !isCorrect) btn.classList.add('incorrect');
+  });
+  const card = quizDeck[quizIndex], fb = document.getElementById('quiz-feedback');
+  fb.classList.add('show', isCorrect ? 'correct-fb' : 'incorrect-fb');
+  fb.innerHTML = isCorrect
+    ? `✅ Correct! <em>${card.name}</em> is a <strong>${catLabel(correct)}</strong>. ${card.definition}`
+    : `✗ Not quite. <em>${card.name}</em> belongs under <strong>${catLabel(correct)}</strong>. ${card.definition}`;
+  setTimeout(() => { quizIndex++; quizAnswered = false; renderQuiz(); }, 2800);
+}
+
+buildDeck();
+shuffle();
+</script>
+</body>
+</html>

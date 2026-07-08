@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Radiographic Geometry — Ug Explorer</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --color-bg:               #ffffff;
+    --color-bg-secondary:     #f4f4f5;
+    --color-bg-success:       #f0fdf4;
+    --color-bg-warning:       #fffbeb;
+    --color-bg-danger:        #fef2f2;
+    --color-bg-info:          #eff6ff;
+    --color-text-primary:     #111827;
+    --color-text-secondary:   #6b7280;
+    --color-text-tertiary:    #9ca3af;
+    --color-text-success:     #166534;
+    --color-text-warning:     #92400e;
+    --color-text-danger:      #991b1b;
+    --color-text-info:        #1e40af;
+    --color-border:           #e5e7eb;
+    --color-border-light:     #f3f4f6;
+    --radius-sm:  6px;
+    --radius-md:  8px;
+    --radius-lg: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    color: var(--color-text-primary);
+    background: var(--color-bg);
+  }
+  body { background: var(--color-bg); }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 20px 16px 24px; }
+  .top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; gap: 8px; flex-wrap: wrap; }
+  h1 { font-size: 17px; font-weight: 600; color: var(--color-text-primary); }
+  .reset-btn { font-size: 12px; padding: 5px 13px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: transparent; color: var(--color-text-secondary); cursor: pointer; transition: background .15s; }
+  .reset-btn:hover { background: var(--color-bg-secondary); }
+  .canvas-wrap { background: #08081a; border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 14px; position: relative; }
+  canvas { display: block; width: 100%; height: auto; }
+  .canvas-success { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 10px; background: rgba(8,8,26,0.75); border-radius: var(--radius-lg); }
+  .canvas-success.show { display: flex; }
+  .success-icon { font-size: 52px; animation: pop .35s cubic-bezier(.36,.07,.19,.97) both; }
+  .success-title { font-size: 19px; font-weight: 700; color: #fff; text-align: center; padding: 0 20px; }
+  .success-sub   { font-size: 13px; color: #ccc; text-align: center; padding: 0 28px; line-height: 1.5; }
+  @keyframes pop { 0% { transform: scale(0.4); opacity: 0; } 70% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
+  .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; margin-bottom: 14px; }
+  .ctrl-row { display: flex; flex-direction: column; gap: 4px; }
+  .ctrl-label { font-size: 12px; font-weight: 600; color: var(--color-text-secondary); }
+  .ctrl-row input[type=range] { width: 100%; accent-color: #e06030; }
+  .ctrl-bottom { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+  .ctrl-bottom input[type=number] { width: 70px; font-size: 12px; padding: 4px 7px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg); color: var(--color-text-primary); -moz-appearance: textfield; }
+  .ctrl-bottom input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .unit { font-size: 11px; color: var(--color-text-tertiary); }
+  .sfd-row { display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; }
+  .sfd-val { font-size: 15px; font-weight: 600; color: var(--color-text-primary); padding: 3px 0; }
+  .ug-card { display: flex; align-items: center; justify-content: space-between; background: var(--color-bg-secondary); border-radius: var(--radius-md); padding: 10px 15px; margin-bottom: 6px; gap: 8px; flex-wrap: wrap; }
+  .ug-formula { font-size: 12px; color: var(--color-text-secondary); }
+  .ug-value   { font-size: 22px; font-weight: 700; color: #e06030; }
+  .ug-badge   { font-size: 11px; padding: 4px 11px; border-radius: 20px; font-weight: 500; }
+  .std-note   { font-size: 11px; color: var(--color-text-tertiary); margin-bottom: 14px; padding: 0 2px; }
+  .exercises { border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
+  .ex-tabs   { display: flex; border-bottom: 1px solid var(--color-border); }
+  .ex-tab { flex: 1; font-size: 11px; padding: 9px 4px; text-align: center; cursor: pointer; color: var(--color-text-secondary); background: transparent; border: none; border-bottom: 2px solid transparent; transition: all .15s; position: relative; }
+  .ex-tab.active { color: var(--color-text-primary); border-bottom-color: #e06030; font-weight: 600; }
+  .ex-tab.done::after { content: "✓"; position: absolute; top: 4px; right: 6px; font-size: 9px; color: var(--color-text-success); }
+  .ex-body  { padding: 16px; }
+  .ex-title { font-size: 13px; font-weight: 700; margin-bottom: 9px; color: var(--color-text-primary); }
+  .ex-steps { font-size: 12px; color: var(--color-text-secondary); line-height: 1.9; list-style: none; padding: 0; margin-bottom: 12px; }
+  .ex-steps li { padding: 1px 0 1px 20px; position: relative; }
+  .ex-steps li::before { content: "→"; position: absolute; left: 0; color: var(--color-text-tertiary); }
+  .target-box { background: var(--color-bg-secondary); border-radius: var(--radius-md); padding: 10px 13px; margin-bottom: 12px; border-left: 3px solid #e06030; }
+  .target-title { font-size: 10px; font-weight: 700; color: #e06030; margin-bottom: 7px; text-transform: uppercase; letter-spacing: .05em; }
+  .target-grid  { display: flex; gap: 12px; flex-wrap: wrap; }
+  .target-item  { font-size: 12px; color: var(--color-text-secondary); }
+  .target-item strong { color: var(--color-text-primary); }
+  .target-item .check { margin-left: 4px; font-size: 12px; }
+  .ex-question { font-size: 12px; font-style: italic; color: var(--color-text-secondary); margin-bottom: 11px; padding: 8px 13px; border-left: 2px solid var(--color-border); background: var(--color-bg-secondary); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; line-height: 1.6; }
+  .ex-feedback { font-size: 12px; padding: 10px 13px; border-radius: var(--radius-md); line-height: 1.6; margin-bottom: 12px; min-height: 38px; transition: background .25s, color .25s; }
+  .next-btn { font-size: 12px; padding: 7px 20px; border: none; border-radius: var(--radius-md); background: #111827; color: #fff; cursor: pointer; font-weight: 600; display: none; transition: opacity .15s; }
+  .next-btn:hover  { opacity: 0.82; }
+  .next-btn.visible { display: inline-block; }
+  .complete-msg { font-size: 13px; padding: 13px; border-radius: var(--radius-md); background: var(--color-bg-success); color: var(--color-text-success); text-align: center; font-weight: 600; display: none; line-height: 1.5; }
+  .complete-msg.show { display: block; }
+  @media (max-width: 520px) { .controls { grid-template-columns: 1fr; } .ex-tab { font-size: 10px; padding: 7px 2px; } .target-grid { gap: 8px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top-bar">
+    <h1>Radiographic geometry — Ug explorer</h1>
+    <button class="reset-btn" onclick="resetAll()">↺ Reset</button>
+  </div>
+  <div class="canvas-wrap">
+    <canvas id="cvs" width="640" height="420"></canvas>
+    <div class="canvas-success" id="canvas-success">
+      <div class="success-icon">✅</div>
+      <div class="success-title" id="success-title">Parameters met!</div>
+      <div class="success-sub"   id="success-sub"></div>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="ctrl-row">
+      <span class="ctrl-label">SS — source size</span>
+      <input type="range" id="sl-ss" min="0.01" max="1" step="0.01" value="0.04" oninput="syncNum('ss',this.value);draw()">
+      <div class="ctrl-bottom">
+        <input type="number" id="num-ss" min="0.01" max="1" step="0.01" value="0.04" oninput="syncSlider('ss',this.value);draw()">
+        <span class="unit">in</span>
+      </div>
+    </div>
+    <div class="ctrl-row">
+      <span class="ctrl-label">OFD — object to film</span>
+      <input type="range" id="sl-ofd" min="0.5" max="12" step="0.5" value="3" oninput="syncNum('ofd',this.value);draw()">
+      <div class="ctrl-bottom">
+        <input type="number" id="num-ofd" min="0.5" max="12" step="0.5" value="3" oninput="syncSlider('ofd',this.value);draw()">
+        <span class="unit">in</span>
+      </div>
+    </div>
+    <div class="ctrl-row">
+      <span class="ctrl-label">SOD — source to object</span>
+      <input type="range" id="sl-sod" min="4" max="60" step="1" value="20" oninput="syncNum('sod',this.value);draw()">
+      <div class="ctrl-bottom">
+        <input type="number" id="num-sod" min="4" max="60" step="1" value="20" oninput="syncSlider('sod',this.value);draw()">
+        <span class="unit">in</span>
+      </div>
+    </div>
+    <div class="sfd-row">
+      <span class="ctrl-label" style="font-size:12px;font-weight:600;color:var(--color-text-secondary)">SFD — source to film</span>
+      <span class="sfd-val" id="sfd-val">23.0 in</span>
+      <span style="font-size:11px;color:var(--color-text-tertiary)">= SOD + OFD</span>
+    </div>
+  </div>
+  <div class="ug-card">
+    <span class="ug-formula">Ug = SS × OFD / SOD</span>
+    <span class="ug-value" id="ug-val">—</span>
+    <span class="ug-badge" id="ug-badge">—</span>
+  </div>
+  <p class="std-note">Thresholds per ASTM E1742 (aerospace): Acceptable ≤ 0.020 in &nbsp;·&nbsp; Marginal 0.020–0.040 in &nbsp;·&nbsp; Unacceptable &gt; 0.040 in</p>
+  <div class="exercises">
+    <div class="ex-tabs">
+      <button class="ex-tab active" id="tab-0" onclick="setEx(0,this)">1. Baseline</button>
+      <button class="ex-tab"        id="tab-1" onclick="setEx(1,this)">2. Source size</button>
+      <button class="ex-tab"        id="tab-2" onclick="setEx(2,this)">3. OFD</button>
+      <button class="ex-tab"        id="tab-3" onclick="setEx(3,this)">4. SOD</button>
+    </div>
+    <div class="ex-body" id="ex-body"></div>
+  </div>
+</div>
+<script>
+const CVS_W = 640, CVS_H = 420, CX = 320;
+const SLAB_TOP_Y = 330, SLAB_H = 18;
+const FILM_TOP_Y = SLAB_TOP_Y + SLAB_H + 5, FILM_H = 10;
+const OBJ_RX = 36, OBJ_RY = 11;
+const SKX = 52, SKY = -20;
+const SLAB_LX = 80, SLAB_RX = 490;
+const UMBRA_RX = OBJ_RX, UMBRA_RY = OBJ_RX * 0.32;
+const UG_ACCEPTABLE = 0.020, UG_MARGINAL = 0.040;
+const cvs = document.getElementById('cvs');
+const ctx  = cvs.getContext('2d');
+const scrambles = [
+  { ss: 0.35, ofd: 8,  sod: 10 },
+  { ss: 0.12, ofd: 7,  sod: 35 },
+  { ss: 0.28, ofd: 2,  sod: 40 },
+  { ss: 0.08, ofd: 9,  sod: 14 },
+];
+function v(id) { return parseFloat(document.getElementById(id).value) || 0; }
+function syncNum(k, val) { document.getElementById('num-' + k).value = parseFloat(val).toFixed(k === 'ss' ? 2 : 1); }
+function syncSlider(k, val) { document.getElementById('sl-' + k).value = val; }
+function setSliders(ss, ofd, sod) {
+  const vals = { ss, ofd, sod };
+  ['ss', 'ofd', 'sod'].forEach(k => {
+    document.getElementById('sl-'  + k).value = vals[k];
+    document.getElementById('num-' + k).value = parseFloat(vals[k]).toFixed(k === 'ss' ? 2 : 1);
+  });
+}
+function getState() {
+  const ss = v('sl-ss'), ofd = v('sl-ofd'), sod = v('sl-sod');
+  const sfd = +(sod + ofd).toFixed(1);
+  const ug  = +(ss * ofd / sod).toFixed(4);
+  const OBJ_MIN_Y = 120, OBJ_MAX_Y = SLAB_TOP_Y - 36;
+  const objY = OBJ_MAX_Y - ((ofd - 0.5) / 11.5) * (OBJ_MAX_Y - OBJ_MIN_Y);
+  const srcY = objY - 20 - ((sod - 4) / 56) * (objY - 28 - 20);
+  const extraPx = Math.min(ss * ofd / sod * 280, 160);
+  const penRX = UMBRA_RX + extraPx, penRY = penRX * 0.32;
+  return { ss, ofd, sod, sfd, ug, objY, srcY, penRX, penRY, extraPx };
+}
+function poly(pts) {
+  ctx.beginPath();
+  pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+  ctx.closePath();
+}
+function slabTop  (lx, rx, ty)    { return [[lx,ty],[rx,ty],[rx+SKX,ty+SKY],[lx+SKX,ty+SKY]]; }
+function slabFront(lx, rx, ty, h) { return [[lx,ty],[rx,ty],[rx,ty+h],[lx,ty+h]]; }
+function slabRight(rx, ty, h)     { return [[rx,ty],[rx+SKX,ty+SKY],[rx+SKX,ty+SKY+h],[rx,ty+h]]; }
+function slabLeft (lx, ty, h)     { return [[lx,ty],[lx+SKX,ty+SKY],[lx+SKX,ty+SKY+h],[lx,ty+h]]; }
+let animFrame = 0, prevDone = false, successShown = false;
+function draw() {
+  animFrame++;
+  const f = animFrame;
+  const { ss, ofd, sod, sfd, ug, objY, srcY, penRX, penRY, extraPx } = getState();
+  const slabMidY = SLAB_TOP_Y + SKY * 0.5;
+  const isPoint = ss <= 0.015;
+  const sHalf = Math.min(ss * 120, 110);
+  const sL = CX - sHalf, sR = CX + sHalf;
+  const t = Date.now() / 1000;
+  const r1 = 0.55 + 0.35 * Math.sin(t * 2.2);
+  const r2 = 0.40 + 0.40 * Math.sin(t * 2.7 + 0.4);
+  ctx.clearRect(0, 0, CVS_W, CVS_H);
+  ctx.fillStyle = '#08081a'; ctx.fillRect(0, 0, CVS_W, CVS_H);
+  poly(slabLeft (SLAB_LX, SLAB_TOP_Y, SLAB_H)); ctx.fillStyle = '#6a5e20'; ctx.fill();
+  poly(slabTop  (SLAB_LX, SLAB_RX, SLAB_TOP_Y)); ctx.fillStyle = '#b8a050'; ctx.fill();
+  ctx.strokeStyle = '#cca840'; ctx.lineWidth = 0.8; ctx.stroke();
+  poly(slabFront(SLAB_LX, SLAB_RX, SLAB_TOP_Y, SLAB_H)); ctx.fillStyle = '#8a6e28'; ctx.fill();
+  poly(slabRight(SLAB_RX, SLAB_TOP_Y, SLAB_H)); ctx.fillStyle = '#5e4a18'; ctx.fill();
+  if (!isPoint && extraPx > 2) {
+    ctx.save();
+    ctx.beginPath(); ctx.ellipse(CX, slabMidY, penRX, penRY, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#b0b0b0'; ctx.globalAlpha = 0.85; ctx.fill(); ctx.restore();
+  }
+  ctx.beginPath(); ctx.ellipse(CX, slabMidY, UMBRA_RX, UMBRA_RY, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#151520'; ctx.fill();
+  ctx.font = '500 11px sans-serif'; ctx.textAlign = 'center';
+  if (isPoint) {
+    ctx.fillStyle = '#aaaaee'; ctx.fillText('sharp shadow', CX, slabMidY + 3);
+  } else {
+    ctx.fillStyle = '#aaaaee'; ctx.fillText('umbra', CX, slabMidY + 3);
+    if (extraPx > 14) { ctx.fillStyle = '#999'; ctx.font = '11px sans-serif'; ctx.fillText('penumbra', CX, slabMidY - penRY - 6); }
+  }
+  ctx.fillStyle = '#585858'; ctx.fillRect(SLAB_LX, FILM_TOP_Y, SLAB_RX - SLAB_LX, FILM_H);
+  ctx.fillStyle = '#3e3e3e'; ctx.fillRect(SLAB_LX, FILM_TOP_Y + FILM_H, SLAB_RX - SLAB_LX, 4);
+  const oL = CX - OBJ_RX, oR = CX + OBJ_RX;
+  const pLx = CX - penRX, pRx = CX + penRX;
+  function ray(x1, y1, x2, y2, x3, y3, alpha, col) {
+    ctx.save(); ctx.globalAlpha = alpha; ctx.strokeStyle = col; ctx.lineWidth = 1.2;
+    ctx.setLineDash([]); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x3, y3); ctx.stroke();
+    ctx.setLineDash([]); ctx.restore();
+  }
+  ray(sL, srcY, oL, objY - OBJ_RY, pLx, SLAB_TOP_Y, r1, '#f5d44e');
+  ray(sL, srcY, oR, objY - OBJ_RY, CX + UMBRA_RX, SLAB_TOP_Y, r1, '#f5d44e');
+  if (!isPoint) {
+    ray(sR, srcY, oL, objY - OBJ_RY, CX - UMBRA_RX, SLAB_TOP_Y, r2, '#f5a030');
+    ray(sR, srcY, oR, objY - OBJ_RY, pRx, SLAB_TOP_Y, r2, '#f5a030');
+  }
+  ctx.beginPath(); ctx.ellipse(CX, objY, OBJ_RX, OBJ_RY, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#1a8ec4'; ctx.fill();
+  ctx.fillStyle = '#80d4f5'; ctx.font = '12px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('Object', CX + OBJ_RX + 8, objY + 4);
+  if (isPoint) {
+    ctx.beginPath(); ctx.arc(CX, srcY, 5, 0, Math.PI * 2); ctx.fillStyle = '#FFD700'; ctx.fill();
+  } else {
+    ctx.fillStyle = '#FFD700'; ctx.fillRect(sL, srcY - 5, sHalf * 2, 10);
+    [sL, sR].forEach(sx => {
+      const g = ctx.createRadialGradient(sx, srcY, 0, sx, srcY, 14);
+      g.addColorStop(0, 'rgba(255,215,0,0.25)'); g.addColorStop(1, 'rgba(255,215,0,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, srcY, 14, 0, Math.PI * 2); ctx.fill();
+    });
+  }
+  ctx.fillStyle = '#FFD700'; ctx.font = '500 12px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(isPoint ? 'Source (point)' : `SS = ${ss.toFixed(2)} in`, CX, srcY - 14);
+  const dx = 44;
+  [[srcY, objY, 'SOD', sod], [objY, SLAB_TOP_Y, 'OFD', ofd]].forEach(([y1, y2, lbl, val]) => {
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 0.6; ctx.setLineDash([3, 2]);
+    ctx.beginPath(); ctx.moveTo(dx, y1); ctx.lineTo(dx, y2); ctx.stroke();
+    ctx.setLineDash([]); ctx.lineWidth = 1.1;
+    [y1, y2].forEach(y => { ctx.beginPath(); ctx.moveTo(dx - 4, y); ctx.lineTo(dx + 4, y); ctx.stroke(); });
+    ctx.fillStyle = '#777'; ctx.font = '11px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(`${lbl}=${val}"`, dx - 8, (y1 + y2) / 2 + 4);
+  });
+  const lblX = SLAB_RX + SKX + 10;
+  ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillStyle = '#b8a050'; ctx.fillText('Image plane', lblX, SLAB_TOP_Y + SLAB_H / 2 + 4);
+  ctx.fillStyle = '#999';    ctx.fillText('Film',        lblX, FILM_TOP_Y  + FILM_H  / 2 + 4);
+  ctx.fillStyle = '#777';    ctx.fillText(`SFD = ${sfd}"`, lblX, SLAB_TOP_Y - 10);
+  if (!isPoint && extraPx > 4) {
+    const brY = FILM_TOP_Y + FILM_H + 16;
+    ctx.strokeStyle = '#e06030'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(CX - penRX, brY); ctx.lineTo(CX + penRX, brY); ctx.stroke();
+    [CX - penRX, CX + penRX].forEach(x => { ctx.beginPath(); ctx.moveTo(x, brY - 4); ctx.lineTo(x, brY + 4); ctx.stroke(); });
+    ctx.fillStyle = '#e06030'; ctx.font = '500 11px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Uɡ', CX, brY + 14);
+  }
+  document.getElementById('sfd-val').textContent = sfd + ' in';
+  document.getElementById('ug-val').textContent  = isPoint ? '≈ 0.0000' : ug.toFixed(4) + ' in';
+  const badge = document.getElementById('ug-badge');
+  if (ug <= UG_ACCEPTABLE) {
+    badge.textContent = 'Acceptable (ASTM E1742)';
+    badge.style.cssText = 'background:var(--color-bg-success);color:var(--color-text-success)';
+  } else if (ug <= UG_MARGINAL) {
+    badge.textContent = 'Marginal — review required';
+    badge.style.cssText = 'background:var(--color-bg-warning);color:var(--color-text-warning)';
+  } else {
+    badge.textContent = 'Unacceptable — exceeds 0.040 in';
+    badge.style.cssText = 'background:var(--color-bg-danger);color:var(--color-text-danger)';
+  }
+  updateFeedback();
+  requestAnimationFrame(() => { if (animFrame === f) draw(); });
+}
+function near(val, tgt, tol) { return Math.abs(val - tgt) <= tol; }
+const exercises = [
+  {
+    title: 'Exercise 1 — Baseline observation',
+    steps: ['Set SS to <strong>0.04 in</strong>','Set OFD to <strong>3 in</strong>','Set SOD to <strong>20 in</strong>','Observe the shadow — note the sharp umbra with minimal penumbra'],
+    target: { ss: 0.04, ofd: 3, sod: 20 }, tol: { ss: 0.02, ofd: 0.5, sod: 2 },
+    successTitle: 'Baseline achieved!',
+    successSub: 'Ug is well within the ASTM E1742 aerospace limit of 0.020 in.',
+    question: 'What do you notice about the shadow? Is it sharp or blurry? Is this setup acceptable per ASTM E1742?',
+    feedback(done) {
+      const { ss, ofd, sod, ug } = getState();
+      if (done) return { text: `✓ Baseline set. Ug = ${ug.toFixed(4)} in — well within the ASTM E1742 limit of 0.020 in. The shadow is sharp with minimal penumbra.`, ok: true };
+      const h = [];
+      if (!near(ss,0.04,0.02)) h.push(`SS should be ~0.04 in (currently ${ss.toFixed(2)} in)`);
+      if (!near(ofd,3,0.5))    h.push(`OFD should be 3 in (currently ${ofd} in)`);
+      if (!near(sod,20,2))     h.push(`SOD should be 20 in (currently ${sod} in)`);
+      return { text: 'Adjust: ' + h.join(' · '), ok: false };
+    },
+  },
+  {
+    title: 'Exercise 2 — Effect of source size (SS)',
+    steps: ['Keep OFD at <strong>3 in</strong> and SOD at <strong>20 in</strong>','Increase SS to <strong>0.50 in</strong>','Watch the penumbra ring grow outward around the fixed umbra'],
+    target: { ss: 0.50, ofd: 3, sod: 20 }, tol: { ss: 0.08, ofd: 0.5, sod: 2 },
+    successTitle: 'Correct — large source, large Ug!',
+    successSub: 'This setup exceeds the ASTM E1742 limit. A larger source always increases geometric unsharpness.',
+    question: 'At SS = 0.50 in, does this setup meet ASTM E1742? What would you change to bring it back into tolerance?',
+    feedback(done) {
+      const { ss, ofd, sod, ug } = getState();
+      if (done) return { text: `✓ Correct. Ug = ${ug.toFixed(4)} in — exceeds the ASTM E1742 limit of 0.020 in. In aerospace this setup would be rejected. To fix it: reduce SS, reduce OFD, or increase SOD.`, ok: true };
+      const h = [];
+      if (!near(ss,0.50,0.08)) h.push(`Increase SS to ~0.50 in (currently ${ss.toFixed(2)} in)`);
+      if (!near(ofd,3,0.5))    h.push(`Keep OFD at 3 in (currently ${ofd} in)`);
+      if (!near(sod,20,2))     h.push(`Keep SOD at 20 in (currently ${sod} in)`);
+      return { text: h.join(' · '), ok: false };
+    },
+  },
+  {
+    title: 'Exercise 3 — Effect of OFD',
+    steps: ['Set SS to <strong>0.10 in</strong> and SOD to <strong>20 in</strong>','Increase OFD to <strong>10 in</strong> — watch the object move away from the film','Notice how the penumbra grows and Ug increases'],
+    target: { ss: 0.10, ofd: 10, sod: 20 }, tol: { ss: 0.03, ofd: 1, sod: 2 },
+    successTitle: 'Correct — high OFD, high Ug!',
+    successSub: 'Object far from film = more blur. Always minimize OFD in aerospace setups.',
+    question: 'At OFD = 10 in, is this acceptable per ASTM E1742? How close must the object be to the film to stay within tolerance?',
+    feedback(done) {
+      const { ss, ofd, sod, ug } = getState();
+      if (done) return { text: `✓ Correct. Ug = ${ug.toFixed(4)} in — unacceptable for aerospace (limit: 0.020 in). With SS = 0.10 in and SOD = 20 in, OFD must stay below ${(UG_ACCEPTABLE * 20 / 0.10).toFixed(1)} in to meet ASTM E1742.`, ok: true };
+      const h = [];
+      if (!near(ss,0.10,0.03))  h.push(`Set SS to 0.10 in (currently ${ss.toFixed(2)} in)`);
+      if (!near(ofd,10,1))      h.push(`Increase OFD to 10 in (currently ${ofd} in)`);
+      if (!near(sod,20,2))      h.push(`Keep SOD at 20 in (currently ${sod} in)`);
+      return { text: h.join(' · '), ok: false };
+    },
+  },
+  {
+    title: 'Exercise 4 — Effect of SOD',
+    steps: ['Set SS to <strong>0.40 in</strong> and OFD to <strong>3 in</strong>','Increase SOD to <strong>48 in</strong> — watch the source move farther from the object','Notice how the penumbra shrinks and Ug decreases'],
+    target: { ss: 0.40, ofd: 3, sod: 48 }, tol: { ss: 0.05, ofd: 0.5, sod: 4 },
+    successTitle: 'Correct — greater SOD, sharper image!',
+    successSub: 'Even with a large source, increasing SOD can bring Ug within aerospace tolerances.',
+    question: 'At SOD = 48 in with SS = 0.40 in, does this setup meet ASTM E1742? What does this tell you about working with larger sources in aerospace?',
+    feedback(done) {
+      const { ss, ofd, sod, ug } = getState();
+      const limit = (UG_ACCEPTABLE * sod / ofd).toFixed(3);
+      if (done) return { text: `✓ Correct. Ug = ${ug.toFixed(4)} in — ${ug <= UG_ACCEPTABLE ? 'within' : 'exceeds'} the ASTM E1742 limit of 0.020 in. With OFD = ${ofd} in, the max allowable SS at this SOD is ${limit} in. Larger sources demand much greater SOD in aerospace.`, ok: true };
+      const h = [];
+      if (!near(ss,0.40,0.05))  h.push(`Set SS to 0.40 in (currently ${ss.toFixed(2)} in)`);
+      if (!near(ofd,3,0.5))     h.push(`Set OFD to 3 in (currently ${ofd} in)`);
+      if (!near(sod,48,4))      h.push(`Increase SOD to 48 in (currently ${sod} in)`);
+      return { text: h.join(' · '), ok: false };
+    },
+  },
+];
+let curEx = 0;
+const doneSet = new Set();
+function checkDone() {
+  const ex = exercises[curEx], { ss, ofd, sod } = getState();
+  return near(ss,ex.target.ss,ex.tol.ss) && near(ofd,ex.target.ofd,ex.tol.ofd) && near(sod,ex.target.sod,ex.tol.sod);
+}
+function setEx(i, btn) {
+  const sc = scrambles[i];
+  setSliders(sc.ss, sc.ofd, sc.sod);
+  curEx = i; prevDone = false; successShown = false; hideSuccess();
+  document.querySelectorAll('.ex-tab').forEach(t => t.classList.remove('active'));
+  (btn || document.getElementById('tab-' + i)).classList.add('active');
+  renderEx(); draw();
+}
+function renderEx() {
+  const ex = exercises[curEx];
+  const steps = ex.steps.map(s => `<li>${s}</li>`).join('');
+  const isLast = curEx === exercises.length - 1;
+  document.getElementById('ex-body').innerHTML = `
+    <div class="ex-title">${ex.title}</div>
+    <ul class="ex-steps">${steps}</ul>
+    <div class="target-box"><div class="target-title">Target values</div><div class="target-grid" id="target-grid"></div></div>
+    <div class="ex-question">${ex.question}</div>
+    <div class="ex-feedback" id="ex-feedback"></div>
+    ${isLast ? '<div class="complete-msg" id="complete-msg">🎉 All exercises complete! You now understand how SS, OFD, and SOD affect Ug — and how to apply ASTM E1742 aerospace tolerances in a real setup.</div>' : '<button class="next-btn" id="next-btn" onclick="nextEx()">Next exercise →</button>'}`;
+  updateFeedback();
+}
+function showSuccess(title, sub) {
+  document.getElementById('success-title').textContent = title;
+  document.getElementById('success-sub').textContent   = sub;
+  document.getElementById('canvas-success').classList.add('show');
+  setTimeout(hideSuccess, 2800);
+}
+function hideSuccess() { document.getElementById('canvas-success').classList.remove('show'); }
+function updateFeedback() {
+  const el = document.getElementById('ex-feedback');
+  const nb = document.getElementById('next-btn');
+  const cm = document.getElementById('complete-msg');
+  const tg = document.getElementById('target-grid');
+  if (!el) return;
+  const ex = exercises[curEx], { ss, ofd, sod } = getState();
+  const isDone = checkDone();
+  if (tg) {
+    const ssOk = near(ss,ex.target.ss,ex.tol.ss), ofdOk = near(ofd,ex.target.ofd,ex.tol.ofd), sodOk = near(sod,ex.target.sod,ex.tol.sod);
+    tg.innerHTML = `<div class="target-item">SS  = <strong>${ex.target.ss.toFixed(2)} in</strong><span class="check">${ssOk ? '✅' : ''}</span></div><div class="target-item">OFD = <strong>${ex.target.ofd.toFixed(1)} in</strong><span class="check">${ofdOk ? '✅' : ''}</span></div><div class="target-item">SOD = <strong>${ex.target.sod} in</strong><span class="check">${sodOk ? '✅' : ''}</span></div>`;
+  }
+  const { text, ok } = ex.feedback(isDone);
+  el.textContent = text;
+  el.style.background = ok ? 'var(--color-bg-success)' : 'var(--color-bg-secondary)';
+  el.style.color      = ok ? 'var(--color-text-success)' : 'var(--color-text-secondary)';
+  if (isDone && !prevDone && !successShown) {
+    successShown = true;
+    showSuccess(ex.successTitle, ex.successSub);
+    doneSet.add(curEx);
+    document.getElementById('tab-' + curEx).classList.add('done');
+  }
+  prevDone = isDone;
+  if (isDone) { if (nb) nb.classList.add('visible'); if (cm) cm.classList.add('show'); }
+  else        { if (nb) nb.classList.remove('visible'); if (cm) cm.classList.remove('show'); }
+}
+function nextEx() { if (curEx < exercises.length - 1) { curEx++; setEx(curEx, null); } }
+function resetAll() {
+  const sc = scrambles[0];
+  setSliders(sc.ss, sc.ofd, sc.sod);
+  doneSet.clear(); prevDone = false; successShown = false; hideSuccess(); curEx = 0;
+  document.querySelectorAll('.ex-tab').forEach((t, i) => { t.classList.toggle('active', i === 0); t.classList.remove('done'); });
+  renderEx(); draw();
+}
+setSliders(scrambles[0].ss, scrambles[0].ofd, scrambles[0].sod);
+renderEx();
+draw();
+</script>
+</body>
+</html>

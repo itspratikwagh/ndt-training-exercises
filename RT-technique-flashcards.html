@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RT Technique Flashcards: SWSI, DWSI, and DWDI</title>
+<style>
+:root {
+  --bg:#f2f5f8; --surf:#ffffff; --surf2:#edf1f5;
+  --bdr:#cdd6e0; --bdr2:#aebccc;
+  --green:#1a6e38; --green-lo:rgba(26,110,56,.1);
+  --red:#b82028; --red-lo:rgba(184,32,40,.1);
+  --blue:#1a3f7a; --amber:#c47a08;
+  --txt:#18242e; --txt2:#243040; --mut:#566878; --mut2:#788898;
+  --mono:'Courier New',monospace; --sans:system-ui,sans-serif;
+  --r:10px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg)}
+body{font-family:var(--sans);color:var(--txt);min-height:100vh;display:flex;flex-direction:column;align-items:stretch}
+button{font-family:inherit;cursor:pointer}
+svg{display:block}
+
+.hdr{background:var(--blue);padding:14px 20px 12px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:5px}
+.hdr-eye{font-family:var(--mono);font-size:10px;letter-spacing:3px;color:rgba(255,255,255,.55);text-transform:uppercase}
+.hdr h1{font-family:var(--mono);font-size:clamp(13px,2.5vw,19px);font-weight:700;color:#fff;letter-spacing:.4px}
+.hdr-rule{font-size:12px;color:rgba(255,255,255,.72);background:rgba(255,255,255,.1);border-left:3px solid #f6c830;padding:6px 14px;border-radius:4px;line-height:1.6;max-width:600px}
+.hdr-rule b{color:#f6c830}
+
+.app{width:100%;max-width:640px;align-self:center;padding:20px 16px 40px;display:flex;flex-direction:column;gap:16px;flex:1}
+
+/* PROGRESS */
+.progress-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.progress-track{flex:1;height:6px;background:var(--bdr);border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;background:var(--blue);border-radius:4px;transition:width .25s ease}
+.progress-label{font-family:var(--mono);font-size:11px;color:var(--mut2);white-space:nowrap}
+
+/* CARD STACK */
+.card-stage{position:relative;perspective:1600px;min-height:420px}
+.card{
+  position:absolute;inset:0;
+  border-radius:14px;
+  cursor:pointer;
+  transition:transform .5s cubic-bezier(.4,.1,.2,1);
+  transform-style:preserve-3d;
+}
+.card-face{
+  position:absolute;inset:0;
+  border-radius:14px;
+  backface-visibility:hidden;
+  display:flex;flex-direction:column;
+  border:2px solid var(--bdr2);
+  background:var(--surf);
+  box-shadow:0 4px 18px rgba(20,40,70,.08);
+  overflow:hidden;
+}
+.card-front{}
+.card-back{transform:rotateY(180deg);background:var(--blue);border-color:var(--blue);color:#fff}
+.card.flipped{transform:rotateY(180deg)}
+
+/* FRONT FACE */
+.card-front-hdr{
+  padding:14px 18px 10px;text-align:center;border-bottom:1px solid var(--bdr);
+  background:var(--surf2);
+}
+.card-eyebrow{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--mut2);text-transform:uppercase}
+.card-prompt{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--blue);letter-spacing:.3px;margin-top:4px}
+.card-name{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--blue);letter-spacing:.5px;margin-top:2px}
+.card-full{font-size:12px;color:var(--mut);margin-top:2px}
+.card-diagram{flex:1;display:flex;align-items:center;justify-content:center;padding:10px;background:#fff}
+.card-diagram svg{width:100%;height:100%;max-width:480px}
+.card-tap-hint{
+  text-align:center;padding:10px;font-family:var(--mono);font-size:10px;color:var(--mut2);
+  letter-spacing:1px;text-transform:uppercase;border-top:1px solid var(--bdr);background:var(--surf2);
+}
+
+/* BACK FACE */
+.card-back-inner{padding:22px 22px 18px;display:flex;flex-direction:column;gap:14px;height:100%;overflow-y:auto}
+.back-name{font-family:var(--mono);font-size:22px;font-weight:700;letter-spacing:.5px}
+.back-full{font-size:13px;color:rgba(255,255,255,.8);margin-top:-8px}
+.back-stats{display:flex;gap:10px}
+.back-stat{flex:1;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:10px;text-align:center}
+.back-stat-val{font-family:var(--mono);font-size:24px;font-weight:700;color:#f6c830}
+.back-stat-lbl{font-size:10px;color:rgba(255,255,255,.7);margin-top:2px;letter-spacing:.5px}
+.back-text{font-size:13.5px;line-height:1.65;color:rgba(255,255,255,.92)}
+.back-callout{
+  font-family:var(--mono);font-size:11.5px;color:#f6c830;
+  background:rgba(246,200,48,.12);border:1px solid rgba(246,200,48,.3);
+  border-radius:6px;padding:8px 12px;line-height:1.5;
+}
+.back-tap-hint{
+  margin-top:auto;text-align:center;font-family:var(--mono);font-size:10px;
+  color:rgba(255,255,255,.55);letter-spacing:1px;text-transform:uppercase;
+  padding-top:10px;border-top:1px solid rgba(255,255,255,.15);
+}
+
+/* NAV CONTROLS */
+.nav-row{display:flex;gap:10px;align-items:center}
+.nav-btn{
+  flex:1;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+  padding:13px 10px;border-radius:var(--r);border:2px solid var(--bdr2);background:var(--surf);color:var(--txt);
+  transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.nav-btn:hover{border-color:var(--blue);color:var(--blue);background:#eaf0f8}
+.nav-btn:disabled{opacity:.4;cursor:default}
+.nav-btn.flip-btn{background:var(--blue);border-color:var(--blue);color:#fff;flex:1.4}
+.nav-btn.flip-btn:hover{background:#102860}
+
+/* SHUFFLE / KNOW TRACKER */
+.tools-row{display:flex;gap:10px}
+.tool-btn{
+  flex:1;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+  padding:10px;border-radius:var(--r);border:2px solid var(--bdr2);background:var(--surf2);color:var(--mut);
+  transition:all .15s;
+}
+.tool-btn:hover{border-color:var(--blue);color:var(--blue)}
+.tool-btn.active-know{border-color:var(--green);color:var(--green);background:var(--green-lo)}
+.tool-btn.active-review{border-color:var(--red);color:var(--red);background:var(--red-lo)}
+
+/* JUMP GRID */
+.jump-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.jump-btn{
+  font-family:var(--mono);font-size:10px;font-weight:700;padding:8px 4px;border-radius:6px;
+  border:2px solid var(--bdr2);background:var(--surf2);color:var(--mut2);transition:all .15s;text-align:center;line-height:1.3;
+}
+.jump-btn .jn{display:block;font-size:11px}
+.jump-btn:hover{border-color:var(--blue);color:var(--blue)}
+.jump-btn.cur{background:var(--blue);border-color:var(--blue);color:#fff}
+.jump-btn.know{border-color:var(--green);background:var(--green-lo)}
+.jump-btn.know:not(.cur){color:var(--green)}
+.jump-btn.review{border-color:var(--red);background:var(--red-lo)}
+.jump-btn.review:not(.cur){color:var(--red)}
+
+/* DONE SCREEN */
+.done-screen{display:none;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:40px 20px;background:var(--surf);border:2px solid var(--bdr2);border-radius:14px}
+.done-screen.show{display:flex}
+.done-title{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--blue)}
+.done-stats{display:flex;gap:14px}
+.done-stat{display:flex;flex-direction:column;align-items:center;gap:2px}
+.done-stat-val{font-family:var(--mono);font-size:32px;font-weight:700}
+.done-stat.know .done-stat-val{color:var(--green)}
+.done-stat.review .done-stat-val{color:var(--red)}
+.done-stat-lbl{font-size:10px;color:var(--mut2);letter-spacing:1px;text-transform:uppercase}
+.hidden{display:none!important}
+
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.fi{animation:fadeIn .4s ease forwards}
+@media(prefers-reduced-motion:reduce){.fi{animation:none}}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-eye">NDT · Level II · Radiographic Testing</div>
+  <h1>RT Technique Flashcards</h1>
+  <div class="hdr-rule">
+    <b>Key:</b> First part of abbreviation = walls radiation passes through &nbsp;·&nbsp; Second part = wall images interpreted
+  </div>
+</header>
+
+<div class="app">
+
+  <div class="progress-row">
+    <span class="progress-label" id="progLabel">Card 1 of 6</span>
+    <div class="progress-track"><div class="progress-fill" id="progFill" style="width:16.6%"></div></div>
+    <span class="progress-label" id="progScore">–0 –0</span>
+  </div>
+
+  <div class="card-stage" id="cardStage">
+    <div class="card" id="card" onclick="flipCard()">
+      <div class="card-face card-front">
+        <div class="card-front-hdr">
+          <div class="card-eyebrow" id="frontEyebrow">Technique 1 of 6</div>
+          <div class="card-prompt">Which technique is this?</div>
+        </div>
+        <div class="card-diagram"><svg id="frontSVG" viewBox="0 0 480 300" xmlns="http://www.w3.org/2000/svg"></svg></div>
+        <div class="card-tap-hint">Tap card to reveal answer →</div>
+      </div>
+      <div class="card-face card-back">
+        <div class="card-back-inner">
+          <div>
+            <div class="back-name" id="backName">SWSI</div>
+            <div class="back-full" id="backFull">Single-Wall Single-Image</div>
+          </div>
+          <div class="back-stats">
+            <div class="back-stat"><div class="back-stat-val" id="backWalls">1</div><div class="back-stat-lbl">Walls<br>Penetrated</div></div>
+            <div class="back-stat"><div class="back-stat-val" id="backImgs">1</div><div class="back-stat-lbl">Images<br>Interpreted</div></div>
+          </div>
+          <div class="back-text" id="backText">—</div>
+          <div class="back-callout" id="backCallout">—</div>
+          <div class="back-tap-hint">← Tap card to flip back</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="done-screen" id="doneScreen">
+    <div class="done-title">🎉 Deck Complete</div>
+    <div class="done-stats">
+      <div class="done-stat know"><div class="done-stat-val" id="doneKnow">0</div><div class="done-stat-lbl">Know It</div></div>
+      <div class="done-stat review"><div class="done-stat-val" id="doneReview">0</div><div class="done-stat-lbl">Review</div></div>
+    </div>
+    <div style="font-size:13px;color:var(--mut);max-width:340px">Cards marked “Review” will come up again if you restart the deck.</div>
+    <button class="nav-btn flip-btn" style="max-width:200px" onclick="restartDeck()">↺ Study Again</button>
+  </div>
+
+  <div class="nav-row" id="navRow">
+    <button class="nav-btn" id="prevBtn" onclick="prevCard()">← Prev</button>
+    <button class="nav-btn flip-btn" onclick="flipCard()">⟲ Flip</button>
+    <button class="nav-btn" id="nextBtn" onclick="nextCard()">Next →</button>
+  </div>
+
+  <div class="tools-row" id="toolsRow">
+    <button class="tool-btn" id="reviewBtn" onclick="markCard('review')">&#x1F534; Mark: Review Again</button>
+    <button class="tool-btn" id="knowBtn" onclick="markCard('know')">&#x1F7E2; Mark: I Know This</button>
+  </div>
+
+  <div class="jump-grid" id="jumpGrid"></div>
+
+</div>
+
+<script>
+const TECHS = [
+  { id:'SWSI', name:'SWSI', full:'Single-Wall Single-Image',
+    walls:1, images:1,
+    text:'The source is placed on one side of the part and the film is directly on the opposite side. Radiation passes through one wall only. One wall image is recorded and interpreted. Used when both sides of the part are accessible.',
+    callout:'Single Wall penetrated + Single Image interpreted = SWSI',
+    draw: drawSWSI },
+  { id:'SWSI_PAN', name:'SWSI Pan.', full:'SWSI — Panoramic / Internal Source',
+    walls:1, images:1,
+    text:'The source is placed inside the pipe at or near the centerline. Film is placed around the outside circumference. Radiation travels outward through one wall only. Despite the source being inside, each beam still crosses only one wall — so this is still classified as SWSI.',
+    callout:'Source inside, but ONE wall penetrated per beam path = still SWSI',
+    draw: drawSWSIPan },
+  { id:'DWSI', name:'DWSI', full:'Double-Wall Single-Image',
+    walls:2, images:1,
+    text:'Source and film are both outside the pipe on opposite sides. Radiation passes through Wall 1 (source side) and Wall 2 (film side). Only Wall 2 is interpreted — Wall 1 is penetrated but its image is disregarded. Used when the source cannot go inside the pipe (typically larger diameter pipe).',
+    callout:'Double Wall penetrated, but Single Image interpreted = DWSI',
+    draw: drawDWSI },
+  { id:'DWDI', name:'DWDI', full:'Double-Wall Double-Image',
+    walls:2, images:2,
+    text:'Source and film are both outside. Radiation passes through both walls and both wall images appear on the radiograph and are evaluated. Used for smaller diameter pipe and tubing — small enough that both weld images land on the film and can be read.',
+    callout:'Double Wall penetrated + Double Image interpreted = DWDI',
+    draw: drawDWDI },
+  { id:'DWDI_SUP', name:'DWDI Super', full:'DWDI — Superimposed',
+    walls:2, images:2,
+    text:'The source is aligned with the pipe centerline. Both wall images land at the same position on the film, creating overlapping (superimposed) images. This makes independent evaluation harder. Offsetting the source to create an elliptical view is preferred when geometry allows.',
+    callout:'Centered source → both weld images stack on top of each other on film',
+    draw: drawDWDISuper },
+  { id:'DWDI_ELL', name:'DWDI Ellip.', full:'DWDI — Elliptical',
+    walls:2, images:2,
+    text:'The source is offset from the pipe centerline. This causes the near-wall and far-wall weld images to land at different positions on the film, creating a clearly separated elliptical view. Both images can be evaluated independently. This is the preferred DWDI arrangement.',
+    callout:'Offset source → two separate weld images on film (elliptical)',
+    draw: drawDWDIEllip }
+];
+
+const NS='http://www.w3.org/2000/svg';
+function mk(tag,a){const e=document.createElementNS(NS,tag);for(const[k,v]of Object.entries(a||{}))e.setAttribute(k,v);return e}
+const CW=480, CH=300, CX=240;
+
+function bg(svg){svg.innerHTML='';svg.appendChild(mk('rect',{width:CW,height:CH,fill:'#fff'}));}
+
+function srcIcon(svg,cx,cy,r){
+  r=r||16;
+  svg.appendChild(mk('circle',{cx,cy,r:r+2,fill:'#e8c000',stroke:'#1a1a1a','stroke-width':'2'}));
+  svg.appendChild(mk('circle',{cx,cy,r:r*0.32,fill:'#1a1a1a'}));
+  for(let i=0;i<3;i++){
+    const a0=(i*120-90)*Math.PI/180, a1=(i*120-30)*Math.PI/180;
+    const ri=r*0.40, ro=r*0.94;
+    const p0=[cx+Math.cos(a0)*ri,cy+Math.sin(a0)*ri];
+    const p1=[cx+Math.cos(a0)*ro,cy+Math.sin(a0)*ro];
+    const p2=[cx+Math.cos(a1)*ro,cy+Math.sin(a1)*ro];
+    const p3=[cx+Math.cos(a1)*ri,cy+Math.sin(a1)*ri];
+    svg.appendChild(mk('path',{d:`M${p0}L${p1}A${ro},${ro} 0 0,1 ${p2}L${p3}A${ri},${ri} 0 0,0 ${p0}Z`,fill:'#1a1a1a'}));
+  }
+}
+
+function beam(svg,x1,y1,x2,y2,op){
+  op=op||1;
+  svg.appendChild(mk('line',{x1,y1,x2,y2,stroke:`rgba(20,20,20,${op})`,'stroke-width':'2','stroke-linecap':'round'}));
+  const ang=Math.atan2(y2-y1,x2-x1), as=7;
+  svg.appendChild(mk('polygon',{
+    points:`${x2},${y2} ${x2-Math.cos(ang-0.38)*as},${y2-Math.sin(ang-0.38)*as} ${x2-Math.cos(ang+0.38)*as},${y2-Math.sin(ang+0.38)*as}`,
+    fill:`rgba(20,20,20,${op})`}));
+}
+
+function wallBand(svg,cx,y,w,h,weldW,hi){
+  const fill = hi==='green'?'rgba(26,110,56,.2)':hi==='red'?'rgba(184,32,40,.16)':'#c8d0d8';
+  const stroke = hi==='green'?'#1a6e38':hi==='red'?'#b82028':'#4a5560';
+  const r=mk('rect',{x:cx-w/2,y,width:w,height:h,fill,stroke,'stroke-width':hi?'2.5':'1.5'});
+  if(hi==='red')r.setAttribute('stroke-dasharray','6,3');
+  svg.appendChild(r);
+  const hw=weldW/2;
+  svg.appendChild(mk('rect',{x:cx-hw,y,width:weldW,height:h,fill:'#3a3020',stroke:'#1a1008','stroke-width':'1'}));
+}
+
+function pipeTube(svg, cx, cy, pipeW, pipeOD, wallH, weldW, hiTop, hiBot){
+  const topOuterY = cy - pipeOD/2;
+  const topInnerY = topOuterY + wallH;
+  const botInnerY = cy + pipeOD/2 - wallH;
+  const botOuterY = cy + pipeOD/2;
+  const halfW = pipeW/2;
+  const capRX = 9;
+
+  const fillFor=(hi)=> hi==='green'?'rgba(26,110,56,.2)':hi==='red'?'rgba(184,32,40,.16)':'#c8d0d8';
+  const strokeFor=(hi)=> hi==='green'?'#1a6e38':hi==='red'?'#b82028':'#4a5560';
+
+  const bodyPath = `
+    M${cx-halfW+capRX},${topOuterY}
+    L${cx+halfW-capRX},${topOuterY}
+    A${capRX},${pipeOD/2} 0 0,1 ${cx+halfW-capRX},${botOuterY}
+    L${cx-halfW+capRX},${botOuterY}
+    A${capRX},${pipeOD/2} 0 0,1 ${cx-halfW+capRX},${topOuterY}
+    Z`;
+  svg.appendChild(mk('path',{d:bodyPath, fill:'#c8d0d8', stroke:'#4a5560','stroke-width':'1.5'}));
+
+  svg.appendChild(mk('rect',{x:cx-halfW+capRX*0.3, y:topInnerY, width:(halfW-capRX*0.3)*2, height:botInnerY-topInnerY, fill:'#eef2f6'}));
+  svg.appendChild(mk('ellipse',{cx:cx-halfW+capRX, cy:(topInnerY+botInnerY)/2, rx:capRX*0.7, ry:(botInnerY-topInnerY)/2, fill:'#eef2f6'}));
+  svg.appendChild(mk('ellipse',{cx:cx+halfW-capRX, cy:(topInnerY+botInnerY)/2, rx:capRX*0.7, ry:(botInnerY-topInnerY)/2, fill:'#eef2f6'}));
+  svg.appendChild(mk('rect',{x:cx-halfW+capRX*0.3, y:topInnerY, width:(halfW-capRX*0.3)*2, height:botInnerY-topInnerY, fill:'none', stroke:'#b8c4d0','stroke-width':'0.5'}));
+
+  if(hiTop){
+    const tw=mk('rect',{x:cx-halfW+capRX*0.5, y:topOuterY, width:(halfW-capRX*0.5)*2, height:wallH, fill:fillFor(hiTop), stroke:strokeFor(hiTop), 'stroke-width':'2.5'});
+    if(hiTop==='red') tw.setAttribute('stroke-dasharray','6,3');
+    svg.appendChild(tw);
+  }
+  if(hiBot){
+    const bw=mk('rect',{x:cx-halfW+capRX*0.5, y:botInnerY, width:(halfW-capRX*0.5)*2, height:wallH, fill:fillFor(hiBot), stroke:strokeFor(hiBot), 'stroke-width':'2.5'});
+    if(hiBot==='red') bw.setAttribute('stroke-dasharray','6,3');
+    svg.appendChild(bw);
+  }
+  svg.appendChild(mk('path',{d:bodyPath, fill:'none', stroke:'#4a5560','stroke-width':'1.5'}));
+
+  svg.appendChild(mk('ellipse',{cx:cx-halfW+capRX, cy:cy, rx:capRX, ry:pipeOD/2, fill:'none', stroke:'#8a98a8','stroke-width':'1'}));
+  svg.appendChild(mk('ellipse',{cx:cx+halfW-capRX, cy:cy, rx:capRX, ry:pipeOD/2, fill:'none', stroke:'#8a98a8','stroke-width':'1'}));
+
+  const hw=weldW/2;
+  svg.appendChild(mk('rect',{x:cx-hw, y:topOuterY, width:weldW, height:wallH, fill:'#3a3020', stroke:'#1a1008','stroke-width':'1'}));
+  svg.appendChild(mk('rect',{x:cx-hw, y:botInnerY, width:weldW, height:wallH, fill:'#3a3020', stroke:'#1a1008','stroke-width':'1'}));
+
+  svg.appendChild(mk('line',{x1:cx-halfW-14, y1:cy, x2:cx+halfW+14, y2:cy, stroke:'#aabac8','stroke-width':'0.8','stroke-dasharray':'6,4'}));
+
+  return {topOuterY, topInnerY, botInnerY, botOuterY, cy, halfW};
+}
+
+function filmBar(svg,cx,y,w){
+  svg.appendChild(mk('rect',{x:cx-w/2,y,width:w,height:10,fill:'#7a6e10',stroke:'#4a4008','stroke-width':'1',rx:'2'}));
+  const n=Math.max(4,Math.floor(w/16)); const step=w/n;
+  for(let i=0;i<n;i++){
+    const px=cx-w/2+i*step+2;
+    svg.appendChild(mk('rect',{x:px,y:y+1.5,width:step-4,height:2.5,fill:'rgba(0,0,0,.3)',rx:'1'}));
+    svg.appendChild(mk('rect',{x:px,y:y+6,width:step-4,height:2.5,fill:'rgba(0,0,0,.3)',rx:'1'}));
+  }
+}
+
+function imgLine(svg,x,y,w){svg.appendChild(mk('line',{x1:x,y1:y-1,x2:x,y2:y+w+1,stroke:'#1a1a1a','stroke-width':'4','stroke-linecap':'round'}));}
+
+function label(svg,x,y,text,color,size,anchor,weight){
+  const t=mk('text',{x,y,fill:color||'#566878','font-size':size||9,'text-anchor':anchor||'middle','font-family':'Courier New,monospace'});
+  if(weight)t.setAttribute('font-weight',weight);
+  t.textContent=text; svg.appendChild(t);
+}
+
+function drawSWSI(svg){
+  bg(svg);
+  const cy=150, pW=200, pH=46, weldW=24;
+  wallBand(svg,CX,cy-pH/2,pW,pH,weldW,'green');
+  label(svg,CX-pW/2-8,cy+4,'Wall 1 ✓','#1a6e38',10,'end','700');
+  srcIcon(svg,CX,55);
+  label(svg,CX,30,'SOURCE','#1a3f7a',9,'middle');
+  [[-50,0],[0,0],[50,0]].forEach(([dx],i)=>beam(svg,CX,73,CX+dx,cy-pH/2,i===1?1:.3));
+  beam(svg,CX,cy+pH/2,CX,cy+pH/2+34,.7);
+  filmBar(svg,CX,cy+pH/2+36,170);
+  label(svg,CX,cy+pH/2+58,'FILM','#4a4008',9,'middle');
+  imgLine(svg,CX,cy+pH/2+36,10);
+}
+
+function drawSWSIPan(svg){
+  bg(svg);
+  const cy=150, pW=200, pOD=92, wallH=22, weldW=18;
+  const p = pipeTube(svg,CX,cy,pW,pOD,wallH,weldW,'green','green');
+  label(svg,CX-p.halfW-8,p.topOuterY+wallH/2+4,'Wall 1 ✓','#1a6e38',10,'end','700');
+  label(svg,CX-p.halfW-8,p.botInnerY+wallH/2+4,'Wall 1 ✓','#1a6e38',10,'end','700');
+  srcIcon(svg,CX,cy,13);
+  label(svg,CX,cy+24,'SOURCE (inside)','#1a3f7a',8,'middle');
+  [-60,0,60].forEach(dx=>{beam(svg,CX,cy,CX+dx,p.topOuterY,.55);beam(svg,CX,cy,CX+dx,p.botOuterY,.55);});
+  filmBar(svg,CX,p.topOuterY-14,180);
+  filmBar(svg,CX,p.botOuterY+4,180);
+  label(svg,CX,p.topOuterY-20,'FILM (outside)','#4a4008',8,'middle');
+}
+
+function drawDWSI(svg){
+  bg(svg);
+  const cy=148, pW=200, pOD=92, wallH=24, weldW=24;
+  const p = pipeTube(svg,CX,cy,pW,pOD,wallH,weldW,'red','green');
+  label(svg,CX-p.halfW-8,p.topOuterY+wallH/2+4,'Wall 1 ✗','#b82028',10,'end','700');
+  label(svg,CX-p.halfW-8,p.botInnerY+wallH/2+4,'Wall 2 ✓','#1a6e38',10,'end','700');
+  srcIcon(svg,CX,55);
+  label(svg,CX,30,'SOURCE','#1a3f7a',9,'middle');
+  beam(svg,CX,73,CX,p.topOuterY,1);
+  beam(svg,CX,p.topInnerY,CX,p.botInnerY,.45);
+  beam(svg,CX,p.botOuterY,CX,p.botOuterY+30,.85);
+  filmBar(svg,CX,p.botOuterY+32,170);
+  label(svg,CX,p.botOuterY+54,'FILM','#4a4008',9,'middle');
+  imgLine(svg,CX,p.botOuterY+32,10);
+  label(svg,CX,p.botOuterY+70,'Only 1 image interpreted','#b82028',8.5,'middle');
+}
+
+function drawDWDI(svg){
+  bg(svg);
+  const cy=148, pW=150, pOD=64, wallH=20, weldW=18;
+  const p = pipeTube(svg,CX,cy,pW,pOD,wallH,weldW,'green','green');
+  label(svg,CX-p.halfW-8,p.topOuterY+wallH/2+4,'Wall 1 ✓','#1a6e38',10,'end','700');
+  label(svg,CX-p.halfW-8,p.botInnerY+wallH/2+4,'Wall 2 ✓','#1a6e38',10,'end','700');
+  srcIcon(svg,CX,55);
+  label(svg,CX,30,'SOURCE','#1a3f7a',9,'middle');
+  beam(svg,CX,73,CX,p.topOuterY,1);
+  beam(svg,CX,p.topInnerY,CX,p.botInnerY,.45);
+  beam(svg,CX,p.botOuterY,CX,p.botOuterY+30,.85);
+  filmBar(svg,CX,p.botOuterY+32,170);
+  const sp=14;
+  imgLine(svg,CX-sp,p.botOuterY+32,10);
+  imgLine(svg,CX+sp,p.botOuterY+32,10);
+  label(svg,CX,p.botOuterY+54,'FILM','#4a4008',9,'middle');
+  label(svg,CX,p.botOuterY+70,'Both images interpreted','#1a6e38',8.5,'middle');
+}
+
+function drawDWDISuper(svg){
+  bg(svg);
+  const cy=148, pW=150, pOD=64, wallH=20, weldW=18;
+  const p = pipeTube(svg,CX,cy,pW,pOD,wallH,weldW,'green','green');
+  svg.appendChild(mk('line',{x1:CX,y1:p.topOuterY-20,x2:CX,y2:p.botOuterY+20,stroke:'#b82028','stroke-width':'1','stroke-dasharray':'4,3'}));
+  label(svg,CX+8,p.topOuterY-8,'centerline','#b82028',7.5,'start');
+  srcIcon(svg,CX,55);
+  label(svg,CX,30,'SOURCE (centered)','#1a3f7a',8.5,'middle');
+  beam(svg,CX,73,CX,p.topOuterY,1);
+  beam(svg,CX,p.topInnerY,CX,p.botInnerY,.45);
+  beam(svg,CX,p.botOuterY,CX,p.botOuterY+30,.85);
+  filmBar(svg,CX,p.botOuterY+32,170);
+  svg.appendChild(mk('line',{x1:CX-1,y1:p.botOuterY+31,x2:CX-1,y2:p.botOuterY+43,stroke:'#1a1a1a','stroke-width':'5','stroke-linecap':'round'}));
+  svg.appendChild(mk('line',{x1:CX+2,y1:p.botOuterY+31,x2:CX+2,y2:p.botOuterY+43,stroke:'#555','stroke-width':'2','stroke-dasharray':'2,2'}));
+  label(svg,CX,p.botOuterY+54,'FILM','#4a4008',9,'middle');
+  label(svg,CX,p.botOuterY+70,'Images overlap','#1a3f7a',8.5,'middle');
+}
+
+function drawDWDIEllip(svg){
+  bg(svg);
+  const cy=148, pW=150, pOD=64, wallH=20, weldW=18;
+  const p = pipeTube(svg,CX,cy,pW,pOD,wallH,weldW,'green','green');
+  const srcX=CX-50;
+  srcIcon(svg,srcX,55);
+  label(svg,srcX,30,'SOURCE (offset)','#1a3f7a',8.5,'middle');
+  const f1=CX-18,f2=CX+18;
+  beam(svg,srcX,73,f1-6,p.topOuterY,1);
+  beam(svg,f1-6,p.topInnerY,f1-6,p.botInnerY,.4);
+  beam(svg,f1-6,p.botOuterY,f1,p.botOuterY+30,.85);
+  beam(svg,srcX,73,f2+6,p.topOuterY,.95);
+  beam(svg,f2+6,p.topInnerY,f2+6,p.botInnerY,.4);
+  beam(svg,f2+6,p.botOuterY,f2,p.botOuterY+30,.85);
+  filmBar(svg,CX,p.botOuterY+32,170);
+  imgLine(svg,f1,p.botOuterY+32,10);
+  imgLine(svg,f2,p.botOuterY+32,10);
+  label(svg,CX,p.botOuterY+54,'FILM','#4a4008',9,'middle');
+  label(svg,CX,p.botOuterY+70,'Images separated','#1a6e38',8.5,'middle');
+}
+
+let curIdx = 0;
+let isFlipped = false;
+let cardStatus = new Array(TECHS.length).fill(null);
+
+function renderCard(){
+  const T = TECHS[curIdx];
+  document.getElementById('frontEyebrow').textContent = `Technique ${curIdx+1} of ${TECHS.length}`;
+  document.getElementById('backName').textContent = T.name;
+  document.getElementById('backFull').textContent = T.full;
+  document.getElementById('backWalls').textContent = T.walls;
+  document.getElementById('backImgs').textContent = T.images;
+  document.getElementById('backText').textContent = T.text;
+  document.getElementById('backCallout').textContent = '→ ' + T.callout;
+
+  const svg = document.getElementById('frontSVG');
+  T.draw(svg);
+
+  isFlipped = false;
+  document.getElementById('card').classList.remove('flipped');
+
+  document.getElementById('progLabel').textContent = `Card ${curIdx+1} of ${TECHS.length}`;
+  document.getElementById('progFill').style.width = `${((curIdx+1)/TECHS.length)*100}%`;
+  const knowCt = cardStatus.filter(s=>s==='know').length;
+  const revCt = cardStatus.filter(s=>s==='review').length;
+  document.getElementById('progScore').textContent = `✓${knowCt} ✗${revCt}`;
+
+  document.getElementById('prevBtn').disabled = (curIdx===0);
+  document.getElementById('nextBtn').textContent = (curIdx===TECHS.length-1) ? 'Finish ✓' : 'Next →';
+
+  document.getElementById('knowBtn').classList.toggle('active-know', cardStatus[curIdx]==='know');
+  document.getElementById('reviewBtn').classList.toggle('active-review', cardStatus[curIdx]==='review');
+
+  renderJumpGrid();
+
+  document.getElementById('cardStage').classList.remove('hidden');
+  document.getElementById('navRow').classList.remove('hidden');
+  document.getElementById('toolsRow').classList.remove('hidden');
+  document.getElementById('jumpGrid').classList.remove('hidden');
+  document.getElementById('doneScreen').classList.remove('show');
+}
+
+function renderJumpGrid(){
+  const grid = document.getElementById('jumpGrid');
+  grid.innerHTML = '';
+  TECHS.forEach((T,i)=>{
+    const b=document.createElement('button');
+    let cls='jump-btn';
+    if(i===curIdx)cls+=' cur';
+    else if(cardStatus[i]==='know')cls+=' know';
+    else if(cardStatus[i]==='review')cls+=' review';
+    b.className=cls;
+    b.innerHTML=`<span class="jn">${i+1}</span>Card ${i+1}`;
+    b.onclick=()=>{curIdx=i;renderCard();};
+    grid.appendChild(b);
+  });
+}
+
+function flipCard(){
+  isFlipped = !isFlipped;
+  document.getElementById('card').classList.toggle('flipped', isFlipped);
+}
+
+function nextCard(){
+  if(curIdx < TECHS.length-1){
+    curIdx++;
+    renderCard();
+  } else {
+    showDone();
+  }
+}
+
+function prevCard(){
+  if(curIdx>0){curIdx--; renderCard();}
+}
+
+function markCard(status){
+  cardStatus[curIdx] = (cardStatus[curIdx]===status) ? null : status;
+  document.getElementById('knowBtn').classList.toggle('active-know', cardStatus[curIdx]==='know');
+  document.getElementById('reviewBtn').classList.toggle('active-review', cardStatus[curIdx]==='review');
+  const knowCt = cardStatus.filter(s=>s==='know').length;
+  const revCt = cardStatus.filter(s=>s==='review').length;
+  document.getElementById('progScore').textContent = `✓${knowCt} ✗${revCt}`;
+  renderJumpGrid();
+  setTimeout(()=>{
+    if(curIdx < TECHS.length-1) nextCard(); else showDone();
+  }, 280);
+}
+
+function showDone(){
+  document.getElementById('cardStage').classList.add('hidden');
+  document.getElementById('navRow').classList.add('hidden');
+  document.getElementById('toolsRow').classList.add('hidden');
+  document.getElementById('jumpGrid').classList.add('hidden');
+  const knowCt = cardStatus.filter(s=>s==='know').length;
+  const revCt = cardStatus.filter(s=>s==='review').length;
+  document.getElementById('doneKnow').textContent = knowCt;
+  document.getElementById('doneReview').textContent = revCt;
+  document.getElementById('doneScreen').classList.add('show');
+}
+
+function restartDeck(){
+  curIdx = 0;
+  cardStatus = new Array(TECHS.length).fill(null);
+  renderCard();
+}
+
+renderCard();
+</script>
+</body>
+</html>
