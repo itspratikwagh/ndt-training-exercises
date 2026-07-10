@@ -41,13 +41,22 @@
   .container { max-width: 720px; margin: 0 auto; }
   .page-title { font-size: 22px; font-weight: 500; margin-bottom: 4px; }
   .page-sub { font-size: 14px; color: var(--text-secondary); margin-bottom: 1.5rem; }
+
+  /* Top stats bar */
   .top-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1.5rem; }
   .stat { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 10px 12px; text-align: center; }
   .stat-label { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
   .stat-val { font-size: 18px; font-weight: 500; color: var(--text-primary); }
+
+  /* Main stage grid */
   .stage { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1rem; align-items: start; }
-  @media (max-width: 540px) { .stage { grid-template-columns: 1fr; } .top-bar { grid-template-columns: repeat(2,1fr); } }
-  .nucleus-panel { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  @media (max-width: 540px) {
+    .stage { grid-template-columns: 1fr; }
+    .top-bar { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* Nucleus */
+  .nucleus-panel { display: flex; flex-direction: column; align-items: center; gap: 8px; }
   .drop-zone {
     width: 220px; height: 220px; border-radius: 50%;
     border: 2px dashed var(--border-secondary);
@@ -58,8 +67,22 @@
   .drop-zone.over { border-color: #378ADD; box-shadow: 0 0 0 4px #E6F1FB; }
   .drop-zone.unstable { border-color: #E24B4A; animation: shake 0.4s ease; }
   .drop-zone.unstable-glow { border-color: #E24B4A; box-shadow: 0 0 0 6px rgba(226,75,74,0.15); }
-  @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-5px)} 40%{transform:translateX(5px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-5px); }
+    40% { transform: translateX(5px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
   .nucleus-svg { width: 190px; height: 190px; pointer-events: none; }
+
+  /* Legend */
+  .legend { display: flex; gap: 16px; align-items: center; justify-content: center; margin-top: 2px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+  .legend-dot { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
+  .hint { font-size: 12px; color: var(--text-tertiary); text-align: center; margin-top: 4px; }
+
+  /* Neutron bank */
   .bank-card { background: var(--bg-secondary); border-radius: var(--radius-lg); padding: 1rem; display: flex; flex-direction: column; gap: 8px; }
   .bank-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
   .bank-neutrons { display: flex; gap: 10px; flex-wrap: wrap; min-height: 48px; align-items: center; }
@@ -67,7 +90,7 @@
     width: 44px; height: 44px; border-radius: 50%;
     background: #85B7EB; border: 2px solid #185FA5;
     display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 500; color: #0C447C;
+    font-size: 13px; font-weight: 600; color: #0C447C;
     cursor: grab; user-select: none;
     transition: transform 0.15s, opacity 0.15s; touch-action: none;
   }
@@ -78,10 +101,12 @@
     width: 44px; height: 44px; border-radius: 50%;
     background: #85B7EB; border: 2px solid #185FA5;
     display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 500; color: #0C447C;
+    font-size: 13px; font-weight: 600; color: #0C447C;
     position: fixed; pointer-events: none; z-index: 9999;
-    transform: translate(-50%,-50%);
+    transform: translate(-50%, -50%);
   }
+
+  /* Info card */
   .info-card { background: var(--bg-primary); border: 0.5px solid var(--border-tertiary); border-radius: var(--radius-lg); padding: 1.25rem; }
   .iso-name { font-size: 20px; font-weight: 500; margin-bottom: 2px; }
   .iso-sub { font-size: 12px; color: var(--text-secondary); margin-bottom: 1rem; }
@@ -94,6 +119,8 @@
   .badge-unstable { background: #FCEBEB; color: #A32D2D; }
   .explanation { font-size: 13px; line-height: 1.65; color: var(--text-secondary); background: var(--bg-secondary); border-radius: var(--radius-md); padding: 11px 13px; margin-top: .5rem; }
   .explanation strong { font-weight: 500; color: var(--text-primary); }
+
+  /* Quiz card */
   .quiz-card { background: var(--bg-primary); border: 0.5px solid var(--border-tertiary); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1rem; }
   .quiz-step { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
   .quiz-q { font-size: 14px; font-weight: 500; margin-bottom: 12px; }
@@ -114,17 +141,27 @@
   .unlock-msg { font-size: 12px; color: #3B6D11; margin-top: 8px; display: none; }
   .btn-retry { margin-top: 8px; font-size: 13px; padding: 7px 14px; border-radius: var(--radius-md); border: 0.5px solid #A32D2D; background: #FCEBEB; color: #A32D2D; cursor: pointer; }
   .btn-retry:hover { background: #F7C1C1; }
-  .hint { font-size: 12px; color: var(--text-tertiary); text-align: center; }
+  .btn-complete {
+    margin-top: 14px; width: 100%; font-size: 14px; font-weight: 500;
+    padding: 11px 20px; border-radius: var(--radius-md);
+    border: 0.5px solid #185FA5; background: #E6F1FB; color: #0C447C;
+    cursor: pointer; display: none; transition: background 0.15s;
+  }
+  .btn-complete:hover { background: #B5D4F4; }
+
+  /* Reset */
   .reset-row { display: flex; justify-content: flex-end; margin-top: .5rem; }
   .btn-reset { font-size: 12px; padding: 6px 14px; border-radius: var(--radius-md); border: 0.5px solid var(--border-secondary); background: var(--bg-secondary); color: var(--text-secondary); cursor: pointer; }
   .btn-reset:hover { background: var(--bg-primary); }
+
+  /* Completion */
   .completion { text-align: center; padding: 1.5rem 1rem; background: var(--bg-primary); border: 0.5px solid var(--border-tertiary); border-radius: var(--radius-lg); margin-top: 1rem; display: none; }
   .comp-title { font-size: 18px; font-weight: 500; margin-bottom: 6px; }
   .comp-sub { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 1.25rem; }
   .score-ring { width: 64px; height: 64px; margin: 0 auto 1rem; position: relative; }
   .score-ring svg { width: 64px; height: 64px; }
-  .score-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 15px; font-weight: 500; }
-  .sum-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 1rem; }
+  .score-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 15px; font-weight: 500; }
+  .sum-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1rem; }
   .sum-card { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 10px; text-align: center; }
   .sum-num { font-size: 18px; font-weight: 500; }
   .sum-lbl { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
@@ -139,7 +176,7 @@
 
   <div class="top-bar">
     <div class="stat"><div class="stat-label">Element</div><div class="stat-val" id="s-element">H</div></div>
-    <div class="stat"><div class="stat-label">Protons</div><div class="stat-val" style="color:#993C1D" id="s-protons">1</div></div>
+    <div class="stat"><div class="stat-label">Protons</div><div class="stat-val" style="color:#993C1D">1</div></div>
     <div class="stat"><div class="stat-label">Neutrons</div><div class="stat-val" style="color:#0C447C" id="s-neutrons">0</div></div>
     <div class="stat"><div class="stat-label">Mass no.</div><div class="stat-val" id="s-mass">1</div></div>
   </div>
@@ -149,12 +186,22 @@
       <div class="drop-zone locked" id="drop-zone">
         <svg class="nucleus-svg" id="nsvg" viewBox="0 0 190 190" xmlns="http://www.w3.org/2000/svg"></svg>
       </div>
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#F0997B;border:2px solid #993C1D"></div>
+          <span>Proton (p⁺)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#85B7EB;border:2px solid #185FA5"></div>
+          <span>Neutron (n)</span>
+        </div>
+      </div>
       <div class="hint" id="drag-hint"><i class="ti ti-lock"></i> Answer the question to unlock</div>
     </div>
 
     <div style="display:flex;flex-direction:column;gap:10px">
       <div class="bank-card">
-        <div class="bank-label">Neutron bank</div>
+        <div class="bank-label">Neutron bank — drag into nucleus</div>
         <div class="bank-neutrons" id="bank"></div>
       </div>
       <div class="info-card">
@@ -162,7 +209,7 @@
         <div class="iso-name" id="iso-name">Hydrogen</div>
         <div class="iso-sub" id="iso-sub">¹H — Protium</div>
         <div class="fact-row"><span class="fl">Element</span><span class="fv">Hydrogen (H)</span></div>
-        <div class="fact-row"><span class="fl">Protons</span><span class="fv" style="color:#993C1D" id="f-protons">1 — defines the element</span></div>
+        <div class="fact-row"><span class="fl">Protons</span><span class="fv" style="color:#993C1D">1 — defines the element</span></div>
         <div class="fact-row"><span class="fl">Neutrons</span><span class="fv" style="color:#0C447C" id="f-neutrons">0</span></div>
         <div class="fact-row"><span class="fl">Mass number</span><span class="fv" id="f-mass">1</span></div>
         <div class="explanation" id="explanation">This is the simplest atom in the universe — 1 proton, 0 neutrons. The number of protons defines which element you have. Hydrogen always has 1 proton.</div>
@@ -175,8 +222,13 @@
     <div class="quiz-q" id="quiz-q"></div>
     <div class="quiz-opts" id="quiz-opts"></div>
     <div class="quiz-fb" id="qfb"></div>
-    <div id="retry-wrap" style="display:none"><button class="btn-retry" onclick="retryQ()"><i class="ti ti-refresh"></i> Try again</button></div>
+    <div id="retry-wrap" style="display:none">
+      <button class="btn-retry" onclick="retryQ()"><i class="ti ti-refresh"></i> Try again</button>
+    </div>
     <div class="unlock-msg" id="unlock-msg"></div>
+    <button class="btn-complete" id="btn-complete" onclick="showCompletion()">
+      <i class="ti ti-check"></i> Complete exercise
+    </button>
   </div>
 
   <div class="reset-row">
@@ -184,7 +236,10 @@
   </div>
 
   <div class="completion" id="completion">
-    <div class="score-ring"><svg viewBox="0 0 64 64" id="score-svg"></svg><div class="score-label" id="score-label"></div></div>
+    <div class="score-ring">
+      <svg viewBox="0 0 64 64" id="score-svg"></svg>
+      <div class="score-label" id="score-label"></div>
+    </div>
     <p class="comp-title">Lab complete</p>
     <p class="comp-sub">You built all three isotopes of hydrogen and discovered why the same element can behave so differently — all because of neutrons.</p>
     <div class="sum-grid">
@@ -192,194 +247,197 @@
       <div class="sum-card"><div class="sum-num">3</div><div class="sum-lbl">Isotopes built</div></div>
       <div class="sum-card"><div class="sum-num" id="score-final">—</div><div class="sum-lbl">First-try correct</div></div>
     </div>
-    <div class="key-box"><strong>Key takeaway:</strong> Protons define the element. Neutrons determine the isotope. Too many neutrons can make a nucleus unstable — and unstable nuclei are radioactive.</div>
+    <div class="key-box">
+      <strong>Key takeaway:</strong> Protons define the element. Neutrons determine the isotope. Too many neutrons can make a nucleus unstable — and unstable nuclei are radioactive.
+    </div>
     <button class="btn-reset" onclick="resetAll()"><i class="ti ti-refresh"></i> Try again</button>
   </div>
 </div>
 
 <script>
-const PROTON_F="#F0997B",PROTON_S="#993C1D",NEUTRON_F="#85B7EB",NEUTRON_S="#185FA5";
+const PROTON_F = "#F0997B", PROTON_S = "#993C1D";
+const NEUTRON_F = "#85B7EB", NEUTRON_S = "#185FA5";
 
-const quizzes=[
+const quizzes = [
   {
-    step:"Question 1 of 3",
-    q:"What determines which element an atom is?",
-    opts:["The number of electrons","The number of protons","The total mass number","The number of neutrons"],
-    correct:1,
-    fb_good:"Exactly. Protons are the identity card of an element. Change the proton count and you'd have a different element entirely.",
-    fb_bad:"Not quite. It's the proton count. Electrons can be gained or lost (ions), and neutrons can vary — but protons define the element.",
-    unlock:"✓ Neutron unlocked — drag it into the nucleus to form deuterium."
+    step: "Question 1 of 3",
+    q: "What determines which element an atom is?",
+    opts: ["The number of electrons", "The number of protons", "The total mass number", "The number of neutrons"],
+    correct: 1,
+    fb_good: "Exactly. Protons are the identity card of an element. Change the proton count and you'd have a different element entirely.",
+    fb_bad: "Not quite. It's the proton count. Electrons can be gained or lost (ions), and neutrons can vary — but protons define the element.",
+    unlock: "✓ Neutron unlocked — drag it into the nucleus to form deuterium.",
+    isLast: false
   },
   {
-    step:"Question 2 of 3",
-    q:"Deuterium and regular hydrogen are the same element. Why?",
-    opts:["They have the same mass number","They have the same number of protons","They are both found in water","They have the same number of neutrons"],
-    correct:1,
-    fb_good:"Right. Same proton count = same element. The extra neutron changes the mass but not the identity.",
-    fb_bad:"Not quite. Same element means same proton count — neutrons can vary without changing the element.",
-    unlock:"✓ Second neutron unlocked — drag it in to form tritium."
+    step: "Question 2 of 3",
+    q: "Deuterium and regular hydrogen are the same element. Why?",
+    opts: ["They have the same mass number", "They have the same number of protons", "They are both found in water", "They have the same number of neutrons"],
+    correct: 1,
+    fb_good: "Right. Same proton count = same element. The extra neutron changes the mass but not the identity.",
+    fb_bad: "Not quite. Same element means same proton count — neutrons can vary without changing the element.",
+    unlock: "✓ Second neutron unlocked — drag it in to form tritium.",
+    isLast: false
   },
   {
-    step:"Question 3 of 3",
-    q:"Why is tritium radioactive when regular hydrogen is not?",
-    opts:["It has more electrons","Its nucleus is unstable due to too many neutrons","It has fewer protons","It is no longer hydrogen"],
-    correct:1,
-    fb_good:"Correct. The proton-to-neutron ratio matters for stability. Two neutrons crowded around one proton creates an unstable nucleus that decays over time.",
-    fb_bad:"Not quite. The extra neutrons upset the nuclear balance — with 2 neutrons and only 1 proton, the nucleus can't hold together indefinitely.",
-    unlock:null
+    step: "Question 3 of 3",
+    q: "Why is tritium radioactive when regular hydrogen is not?",
+    opts: ["It has more electrons", "Its nucleus is unstable due to too many neutrons", "It has fewer protons", "It is no longer hydrogen"],
+    correct: 1,
+    fb_good: "Correct. The proton-to-neutron ratio matters for stability. Two neutrons crowded around one proton creates an unstable nucleus that decays over time.",
+    fb_bad: "Not quite. The extra neutrons upset the nuclear balance — with 2 neutrons and only 1 proton, the nucleus can't hold together indefinitely.",
+    unlock: null,
+    isLast: true
   }
 ];
 
-const isoStates=[
+const isoStates = [
   {
-    name:"Hydrogen",sub:"¹H — Protium",stable:true,
-    explain:"This is the simplest atom in the universe — 1 proton, 0 neutrons. The number of protons defines which element you have. Hydrogen always has 1 proton."
+    name: "Hydrogen", sub: "¹H — Protium", stable: true,
+    explain: "This is the simplest atom in the universe — 1 proton, 0 neutrons. The number of protons defines which element you have. Hydrogen always has 1 proton."
   },
   {
-    name:"Deuterium",sub:"²H — Heavy hydrogen",stable:true,
-    explain:"<strong>Same element, different isotope.</strong> Adding 1 neutron increased the mass number to 2, but the proton count is still 1 — so this is still hydrogen. Deuterium is stable and occurs naturally in water."
+    name: "Deuterium", sub: "²H — Heavy hydrogen", stable: true,
+    explain: "<strong>Same element, different isotope.</strong> Adding 1 neutron increased the mass number to 2, but the proton count is still 1 — so this is still hydrogen. Deuterium is stable and occurs naturally in water."
   },
   {
-    name:"Tritium",sub:"³H — Radioactive hydrogen",stable:false,
-    explain:"<strong>Still hydrogen</strong> — still 1 proton. But 2 neutrons crowd the nucleus beyond stability. Tritium is radioactive: it undergoes beta decay with a half-life of about 12.3 years."
+    name: "Tritium", sub: "³H — Radioactive hydrogen", stable: false,
+    explain: "<strong>Still hydrogen</strong> — still 1 proton. But 2 neutrons crowd the nucleus beyond stability. Tritium is radioactive: it undergoes beta decay with a half-life of about 12.3 years."
   }
 ];
 
-let neutronCount=0,currentQuiz=0,quizPassed=[false,false,false],score=0,attempts=[0,0,0],dzLocked=true;
+let neutronCount = 0, currentQuiz = 0;
+let quizPassed = [false, false, false];
+let score = 0, attempts = [0, 0, 0], dzLocked = true;
 
-function drawNucleus(n){
-  const svg=document.getElementById("nsvg");
-  const total=1+n,R=total===1?0:total===2?26:34;
-  let h="";
-  h+=`<circle cx="95" cy="95" r="60" fill="none" stroke="${n===2?"#F09595":"#B4B2A9"}" stroke-width="0.5" stroke-dasharray="4 3" opacity="0.5"/>`;
-  if(n===2){
-    h+=`<circle cx="95" cy="95" r="64" fill="none" stroke="#F09595" stroke-width="1" opacity="0.35"/>`;
-    h+=`<text x="95" y="172" font-size="11" fill="#A32D2D" text-anchor="middle" font-weight="500">⚠ unstable nucleus</text>`;
+function drawNucleus(n) {
+  const svg = document.getElementById("nsvg");
+  const total = 1 + n;
+  const R = total === 1 ? 0 : total === 2 ? 26 : 34;
+  let h = "";
+  h += `<circle cx="95" cy="95" r="60" fill="none" stroke="${n === 2 ? "#F09595" : "#B4B2A9"}" stroke-width="0.5" stroke-dasharray="4 3" opacity="0.5"/>`;
+  if (n === 2) {
+    h += `<circle cx="95" cy="95" r="64" fill="none" stroke="#F09595" stroke-width="1" opacity="0.35"/>`;
+    h += `<text x="95" y="175" font-size="11" fill="#A32D2D" text-anchor="middle" font-weight="500">⚠ unstable</text>`;
   }
-  for(let i=0;i<total;i++){
-    const angle=(2*Math.PI*i/total)-Math.PI/2;
-    const x=95+(total===1?0:R*Math.cos(angle));
-    const y=95+(total===1?0:R*Math.sin(angle));
-    const isP=i<1;
-    h+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="20" fill="${isP?PROTON_F:NEUTRON_F}" stroke="${isP?PROTON_S:NEUTRON_S}" stroke-width="1.5"/>`;
-    h+=`<text x="${x.toFixed(1)}" y="${(y+5).toFixed(1)}" font-size="11" fill="${isP?PROTON_S:NEUTRON_S}" font-weight="500" text-anchor="middle">${isP?"p⁺":"n"}</text>`;
+  for (let i = 0; i < total; i++) {
+    const angle = (2 * Math.PI * i / total) - Math.PI / 2;
+    const x = 95 + (total === 1 ? 0 : R * Math.cos(angle));
+    const y = 95 + (total === 1 ? 0 : R * Math.sin(angle));
+    const isP = i < 1;
+    h += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="20" fill="${isP ? PROTON_F : NEUTRON_F}" stroke="${isP ? PROTON_S : NEUTRON_S}" stroke-width="1.5"/>`;
   }
-  h+=`<circle cx="162" cy="95" r="6" fill="${NEUTRON_F}" stroke="${NEUTRON_S}" stroke-width="1" opacity="0.6"/>`;
-  h+=`<text x="162" y="112" font-size="9" fill="${NEUTRON_S}" text-anchor="middle" opacity="0.5">e⁻</text>`;
-  h+=`<circle cx="10" cy="13" r="6" fill="${PROTON_F}" stroke="${PROTON_S}" stroke-width="1"/>`;
-  h+=`<text x="20" y="17" font-size="9" fill="${PROTON_S}">p⁺ proton</text>`;
-  h+=`<circle cx="90" cy="13" r="6" fill="${NEUTRON_F}" stroke="${NEUTRON_S}" stroke-width="1"/>`;
-  h+=`<text x="100" y="17" font-size="9" fill="${NEUTRON_S}">n neutron</text>`;
-  svg.innerHTML=h;
+  svg.innerHTML = h;
 }
 
-function updateIsotopeUI(n){
-  const s=isoStates[n];
-  document.getElementById("s-neutrons").textContent=n;
-  document.getElementById("s-mass").textContent=1+n;
-  document.getElementById("iso-name").textContent=s.name;
-  document.getElementById("iso-sub").textContent=s.sub;
-  document.getElementById("f-neutrons").textContent=n;
-  document.getElementById("f-mass").textContent=1+n;
-  document.getElementById("explanation").innerHTML=s.explain;
-  const badge=document.getElementById("stability-badge");
-  const dz=document.getElementById("drop-zone");
-  if(s.stable){
-    badge.className="badge badge-stable";
-    badge.innerHTML=`<i class="ti ti-circle-check"></i> Stable`;
-    dz.classList.remove("unstable","unstable-glow");
+function updateIsotopeUI(n) {
+  const s = isoStates[n];
+  document.getElementById("s-neutrons").textContent = n;
+  document.getElementById("s-mass").textContent = 1 + n;
+  document.getElementById("iso-name").textContent = s.name;
+  document.getElementById("iso-sub").textContent = s.sub;
+  document.getElementById("f-neutrons").textContent = n;
+  document.getElementById("f-mass").textContent = 1 + n;
+  document.getElementById("explanation").innerHTML = s.explain;
+  const badge = document.getElementById("stability-badge");
+  const dz = document.getElementById("drop-zone");
+  if (s.stable) {
+    badge.className = "badge badge-stable";
+    badge.innerHTML = `<i class="ti ti-circle-check"></i> Stable`;
+    dz.classList.remove("unstable", "unstable-glow");
   } else {
-    badge.className="badge badge-unstable";
-    badge.innerHTML=`<i class="ti ti-radioactive"></i> Radioactive — unstable`;
+    badge.className = "badge badge-unstable";
+    badge.innerHTML = `<i class="ti ti-radioactive"></i> Radioactive — unstable`;
     dz.classList.add("unstable");
-    setTimeout(()=>{dz.classList.remove("unstable");dz.classList.add("unstable-glow");},400);
+    setTimeout(() => { dz.classList.remove("unstable"); dz.classList.add("unstable-glow"); }, 400);
   }
   drawNucleus(n);
 }
 
-function lockDZ(){
-  dzLocked=true;
+function lockDZ() {
+  dzLocked = true;
   document.getElementById("drop-zone").classList.add("locked");
-  document.getElementById("drag-hint").innerHTML=`<i class="ti ti-lock"></i> Answer the question to unlock`;
-  document.querySelectorAll(".neutron").forEach(n=>n.classList.add("locked-n"));
+  document.getElementById("drag-hint").innerHTML = `<i class="ti ti-lock"></i> Answer the question to unlock`;
+  document.querySelectorAll(".neutron").forEach(n => n.classList.add("locked-n"));
 }
 
-function unlockDZ(){
-  dzLocked=false;
+function unlockDZ() {
+  dzLocked = false;
   document.getElementById("drop-zone").classList.remove("locked");
-  document.getElementById("drag-hint").textContent="Drag a neutron into the nucleus";
-  document.querySelectorAll(".neutron").forEach(n=>n.classList.remove("locked-n"));
+  document.getElementById("drag-hint").textContent = "Drag a neutron into the nucleus";
+  document.querySelectorAll(".neutron").forEach(n => n.classList.remove("locked-n"));
 }
 
-function buildBank(){
-  const bank=document.getElementById("bank");
-  bank.innerHTML="";
-  const available=2-neutronCount;
-  for(let i=0;i<available;i++){
-    const el=document.createElement("div");
-    el.className="neutron"+(dzLocked?" locked-n":"");
-    el.textContent="n";
-    if(!dzLocked){
-      el.setAttribute("draggable","true");
-      addDragListeners(el);
-    }
+function buildBank() {
+  const bank = document.getElementById("bank");
+  bank.innerHTML = "";
+  const available = 2 - neutronCount;
+  for (let i = 0; i < available; i++) {
+    const el = document.createElement("div");
+    el.className = "neutron" + (dzLocked ? " locked-n" : "");
+    el.textContent = "n";
+    if (!dzLocked) { el.setAttribute("draggable", "true"); addDragListeners(el); }
     bank.appendChild(el);
   }
-  if(available===0){
-    bank.innerHTML=`<span style="font-size:12px;color:var(--text-tertiary)">All neutrons added</span>`;
+  if (available === 0) {
+    bank.innerHTML = `<span style="font-size:12px;color:var(--text-tertiary)">All neutrons added</span>`;
   }
 }
 
-function addDragListeners(el){
-  let ghost=null;
-  el.addEventListener("dragstart",e=>{
-    if(dzLocked){e.preventDefault();return;}
-    e.dataTransfer.effectAllowed="move";
+function addDragListeners(el) {
+  let ghost = null;
+
+  el.addEventListener("dragstart", e => {
+    if (dzLocked) { e.preventDefault(); return; }
+    e.dataTransfer.effectAllowed = "move";
     el.classList.add("dragging");
     document.getElementById("drop-zone").classList.add("over");
   });
-  el.addEventListener("dragend",()=>{
+  el.addEventListener("dragend", () => {
     el.classList.remove("dragging");
     document.getElementById("drop-zone").classList.remove("over");
   });
-  el.addEventListener("touchstart",e=>{
-    if(dzLocked) return;
+
+  el.addEventListener("touchstart", e => {
+    if (dzLocked) return;
     e.preventDefault();
-    const t=e.touches[0];
-    ghost=document.createElement("div");
-    ghost.className="neutron-ghost";
-    ghost.textContent="n";
-    ghost.style.left=t.clientX+"px";
-    ghost.style.top=t.clientY+"px";
+    const t = e.touches[0];
+    ghost = document.createElement("div");
+    ghost.className = "neutron-ghost";
+    ghost.textContent = "n";
+    ghost.style.left = t.clientX + "px";
+    ghost.style.top = t.clientY + "px";
     document.body.appendChild(ghost);
     el.classList.add("dragging");
     document.getElementById("drop-zone").classList.add("over");
-  },{passive:false});
-  el.addEventListener("touchmove",e=>{
+  }, { passive: false });
+
+  el.addEventListener("touchmove", e => {
     e.preventDefault();
-    const t=e.touches[0];
-    if(ghost){ghost.style.left=t.clientX+"px";ghost.style.top=t.clientY+"px";}
-  },{passive:false});
-  el.addEventListener("touchend",e=>{
+    const t = e.touches[0];
+    if (ghost) { ghost.style.left = t.clientX + "px"; ghost.style.top = t.clientY + "px"; }
+  }, { passive: false });
+
+  el.addEventListener("touchend", e => {
     e.preventDefault();
-    if(ghost){ghost.remove();ghost=null;}
+    if (ghost) { ghost.remove(); ghost = null; }
     el.classList.remove("dragging");
-    const t=e.changedTouches[0];
-    const dz=document.getElementById("drop-zone");
+    const t = e.changedTouches[0];
+    const dz = document.getElementById("drop-zone");
     dz.classList.remove("over");
-    const r=dz.getBoundingClientRect();
-    const dist=Math.hypot(t.clientX-(r.left+r.width/2),t.clientY-(r.top+r.height/2));
-    if(dist<r.width/2) dropNeutron();
-  },{passive:false});
+    const r = dz.getBoundingClientRect();
+    const dist = Math.hypot(t.clientX - (r.left + r.width / 2), t.clientY - (r.top + r.height / 2));
+    if (dist < r.width / 2) dropNeutron();
+  }, { passive: false });
 }
 
-const dz=document.getElementById("drop-zone");
-dz.addEventListener("dragover",e=>{if(!dzLocked){e.preventDefault();e.dataTransfer.dropEffect="move";}});
-dz.addEventListener("dragleave",()=>dz.classList.remove("over"));
-dz.addEventListener("drop",e=>{e.preventDefault();dz.classList.remove("over");if(!dzLocked)dropNeutron();});
+const dz = document.getElementById("drop-zone");
+dz.addEventListener("dragover", e => { if (!dzLocked) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; } });
+dz.addEventListener("dragleave", () => dz.classList.remove("over"));
+dz.addEventListener("drop", e => { e.preventDefault(); dz.classList.remove("over"); if (!dzLocked) dropNeutron(); });
 
-function dropNeutron(){
-  if(dzLocked||neutronCount>=2) return;
+function dropNeutron() {
+  if (dzLocked || neutronCount >= 2) return;
   neutronCount++;
   updateIsotopeUI(neutronCount);
   buildBank();
@@ -387,87 +445,92 @@ function dropNeutron(){
   loadQuiz(currentQuiz);
 }
 
-function loadQuiz(idx){
-  const q=quizzes[idx];
-  document.getElementById("quiz-step").textContent=q.step;
-  document.getElementById("quiz-q").textContent=q.q;
-  document.getElementById("qfb").textContent="";
-  document.getElementById("qfb").className="quiz-fb";
-  document.getElementById("retry-wrap").style.display="none";
-  document.getElementById("unlock-msg").style.display="none";
-  const optsEl=document.getElementById("quiz-opts");
-  optsEl.innerHTML=q.opts.map((o,i)=>`<button class="qopt" onclick="checkQ(${i})">${o}</button>`).join("");
+function loadQuiz(idx) {
+  const q = quizzes[idx];
+  document.getElementById("quiz-step").textContent = q.step;
+  document.getElementById("quiz-q").textContent = q.q;
+  document.getElementById("qfb").textContent = "";
+  document.getElementById("qfb").className = "quiz-fb";
+  document.getElementById("retry-wrap").style.display = "none";
+  document.getElementById("unlock-msg").style.display = "none";
+  document.getElementById("btn-complete").style.display = "none";
+  document.getElementById("quiz-opts").innerHTML = q.opts
+    .map((o, i) => `<button class="qopt" onclick="checkQ(${i})">${o}</button>`)
+    .join("");
 }
 
-function checkQ(idx){
-  const q=quizzes[currentQuiz];
-  if(quizPassed[currentQuiz]) return;
-  const opts=document.querySelectorAll(".qopt");
-  opts.forEach(o=>o.disabled=true);
+function checkQ(idx) {
+  const q = quizzes[currentQuiz];
+  if (quizPassed[currentQuiz]) return;
+  const opts = document.querySelectorAll(".qopt");
+  opts.forEach(o => o.disabled = true);
   attempts[currentQuiz]++;
-  const correct=idx===q.correct;
-  opts[idx].classList.add(correct?"correct":"wrong");
-  const fb=document.getElementById("qfb");
-  if(correct){
-    if(attempts[currentQuiz]===1) score++;
-    quizPassed[currentQuiz]=true;
-    fb.className="quiz-fb good";
-    fb.textContent=q.fb_good;
-    document.getElementById("retry-wrap").style.display="none";
-    if(q.unlock){
-      const um=document.getElementById("unlock-msg");
-      um.textContent=q.unlock;
-      um.style.display="block";
-      setTimeout(()=>{unlockDZ();buildBank();},500);
+  const correct = idx === q.correct;
+  opts[idx].classList.add(correct ? "correct" : "wrong");
+  const fb = document.getElementById("qfb");
+  if (correct) {
+    if (attempts[currentQuiz] === 1) score++;
+    quizPassed[currentQuiz] = true;
+    fb.className = "quiz-fb good";
+    fb.textContent = q.fb_good;
+    document.getElementById("retry-wrap").style.display = "none";
+    if (q.isLast) {
+      document.getElementById("btn-complete").style.display = "block";
     } else {
-      setTimeout(()=>showCompletion(),700);
+      const um = document.getElementById("unlock-msg");
+      um.textContent = q.unlock;
+      um.style.display = "block";
+      setTimeout(() => { unlockDZ(); buildBank(); }, 500);
     }
-    currentQuiz=Math.min(currentQuiz+1,quizzes.length-1);
+    currentQuiz = Math.min(currentQuiz + 1, quizzes.length - 1);
   } else {
-    fb.className="quiz-fb bad";
-    fb.textContent=q.fb_bad;
-    document.getElementById("retry-wrap").style.display="block";
+    fb.className = "quiz-fb bad";
+    fb.textContent = q.fb_bad;
+    document.getElementById("retry-wrap").style.display = "block";
   }
 }
 
-function retryQ(){
-  document.querySelectorAll(".qopt").forEach(o=>{
-    o.disabled=false;o.classList.remove("correct","wrong");
+function retryQ() {
+  document.querySelectorAll(".qopt").forEach(o => {
+    o.disabled = false;
+    o.classList.remove("correct", "wrong");
   });
-  document.getElementById("qfb").textContent="";
-  document.getElementById("qfb").className="quiz-fb";
-  document.getElementById("retry-wrap").style.display="none";
+  document.getElementById("qfb").textContent = "";
+  document.getElementById("qfb").className = "quiz-fb";
+  document.getElementById("retry-wrap").style.display = "none";
 }
 
-function showCompletion(){
-  document.getElementById("quiz-card").style.display="none";
-  const comp=document.getElementById("completion");
-  comp.style.display="block";
-  comp.scrollIntoView({behavior:"smooth",block:"nearest"});
-  const pct=Math.round((score/3)*100);
-  const circ=2*Math.PI*24;
-  const dash=Math.round((pct/100)*circ);
-  const col=pct>=67?"#639922":pct>=34?"#BA7517":"#E24B4A";
-  document.getElementById("score-svg").innerHTML=`
+function showCompletion() {
+  document.getElementById("quiz-card").style.display = "none";
+  const comp = document.getElementById("completion");
+  comp.style.display = "block";
+  comp.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  const pct = Math.round((score / 3) * 100);
+  const circ = 2 * Math.PI * 24;
+  const dash = Math.round((pct / 100) * circ);
+  const col = pct >= 67 ? "#639922" : pct >= 34 ? "#BA7517" : "#E24B4A";
+  document.getElementById("score-svg").innerHTML = `
     <circle cx="32" cy="32" r="24" fill="none" stroke="#D3D1C7" stroke-width="5"/>
     <circle cx="32" cy="32" r="24" fill="none" stroke="${col}" stroke-width="5"
       stroke-dasharray="${dash} ${circ}" stroke-linecap="round" transform="rotate(-90 32 32)"/>`;
-  document.getElementById("score-label").textContent=`${score}/3`;
-  document.getElementById("score-final").textContent=`${score}/3`;
+  document.getElementById("score-label").textContent = `${score}/3`;
+  document.getElementById("score-final").textContent = `${score}/3`;
 }
 
-function resetAll(){
-  neutronCount=0;currentQuiz=0;score=0;
-  quizPassed=[false,false,false];attempts=[0,0,0];dzLocked=true;
-  document.getElementById("drop-zone").classList.remove("unstable","unstable-glow");
-  document.getElementById("quiz-card").style.display="block";
-  document.getElementById("completion").style.display="none";
+function resetAll() {
+  neutronCount = 0; currentQuiz = 0; score = 0;
+  quizPassed = [false, false, false]; attempts = [0, 0, 0]; dzLocked = true;
+  document.getElementById("drop-zone").classList.remove("unstable", "unstable-glow");
+  document.getElementById("quiz-card").style.display = "block";
+  document.getElementById("completion").style.display = "none";
+  document.getElementById("btn-complete").style.display = "none";
   updateIsotopeUI(0);
   lockDZ();
   buildBank();
   loadQuiz(0);
 }
 
+// Init
 updateIsotopeUI(0);
 lockDZ();
 buildBank();
