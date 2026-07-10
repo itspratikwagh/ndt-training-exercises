@@ -10,7 +10,7 @@
   --bdr:#cdd6e0; --bdr2:#aebccc;
   --green:#1a6e38; --green-lo:rgba(26,110,56,.1);
   --red:#b82028; --red-lo:rgba(184,32,40,.1);
-  --blue:#1a3f7a; --amber:#c47a08;
+  --blue:#a82020; --blue-dk:#8a1818; --amber:#c47a08;
   --txt:#18242e; --txt2:#243040; --mut:#566878; --mut2:#788898;
   --mono:'Courier New',monospace; --sans:system-ui,sans-serif;
   --r:10px;
@@ -104,7 +104,7 @@ svg{display:block}
 .nav-btn:hover{border-color:var(--blue);color:var(--blue);background:#eaf0f8}
 .nav-btn:disabled{opacity:.4;cursor:default}
 .nav-btn.flip-btn{background:var(--blue);border-color:var(--blue);color:#fff;flex:1.4}
-.nav-btn.flip-btn:hover{background:#102860}
+.nav-btn.flip-btn:hover{background:#8a1818}
 
 /* SHUFFLE / KNOW TRACKER */
 .tools-row{display:flex;gap:10px}
@@ -154,7 +154,8 @@ svg{display:block}
   <div class="hdr-eye">NDT · Level II · Radiographic Testing</div>
   <h1>RT Technique Flashcards</h1>
   <div class="hdr-rule">
-    <b>Key:</b> First part of abbreviation = walls radiation passes through &nbsp;·&nbsp; Second part = wall images interpreted
+    In this flashcard exercise, we will learn these techniques which are:<br>
+    SWSI &nbsp;·&nbsp; SWSI Panoramic &nbsp;·&nbsp; DWSI &nbsp;·&nbsp; DWDI &nbsp;·&nbsp; DWDI Elliptical
   </div>
 </header>
 
@@ -163,7 +164,7 @@ svg{display:block}
   <div class="progress-row">
     <span class="progress-label" id="progLabel">Card 1 of 6</span>
     <div class="progress-track"><div class="progress-fill" id="progFill" style="width:16.6%"></div></div>
-    <span class="progress-label" id="progScore">–0 –0</span>
+    <span class="progress-label" id="progScore">✓0 ✗0</span>
   </div>
 
   <div class="card-stage" id="cardStage">
@@ -200,7 +201,7 @@ svg{display:block}
       <div class="done-stat know"><div class="done-stat-val" id="doneKnow">0</div><div class="done-stat-lbl">Know It</div></div>
       <div class="done-stat review"><div class="done-stat-val" id="doneReview">0</div><div class="done-stat-lbl">Review</div></div>
     </div>
-    <div style="font-size:13px;color:var(--mut);max-width:340px">Cards marked “Review” will come up again if you restart the deck.</div>
+    <div style="font-size:13px;color:var(--mut);max-width:340px">Cards marked "Review" will come up again if you restart the deck.</div>
     <button class="nav-btn flip-btn" style="max-width:200px" onclick="restartDeck()">↺ Study Again</button>
   </div>
 
@@ -211,8 +212,8 @@ svg{display:block}
   </div>
 
   <div class="tools-row" id="toolsRow">
-    <button class="tool-btn" id="reviewBtn" onclick="markCard('review')">&#x1F534; Mark: Review Again</button>
-    <button class="tool-btn" id="knowBtn" onclick="markCard('know')">&#x1F7E2; Mark: I Know This</button>
+    <button class="tool-btn" id="reviewBtn" onclick="markCard('review')">🔴 Mark: Review Again</button>
+    <button class="tool-btn" id="knowBtn" onclick="markCard('know')">🟢 Mark: I Know This</button>
   </div>
 
   <div class="jump-grid" id="jumpGrid"></div>
@@ -220,6 +221,9 @@ svg{display:block}
 </div>
 
 <script>
+/* =============================================================
+   TECHNIQUE DATA — edit here
+============================================================= */
 const TECHS = [
   { id:'SWSI', name:'SWSI', full:'Single-Wall Single-Image',
     walls:1, images:1,
@@ -238,14 +242,9 @@ const TECHS = [
     draw: drawDWSI },
   { id:'DWDI', name:'DWDI', full:'Double-Wall Double-Image',
     walls:2, images:2,
-    text:'Source and film are both outside. Radiation passes through both walls and both wall images appear on the radiograph and are evaluated. Used for smaller diameter pipe and tubing — small enough that both weld images land on the film and can be read.',
+    text:'Source and film are both outside. Radiation passes through both walls and both wall images appear on the radiograph and are evaluated. Used for smaller diameter pipe and tubing — pipe must be less than 3½ inches outer diameter. When the source is centered on the pipe axis, both wall images overlap on the film (superimposed). Offsetting the source slightly produces two separated images (elliptical view), which is preferred.',
     callout:'Double Wall penetrated + Double Image interpreted = DWDI',
     draw: drawDWDI },
-  { id:'DWDI_SUP', name:'DWDI Super', full:'DWDI — Superimposed',
-    walls:2, images:2,
-    text:'The source is aligned with the pipe centerline. Both wall images land at the same position on the film, creating overlapping (superimposed) images. This makes independent evaluation harder. Offsetting the source to create an elliptical view is preferred when geometry allows.',
-    callout:'Centered source → both weld images stack on top of each other on film',
-    draw: drawDWDISuper },
   { id:'DWDI_ELL', name:'DWDI Ellip.', full:'DWDI — Elliptical',
     walls:2, images:2,
     text:'The source is offset from the pipe centerline. This causes the near-wall and far-wall weld images to land at different positions on the film, creating a clearly separated elliptical view. Both images can be evaluated independently. This is the preferred DWDI arrangement.',
@@ -253,6 +252,9 @@ const TECHS = [
     draw: drawDWDIEllip }
 ];
 
+/* =============================================================
+   SVG HELPERS — simple single-panel diagram per card (480×300)
+============================================================= */
 const NS='http://www.w3.org/2000/svg';
 function mk(tag,a){const e=document.createElementNS(NS,tag);for(const[k,v]of Object.entries(a||{}))e.setAttribute(k,v);return e}
 const CW=480, CH=300, CX=240;
@@ -293,17 +295,22 @@ function wallBand(svg,cx,y,w,h,weldW,hi){
   svg.appendChild(mk('rect',{x:cx-hw,y,width:weldW,height:h,fill:'#3a3020',stroke:'#1a1008','stroke-width':'1'}));
 }
 
+/* Draws a pipe in side/longitudinal view — a tube with rounded (elliptical)
+   open ends, a hollow lumen running through it, a weld band on the near
+   wall (top) and far wall (bottom), and optional highlight tints on each
+   wall. Returns key y-coordinates so callers can place beams/film/labels. */
 function pipeTube(svg, cx, cy, pipeW, pipeOD, wallH, weldW, hiTop, hiBot){
   const topOuterY = cy - pipeOD/2;
   const topInnerY = topOuterY + wallH;
   const botInnerY = cy + pipeOD/2 - wallH;
   const botOuterY = cy + pipeOD/2;
   const halfW = pipeW/2;
-  const capRX = 9;
+  const capRX = 9; // end-cap ellipse rx (how rounded the pipe ends look)
 
   const fillFor=(hi)=> hi==='green'?'rgba(26,110,56,.2)':hi==='red'?'rgba(184,32,40,.16)':'#c8d0d8';
   const strokeFor=(hi)=> hi==='green'?'#1a6e38':hi==='red'?'#b82028':'#4a5560';
 
+  // Outer tube body (single path: rounded left/right ends, straight top/bottom)
   const bodyPath = `
     M${cx-halfW+capRX},${topOuterY}
     L${cx+halfW-capRX},${topOuterY}
@@ -313,30 +320,37 @@ function pipeTube(svg, cx, cy, pipeW, pipeOD, wallH, weldW, hiTop, hiBot){
     Z`;
   svg.appendChild(mk('path',{d:bodyPath, fill:'#c8d0d8', stroke:'#4a5560','stroke-width':'1.5'}));
 
+  // Hollow lumen (inner tube) — flat fill plus rounded end caps
   svg.appendChild(mk('rect',{x:cx-halfW+capRX*0.3, y:topInnerY, width:(halfW-capRX*0.3)*2, height:botInnerY-topInnerY, fill:'#eef2f6'}));
   svg.appendChild(mk('ellipse',{cx:cx-halfW+capRX, cy:(topInnerY+botInnerY)/2, rx:capRX*0.7, ry:(botInnerY-topInnerY)/2, fill:'#eef2f6'}));
   svg.appendChild(mk('ellipse',{cx:cx+halfW-capRX, cy:(topInnerY+botInnerY)/2, rx:capRX*0.7, ry:(botInnerY-topInnerY)/2, fill:'#eef2f6'}));
   svg.appendChild(mk('rect',{x:cx-halfW+capRX*0.3, y:topInnerY, width:(halfW-capRX*0.3)*2, height:botInnerY-topInnerY, fill:'none', stroke:'#b8c4d0','stroke-width':'0.5'}));
 
+  // Top wall highlight band
   if(hiTop){
     const tw=mk('rect',{x:cx-halfW+capRX*0.5, y:topOuterY, width:(halfW-capRX*0.5)*2, height:wallH, fill:fillFor(hiTop), stroke:strokeFor(hiTop), 'stroke-width':'2.5'});
     if(hiTop==='red') tw.setAttribute('stroke-dasharray','6,3');
     svg.appendChild(tw);
   }
+  // Bottom wall highlight band
   if(hiBot){
     const bw=mk('rect',{x:cx-halfW+capRX*0.5, y:botInnerY, width:(halfW-capRX*0.5)*2, height:wallH, fill:fillFor(hiBot), stroke:strokeFor(hiBot), 'stroke-width':'2.5'});
     if(hiBot==='red') bw.setAttribute('stroke-dasharray','6,3');
     svg.appendChild(bw);
   }
+  // Redraw outer silhouette stroke on top so highlight fills don't cover the pipe outline
   svg.appendChild(mk('path',{d:bodyPath, fill:'none', stroke:'#4a5560','stroke-width':'1.5'}));
 
+  // End-cap rims (rounded pipe-opening look)
   svg.appendChild(mk('ellipse',{cx:cx-halfW+capRX, cy:cy, rx:capRX, ry:pipeOD/2, fill:'none', stroke:'#8a98a8','stroke-width':'1'}));
   svg.appendChild(mk('ellipse',{cx:cx+halfW-capRX, cy:cy, rx:capRX, ry:pipeOD/2, fill:'none', stroke:'#8a98a8','stroke-width':'1'}));
 
+  // Weld bands (dark, at center, on both walls)
   const hw=weldW/2;
   svg.appendChild(mk('rect',{x:cx-hw, y:topOuterY, width:weldW, height:wallH, fill:'#3a3020', stroke:'#1a1008','stroke-width':'1'}));
   svg.appendChild(mk('rect',{x:cx-hw, y:botInnerY, width:weldW, height:wallH, fill:'#3a3020', stroke:'#1a1008','stroke-width':'1'}));
 
+  // Centerline through the pipe
   svg.appendChild(mk('line',{x1:cx-halfW-14, y1:cy, x2:cx+halfW+14, y2:cy, stroke:'#aabac8','stroke-width':'0.8','stroke-dasharray':'6,4'}));
 
   return {topOuterY, topInnerY, botInnerY, botOuterY, cy, halfW};
@@ -360,112 +374,175 @@ function label(svg,x,y,text,color,size,anchor,weight){
   t.textContent=text; svg.appendChild(t);
 }
 
+/* =============================================================
+   DRAW FUNCTIONS — one simple diagram per card (480×300)
+   Layout: pipe centred vertically around cy=155
+   Source sits high (y=22), film sits close under pipe
+============================================================= */
+
+// Card 1 — SWSI: source far above flat plate, film tight below — shifted down to fit
 function drawSWSI(svg){
   bg(svg);
-  const cy=150, pW=200, pH=46, weldW=24;
+  const cy=170, pW=200, pH=46, weldW=24;
   wallBand(svg,CX,cy-pH/2,pW,pH,weldW,'green');
   label(svg,CX-pW/2-8,cy+4,'Wall 1 ✓','#1a6e38',10,'end','700');
-  srcIcon(svg,CX,55);
-  label(svg,CX,30,'SOURCE','#1a3f7a',9,'middle');
-  [[-50,0],[0,0],[50,0]].forEach(([dx],i)=>beam(svg,CX,73,CX+dx,cy-pH/2,i===1?1:.3));
-  beam(svg,CX,cy+pH/2,CX,cy+pH/2+34,.7);
-  filmBar(svg,CX,cy+pH/2+36,170);
-  label(svg,CX,cy+pH/2+58,'FILM','#4a4008',9,'middle');
-  imgLine(svg,CX,cy+pH/2+36,10);
+  const srcY=40;
+  srcIcon(svg,CX,srcY);
+  label(svg,CX,srcY-22,'SOURCE','#a82020',9,'middle');
+  [[-55,0],[0,0],[55,0]].forEach(([dx],i)=>beam(svg,CX,srcY+18,CX+dx,cy-pH/2,i===1?1:.3));
+  beam(svg,CX,cy+pH/2,CX,cy+pH/2+10,.7);
+  filmBar(svg,CX,cy+pH/2+12,170);
+  label(svg,CX,cy+pH/2+33,'FILM','#4a4008',9,'middle');
+  imgLine(svg,CX,cy+pH/2+12,10);
 }
 
+// Card 2 — SWSI Panoramic: source inside, film wraps 360° outside
 function drawSWSIPan(svg){
   bg(svg);
-  const cy=150, pW=200, pOD=92, wallH=22, weldW=18;
+  const cy=148, pW=200, pOD=96, wallH=22, weldW=18;
   const p = pipeTube(svg,CX,cy,pW,pOD,wallH,weldW,'green','green');
   label(svg,CX-p.halfW-8,p.topOuterY+wallH/2+4,'Wall 1 ✓','#1a6e38',10,'end','700');
   label(svg,CX-p.halfW-8,p.botInnerY+wallH/2+4,'Wall 1 ✓','#1a6e38',10,'end','700');
+  // source inside at centre
   srcIcon(svg,CX,cy,13);
-  label(svg,CX,cy+24,'SOURCE (inside)','#1a3f7a',8,'middle');
-  [-60,0,60].forEach(dx=>{beam(svg,CX,cy,CX+dx,p.topOuterY,.55);beam(svg,CX,cy,CX+dx,p.botOuterY,.55);});
-  filmBar(svg,CX,p.topOuterY-14,180);
-  filmBar(svg,CX,p.botOuterY+4,180);
-  label(svg,CX,p.topOuterY-20,'FILM (outside)','#4a4008',8,'middle');
+  label(svg,CX,cy+26,'SOURCE (inside)','#a82020',8,'middle');
+  // outward beams through both walls
+  [-60,0,60].forEach(dx=>{
+    beam(svg,CX,cy,CX+dx,p.topOuterY,.55);
+    beam(svg,CX,cy,CX+dx,p.botOuterY,.55);
+  });
+  // film tight above and below pipe
+  filmBar(svg,CX,p.topOuterY-10,pW+20);
+  filmBar(svg,CX,p.botOuterY+2,pW+20);
+  // 360° label spanning both film bars
+  const midY=(p.topOuterY-10+p.botOuterY+14)/2;
+  label(svg,CX+p.halfW+36,midY,'Film wrapped','#4a4008',8,'start');
+  label(svg,CX+p.halfW+36,midY+11,'360° around pipe','#4a4008',8,'start');
+  // bracket lines connecting label to both film bars
+  svg.appendChild(mk('line',{x1:CX+p.halfW+14,y1:p.topOuterY-5,x2:CX+p.halfW+30,y2:midY-2,stroke:'#4a4008','stroke-width':'0.8'}));
+  svg.appendChild(mk('line',{x1:CX+p.halfW+14,y1:p.botOuterY+7, x2:CX+p.halfW+30,y2:midY+8,stroke:'#4a4008','stroke-width':'0.8'}));
 }
 
+// Card 3 — DWSI: source closer to pipe, film tight below
 function drawDWSI(svg){
   bg(svg);
-  const cy=148, pW=200, pOD=92, wallH=24, weldW=24;
+  const cy=150, pW=200, pOD=90, wallH=24, weldW=24;
   const p = pipeTube(svg,CX,cy,pW,pOD,wallH,weldW,'red','green');
   label(svg,CX-p.halfW-8,p.topOuterY+wallH/2+4,'Wall 1 ✗','#b82028',10,'end','700');
   label(svg,CX-p.halfW-8,p.botInnerY+wallH/2+4,'Wall 2 ✓','#1a6e38',10,'end','700');
-  srcIcon(svg,CX,55);
-  label(svg,CX,30,'SOURCE','#1a3f7a',9,'middle');
-  beam(svg,CX,73,CX,p.topOuterY,1);
+  // source closer — just above pipe
+  const srcY=p.topOuterY-38;
+  srcIcon(svg,CX,srcY);
+  label(svg,CX,srcY-20,'SOURCE','#a82020',9,'middle');
+  // fan beams down to top wall
+  [[-40,0],[0,0],[40,0]].forEach(([dx],i)=>beam(svg,CX,srcY+18,CX+dx,p.topOuterY,i===1?1:.3));
   beam(svg,CX,p.topInnerY,CX,p.botInnerY,.45);
-  beam(svg,CX,p.botOuterY,CX,p.botOuterY+30,.85);
-  filmBar(svg,CX,p.botOuterY+32,170);
-  label(svg,CX,p.botOuterY+54,'FILM','#4a4008',9,'middle');
-  imgLine(svg,CX,p.botOuterY+32,10);
-  label(svg,CX,p.botOuterY+70,'Only 1 image interpreted','#b82028',8.5,'middle');
+  // exit beam to film tight under pipe
+  beam(svg,CX,p.botOuterY,CX,p.botOuterY+10,.85);
+  filmBar(svg,CX,p.botOuterY+12,170);
+  label(svg,CX,p.botOuterY+33,'FILM','#4a4008',9,'middle');
+  imgLine(svg,CX,p.botOuterY+12,10);
+  label(svg,CX,p.botOuterY+48,'Only 1 image interpreted','#b82028',8.5,'middle');
 }
 
+// Card 4 — DWDI: source further above, film closer under small pipe, shifted down to fit
 function drawDWDI(svg){
   bg(svg);
-  const cy=148, pW=150, pOD=64, wallH=20, weldW=18;
+  const cy=162, pW=150, pOD=64, wallH=20, weldW=18;
   const p = pipeTube(svg,CX,cy,pW,pOD,wallH,weldW,'green','green');
   label(svg,CX-p.halfW-8,p.topOuterY+wallH/2+4,'Wall 1 ✓','#1a6e38',10,'end','700');
   label(svg,CX-p.halfW-8,p.botInnerY+wallH/2+4,'Wall 2 ✓','#1a6e38',10,'end','700');
-  srcIcon(svg,CX,55);
-  label(svg,CX,30,'SOURCE','#1a3f7a',9,'middle');
-  beam(svg,CX,73,CX,p.topOuterY,1);
+  const srcY=38;
+  srcIcon(svg,CX,srcY);
+  label(svg,CX,srcY-22,'SOURCE','#a82020',9,'middle');
+  [[-30,0],[0,0],[30,0]].forEach(([dx],i)=>beam(svg,CX,srcY+18,CX+dx,p.topOuterY,i===1?1:.3));
   beam(svg,CX,p.topInnerY,CX,p.botInnerY,.45);
-  beam(svg,CX,p.botOuterY,CX,p.botOuterY+30,.85);
-  filmBar(svg,CX,p.botOuterY+32,170);
+  beam(svg,CX,p.botOuterY,CX,p.botOuterY+10,.85);
+  filmBar(svg,CX,p.botOuterY+12,170);
   const sp=14;
-  imgLine(svg,CX-sp,p.botOuterY+32,10);
-  imgLine(svg,CX+sp,p.botOuterY+32,10);
-  label(svg,CX,p.botOuterY+54,'FILM','#4a4008',9,'middle');
-  label(svg,CX,p.botOuterY+70,'Both images interpreted','#1a6e38',8.5,'middle');
+  imgLine(svg,CX-sp,p.botOuterY+12,10);
+  imgLine(svg,CX+sp,p.botOuterY+12,10);
+  label(svg,CX,p.botOuterY+33,'FILM','#4a4008',9,'middle');
+  label(svg,CX,p.botOuterY+48,'Both images interpreted','#1a6e38',8.5,'middle');
+  // Size requirement label — written out in full on right side
+  const rx=CX+p.halfW+10, ry=cy;
+  svg.appendChild(mk('line',{x1:CX+p.halfW,y1:p.topOuterY,x2:rx+4,y2:p.topOuterY,stroke:'#a82020','stroke-width':'0.8'}));
+  svg.appendChild(mk('line',{x1:CX+p.halfW,y1:p.botOuterY,x2:rx+4,y2:p.botOuterY,stroke:'#a82020','stroke-width':'0.8'}));
+  svg.appendChild(mk('line',{x1:rx+8,y1:p.topOuterY,x2:rx+8,y2:p.botOuterY,stroke:'#a82020','stroke-width':'1'}));
+  label(svg,rx+14,ry-14,'Used for pipes','#a82020',11,'start','700');
+  label(svg,rx+14,ry+2,'less than','#a82020',11,'start','700');
+  label(svg,rx+14,ry+18,'3½ inches','#a82020',11,'start','700');
+  label(svg,rx+14,ry+34,'outer diameter','#a82020',11,'start','700');
 }
 
-function drawDWDISuper(svg){
-  bg(svg);
-  const cy=148, pW=150, pOD=64, wallH=20, weldW=18;
-  const p = pipeTube(svg,CX,cy,pW,pOD,wallH,weldW,'green','green');
-  svg.appendChild(mk('line',{x1:CX,y1:p.topOuterY-20,x2:CX,y2:p.botOuterY+20,stroke:'#b82028','stroke-width':'1','stroke-dasharray':'4,3'}));
-  label(svg,CX+8,p.topOuterY-8,'centerline','#b82028',7.5,'start');
-  srcIcon(svg,CX,55);
-  label(svg,CX,30,'SOURCE (centered)','#1a3f7a',8.5,'middle');
-  beam(svg,CX,73,CX,p.topOuterY,1);
-  beam(svg,CX,p.topInnerY,CX,p.botInnerY,.45);
-  beam(svg,CX,p.botOuterY,CX,p.botOuterY+30,.85);
-  filmBar(svg,CX,p.botOuterY+32,170);
-  svg.appendChild(mk('line',{x1:CX-1,y1:p.botOuterY+31,x2:CX-1,y2:p.botOuterY+43,stroke:'#1a1a1a','stroke-width':'5','stroke-linecap':'round'}));
-  svg.appendChild(mk('line',{x1:CX+2,y1:p.botOuterY+31,x2:CX+2,y2:p.botOuterY+43,stroke:'#555','stroke-width':'2','stroke-dasharray':'2,2'}));
-  label(svg,CX,p.botOuterY+54,'FILM','#4a4008',9,'middle');
-  label(svg,CX,p.botOuterY+70,'Images overlap','#1a3f7a',8.5,'middle');
-}
-
+// Card 5 — DWDI Elliptical: two parallel beams at 5° angle, separated laterally
 function drawDWDIEllip(svg){
   bg(svg);
-  const cy=148, pW=150, pOD=64, wallH=20, weldW=18;
+  const cy=162, pW=150, pOD=64, wallH=20, weldW=44;
   const p = pipeTube(svg,CX,cy,pW,pOD,wallH,weldW,'green','green');
-  const srcX=CX-50;
-  srcIcon(svg,srcX,55);
-  label(svg,srcX,30,'SOURCE (offset)','#1a3f7a',8.5,'middle');
-  const f1=CX-18,f2=CX+18;
-  beam(svg,srcX,73,f1-6,p.topOuterY,1);
-  beam(svg,f1-6,p.topInnerY,f1-6,p.botInnerY,.4);
-  beam(svg,f1-6,p.botOuterY,f1,p.botOuterY+30,.85);
-  beam(svg,srcX,73,f2+6,p.topOuterY,.95);
-  beam(svg,f2+6,p.topInnerY,f2+6,p.botInnerY,.4);
-  beam(svg,f2+6,p.botOuterY,f2,p.botOuterY+30,.85);
-  filmBar(svg,CX,p.botOuterY+32,170);
-  imgLine(svg,f1,p.botOuterY+32,10);
-  imgLine(svg,f2,p.botOuterY+32,10);
-  label(svg,CX,p.botOuterY+54,'FILM','#4a4008',9,'middle');
-  label(svg,CX,p.botOuterY+70,'Images separated','#1a6e38',8.5,'middle');
+  label(svg,CX-p.halfW-8,p.topOuterY+wallH/2+4,'Wall 1 ✓','#1a6e38',10,'end','700');
+  label(svg,CX-p.halfW-8,p.botInnerY+wallH/2+4,'Wall 2 ✓','#1a6e38',10,'end','700');
+
+  // Source offset 5° from vertical — positioned above pipe
+  const srcY=38;
+  const offsetDeg=5, ang=offsetDeg*Math.PI/180;
+  const totalDist=p.topOuterY-srcY;
+  const srcX=CX - Math.tan(ang)*totalDist;
+
+  // Film close under pipe
+  const filmY=p.botOuterY+12;
+
+  // Centreline from source centre down to top of film
+  svg.appendChild(mk('line',{x1:CX,y1:srcY,x2:CX,y2:filmY,
+    stroke:'#a82020','stroke-width':'1','stroke-dasharray':'6,4'}));
+
+  srcIcon(svg,srcX,srcY);
+  label(svg,srcX,srcY-22,'SOURCE (offset)','#a82020',8.5,'middle');
+  label(svg,srcX-26,srcY+4,'5°','#a82020',9,'end','700');
+
+  // Two beams: both parallel at exactly 5°, separated by a fixed lateral offset
+  // Each beam: starting x shifts by ±sep at the source, same angle all the way through
+  const sep=14; // lateral separation between the two beams
+
+  // For each beam, compute all waypoints using the same angle (tan(ang) * dy)
+  const beamPath=(startX)=>{
+    const dy1=p.topOuterY-srcY;
+    const dy2=p.topInnerY-srcY;
+    const dy3=p.botInnerY-srcY;
+    const dy4=p.botOuterY-srcY;
+    const dy5=filmY-srcY;
+    return {
+      x0:startX, y0:srcY+18,
+      x1:startX+Math.tan(ang)*dy1, y1:p.topOuterY,
+      x2:startX+Math.tan(ang)*dy2, y2:p.topInnerY,
+      x3:startX+Math.tan(ang)*dy3, y3:p.botInnerY,
+      x4:startX+Math.tan(ang)*dy4, y4:p.botOuterY,
+      x5:startX+Math.tan(ang)*dy5, y5:filmY,
+    };
+  };
+
+  [srcX-sep, srcX+sep].forEach(startX=>{
+    const b=beamPath(startX);
+    beam(svg, b.x0,b.y0, b.x1,b.y1, 1);
+    beam(svg, b.x2,b.y2, b.x3,b.y3, .5);
+    beam(svg, b.x4,b.y4, b.x5,b.y5, .9);
+  });
+
+  filmBar(svg,CX,filmY,170);
+  // Film image lines at where each beam hits
+  const bl=beamPath(srcX-sep), br=beamPath(srcX+sep);
+  imgLine(svg,bl.x5,filmY,10);
+  imgLine(svg,br.x5,filmY,10);
+  label(svg,CX,filmY+21,'FILM','#4a4008',9,'middle');
+  label(svg,CX,filmY+35,'Images separated','#1a6e38',8.5,'middle');
 }
 
+/* =============================================================
+   FLASHCARD STATE & LOGIC
+============================================================= */
 let curIdx = 0;
 let isFlipped = false;
-let cardStatus = new Array(TECHS.length).fill(null);
+let cardStatus = new Array(TECHS.length).fill(null); // null | 'know' | 'review'
 
 function renderCard(){
   const T = TECHS[curIdx];
@@ -480,18 +557,22 @@ function renderCard(){
   const svg = document.getElementById('frontSVG');
   T.draw(svg);
 
+  // Reset flip state when navigating
   isFlipped = false;
   document.getElementById('card').classList.remove('flipped');
 
+  // Progress
   document.getElementById('progLabel').textContent = `Card ${curIdx+1} of ${TECHS.length}`;
   document.getElementById('progFill').style.width = `${((curIdx+1)/TECHS.length)*100}%`;
   const knowCt = cardStatus.filter(s=>s==='know').length;
   const revCt = cardStatus.filter(s=>s==='review').length;
   document.getElementById('progScore').textContent = `✓${knowCt} ✗${revCt}`;
 
+  // Nav buttons
   document.getElementById('prevBtn').disabled = (curIdx===0);
   document.getElementById('nextBtn').textContent = (curIdx===TECHS.length-1) ? 'Finish ✓' : 'Next →';
 
+  // Mark buttons reflect current status
   document.getElementById('knowBtn').classList.toggle('active-know', cardStatus[curIdx]==='know');
   document.getElementById('reviewBtn').classList.toggle('active-review', cardStatus[curIdx]==='review');
 
@@ -546,6 +627,7 @@ function markCard(status){
   const revCt = cardStatus.filter(s=>s==='review').length;
   document.getElementById('progScore').textContent = `✓${knowCt} ✗${revCt}`;
   renderJumpGrid();
+  // auto-advance after marking, small delay for feedback
   setTimeout(()=>{
     if(curIdx < TECHS.length-1) nextCard(); else showDone();
   }, 280);
@@ -564,6 +646,7 @@ function showDone(){
 }
 
 function restartDeck(){
+  // Keep cards marked "review" at front of deck conceptually — simplest: just reset and restart
   curIdx = 0;
   cardStatus = new Array(TECHS.length).fill(null);
   renderCard();
