@@ -25,18 +25,8 @@
       box-shadow: 0 2px 12px rgba(0,0,0,0.06);
     }
 
-    h1 {
-      font-size: 17px;
-      font-weight: 600;
-      color: #1a1a18;
-      margin-bottom: 4px;
-    }
-
-    .subtitle {
-      font-size: 13px;
-      color: #888;
-      margin-bottom: 16px;
-    }
+    h1 { font-size: 17px; font-weight: 600; color: #1a1a18; margin-bottom: 4px; }
+    .subtitle { font-size: 13px; color: #888; margin-bottom: 16px; }
 
     .btn-row {
       display: flex;
@@ -75,12 +65,7 @@
 
     svg { display: block; width: 100%; }
 
-    .hint {
-      font-size: 12px;
-      color: #aaa;
-      text-align: center;
-      margin: 4px 0 0;
-    }
+    .hint { font-size: 12px; color: #aaa; text-align: center; margin: 4px 0 0; }
 
     .info-card {
       background: #fafaf8;
@@ -91,17 +76,9 @@
       min-height: 80px;
     }
 
-    .placeholder-text {
-      color: #bbb;
-      font-style: italic;
-      font-size: 14px;
-    }
+    .placeholder-text { color: #bbb; font-style: italic; font-size: 14px; }
 
-    .info-row {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
+    .info-row { display: flex; gap: 12px; flex-wrap: wrap; }
 
     .info-block {
       background: #ffffff;
@@ -121,10 +98,10 @@
       margin-bottom: 6px;
     }
 
-    .info-block-title  { font-size: 14px; font-weight: 600; margin: 0 0 4px; color: #1a1a18; }
-    .info-block-body   { font-size: 13px; line-height: 1.6; color: #444; margin: 0; }
-    .info-block-charge { font-size: 12px; margin-top: 6px; color: #888; }
-    .info-block-analogy{ font-size: 12px; margin-top: 5px; color: #aaa; font-style: italic; }
+    .info-block-title   { font-size: 14px; font-weight: 600; margin: 0 0 4px; color: #1a1a18; }
+    .info-block-body    { font-size: 13px; line-height: 1.6; color: #444; margin: 0; }
+    .info-block-charge  { font-size: 12px; margin-top: 6px; color: #888; }
+    .info-block-analogy { font-size: 12px; margin-top: 5px; color: #aaa; font-style: italic; }
   </style>
 </head>
 <body>
@@ -260,27 +237,27 @@ const highlightIds = {
 };
 
 const allBase = ['svg-shell-base','svg-electron','svg-proton','svg-neutron','svg-nucleus'];
-const selected = new Set();
+
+// Array preserves click order
+let clickOrder = [];
 
 function updateDiagram() {
+  const selected = new Set(clickOrder);
   const highlighted = new Set();
-  selected.forEach(part => {
+  clickOrder.forEach(part => {
     if (part === 'proton')   { highlighted.add('svg-proton');   highlighted.add('svg-nucleus'); }
     if (part === 'neutron')  { highlighted.add('svg-neutron');  highlighted.add('svg-nucleus'); }
     if (part === 'electron') { highlighted.add('svg-electron'); }
     if (part === 'nucleus')  { highlighted.add('svg-nucleus');  highlighted.add('svg-proton'); highlighted.add('svg-neutron'); }
     if (part === 'shell')    { highlighted.add('svg-shell-base'); }
   });
-
   allBase.forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.style.opacity = (selected.size === 0 || highlighted.has(id)) ? '1' : '0.1';
+    if (el) el.style.opacity = (clickOrder.length === 0 || highlighted.has(id)) ? '1' : '0.1';
   });
-
   const shellSel = selected.has('shell');
   document.getElementById('shell2-fill').setAttribute('fill-opacity', shellSel ? '0.12' : '0');
   document.getElementById('shell1-fill').setAttribute('fill-opacity', shellSel ? '0.12' : '0');
-
   Object.keys(highlightIds).forEach(part => {
     const el = document.getElementById(highlightIds[part]);
     if (el) el.style.opacity = selected.has(part) ? '1' : '0';
@@ -288,6 +265,7 @@ function updateDiagram() {
 }
 
 function updateButtons() {
+  const selected = new Set(clickOrder);
   Object.keys(data).forEach(part => {
     const btn = document.getElementById('btn-' + part);
     if (selected.has(part)) {
@@ -306,7 +284,7 @@ function updateButtons() {
 function updateCards() {
   const row = document.getElementById('info-row');
   const placeholder = document.getElementById('placeholder');
-  if (selected.size === 0) {
+  if (clickOrder.length === 0) {
     row.style.display = 'none';
     placeholder.style.display = 'block';
     return;
@@ -314,8 +292,8 @@ function updateCards() {
   placeholder.style.display = 'none';
   row.style.display = 'flex';
   row.innerHTML = '';
-  ['proton','neutron','nucleus','electron','shell'].forEach(part => {
-    if (!selected.has(part)) return;
+  // Render in click order
+  clickOrder.forEach(part => {
     const d = data[part];
     const c = btnColors[part];
     const block = document.createElement('div');
@@ -327,12 +305,17 @@ function updateCards() {
 }
 
 function toggle(part) {
-  selected.has(part) ? selected.delete(part) : selected.add(part);
+  const idx = clickOrder.indexOf(part);
+  if (idx !== -1) {
+    clickOrder.splice(idx, 1);   // deselect — remove from its position
+  } else {
+    clickOrder.push(part);       // select — append to end
+  }
   updateDiagram(); updateButtons(); updateCards();
 }
 
 function clearAll() {
-  selected.clear();
+  clickOrder = [];
   updateDiagram(); updateButtons(); updateCards();
 }
 </script>
