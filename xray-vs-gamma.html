@@ -356,7 +356,7 @@
           <input type="range" class="x" min="0" max="4" step="1" value="2" id="ma-slider" oninput="sliderChange('ma',this.value)">
         </div>
         <div class="slider-ticks" style="padding-left:28px;">
-          <span>100</span><span>200</span><span>300</span><span>400</span><span>500</span>
+          <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
         </div>
       </div>
     </div>
@@ -414,7 +414,7 @@
     </div>
     <canvas class="ray-canvas" id="xp-canvas" height="150"></canvas>
     <div class="badge-row" id="xp-badge"></div>
-    <p class="teach">kV controls X-ray penetrating power. Increasing kV gives X-ray photons more energy, allowing them to penetrate thicker or denser materials.</p>
+    <p class="teach">kV controls X-ray penetrating power. Increasing kV gives X-ray photons more energy, allowing them to penetrate thicker or denser materials. X-ray penetrating power can be changed at the press of a button.</p>
   </div>
 
   <!-- Gamma Penetration -->
@@ -423,27 +423,16 @@
       <div class="panel-icon g">☢</div>
       <span class="panel-title g">Gamma Penetration — Isotope</span>
     </div>
-    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:10px;">
-      <div class="lock-group" id="lock-group" onclick="shakeLock()">
-        <span style="font-size:9px;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;">kV</span>
-        <div class="locked-knob-outer">
-          <div class="locked-knob-inner">
-            <div class="knob-tick g" style="opacity:0.3;transform:translateX(-50%) rotate(0deg)"></div>
-          </div>
-        </div>
-        <div class="lock-badge">🔒 Cannot adjust</div>
-      </div>
-      <div style="flex:1;">
-        <div style="font-size:10px;color:var(--text3);margin-bottom:6px;letter-spacing:0.06em;text-transform:uppercase;">Select Isotope</div>
-        <div class="iso-row" style="justify-content:flex-start;">
-          <button class="iso-btn" id="bi192" onclick="setIso('ir192')">Ir-192</button>
-          <button class="iso-btn on" id="bco60" onclick="setIso('co60')">Co-60</button>
-        </div>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:10px;color:var(--text3);margin-bottom:6px;letter-spacing:0.06em;text-transform:uppercase;">Select Isotope</div>
+      <div class="iso-row" style="justify-content:flex-start;">
+        <button class="iso-btn" id="bi192" onclick="setIso('ir192')">Ir-192</button>
+        <button class="iso-btn on" id="bco60" onclick="setIso('co60')">Co-60</button>
       </div>
     </div>
     <canvas class="ray-canvas" id="gp-canvas" height="150"></canvas>
     <div class="badge-row" id="gp-badge"></div>
-    <p class="teach">To change gamma ray penetrating power, you must change the isotope. Ir-192 is less penetrating; Co-60 is more penetrating.</p>
+    <p class="teach">To change gamma ray penetrating power, you must change the isotope. Ir-192 is less penetrating; Co-60 is more penetrating. There is no button to press to change the penetrating power.</p>
   </div>
 
 </div>
@@ -524,7 +513,7 @@ function syncAll(id) {
   setKnobVisual(id, S[id]);
   const sl = document.getElementById(id + '-slider');
   sl.value = S[id];
-  updateSliderTrack(sl);
+  updateSliderTrack(sl);          // always refresh track fill from knob or slider
   if (id === 'ma') {
     document.getElementById('ma-val').textContent = maSteps[S.ma] + ' mA';
   } else {
@@ -583,6 +572,9 @@ function startLoop(key) {
   ({ xq: loopXQ, gq: loopGQ, xp: loopXP, gp: loopGP }[key])(tok);
 }
 
+/* ─── Wave ray draw ─── */
+/* phase increases with t, so using (d/wl)*2π − phase makes crests
+   travel in the +d direction (outward from source) each frame.      */
 function drawWaveRay(ctx, x0, y0, angle, len, color, amp, wl, phase, alpha, clipX) {
   ctx.save();
   if (clipX !== undefined) {
@@ -598,7 +590,7 @@ function drawWaveRay(ctx, x0, y0, angle, len, color, amp, wl, phase, alpha, clip
   ctx.beginPath();
   for (let s = 0; s <= steps; s++) {
     const d = (s / steps) * len;
-    const w = amp * Math.sin((d / wl) * Math.PI * 2 - phase);
+    const w = amp * Math.sin((d / wl) * Math.PI * 2 - phase);   // − phase → outward travel
     s === 0
       ? ctx.moveTo(x0 + cosA * d + px * w, y0 + sinA * d + py * w)
       : ctx.lineTo(x0 + cosA * d + px * w, y0 + sinA * d + py * w);
@@ -607,6 +599,7 @@ function drawWaveRay(ctx, x0, y0, angle, len, color, amp, wl, phase, alpha, clip
   ctx.restore();
 }
 
+/* ─── Scatter sparks when ray is blocked ─── */
 function drawScatter(ctx, x, y, color, t, intensity) {
   const sparks = 5;
   for (let i = 0; i < sparks; i++) {
@@ -624,6 +617,13 @@ function drawScatter(ctx, x, y, color, t, intensity) {
   }
 }
 
+/* ════════════════════════════════════════════
+   SECTION 1: X-ray tube — glass envelope,
+   focusing cup, filament, tungsten target
+   wedge (tip top-left, right face = full
+   anode height), electrons → mid-hypotenuse,
+   X-ray waves down from that midpoint.
+════════════════════════════════════════════ */
 function loopXQ(tok) {
   const canvas = document.getElementById('xq-canvas');
   const W = cw('xq-canvas');
@@ -633,18 +633,28 @@ function loopXQ(tok) {
   let t = 0;
 
   const envCx = W*0.46, envCy = midY, envRx = W*0.43, envRy = H*0.42;
+
+  /* Anode block */
   const anodLX = W*0.60, anodRX = W*0.84;
   const anodTY = midY - 46, anodBY = midY + 46;
+
+  /* Tungsten wedge — tip top-left, right face spans full anode height */
   const tipX = anodLX - W*0.13, tipY = anodTY;
-  const trX = anodLX, trY = anodTY;
-  const brX = anodLX, brY = anodBY;
+  const trX = anodLX, trY = anodTY;   /* top-right = anode top-left */
+  const brX = anodLX, brY = anodBY;   /* bottom-right = anode bottom-left */
+
+  /* Focal point = midpoint of hypotenuse (tipX,tipY)→(brX,brY) */
   const focalX = (tipX + brX) / 2;
   const focalY = (tipY + brY) / 2;
+
+  /* Tube window centred below focal point */
   const winCX = focalX, winY = envCy + envRy - 10, winW = 36;
   const stemX = envCx + envRx, stemLen = W*0.10;
   const catCx = W*0.10, cupH = 50;
   const electrons = [];
   const eCounts = [2, 4, 7, 10, 14];
+
+  /* Direction from cathode exit → focal midpoint */
   const ex0 = catCx + 22, ey0 = midY;
   const dxT = focalX - ex0, dyT = focalY - ey0;
   const distT = Math.sqrt(dxT*dxT + dyT*dyT);
@@ -657,6 +667,7 @@ function loopXQ(tok) {
     ctx.fillStyle = '#0e121c';
     ctx.fillRect(0, 0, W, H);
 
+    /* Glass envelope */
     ctx.save();
     ctx.beginPath();
     ctx.ellipse(envCx, envCy, envRx, envRy, 0, 0, Math.PI*2);
@@ -665,28 +676,28 @@ function loopXQ(tok) {
     ctx.strokeStyle = 'rgba(100,140,210,0.55)';
     ctx.lineWidth = 2; ctx.stroke();
     ctx.restore();
-    ctx.fillStyle = 'rgba(100,140,210,0.28)';
-    ctx.font = 'italic 9px Courier New'; ctx.textAlign = 'center';
-    ctx.fillText('vacuum', envCx, midY - envRy + 16);
-    ctx.fillStyle = '#5a6480';
-    ctx.font = '9px Courier New';
-    ctx.fillText('Glass envelope', envCx + envRx - 28, midY - envRy + 13);
+    ctx.fillStyle = '#f0d060';
+    ctx.font = '9px Courier New'; ctx.textAlign = 'right';
+    ctx.fillText('Glass envelope', envCx + envRx - 6, midY - envRy + 13);
 
+    /* Copper stem */
     ctx.fillStyle = '#7a4a20';
     ctx.fillRect(stemX, midY-7, stemLen+6, 14);
     ctx.strokeStyle = '#a06828'; ctx.lineWidth = 0.5;
     ctx.strokeRect(stemX, midY-7, stemLen+6, 14);
-    ctx.fillStyle = '#e0a040';
+    ctx.fillStyle = '#f0d060';
     ctx.font = 'bold 13px Courier New'; ctx.textAlign = 'left';
     ctx.fillText('+', stemX + stemLen + 8, midY + 5);
-    ctx.fillStyle = '#5a6480'; ctx.font = '9px Courier New';
+    ctx.font = '9px Courier New'; ctx.textAlign = 'center';
     ctx.fillText('Anode (+)', (anodLX+anodRX)/2, anodBY + 16);
 
+    /* Anode block */
     ctx.fillStyle = '#38344e';
     ctx.fillRect(anodLX, anodTY, anodRX-anodLX, anodBY-anodTY);
     ctx.strokeStyle = '#6060a0'; ctx.lineWidth = 0.5;
     ctx.strokeRect(anodLX, anodTY, anodRX-anodLX, anodBY-anodTY);
 
+    /* Tungsten wedge: TIP → TR → BR → close (hypotenuse = TIP→BR) */
     ctx.fillStyle = '#a8a8b8';
     ctx.beginPath();
     ctx.moveTo(tipX, tipY);
@@ -694,12 +705,15 @@ function loopXQ(tok) {
     ctx.lineTo(brX,  brY);
     ctx.closePath();
     ctx.fill();
+    /* Hypotenuse highlight — the target face */
     ctx.strokeStyle = '#e0e0f0'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(tipX, tipY); ctx.lineTo(brX, brY); ctx.stroke();
+    /* Flat top and vertical right (subtle) */
     ctx.strokeStyle = '#80809a'; ctx.lineWidth = 0.5;
     ctx.beginPath(); ctx.moveTo(tipX,tipY); ctx.lineTo(trX,trY); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(trX,trY); ctx.lineTo(brX,brY); ctx.stroke();
 
+    /* Focal spot glow at hypotenuse midpoint */
     const gs = 6 + 2*Math.sin(t*0.15);
     const fa = 0.45 + 0.12*Math.sin(t*0.15);
     const fgrd = ctx.createRadialGradient(focalX,focalY,0,focalX,focalY,gs*2.5);
@@ -708,16 +722,19 @@ function loopXQ(tok) {
     ctx.fillStyle = fgrd;
     ctx.beginPath(); ctx.arc(focalX, focalY, gs*2.5, 0, Math.PI*2); ctx.fill();
 
-    ctx.fillStyle = '#c8aa60'; ctx.font = 'bold 8px Courier New'; ctx.textAlign = 'center';
+    /* Focal spot label */
+    ctx.fillStyle = '#f0d060'; ctx.font = 'bold 8px Courier New'; ctx.textAlign = 'center';
     ctx.fillText('Focal spot (tungsten target)', focalX - 10, anodTY - 8);
 
+    /* Tube window */
     ctx.fillStyle = 'rgba(60,100,170,0.35)';
     ctx.strokeStyle = 'rgba(100,140,210,0.7)'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.roundRect(winCX - winW/2, winY - 3, winW, 11, 3);
     ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#5a7ab0'; ctx.font = '8px Courier New'; ctx.textAlign = 'center';
+    ctx.fillStyle = '#f0d060'; ctx.font = '8px Courier New'; ctx.textAlign = 'center';
     ctx.fillText('Tube window', winCX, winY + 20);
 
+    /* Focusing cup */
     ctx.fillStyle = '#1e3058';
     ctx.beginPath();
     ctx.moveTo(catCx+20, midY-cupH/2);
@@ -729,6 +746,7 @@ function loopXQ(tok) {
     ctx.closePath(); ctx.fill();
     ctx.strokeStyle = '#3a5090'; ctx.lineWidth = 0.5; ctx.stroke();
 
+    /* Filament coil */
     ctx.strokeStyle = '#ffb840'; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
     const cfx = catCx+9, cfy = midY, coilH = 20, coils = 5;
     ctx.beginPath(); ctx.moveTo(cfx, cfy-coilH/2);
@@ -739,13 +757,14 @@ function loopXQ(tok) {
     cgrd.addColorStop(1, 'transparent');
     ctx.fillStyle = cgrd; ctx.beginPath(); ctx.arc(cfx, cfy, 13, 0, Math.PI*2); ctx.fill();
 
-    ctx.fillStyle = '#9aa3bc'; ctx.font = 'bold 12px Courier New'; ctx.textAlign = 'center';
+    /* Cathode labels */
+    ctx.fillStyle = '#f0d060'; ctx.font = 'bold 12px Courier New'; ctx.textAlign = 'center';
     ctx.fillText('−', catCx, midY-cupH/2-12);
-    ctx.font = '8px Courier New'; ctx.fillStyle = '#5a6480';
+    ctx.font = '8px Courier New'; ctx.fillStyle = '#f0d060';
     ctx.fillText('Cathode (−)', catCx+10, midY+cupH/2+13);
-    ctx.fillText('Focusing cup', catCx+10, midY+cupH/2+22);
     ctx.fillText('Filament', catCx+10, midY-cupH/2-4);
 
+    /* Electrons — aimed at focal midpoint of hypotenuse */
     const n = eCounts[S.ma];
     while (electrons.length < n) {
       electrons.push({ pct: Math.random(), offsetY: (Math.random()-0.5)*16, speed: (1.7+Math.random())/distT, done: false });
@@ -768,6 +787,7 @@ function loopXQ(tok) {
       if (electrons[i].done) electrons[i] = { pct: 0, offsetY: (Math.random()-0.5)*16, speed: (1.7+Math.random())/distT, done: false };
     }
 
+    /* X-ray waves downward from focal midpoint */
     const numPhotons = [1, 2, 4, 6, 9][S.ma];
     for (let i = 0; i < numPhotons; i++) {
       const frac = numPhotons === 1 ? 0.5 : i / (numPhotons - 1);
@@ -781,6 +801,9 @@ function loopXQ(tok) {
   frame();
 }
 
+/* ════════════════════════════════════════════
+   SECTION 2: Gamma outward radiation
+════════════════════════════════════════════ */
 function loopGQ(tok) {
   const canvas = document.getElementById('gq-canvas');
   const W = cw('gq-canvas');
@@ -798,15 +821,18 @@ function loopGQ(tok) {
     ctx.fillRect(0, 0, W, H);
 
     const v = parseInt(document.getElementById('act-sel').value);
+    // Source grows slightly with activity
     const srcR = 10 + v * 2;
     const glowR = srcR + 10 + v * 3;
 
+    // Outer glow
     const grd = ctx.createRadialGradient(cx, cy, srcR * 0.4, cx, cy, glowR);
     grd.addColorStop(0, `rgba(126,203,53,${0.12 + v * 0.06})`);
     grd.addColorStop(1, 'transparent');
     ctx.fillStyle = grd;
     ctx.beginPath(); ctx.arc(cx, cy, glowR, 0, Math.PI * 2); ctx.fill();
 
+    // Source core
     const coreGrd = ctx.createRadialGradient(cx - srcR * 0.3, cy - srcR * 0.3, 1, cx, cy, srcR);
     coreGrd.addColorStop(0, '#c0ff60');
     coreGrd.addColorStop(0.5, '#7ecb35');
@@ -814,10 +840,12 @@ function loopGQ(tok) {
     ctx.fillStyle = coreGrd;
     ctx.beginPath(); ctx.arc(cx, cy, srcR, 0, Math.PI * 2); ctx.fill();
 
+    // Trefoil radiation symbol
     ctx.save();
     ctx.globalAlpha = 0.5;
     ctx.fillStyle = '#0e121c';
     const ts = srcR * 0.35;
+    // 3 blades
     for (let b = 0; b < 3; b++) {
       ctx.save();
       ctx.translate(cx, cy);
@@ -831,12 +859,14 @@ function loopGQ(tok) {
     ctx.fillStyle = '#0e121c'; ctx.fill();
     ctx.restore();
 
+    // Activity label
     const labels = ['10 Ci', '50 Ci', '100 Ci'];
     ctx.fillStyle = '#7ecb35';
     ctx.font = 'bold 10px Courier New';
     ctx.textAlign = 'center';
     ctx.fillText(labels[v - 1], cx, cy + srcR + 12);
 
+    // Outward gamma wave rays — always away from center
     const numRays = [6, 10, 16][v - 1];
     const maxD = Math.min(cx, cy) - srcR - 4;
     for (let i = 0; i < numRays; i++) {
@@ -852,10 +882,25 @@ function loopGQ(tok) {
   frame();
 }
 
+/* ════════════════════════════════════════════
+   Wall definitions for penetration panels
+════════════════════════════════════════════ */
 const WALLS = [
-  { mat: 'Steel', inch: '0.25"', fill: '#6a6860', stroke: '#888070', darkText: '#c8c4bc', label_y_off: -3 },
-  { mat: 'Lead', inch: '0.04"', fill: '#4a5060', stroke: '#5a6070', darkText: '#b0b8c8', label_y_off: -3 },
-  { mat: 'Tungsten', inch: '0.02"', fill: '#302838', stroke: '#504858', darkText: '#a8a0b8', label_y_off: -3 },
+  {
+    mat: 'Steel', inch: '0.25"',
+    fill: '#6a6860', stroke: '#888070',
+    darkText: '#c8c4bc', label_y_off: -3
+  },
+  {
+    mat: 'Lead', inch: '0.04"',
+    fill: '#4a5060', stroke: '#5a6070',
+    darkText: '#b0b8c8', label_y_off: -3
+  },
+  {
+    mat: 'Tungsten', inch: '0.02"',
+    fill: '#302838', stroke: '#504858',
+    darkText: '#a8a0b8', label_y_off: -3
+  },
 ];
 const WALL_PX = [46, 34, 26];
 const GAP = 24;
@@ -868,11 +913,15 @@ function buildWpos(srcX) {
 function drawWalls(ctx, W, H, wpos, penetrates, t) {
   wpos.forEach((w, i) => {
     const blocked = i >= penetrates;
+
+    // Wall body
     ctx.fillStyle = w.fill;
     ctx.fillRect(w.x, 12, w.px, H - 24);
     ctx.strokeStyle = w.stroke;
     ctx.lineWidth = 0.5;
     ctx.strokeRect(w.x, 12, w.px, H - 24);
+
+    // Horizontal grain lines for texture
     ctx.save();
     ctx.globalAlpha = 0.1;
     ctx.strokeStyle = '#ffffff';
@@ -884,17 +933,24 @@ function drawWalls(ctx, W, H, wpos, penetrates, t) {
       ctx.stroke();
     }
     ctx.restore();
+
     if (blocked) {
+      // Red tint
       ctx.fillStyle = 'rgba(220,60,50,0.22)';
       ctx.fillRect(w.x, 12, w.px, H - 24);
+      // Red border
       ctx.strokeStyle = '#dc3c32';
       ctx.lineWidth = 1.2;
       ctx.strokeRect(w.x, 12, w.px, H - 24);
+      // Scatter sparks at left face
       drawScatter(ctx, w.x, H / 2, '#ff8060', t, 1);
     } else {
+      // Green pass tint
       ctx.fillStyle = 'rgba(126,203,53,0.08)';
       ctx.fillRect(w.x, 12, w.px, H - 24);
     }
+
+    // Labels
     const tc = blocked ? '#f07070' : w.darkText;
     ctx.fillStyle = tc;
     ctx.font = 'bold 9px Courier New';
@@ -902,6 +958,8 @@ function drawWalls(ctx, W, H, wpos, penetrates, t) {
     ctx.fillText(w.mat, w.x + w.px / 2, 9);
     ctx.font = '9px Courier New';
     ctx.fillText(w.inch, w.x + w.px / 2, H - 2);
+
+    // Gap dashes
     if (i < wpos.length - 1) {
       ctx.strokeStyle = '#333a55';
       ctx.lineWidth = 0.5;
@@ -915,6 +973,10 @@ function drawWalls(ctx, W, H, wpos, penetrates, t) {
   });
 }
 
+/* ════════════════════════════════════════════
+   SECTION 3: X-ray penetration
+   Rays correctly stop at first blocked wall.
+════════════════════════════════════════════ */
 function loopXP(tok) {
   const canvas = document.getElementById('xp-canvas');
   const W = cw('xp-canvas');
@@ -922,6 +984,7 @@ function loopXP(tok) {
   const ctx = canvas.getContext('2d');
   const H = 150, srcX = 28, srcY = H / 2;
   const wpos = buildWpos(srcX);
+  // kV index → how many walls penetrated (0=none, 1=steel, 2=steel+lead, 3=all)
   const kvPen = [0, 1, 2, 3, 3];
   const kvAmp = [5.0, 4.2, 3.2, 2.2, 1.6];
   const kvWl  = [14,  18,  26,  36,  48];
@@ -933,9 +996,12 @@ function loopXP(tok) {
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = '#0e121c';
     ctx.fillRect(0, 0, W, H);
+
     const pen = kvPen[Math.min(S.kv, 4)];
     const amp = kvAmp[S.kv];
     const wl  = kvWl[S.kv];
+
+    // Source head
     ctx.fillStyle = '#1e2a3a';
     ctx.fillRect(0, srcY - 26, srcX, 52);
     ctx.fillStyle = '#2a3a4a';
@@ -944,11 +1010,21 @@ function loopXP(tok) {
     ctx.globalAlpha = 0.9;
     ctx.beginPath(); ctx.arc(srcX, srcY, 4, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = 1;
+
     drawWalls(ctx, W, H, wpos, pen, t);
+
+    // Determine clip boundary: rays travel through all penetrated walls,
+    // stop at the FACE of the first blocked wall
     let clipX;
-    if (pen >= 3) { clipX = W; }
-    else if (pen === 0) { clipX = wpos[0].x; }
-    else { clipX = wpos[pen].x; }
+    if (pen >= 3) {
+      clipX = W;
+    } else if (pen === 0) {
+      clipX = wpos[0].x;   // stop at steel face
+    } else {
+      // Stop at face of the (pen)th wall (0-indexed = first blocked)
+      clipX = wpos[pen].x;
+    }
+
     const numRays = 7, spread = 38;
     for (let i = 0; i < numRays; i++) {
       const frac = i / (numRays - 1);
@@ -957,11 +1033,16 @@ function loopXP(tok) {
       const phase = (t * 0.055) + (i * 0.9);
       drawWaveRay(ctx, srcX, srcY, angle, maxD, '#4da6ff', amp, wl, phase, 0.78, clipX);
     }
+
     requestAnimationFrame(frame);
   }
   frame();
 }
 
+/* ════════════════════════════════════════════
+   SECTION 4: Gamma penetration by isotope
+   Ir-192 stops at lead, Co-60 passes all.
+════════════════════════════════════════════ */
 function loopGP(tok) {
   const canvas = document.getElementById('gp-canvas');
   const W = cw('gp-canvas');
@@ -977,14 +1058,20 @@ function loopGP(tok) {
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = '#0e121c';
     ctx.fillRect(0, 0, W, H);
+
     const co60 = S.iso === 'co60';
+    // Ir-192: passes steel (1), blocked at lead
+    // Co-60:  passes all (3)
     const pen = co60 ? 3 : 1;
     const amp = co60 ? 1.8 : 4.2;
     const wl  = co60 ? 48  : 18;
+
+    // Source head (gamma style)
     ctx.fillStyle = '#1e1e3a';
     ctx.fillRect(0, srcY - 26, srcX, 52);
     ctx.fillStyle = '#2a2a5a';
     ctx.fillRect(3, srcY - 16, srcX - 4, 32);
+    // Isotope label
     ctx.fillStyle = co60 ? '#7ecb35' : '#b8d060';
     ctx.font = 'bold 8px Courier New';
     ctx.textAlign = 'center';
@@ -993,11 +1080,18 @@ function loopGP(tok) {
     ctx.fillStyle = '#7ecb35';
     ctx.beginPath(); ctx.arc(srcX, srcY, 5, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = 1;
+
     drawWalls(ctx, W, H, wpos, pen, t);
+
     let clipX;
-    if (pen >= 3) { clipX = W; }
-    else if (pen === 0) { clipX = wpos[0].x; }
-    else { clipX = wpos[pen].x; }
+    if (pen >= 3) {
+      clipX = W;
+    } else if (pen === 0) {
+      clipX = wpos[0].x;
+    } else {
+      clipX = wpos[pen].x;
+    }
+
     const numRays = 7, spread = 38;
     for (let i = 0; i < numRays; i++) {
       const frac = i / (numRays - 1);
@@ -1006,11 +1100,13 @@ function loopGP(tok) {
       const phase = (t * 0.055) + (i * 0.9);
       drawWaveRay(ctx, srcX, srcY, angle, maxD, '#7ecb35', amp, wl, phase, 0.78, clipX);
     }
+
     requestAnimationFrame(frame);
   }
   frame();
 }
 
+/* ─── Init ─── */
 function initAll() {
   setKnobVisual('ma', S.ma);
   setKnobVisual('kv', S.kv);
@@ -1025,6 +1121,7 @@ function initAll() {
   ['xq', 'gq', 'xp', 'gp'].forEach(k => startLoop(k));
 }
 
+// Start after layout paints
 setTimeout(initAll, 100);
 window.addEventListener('resize', () => setTimeout(() => ['xq','gq','xp','gp'].forEach(k => startLoop(k)), 80));
 </script>
