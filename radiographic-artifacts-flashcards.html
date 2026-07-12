@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Radiographic Artifacts Flashcards</title>
+<title>Film Handling Artifacts Flashcards</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
 
@@ -14,8 +14,8 @@
   --ink2:     #3d3530;
   --muted:    #8c7e72;
   --border:   #d8d0c4;
-  --accent:   #c0392b;
-  --accent2:  #1a6b8a;
+  --accent:   #b44c20;
+  --accent2:  #8a3a10;
   --green:    #2e7d4f;
   --amber:    #9c6a00;
   --shadow:   0 2px 12px rgba(26,22,18,0.10);
@@ -43,6 +43,7 @@ body {
   padding-bottom: 60px;
 }
 
+/* ─── HEADER ─── */
 header {
   background: var(--ink);
   color: var(--paper);
@@ -77,6 +78,7 @@ header h1 {
 }
 .reminder strong { color: #f5c5be; }
 
+/* ─── MODE TOGGLE ─── */
 .mode-bar {
   display: flex;
   justify-content: center;
@@ -106,6 +108,7 @@ header h1 {
   color: var(--paper);
 }
 
+/* ─── FILTERS ─── */
 .filter-bar {
   display: flex;
   gap: 7px;
@@ -141,6 +144,7 @@ header h1 {
 .filter-pill[data-cat="digital"].active    { background: var(--cat-digital);     border-color: var(--cat-digital); }
 .filter-pill[data-cat="review"].active     { background: var(--accent);          border-color: var(--accent); }
 
+/* ─── PROGRESS ─── */
 .progress-wrap {
   max-width: 620px;
   margin: 8px auto 0;
@@ -179,12 +183,12 @@ header h1 {
   transition: width 0.35s ease;
 }
 
+/* ─── CARD STAGE ─── */
 .card-stage {
   display: block;
-  max-width: 620px;
-  width: 100%;
-  margin: 10px auto 0;
-  padding: 0 18px;
+  flex: 1;
+  min-width: 0;
+  padding: 0 4px;
   box-sizing: border-box;
 }
 
@@ -212,6 +216,7 @@ header h1 {
   overflow: hidden;
 }
 
+/* FRONT */
 .card-front {
   background: var(--paper);
   border: 1px solid var(--border);
@@ -261,6 +266,16 @@ header h1 {
   color: var(--paper);
   margin-bottom: 18px;
   display: inline-block;
+}
+.card-prompt {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-style: italic;
+  border-top: 1px dashed var(--border);
+  padding-top: 14px;
+  line-height: 1.5;
+  width: 100%;
 }
 .front-top {
   display: flex;
@@ -321,6 +336,7 @@ header h1 {
   letter-spacing: 0.06em;
 }
 
+/* BACK */
 .card-back {
   background: var(--ink);
   color: var(--paper);
@@ -387,10 +403,11 @@ header h1 {
   color: rgba(255,255,255,0.88);
 }
 
+/* ─── CONTROLS ─── */
 .controls {
-  max-width: 620px;
+  max-width: 720px;
   margin: 10px auto 0;
-  padding: 0 18px;
+  padding: 0 56px;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -445,6 +462,35 @@ header h1 {
 .nav-group { display: flex; gap: 6px; align-items: center; }
 .spacer { flex: 1; min-width: 10px; }
 
+/* ─── CARD ROW with side arrows ─── */
+.card-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 720px;
+  margin: 10px auto 0;
+  padding: 0 4px;
+}
+.btn-side-nav {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow);
+}
+.btn-side-nav:hover:not(:disabled) { border-color: var(--ink); background: var(--bg); }
+.btn-side-nav:disabled { opacity: 0.2; cursor: default; }
+
+/* ─── QUIZ MODE ─── */
 .quiz-wrap {
   max-width: 620px;
   margin: 22px auto 0;
@@ -543,6 +589,7 @@ header h1 {
 }
 .score-chip span { color: var(--ink); font-weight: 500; }
 
+/* ─── EMPTY STATE ─── */
 .empty-state {
   text-align: center;
   padding: 48px 20px;
@@ -551,61 +598,120 @@ header h1 {
 .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
 .empty-state p { font-size: 0.85rem; }
 
+/* ─── ANIM ─── */
 @keyframes slide-in {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .card-stage, .quiz-wrap { animation: slide-in 0.3s ease; }
+/* ─── QUIZ READY MODAL ─── */
+#quiz-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(26,22,18,0.55);
+  backdrop-filter: blur(3px);
+}
+.modal-box {
+  position: relative;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(26,22,18,0.25);
+  padding: 36px 32px 28px;
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+  animation: modal-pop 0.25s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes modal-pop {
+  from { opacity: 0; transform: scale(0.88) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.modal-icon  { font-size: 2.8rem; margin-bottom: 12px; }
+.modal-title {
+  font-family: 'Bitter', Georgia, serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+.modal-body {
+  font-size: 0.83rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+.modal-body strong { color: var(--ink2); }
+.modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.modal-actions .btn { width: 100%; justify-content: center; }
 </style>
 </head>
 <body>
 
+<!-- ════════ HEADER ════════ -->
 <header>
-  <h1>Radiographic Artifacts Flashcards</h1>
-  <div class="header-sub">NDT Radiographic Testing — Level 2 &nbsp;·&nbsp; Artifact Recognition</div>
+  <h1>Film Handling Artifacts Flashcards</h1>
+  <div class="header-sub">NDT Radiographic Testing — Level 2 &nbsp;·&nbsp; Film Handling Artifacts</div>
   <div class="reminder">
     <strong>Key Reminder:</strong> Artifacts are unwanted marks, patterns, or density changes that are <em>not</em> caused by actual discontinuities in the test object.
   </div>
 </header>
 
+<!-- ════════ MODE TOGGLE ════════ -->
 <div class="mode-bar">
-  <button class="mode-btn active" id="mode-study" onclick="setMode('study')">&#x1F4D6; Study</button>
-  <button class="mode-btn"        id="mode-quiz"  onclick="setMode('quiz')">&#x1F3AF; Quiz</button>
+  <button class="mode-btn active" id="mode-study" onclick="setMode('study')">📖 Study</button>
+  <button class="mode-btn"        id="mode-quiz"  onclick="setMode('quiz')">🎯 Quiz</button>
 </div>
 
+<!-- ════════ FILTERS ════════ -->
 <div class="filter-bar" id="filter-bar">
-  <button class="filter-pill active" data-cat="all"        onclick="setFilter('all')">All Cards</button>
-  <button class="filter-pill"        data-cat="film"       onclick="setFilter('film')">Film Handling</button>
-  <button class="filter-pill"        data-cat="processing" onclick="setFilter('processing')">Processing</button>
-  <button class="filter-pill"        data-cat="screen"     onclick="setFilter('screen')">Screen / Cassette</button>
-  <button class="filter-pill"        data-cat="exposure"   onclick="setFilter('exposure')">Exposure / Technique</button>
-  <button class="filter-pill"        data-cat="digital"    onclick="setFilter('digital')">Digital / CR / DR</button>
-  <button class="filter-pill"        data-cat="review"     onclick="setFilter('review')">&#x2691; Needs Review</button>
+  <button class="filter-pill active" data-cat="all"    onclick="setFilter('all')">All Cards</button>
+  <button class="filter-pill"        data-cat="film"   onclick="setFilter('film')">Film Handling</button>
+  <button class="filter-pill"        data-cat="review" onclick="setFilter('review')">⚑ Needs Review</button>
 </div>
 
+<!-- ════════ PROGRESS ════════ -->
 <div class="progress-wrap">
   <div class="progress-row">
     <span class="progress-label" id="progress-label">Card 1 of 21</span>
-    <span class="review-badge"   id="review-badge" style="display:none">&#x2691; 0 flagged</span>
+    <span class="review-badge"   id="review-badge" style="display:none">⚑ 0 flagged</span>
   </div>
   <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
 </div>
 
+<!-- ════════ STUDY MODE ════════ -->
 <div id="study-ui">
-  <div class="card-stage" id="card-stage"></div>
-  <div class="controls">
-    <div class="nav-group">
-      <button class="btn btn-nav" id="btn-prev" onclick="navigate(-1)">←</button>
-      <button class="btn btn-nav" id="btn-next" onclick="navigate(1)">→</button>
+  <div class="card-row">
+    <button class="btn btn-side-nav" id="btn-prev" onclick="navigate(-1)" title="Previous card">&#8592;</button>
+    <div class="card-stage" id="card-stage">
+      <!-- injected by JS -->
     </div>
+    <button class="btn btn-side-nav" id="btn-next" onclick="navigate(1)" title="Next card">&#8594;</button>
+  </div>
+
+  <div class="controls">
     <button class="btn btn-dark"    onclick="flipCard()">↩ Flip</button>
-    <button class="btn btn-review"  id="btn-review" onclick="toggleReview()">&#x2691; Needs Review</button>
+    <button class="btn btn-review"  id="btn-review" onclick="toggleReview()">⚑ Needs Review</button>
     <div class="spacer"></div>
     <button class="btn btn-outline" onclick="shuffle()">⇄ Shuffle</button>
     <button class="btn btn-outline" onclick="resetAll()">↺ Reset</button>
   </div>
 </div>
 
+<!-- ════════ QUIZ MODE ════════ -->
 <div id="quiz-ui" style="display:none">
   <div class="quiz-score-bar">
     <span class="score-chip">Correct: <span id="q-correct">0</span></span>
@@ -613,10 +719,30 @@ header h1 {
     <span class="score-chip">Remaining: <span id="q-remaining">—</span></span>
     <button class="btn btn-outline" style="margin-left:auto" onclick="resetQuiz()">↺ Reset Quiz</button>
   </div>
-  <div class="quiz-wrap" id="quiz-wrap"></div>
+  <div class="quiz-wrap" id="quiz-wrap">
+    <!-- injected by JS -->
+  </div>
+</div>
+
+<!-- ════════ QUIZ READY MODAL ════════ -->
+<div id="quiz-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-backdrop" onclick="closeModal()"></div>
+  <div class="modal-box">
+    <div class="modal-icon">🎯</div>
+    <div class="modal-title" id="modal-title">Ready to test yourself?</div>
+    <div class="modal-body">You've reviewed all the cards. Switch to <strong>Quiz Mode</strong> to test your knowledge — or keep studying.</div>
+    <div class="modal-actions">
+      <button class="btn btn-dark"    onclick="launchQuiz()">Start Quiz →</button>
+      <button class="btn btn-outline" onclick="closeModal()">Keep Studying</button>
+    </div>
+  </div>
 </div>
 
 <script>
+/* ══════════════════════════════════════════════════════
+   EDITABLE DATA — edit cards here, all UI updates automatically
+   ══════════════════════════════════════════════════════ */
+
 const CATEGORIES = {
   film:       { label: 'Film Handling',        color: '#b44c20' },
   processing: { label: 'Processing / Chemical',color: '#1a6b8a' },
@@ -626,156 +752,121 @@ const CATEGORIES = {
 };
 
 const CARDS = [
-  { id:'scratches', name:'Scratches', category:'film', icon:'✏️',
-    prompt:'What causes this artifact, and how does it appear?',
-    definition:'Physical damage to the film emulsion or imaging plate surface, creating marks unrelated to the test object.',
-    cause:'Rough handling, sharp edges, or abrasive contact during loading, unloading, or processing.',
-    appearance:'Appears as irregular lines or linear marks at varying densities across the image.',
-    prevention:'Handle film and plates gently; use clean, smooth cassettes and processing equipment.' },
-  { id:'fingerprints', name:'Fingerprints', category:'film', icon:'🖐️',
-    prompt:'What causes this artifact, and how does it appear?',
-    definition:'Contamination of the film emulsion by skin oils, salts, or other residues from bare or dirty hands.',
-    cause:'Touching film or imaging plates with ungloved or contaminated hands before or after exposure.',
-    appearance:'Visible as circular or partial print-shaped density changes or stains on the image.',
-    prevention:'Always handle film with clean cotton gloves; avoid touching the emulsion surface.' },
-  { id:'static', name:'Static Marks', category:'film', icon:'⚡',
-    prompt:'What causes this artifact, and how does it appear?',
-    definition:'Marks created by electrostatic discharge on the film surface.',
-    cause:'Static electricity from rapid film removal from packaging, low humidity, or contact with synthetic materials.',
-    appearance:'Branching, tree-like, or lightning bolt–shaped dark marks on the processed image.',
-    prevention:'Handle film slowly; maintain humidity above 40%; ground equipment appropriately.' },
-  { id:'pressure', name:'Pressure Marks', category:'film', icon:'👊',
-    prompt:'What causes this artifact, and how does it appear?',
-    definition:'Localized density changes caused by mechanical stress applied to film before or during exposure.',
-    cause:'Bending, pressing, rolling, or stressing the film or imaging plate.',
-    appearance:'Localised areas of increased or decreased density depending on the type of pressure applied.',
-    prevention:'Store and handle film flat; avoid excessive stacking or pressure on cassettes.' },
-  { id:'crimp', name:'Crimp Marks', category:'film', icon:'📎',
-    prompt:'What causes this artifact, and how does it appear?',
-    definition:'A specific type of pressure mark caused by a sharp bend or crease in the film.',
-    cause:'Sharply folding or bending film corners during darkroom handling, especially when loading cassettes.',
-    appearance:'Crescent-shaped dark marks, typically near film edges or corners.',
-    prevention:'Use proper film-handling technique; do not bend or fold film edges during loading.' },
-  { id:'waterspots', name:'Water Spots', category:'processing', icon:'💧',
-    prompt:'What causes this artifact, and how does it appear?',
-    definition:'Surface marks caused by uneven evaporation of water or fixer droplets on the film.',
-    cause:'Inadequate or uneven drying; water or fixer drops contacting the film surface after washing.',
-    appearance:'Circular or irregular ring-shaped marks visible on the film surface after drying.',
-    prevention:'Ensure consistent drying; use wetting agent in final rinse; avoid drips during handling.' },
-  { id:'chemstains', name:'Chemical Stains', category:'processing', icon:'🧪',
-    prompt:'What causes this artifact, and how does it appear?',
-    definition:'Discoloration or density changes from improper processing chemistry or contamination.',
-    cause:'Exhausted, contaminated, or incorrectly mixed developer or fixer solutions; inadequate washing.',
-    appearance:'Uneven discoloration, yellowish or brownish staining, or irregular density patches.',
-    prevention:'Maintain fresh, correctly mixed chemistry; monitor replenishment rates; ensure thorough washing.' },
-  { id:'streaks', name:'Processing Streaks', category:'processing', icon:'〰️',
-    prompt:'What causes this artifact, and how does it appear?',
-    definition:'Directional density variations caused by uneven chemical action during processing.',
-    cause:'Poor agitation in tank processing; faulty transport rollers or guides in automatic processors.',
-    appearance:'Parallel or directional streaks of varying density running along the film.',
-    prevention:'Use proper agitation technique; regularly clean and maintain automatic processor rollers.' },
-  { id:'fog', name:'Fog', category:'processing', icon:'🌫️',
-    prompt:'What causes this artifact, and how does it appear?',
-    definition:'Unwanted overall or partial increase in film density not caused by the intended exposure.',
-    cause:'Accidental light exposure, stray scatter radiation, expired or improperly stored film, or processing issues.',
-    appearance:'Overall increased density (darkening) reducing contrast and obscuring relevant detail.',
-    prevention:'Check darkroom integrity; store film properly; use appropriate scatter control; check safelight.' },
-  { id:'lightleaks', name:'Light Leaks', category:'film', icon:'☀️',
-    prompt:'What causes this artifact, and how does it appear?',
-    definition:'Localised or overall fogging from accidental exposure of film to visible light.',
-    cause:'Faulty cassette seals, darkroom light leaks, or premature film exposure to ambient light.',
-    appearance:'Localised or edge-fogging as areas of increased density not related to the radiographic setup.',
-    prevention:'Inspect cassettes regularly for light-tightness; perform darkroom integrity checks.' },
-  { id:'dirt', name:'Dirt or Dust Marks', category:'screen', icon:'🌀',
-    prompt:'What causes this artifact, and how does it appear?',
-    definition:'Foreign particles between the film, screen, or detector that block exposure locally.',
-    cause:'Dust, debris, or dirt on the intensifying screen, imaging plate, or inside the cassette.',
-    appearance:'White (unexposed) spots or specks on the processed image at the location of the particle.',
-    prevention:'Clean screens and cassettes regularly; store in a clean, dust-controlled environment.' },
-  { id:'poorcontact', name:'Poor Film-Screen Contact', category:'screen', icon:'📐',
-    prompt:'What causes this artifact, and how does it appear?',
-    definition:'Inadequate contact between the film and intensifying screen causing local image unsharpness.',
-    cause:'Warped cassette, foreign material inside, worn foam backing, or damaged hinges.',
-    appearance:'Localised blurring or unsharpness in specific areas of the image (not overall blur).',
-    prevention:'Perform wire-mesh contact tests regularly; inspect and replace damaged cassettes.' },
-  { id:'motion', name:'Motion Blur', category:'exposure', icon:'💨',
-    prompt:'What causes this artifact, and how does it appear?',
-    definition:'Image unsharpness caused by relative movement between the source, object, or film during exposure.',
-    cause:'Movement of the test object, x-ray tube, or film/detector during the exposure time.',
-    appearance:'Smeared or blurred image lacking sharp edges; indications are difficult to define.',
-    prevention:'Secure the object and film firmly; use shortest practical exposure time.' },
-  { id:'double', name:'Double Exposure', category:'exposure', icon:'2️⃣',
-    prompt:'What causes this artifact, and how does it appear?',
-    definition:'Two unintended exposures recorded on the same film or detector.',
-    cause:'Re-using an exposed film; forgetting a prior exposure; equipment malfunction causing repeat exposure.',
-    appearance:'Two overlapping or superimposed images making interpretation unreliable.',
-    prevention:'Mark exposed film/cassettes clearly; implement strict job tracking procedures.' },
-  { id:'underexposure', name:'Underexposure', category:'exposure', icon:'🔅',
-    prompt:'What causes this artifact, and how does it appear?',
-    definition:'Insufficient radiation reaching the film or detector to produce an adequate image.',
-    cause:'Too low mAs or kVp; excessive source-to-film distance; incorrect exposure settings.',
-    appearance:'Image is too light (low density) with poor contrast and insufficient penetration of material.',
-    prevention:'Verify exposure parameters before shooting; use correct technique charts.' },
-  { id:'overexposure', name:'Overexposure', category:'exposure', icon:'🔆',
-    prompt:'What causes this artifact, and how does it appear?',
-    definition:'Excess radiation reaching the film or detector, degrading image quality.',
-    cause:'Too high mAs or kVp; source too close; incorrect exposure settings.',
-    appearance:'Image is too dark (high density); relevant detail lost in saturated regions.',
-    prevention:'Verify exposure parameters; use calibrated technique charts; check source integrity.' },
-  { id:'backscatter', name:'Backscatter', category:'exposure', icon:'🔄',
-    prompt:'What causes this artifact, and how does it appear?',
-    definition:'Scattered radiation reflected back toward the film or detector from structures behind it.',
-    cause:'High-density materials (walls, floors, structures) behind the cassette scattering radiation back.',
-    appearance:'Unwanted density increase, sometimes showing the outline of cassette backing or structural elements.',
-    prevention:'Use lead backing in cassettes; place lead sheet behind cassette during exposure.' },
-  { id:'scanner', name:'Scanner Artifacts', category:'digital', icon:'📡',
-    prompt:'What causes this artifact, and how does it appear?',
-    definition:'Systematic image defects introduced during the CR readout scanning process.',
-    cause:"Faults in the CR scanner's laser, optics, or mechanical transport system.",
-    appearance:'Banding, lines, or non-uniform density patterns running in the scan direction.',
-    prevention:'Regularly service and calibrate CR scanners; perform quality control tests.' },
-  { id:'deadpixels', name:'Dead Pixels', category:'digital', icon:'🟥',
-    prompt:'What causes this artifact, and how does it appear?',
-    definition:'Non-functional detector elements in a digital flat-panel detector that do not respond to radiation.',
-    cause:'Detector element failure from age, radiation damage, manufacturing defect, or physical impact.',
-    appearance:'Fixed bright or dark spots at the same location across all images from that detector.',
-    prevention:'Perform regular detector QC; apply dead-pixel correction maps in software.' },
-  { id:'lag', name:'Lag / Ghost Image', category:'digital', icon:'👻',
-    prompt:'What causes this artifact, and how does it appear?',
-    definition:'Residual signal from a previous exposure that persists into the current image.',
-    cause:'Incomplete erasure of a CR plate; inadequate detector reset time in DR systems.',
-    appearance:'Faint superimposed image of a previous exposure visible in the current radiograph.',
-    prevention:'Fully erase CR plates before reuse; allow adequate detector reset time between exposures.' },
-  { id:'imageplate', name:'Image Plate Artifacts', category:'digital', icon:'💿',
-    prompt:'What causes this artifact, and how does it appear?',
-    definition:'Defects in the CR imaging plate itself that create recurring image anomalies.',
-    cause:'Scratches, creases, dirt, physical damage, or chemical contamination of the phosphor plate.',
-    appearance:'Repeating marks, lines, or spots that appear consistently on images from the affected plate.',
-    prevention:'Handle CR plates carefully; inspect regularly; retire plates showing damage or wear.' },
+  {
+    id: 'scratches',
+    name: 'Scratches',
+    category: 'film',
+    icon: '✏️',
+    prompt: 'What causes this artifact, and how does it appear?',
+    definition: 'Physical damage to the film emulsion or imaging plate surface, creating marks unrelated to the test object.',
+    cause: 'Rough handling, sharp edges, or abrasive contact during loading, unloading, or processing.',
+    appearance: 'Appears as irregular lines or linear marks at varying densities across the image.',
+    prevention: 'Handle film and plates gently; use clean, smooth cassettes and processing equipment.',
+  },
+  {
+    id: 'fingerprints',
+    name: 'Fingerprints',
+    category: 'film',
+    icon: '🖐️',
+    prompt: 'What causes this artifact, and how does it appear?',
+    definition: 'Contamination of the film emulsion by skin oils, salts, or other residues from bare or dirty hands.',
+    cause: 'Touching film or imaging plates with ungloved or contaminated hands before or after exposure.',
+    appearance: 'Visible as circular or partial print-shaped density changes or stains on the image.',
+    prevention: 'Always handle film with clean cotton gloves; avoid touching the emulsion surface.',
+  },
+  {
+    id: 'static',
+    name: 'Static Marks',
+    category: 'film',
+    icon: '⚡',
+    prompt: 'What causes this artifact, and how does it appear?',
+    definition: 'Marks created by electrostatic discharge on the film surface.',
+    cause: 'Static electricity from rapid film removal from packaging, low humidity, or contact with synthetic materials.',
+    appearance: 'Branching, tree-like, or lightning bolt–shaped dark marks on the processed image.',
+    prevention: 'Handle film slowly; maintain humidity above 40%; ground equipment appropriately.',
+  },
+  {
+    id: 'pressure',
+    name: 'Pressure Marks',
+    category: 'film',
+    icon: '👊',
+    prompt: 'What causes this artifact, and how does it appear?',
+    definition: 'Localized density changes caused by mechanical stress applied to film before or during exposure.',
+    cause: 'Bending, pressing, rolling, or stressing the film or imaging plate.',
+    appearance: 'Localised areas of increased or decreased density depending on the type of pressure applied.',
+    prevention: 'Store and handle film flat; avoid excessive stacking or pressure on cassettes.',
+  },
+  {
+    id: 'crimp',
+    name: 'Crimp Marks',
+    category: 'film',
+    icon: '📎',
+    prompt: 'What causes this artifact, and how does it appear?',
+    definition: 'A specific type of pressure mark caused by a sharp bend or crease in the film.',
+    cause: 'Sharply folding or bending film corners during darkroom handling, especially when loading cassettes.',
+    appearance: 'Crescent-shaped dark marks, typically near film edges or corners.',
+    prevention: 'Use proper film-handling technique; do not bend or fold film edges during loading.',
+  },
+  {
+    id: 'lightleaks',
+    name: 'Light Leaks',
+    category: 'film',
+    icon: '☀️',
+    prompt: 'What causes this artifact, and how does it appear?',
+    definition: 'Localised or overall fogging from accidental exposure of film to visible light.',
+    cause: 'Faulty cassette seals, darkroom light leaks, or premature film exposure to ambient light.',
+    appearance: 'Localised or edge-fogging as areas of increased density not related to the radiographic setup.',
+    prevention: 'Inspect cassettes regularly for light-tightness; perform darkroom integrity checks.',
+  },
 ];
 
-let deck = [...CARDS], deckIndex = 0, isFlipped = false;
-let reviewSet = new Set(), currentFilter = 'all', currentMode = 'study';
-let quizDeck = [], quizIndex = 0, quizCorrect = 0, quizIncorrect = 0, quizAnswered = false;
+/* ══════════════════════════════════════════════════════
+   STATE
+   ══════════════════════════════════════════════════════ */
+let deck        = [...CARDS];
+let deckIndex   = 0;
+let isFlipped   = false;
+let reviewSet   = new Set();
+let currentFilter = 'all';
+let currentMode   = 'study';
 
+// quiz state
+let quizDeck      = [];
+let quizIndex     = 0;
+let quizCorrect   = 0;
+let quizIncorrect = 0;
+let quizAnswered  = false;
+
+/* ══════════════════════════════════════════════════════
+   HELPERS
+   ══════════════════════════════════════════════════════ */
 function buildDeck() {
-  if (currentFilter === 'all') deck = [...CARDS];
+  if (currentFilter === 'all')    deck = [...CARDS];
   else if (currentFilter === 'review') deck = CARDS.filter(c => reviewSet.has(c.id));
   else deck = CARDS.filter(c => c.category === currentFilter);
-  deckIndex = 0; isFlipped = false;
+  deckIndex = 0;
+  isFlipped = false;
 }
 
 function catColor(catId) { return CATEGORIES[catId]?.color || '#555'; }
 function catLabel(catId) { return CATEGORIES[catId]?.label || catId; }
 
+/* ══════════════════════════════════════════════════════
+   RENDER — STUDY
+   ══════════════════════════════════════════════════════ */
 function renderStudy() {
   const stage = document.getElementById('card-stage');
   if (deck.length === 0) {
-    stage.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>No cards match this filter.<br>Try a different category or clear the filter.</p></div>';
-    updateProgress(); return;
+    stage.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>No cards match this filter.<br>Try a different category or clear the filter.</p></div>`;
+    updateProgress();
+    return;
   }
-  const card = deck[deckIndex], cc = catColor(card.category), cl = catLabel(card.category);
+
+  const card = deck[deckIndex];
+  const cc   = catColor(card.category);
+  const cl   = catLabel(card.category);
   const flagged = reviewSet.has(card.id);
+
   stage.innerHTML = `
     <div class="card-wrap ${isFlipped ? 'flipped' : ''}" id="card-wrap" onclick="flipCard()">
       <div class="card-face card-front">
@@ -805,31 +896,60 @@ function renderStudy() {
           <span class="back-cat-label" style="background:${cc}">${cl}</span>
         </div>
         <div class="back-fields">
-          <div class="field"><div class="field-label">📋 Definition</div><div class="field-value">${card.definition}</div></div>
-          <div class="field"><div class="field-label">⚗️ Common Cause</div><div class="field-value">${card.cause}</div></div>
-          <div class="field"><div class="field-label">👁 Appearance</div><div class="field-value">${card.appearance}</div></div>
-          <div class="field"><div class="field-label">🛡 Prevention</div><div class="field-value">${card.prevention}</div></div>
+          <div class="field">
+            <div class="field-label">📋 Definition</div>
+            <div class="field-value">${card.definition}</div>
+          </div>
+          <div class="field">
+            <div class="field-label">⚗️ Common Cause</div>
+            <div class="field-value">${card.cause}</div>
+          </div>
+          <div class="field">
+            <div class="field-label">👁 Appearance</div>
+            <div class="field-value">${card.appearance}</div>
+          </div>
+          <div class="field">
+            <div class="field-label">🛡 Prevention</div>
+            <div class="field-value">${card.prevention}</div>
+          </div>
         </div>
       </div>
     </div>`;
+
+  // review button state
   const rb = document.getElementById('btn-review');
   rb.classList.toggle('flagged', flagged);
   rb.textContent = flagged ? '⚑ Flagged' : '⚑ Needs Review';
+
+  // nav buttons
   document.getElementById('btn-prev').disabled = deckIndex === 0;
-  document.getElementById('btn-next').disabled = deckIndex === deck.length - 1;
+  document.getElementById('btn-next').disabled = false;
+
   updateProgress();
 }
 
 function updateProgress() {
-  const total = deck.length, current = total === 0 ? 0 : deckIndex + 1;
+  const total = deck.length;
+  const current = total === 0 ? 0 : deckIndex + 1;
   document.getElementById('progress-label').textContent =
-    currentMode === 'quiz' ? `Quiz: ${quizIndex + 1} of ${quizDeck.length}` : `Card ${current} of ${total}`;
-  document.getElementById('progress-fill').style.width = total === 0 ? '0%' : `${Math.round(current / total * 100)}%`;
+    currentMode === 'quiz'
+      ? `Quiz: ${quizIndex + 1} of ${quizDeck.length}`
+      : `Card ${current} of ${total}`;
+  document.getElementById('progress-fill').style.width =
+    total === 0 ? '0%' : `${Math.round(current / total * 100)}%`;
+
   const rb = document.getElementById('review-badge');
-  if (reviewSet.size > 0) { rb.style.display = 'inline-block'; rb.textContent = `⚑ ${reviewSet.size} flagged`; }
-  else rb.style.display = 'none';
+  if (reviewSet.size > 0) {
+    rb.style.display = 'inline-block';
+    rb.textContent = `⚑ ${reviewSet.size} flagged`;
+  } else {
+    rb.style.display = 'none';
+  }
 }
 
+/* ══════════════════════════════════════════════════════
+   CONTROLS — STUDY
+   ══════════════════════════════════════════════════════ */
 function flipCard() {
   isFlipped = !isFlipped;
   const wrap = document.getElementById('card-wrap');
@@ -837,51 +957,104 @@ function flipCard() {
 }
 
 function navigate(dir) {
-  deckIndex = Math.max(0, Math.min(deck.length - 1, deckIndex + dir));
-  isFlipped = false; renderStudy();
+  const newIndex = deckIndex + dir;
+  if (newIndex >= deck.length) {
+    showModal();
+    return;
+  }
+  deckIndex = Math.max(0, newIndex);
+  isFlipped = false;
+  renderStudy();
+}
+
+function showModal() {
+  document.getElementById('quiz-modal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('quiz-modal').style.display = 'none';
+}
+
+function launchQuiz() {
+  closeModal();
+  setMode('quiz');
 }
 
 function shuffle() {
-  for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
-  deckIndex = 0; isFlipped = false; renderStudy();
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  deckIndex = 0;
+  isFlipped = false;
+  renderStudy();
 }
 
 function toggleReview() {
   if (deck.length === 0) return;
   const id = deck[deckIndex].id;
-  if (reviewSet.has(id)) reviewSet.delete(id); else reviewSet.add(id);
+  if (reviewSet.has(id)) reviewSet.delete(id);
+  else reviewSet.add(id);
   renderStudy();
+  // if filter is 'review', rebuild deck
   if (currentFilter === 'review') { buildDeck(); renderStudy(); }
 }
 
-function resetAll() { reviewSet.clear(); buildDeck(); shuffle(); }
-
-function setFilter(cat) {
-  currentFilter = cat;
-  document.querySelectorAll('.filter-pill').forEach(p => p.classList.toggle('active', p.dataset.cat === cat));
-  buildDeck(); renderStudy();
+function resetAll() {
+  reviewSet.clear();
+  buildDeck();
+  shuffle();
 }
 
+/* ══════════════════════════════════════════════════════
+   FILTER
+   ══════════════════════════════════════════════════════ */
+function setFilter(cat) {
+  // double-click: if already active and not 'all', toggle back to all
+  if (cat !== 'all' && currentFilter === cat) cat = 'all';
+  currentFilter = cat;
+  document.querySelectorAll('.filter-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.cat === cat);
+  });
+  buildDeck();
+  renderStudy();
+}
+
+/* ══════════════════════════════════════════════════════
+   MODE TOGGLE
+   ══════════════════════════════════════════════════════ */
 function setMode(mode) {
   currentMode = mode;
   document.getElementById('mode-study').classList.toggle('active', mode === 'study');
   document.getElementById('mode-quiz').classList.toggle('active', mode === 'quiz');
   document.getElementById('study-ui').style.display = mode === 'study' ? '' : 'none';
   document.getElementById('quiz-ui').style.display  = mode === 'quiz'  ? '' : 'none';
-  if (mode === 'quiz') resetQuiz(); else renderStudy();
+  if (mode === 'quiz') { resetQuiz(); }
+  else { renderStudy(); }
 }
 
+/* ══════════════════════════════════════════════════════
+   QUIZ MODE
+   ══════════════════════════════════════════════════════ */
 function buildQuizDeck() {
   const source = currentFilter === 'all' ? [...CARDS]
                : currentFilter === 'review' ? CARDS.filter(c => reviewSet.has(c.id))
                : CARDS.filter(c => c.category === currentFilter);
-  for (let i = source.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [source[i], source[j]] = [source[j], source[i]]; }
+  // shuffle
+  for (let i = source.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [source[i], source[j]] = [source[j], source[i]];
+  }
   return source;
 }
 
 function resetQuiz() {
-  quizDeck = buildQuizDeck(); quizIndex = 0; quizCorrect = 0; quizIncorrect = 0; quizAnswered = false;
-  document.getElementById('q-correct').textContent = 0;
+  quizDeck      = buildQuizDeck();
+  quizIndex     = 0;
+  quizCorrect   = 0;
+  quizIncorrect = 0;
+  quizAnswered  = false;
+  document.getElementById('q-correct').textContent   = 0;
   document.getElementById('q-incorrect').textContent = 0;
   document.getElementById('q-remaining').textContent = quizDeck.length;
   renderQuiz();
@@ -889,56 +1062,100 @@ function resetQuiz() {
 
 function renderQuiz() {
   const wrap = document.getElementById('quiz-wrap');
-  if (quizDeck.length === 0) { wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>No cards for this filter.</p></div>'; return; }
+
+  if (quizDeck.length === 0) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>No cards for this filter.</p></div>`;
+    return;
+  }
+
   if (quizIndex >= quizDeck.length) {
     const pct = Math.round(quizCorrect / quizDeck.length * 100);
-    const emoji = pct === 100 ? '🏆' : pct >= 70 ? '👍' : '\ud83d�';
-    wrap.innerHTML = `<div class="quiz-card" style="text-align:center; padding:40px 28px;">
-      <div style="font-size:3rem; margin-bottom:12px;">${emoji}</div>
-      <div style="font-family:'Bitter',Georgia,serif; font-size:1.5rem; font-weight:700; margin-bottom:8px;">Quiz Complete!</div>
-      <div style="color:var(--muted); font-size:0.85rem; margin-bottom:18px;">You scored <strong>${quizCorrect} of ${quizDeck.length}</strong> (${pct}%)</div>
-      <button class="btn btn-dark" onclick="resetQuiz()">Try Again</button></div>`;
+    const emoji = pct === 100 ? '🏆' : pct >= 70 ? '👍' : '📖';
+    wrap.innerHTML = `
+      <div class="quiz-card" style="text-align:center; padding:40px 28px;">
+        <div style="font-size:3rem; margin-bottom:12px;">${emoji}</div>
+        <div style="font-family:'Bitter',Georgia,serif; font-size:1.5rem; font-weight:700; margin-bottom:8px;">Quiz Complete!</div>
+        <div style="color:var(--muted); font-size:0.85rem; margin-bottom:18px;">You scored <strong>${quizCorrect} of ${quizDeck.length}</strong> (${pct}%)</div>
+        <button class="btn btn-dark" onclick="resetQuiz()">Try Again</button>
+      </div>`;
     document.getElementById('progress-label').textContent = 'Quiz complete!';
     document.getElementById('progress-fill').style.width = '100%';
     return;
   }
-  const card = quizDeck[quizIndex], cc = catColor(card.category);
+
+  const card = quizDeck[quizIndex];
+  const cc   = catColor(card.category);
   document.getElementById('progress-label').textContent = `Quiz: ${quizIndex + 1} of ${quizDeck.length}`;
   document.getElementById('progress-fill').style.width = `${Math.round((quizIndex) / quizDeck.length * 100)}%`;
   document.getElementById('q-remaining').textContent = quizDeck.length - quizIndex;
-  const allCats = Object.keys(CATEGORIES), wrongCats = allCats.filter(c => c !== card.category);
-  const sArr = arr => { for (let i = arr.length-1; i>0; i--) { const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; };
-  const choices = sArr([card.category, ...sArr(wrongCats).slice(0, 3)]);
-  const optionsHtml = choices.map(cat => `<button class="quiz-option" data-cat="${cat}" onclick="answerQuiz('${cat}','${card.category}')">${catLabel(cat)}</button>`).join('');
-  wrap.innerHTML = `<div class="quiz-card">
-    <div class="quiz-stripe" style="background:${cc}"></div>
-    <div class="quiz-q-label">Which category does this artifact belong to?</div>
-    <div class="quiz-artifact-icon">${card.icon}</div>
-    <div class="quiz-artifact-name">${card.name}</div>
-    <div class="quiz-prompt">${card.prompt}</div>
-    <div class="quiz-options">${optionsHtml}</div>
-    <div class="quiz-feedback" id="quiz-feedback"></div></div>`;
+
+  // build 4 answer choices: correct + 3 random wrong
+  const allCats   = Object.keys(CATEGORIES);
+  const wrongCats = allCats.filter(c => c !== card.category);
+  const shuffleArr = arr => { for (let i = arr.length-1; i>0; i--) { const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; };
+  const choices   = shuffleArr([card.category, ...shuffleArr(wrongCats).slice(0, 3)]);
+
+  const optionsHtml = choices.map(cat => `
+    <button class="quiz-option" data-cat="${cat}" onclick="answerQuiz('${cat}', '${card.category}')">
+      ${catLabel(cat)}
+    </button>`).join('');
+
+  wrap.innerHTML = `
+    <div class="quiz-card">
+      <div class="quiz-stripe" style="background:${cc}"></div>
+      <div class="quiz-q-label">Which category does this artifact belong to?</div>
+      <div class="quiz-artifact-icon">${card.icon}</div>
+      <div class="quiz-artifact-name">${card.name}</div>
+      <div class="quiz-prompt">${card.prompt}</div>
+      <div class="quiz-options">${optionsHtml}</div>
+      <div class="quiz-feedback" id="quiz-feedback"></div>
+    </div>`;
 }
 
 function answerQuiz(chosen, correct) {
   if (quizAnswered) return;
   quizAnswered = true;
+
   const isCorrect = chosen === correct;
-  if (isCorrect) { quizCorrect++; document.getElementById('q-correct').textContent = quizCorrect; }
-  else { quizIncorrect++; document.getElementById('q-incorrect').textContent = quizIncorrect; }
+  if (isCorrect) {
+    quizCorrect++;
+    document.getElementById('q-correct').textContent = quizCorrect;
+  } else {
+    quizIncorrect++;
+    document.getElementById('q-incorrect').textContent = quizIncorrect;
+  }
+
+  // colour buttons
   document.querySelectorAll('.quiz-option').forEach(btn => {
     btn.disabled = true;
     if (btn.dataset.cat === correct) btn.classList.add('correct');
     else if (btn.dataset.cat === chosen && !isCorrect) btn.classList.add('incorrect');
   });
-  const card = quizDeck[quizIndex], fb = document.getElementById('quiz-feedback');
+
+  // feedback
+  const card = quizDeck[quizIndex];
+  const fb   = document.getElementById('quiz-feedback');
   fb.classList.add('show', isCorrect ? 'correct-fb' : 'incorrect-fb');
-  fb.innerHTML = isCorrect
+  const isLast = quizIndex === quizDeck.length - 1;
+  fb.innerHTML = (isCorrect
     ? `✅ Correct! <em>${card.name}</em> is a <strong>${catLabel(correct)}</strong>. ${card.definition}`
-    : `✗ Not quite. <em>${card.name}</em> belongs under <strong>${catLabel(correct)}</strong>. ${card.definition}`;
-  setTimeout(() => { quizIndex++; quizAnswered = false; renderQuiz(); }, 2800);
+    : `✗ Not quite. <em>${card.name}</em> belongs under <strong>${catLabel(correct)}</strong>. ${card.definition}`)
+    + `<div style="margin-top:12px;">
+        <button class="btn btn-dark" style="font-size:0.78rem; padding:7px 18px;" onclick="advanceQuiz()">
+          ${isLast ? 'See Results →' : 'Next Question →'}
+        </button>
+       </div>`;
 }
 
+function advanceQuiz() {
+  quizIndex++;
+  quizAnswered = false;
+  renderQuiz();
+}
+
+/* ══════════════════════════════════════════════════════
+   INIT
+   ══════════════════════════════════════════════════════ */
 buildDeck();
 shuffle();
 </script>
