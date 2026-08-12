@@ -449,8 +449,11 @@ function stampGrid(g, x, y, rad, amt){
         r1 = Math.min(ROWS - 1, Math.floor((y + rad - Z.y0) / CS));
   for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++){
     const cx = Z.x0 + c * CS + CS/2, cy = Z.y0 + r * CS + CS/2;
-    if ((cx-x)*(cx-x) + (cy-y)*(cy-y) <= rad*rad){
-      const i = r * COLS + c; g[i] = Math.min(1, g[i] + amt);
+    const d2 = (cx-x)*(cx-x) + (cy-y)*(cy-y);
+    if (d2 <= rad*rad){
+      // falloff matches the visual mist: dense at the center, thin at the edge
+      const i = r * COLS + c;
+      g[i] = Math.min(1, g[i] + amt * (1 - Math.sqrt(d2) / rad));
     }
   }
 }
@@ -476,6 +479,7 @@ const state = {
   mistakes: [],
   hintAt: 0, lastHint: '',
   oversprayRun: 0,
+  lastApplyAt: 0, gapHintShown: false,
   advancing: false,
   results: null,
   done: false
@@ -483,20 +487,20 @@ const state = {
 
 /* ================= procedure flow ================= */
 const FLOW = [
- { step:1, name:'Pre-clean',  id:'s1a', text:'Spray the <b>Cleaner</b> over the whole marked inspection area, then it gets a wipe.', tool:'cleaner', widget:'cov', covLabel:'Cleaner coverage', need:0.85, rad:26 },
- { step:1, name:'Pre-clean',  id:'s1b', text:'Now wipe the area down with the <b>lint-free rag</b> to lift off the grime.', tool:'rag', ragNeed:'any', widget:'cov', covLabel:'Wiped', need:0.8, rad:30 },
+ { step:1, name:'Pre-clean',  id:'s1a', text:'Spray the <b>Cleaner</b> over the whole marked inspection area, then it gets a wipe.', tool:'cleaner', widget:'cov', covLabel:'Cleaner coverage', need:0.97, rad:26 },
+ { step:1, name:'Pre-clean',  id:'s1b', text:'Now wipe the area down with the <b>lint-free rag</b> to lift off the grime.', tool:'rag', ragNeed:'any', widget:'cov', covLabel:'Wiped', need:0.95, rad:30 },
  { step:1, name:'Pre-clean',  id:'s1c', text:'Let the solvent flash off — give it <b>30 seconds</b> to dry.', tool:null, widget:'timer', sim:30, real:10 },
- { step:2, name:'Penetrant',  id:'s2a', text:'Spray the <b>Red Dye Penetrant</b> over the entire inspection area.', tool:'penetrant', widget:'cov', covLabel:'Penetrant coverage', need:0.9, rad:26 },
+ { step:2, name:'Penetrant',  id:'s2a', text:'Spray the <b>Red Dye Penetrant</b> over the entire inspection area.', tool:'penetrant', widget:'cov', covLabel:'Penetrant coverage', need:0.97, rad:26 },
  { step:2, name:'Penetrant',  id:'s2b', text:'Penetrant dwell — leave it on for <b>5 minutes</b> so it can seep into any flaws.', tool:null, widget:'timer', sim:300, real:40 },
- { step:3, name:'Removal',    id:'s3a', text:'Wipe off the excess penetrant with a <b>dry rag</b>. One direction, steady passes.', tool:'rag', ragNeed:'fresh', widget:'cov', covLabel:'First wipe', need:0.8, rad:30 },
+ { step:3, name:'Removal',    id:'s3a', text:'Wipe off the excess penetrant with a <b>dry rag</b>. One direction, steady passes.', tool:'rag', ragNeed:'fresh', widget:'cov', covLabel:'First wipe', need:0.95, rad:30 },
  { step:3, name:'Removal',    id:'s3b', text:'Take a <b>fresh rag</b> and spray <b>Cleaner onto the rag</b> to moisten it — never spray cleaner straight onto the part now.', tool:'cleaner', widget:'moist' },
- { step:3, name:'Removal',    id:'s3c', text:'Wipe the area with the <b>moistened rag</b> to pull off the last of the surface dye.', tool:'rag', ragNeed:'moist', widget:'cov', covLabel:'Solvent wipe', need:0.8, rad:30 },
- { step:3, name:'Removal',    id:'s3d', text:'Finish with one more pass using a <b>fresh dry rag</b>.', tool:'rag', ragNeed:'fresh', widget:'cov', covLabel:'Final wipe', need:0.8, rad:30 },
- { step:4, name:'Developer',  id:'s4a', text:'Spray a <b>thin, even coat of Developer</b> over the inspection area.', tool:'developer', widget:'cov', covLabel:'Developer coverage', need:0.85, rad:26 },
+ { step:3, name:'Removal',    id:'s3c', text:'Wipe the area with the <b>moistened rag</b> to pull off the last of the surface dye.', tool:'rag', ragNeed:'moist', widget:'cov', covLabel:'Solvent wipe', need:0.95, rad:30 },
+ { step:3, name:'Removal',    id:'s3d', text:'Finish with one more pass using a <b>fresh dry rag</b>.', tool:'rag', ragNeed:'fresh', widget:'cov', covLabel:'Final wipe', need:0.95, rad:30 },
+ { step:4, name:'Developer',  id:'s4a', text:'Spray a <b>thin, even coat of Developer</b> over the inspection area.', tool:'developer', widget:'cov', covLabel:'Developer coverage', need:0.97, rad:26 },
  { step:4, name:'Developer',  id:'s4b', text:'Developer dwell — <b>5 minutes</b>. Watch the plate: trapped penetrant will bleed out.', tool:null, widget:'timer', sim:300, real:40 },
  { step:5, name:'Evaluate',   id:'s5',  text:'Drag the <b>ruler</b> onto the plate, measure each indication tip-to-tip, and enter your readings below.', tool:'ruler', widget:'none' },
- { step:6, name:'Post-clean', id:'s6a', text:'Good work. Post-clean: spray <b>Cleaner</b> over the area to dissolve the developer.', tool:'cleaner', widget:'cov', covLabel:'Cleaner coverage', need:0.8, rad:26 },
- { step:6, name:'Post-clean', id:'s6b', text:'Wipe the plate down with a <b>rag</b> and you’re done.', tool:'rag', ragNeed:'any', widget:'cov', covLabel:'Wiped clean', need:0.8, rad:30 }
+ { step:6, name:'Post-clean', id:'s6a', text:'Good work. Post-clean: spray <b>Cleaner</b> over the area to dissolve the developer.', tool:'cleaner', widget:'cov', covLabel:'Cleaner coverage', need:0.95, rad:26 },
+ { step:6, name:'Post-clean', id:'s6b', text:'Wipe the plate down with a <b>rag</b> and you’re done.', tool:'rag', ragNeed:'any', widget:'cov', covLabel:'Wiped clean', need:0.95, rad:30 }
 ];
 const cur = () => FLOW[state.idx];
 
@@ -795,7 +799,7 @@ function renderWidget(){
   const s = cur();
   if (!s){ widget.innerHTML = ''; return; }
   if (s.widget === 'cov'){
-    widget.innerHTML = `<div class="covbox"><div class="covlabel">${s.covLabel}</div>
+    widget.innerHTML = `<div class="covbox"><div class="covlabel">${s.covLabel} · <span id="covpct">0%</span></div>
       <div class="covbar" id="covbar"><i id="covfill"></i></div></div>`;
   } else if (s.widget === 'timer'){
     const mm = Math.floor(s.sim / 60), ss = s.sim % 60;
@@ -809,10 +813,12 @@ function renderWidget(){
       <div class="covbar" id="covbar"><i id="covfill"></i></div></div>`;
   } else widget.innerHTML = '';
 }
-function setCovBar(v){
+function setCovBar(v, need){
+  need = need || 1;
   const f = $('covfill'); if (!f) return;
   f.style.width = Math.round(v * 100) + '%';
-  const b = $('covbar'); if (b) b.classList.toggle('full', v >= 1);
+  const b = $('covbar'); if (b) b.classList.toggle('full', v >= need);
+  const p = $('covpct'); if (p) p.textContent = Math.floor(v * 100) + '%';
 }
 
 /* ================= timers ================= */
@@ -862,6 +868,7 @@ function advance(){
     state.idx++;
     grid = makeGrid();
     state.moistProg = 0;
+    state.gapHintShown = false;
     enterStep();
   }, 650);
 }
@@ -897,10 +904,10 @@ function enterStep(){
 /* completion checks for spray / wipe coverage */
 function checkCoverage(){
   const s = cur(); if (!s || (s.widget !== 'cov')) return;
-  const v = Math.min(1, coverage(grid) / s.need);
-  setCovBar(v);
-  if (v >= 1 && !state.advancing){
-    toast('✓ Good, even coverage.', 'good');
+  const c = coverage(grid);
+  setCovBar(c, s.need);
+  if (c >= s.need && !state.advancing){
+    toast('✓ Full, even coverage — that’s the standard.', 'good');
     advance();
   }
 }
@@ -1097,6 +1104,7 @@ function applySpray(dt){
     if (state.oversprayRun > 0.7){ toast('Aim inside the dashed inspection area.'); state.oversprayRun = 0; }
   } else state.oversprayRun = 0;
 
+  state.lastApplyAt = performance.now();
   const r = s.rad || 26;
   if (t === 'cleaner'){
     sprayLayer(shctx, p.x, p.y, r, '215,232,240', 0.10);
@@ -1121,6 +1129,7 @@ function applySpray(dt){
 function applyWipe(dt){
   const s = cur(); if (!s) return;
   if (!wipeAllowed(false)) return;
+  state.lastApplyAt = performance.now();
   const p = clampPlate(state.px, state.py);
   const r = s.rad || 30;
   stampGrid(grid, p.x, p.y, r, 0.28);
@@ -1201,6 +1210,22 @@ function frame(now){
   if (state.penMult > 0){ ctx.globalAlpha = state.penMult; ctx.drawImage(penC, 0, 0); ctx.globalAlpha = 1; }
   if (state.devA > 0){ ctx.globalAlpha = state.devA; ctx.drawImage(devC, 0, 0); ctx.globalAlpha = 1; }
   drawBleed(ctx);
+  // highlight thin spots when the student pauses before reaching full coverage
+  const cs = cur();
+  if (cs && cs.widget === 'cov' && !state.done && !state.spraying && !state.wiping){
+    const c = coverage(grid);
+    if (c > 0.3 && c < cs.need && now - state.lastApplyAt > 1200){
+      const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const pulse = reduce ? 0.22 : 0.19 + 0.1 * Math.sin(now / 260);
+      ctx.fillStyle = `rgba(181,69,21,${pulse})`;
+      for (let r = 0; r < ROWS; r++) for (let cc = 0; cc < COLS; cc++)
+        if (grid[r * COLS + cc] < 0.5) ctx.fillRect(Z.x0 + cc * CS, Z.y0 + r * CS, CS, CS);
+      if (!state.gapHintShown){
+        state.gapHintShown = true;
+        toast('The glowing patches are still thin — go back over them. Full coverage, no gaps.');
+      }
+    }
+  }
   if (state.sheenA > 0){ ctx.globalAlpha = Math.min(0.85, state.sheenA); ctx.drawImage(sheenC, 0, 0); ctx.globalAlpha = 1; }
   // particles
   for (const p of parts){
