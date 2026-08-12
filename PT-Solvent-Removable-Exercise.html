@@ -58,6 +58,49 @@
     color: var(--ink-faded); text-decoration: none; padding-bottom: 6px;
   }
   a.back:hover { color: var(--amber); }
+  .hdr-actions { display: flex; align-items: center; gap: 18px; padding-bottom: 2px; }
+  .fsbtn {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    background: none; border: 1px solid var(--rule); border-radius: 2px;
+    color: var(--ink-soft); padding: 7px 13px; cursor: pointer; white-space: nowrap;
+  }
+  .fsbtn:hover { border-color: var(--amber); color: var(--amber); }
+  .fsbtn:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  .fsbtn.hidden { display: none; }
+
+  /* Fullscreen: compact the chrome so the plate gets the reclaimed height.
+     JS then widens the container until the plate exactly fills what's left. */
+  :fullscreen .container { padding: 14px 28px 16px; }
+  :fullscreen header { margin-bottom: 10px; padding-bottom: 14px; }
+  :fullscreen header .eyebrow { margin-bottom: 4px; font-size: 10px; }
+  :fullscreen h1 { font-size: clamp(20px, 2.4vw, 26px); }
+  :fullscreen .steps { margin-bottom: 10px; }
+  :fullscreen .steps .s { padding: 5px 9px; }
+  :fullscreen .instr { padding: 12px 18px; min-height: 0; margin-bottom: 10px; }
+  :fullscreen .instr .text { font-size: 15px; }
+  :fullscreen .tray { margin-top: 9px; gap: 8px; }
+  :fullscreen .tool { padding: 7px 10px; }
+  :fullscreen .tool .icon { height: 38px; margin-bottom: 3px; }
+  :fullscreen .tool .icon svg { max-height: 38px; width: auto; }
+  /* measurement fields go side-by-side in fullscreen so the panel stays short */
+  :fullscreen .measure { padding: 12px 16px; margin-top: 9px; }
+  :fullscreen .measure h4 { font-size: 15px; margin-bottom: 8px; }
+  :fullscreen .measure .rows { grid-template-columns: repeat(3, 1fr); gap: 8px 18px; }
+  :fullscreen .measure .row { grid-template-columns: 1fr 24px; align-items: center; gap: 4px 8px; }
+  :fullscreen .measure .row label { grid-column: 1 / -1; font-size: 12px; line-height: 1.35; }
+  :fullscreen .measure .actions { margin-top: 9px; }
+  @media (max-width: 780px) {
+    :fullscreen .measure .rows { grid-template-columns: 1fr; }
+  }
+  :fullscreen footer { display: none; }
+  /* short laptop screens: trade the title block for plate height */
+  @media (max-height: 860px) {
+    :fullscreen header { padding-bottom: 8px; margin-bottom: 8px; }
+    :fullscreen header .eyebrow { display: none; }
+    :fullscreen h1 { font-size: 19px; }
+    :fullscreen .steps .s { padding: 4px 8px; }
+    :fullscreen .instr { padding: 10px 16px; }
+  }
 
   /* ---------- step progress ---------- */
   .steps {
@@ -232,14 +275,16 @@
   .tool.hidden { display: none; }
 
   /* ---------- overlays (intro / report) ---------- */
+  /* top-aligned so the card stays reachable when the page is embedded in a tall iframe */
   .veil {
     position: fixed; inset: 0; background: rgba(26,24,20,.55); backdrop-filter: blur(2px);
-    display: flex; align-items: center; justify-content: center; z-index: 100; padding: 24px;
+    display: flex; align-items: flex-start; justify-content: center; z-index: 100;
+    padding: 28px 24px; overflow-y: auto;
   }
   .veil.hidden { display: none; }
   .card {
     background: var(--paper); border-radius: 3px; box-shadow: 0 24px 80px -20px rgba(0,0,0,.5);
-    max-width: 620px; width: 100%; padding: 34px 38px; max-height: 90vh; overflow-y: auto;
+    max-width: 620px; width: 100%; padding: 32px 38px; margin: 0; flex: none;
   }
   .card .eyebrow { margin-bottom: 10px; }
   .card h2 { font-family: var(--serif); font-weight: 600; font-size: 28px; letter-spacing: -0.01em; margin-bottom: 12px; }
@@ -257,6 +302,11 @@
     padding: 13px 28px; cursor: pointer; margin-top: 6px;
   }
   .card button.primary:hover { background: #9a3a12; }
+  .card p.fsnote {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .04em;
+    color: var(--ink-faded); margin: 10px 0 0;
+  }
+  .card p.fsnote.hidden { display: none; }
   .card table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 10px 0 16px; }
   .card table th {
     font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
@@ -289,7 +339,10 @@
       <div class="eyebrow">Penetrant Testing · Level I–II Practical</div>
       <h1>Solvent Removable <em>Technique</em></h1>
     </div>
-    <a class="back" href="index.html">← Exercise Hub</a>
+    <div class="hdr-actions">
+      <button class="fsbtn" id="fsBtn" type="button">⛶ Fullscreen</button>
+      <a class="back" href="index.html" target="_top">← Exercise Hub</a>
+    </div>
   </header>
 
   <div class="steps" id="steps">
@@ -389,6 +442,7 @@
     </ul>
     <div class="note">Dwell timers are accelerated: 30 s runs in ~10 s, 5 min runs in ~40 s. In the real shop you wait the full time.</div>
     <button class="primary" id="beginBtn">Begin inspection →</button>
+    <p class="fsnote" id="fsNote">Opens fullscreen for room to work — press <b>Esc</b> to exit.</p>
   </div>
 </div>
 
@@ -899,6 +953,7 @@ function enterStep(){
   }
   if (s.id === 's3b' && state.rag !== 'fresh')
     toast('First take a fresh rag (＋ New rag), then spray cleaner on it.');
+  refit();   // the measure panel changes the page height
 }
 
 /* completion checks for spray / wipe coverage */
@@ -942,7 +997,8 @@ function updateRagUI(){
 }
 window.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
-  if (e.key === 'Escape') selectTool(state.tool);
+  // Esc exits fullscreen natively — don't also drop the tool in that case
+  if (e.key === 'Escape' && !document.fullscreenElement) selectTool(state.tool);
   if (e.key === '1') selectTool('cleaner');
   if (e.key === '2') selectTool('penetrant');
   if (e.key === '3') selectTool('developer');
@@ -1238,8 +1294,56 @@ function frame(now){
 }
 requestAnimationFrame(frame);
 
+/* ================= fullscreen ================= */
+const fsBtn = $('fsBtn'), container = document.querySelector('.container');
+const fsSupported = !!(document.documentElement.requestFullscreen && document.fullscreenEnabled);
+if (!fsSupported){ fsBtn.classList.add('hidden'); $('fsNote').classList.add('hidden'); }
+
+function enterFullscreen(){
+  if (!fsSupported || document.fullscreenElement) return Promise.resolve();
+  // may reject if the embedding iframe lacks allow="fullscreen" — that's fine, the page still works
+  return document.documentElement.requestFullscreen().catch(() => {});
+}
+function toggleFullscreen(){
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  else enterFullscreen();
+}
+fsBtn.addEventListener('click', toggleFullscreen);
+
+/* widen the container in fullscreen so the plate grows to fill the height without scrolling */
+function fitLayout(){
+  if (!document.fullscreenElement){ container.style.maxWidth = ''; return; }
+  // Narrowing the container reflows the tray and wraps text, which changes the chrome
+  // height — so iterate until the width settles instead of computing it once.
+  container.style.maxWidth = '';
+  const fits = () => container.scrollHeight <= window.innerHeight;
+  let prev = Infinity;
+  for (let i = 0; i < 5; i++){
+    const stageH = stage.getBoundingClientRect().height;
+    const otherH = container.scrollHeight - stageH;    // everything that isn't the plate
+    const avail = window.innerHeight - otherH - 6;
+    if (avail <= 0) break;
+    const wanted = avail * W / H + 56;                 // + container horizontal padding
+    const next = Math.round(Math.max(560, Math.min(1760, wanted)));
+    container.style.maxWidth = next + 'px';
+    if (fits()) break;
+    if (Math.abs(next - prev) < 4) break;
+    prev = next;
+  }
+  // If no width makes it fit, keep the plate large and let the page scroll rather
+  // than shrinking the plate to nothing for a fit that never arrives.
+  if (!fits()) container.style.maxWidth = '';
+}
+const refit = () => requestAnimationFrame(() => requestAnimationFrame(fitLayout));
+document.addEventListener('fullscreenchange', () => {
+  fsBtn.textContent = document.fullscreenElement ? '⛶ Exit fullscreen' : '⛶ Fullscreen';
+  refit();
+});
+window.addEventListener('resize', refit);
+
 /* ================= begin ================= */
 $('beginBtn').addEventListener('click', () => {
+  enterFullscreen().then(refit);      // this click is the user gesture fullscreen requires
   $('intro').classList.add('hidden');
   state.idx = 0;
   enterStep();
