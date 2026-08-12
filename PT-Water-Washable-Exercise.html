@@ -19,7 +19,6 @@
     --amber-soft: #e8a87c;
     --amber-tint: #fdf2e6;
     --fluor: #9adb2c;
-    --uv-deep: #201c46;
     --clean-blue: #1d6fa5;
     --good: #2e7d4f;
     --pen-red: #c8102e;
@@ -69,7 +68,6 @@
   .fsbtn:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
   .fsbtn.hidden { display: none; }
 
-  /* Fullscreen: compact the chrome so the plate gets the reclaimed height. */
   :fullscreen .container { padding: 14px 28px 16px; }
   :fullscreen header { margin-bottom: 10px; padding-bottom: 14px; }
   :fullscreen header .eyebrow { margin-bottom: 4px; font-size: 10px; }
@@ -78,10 +76,6 @@
   :fullscreen .steps .s { padding: 5px 9px; }
   :fullscreen .instr { padding: 12px 18px; min-height: 0; margin-bottom: 10px; }
   :fullscreen .instr .text { font-size: 15px; }
-  :fullscreen .tray { margin-top: 9px; gap: 8px; }
-  :fullscreen .tool { padding: 7px 10px; }
-  :fullscreen .tool .icon { height: 38px; margin-bottom: 3px; }
-  :fullscreen .tool .icon svg { max-height: 38px; width: auto; }
   :fullscreen .panel { padding: 12px 16px; margin-top: 9px; }
   :fullscreen .measure .rows { grid-template-columns: repeat(3, 1fr); gap: 8px 18px; }
   :fullscreen .measure .row { grid-template-columns: 1fr 24px; align-items: center; gap: 4px 8px; }
@@ -102,7 +96,7 @@
   /* ---------- step progress ---------- */
   .steps { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
   .steps .s {
-    flex: 1 1 104px; display: flex; align-items: center; gap: 8px;
+    flex: 1 1 92px; display: flex; align-items: center; gap: 8px;
     padding: 8px 10px; border: 1px solid var(--rule); border-radius: 2px;
     background: var(--paper-deep); opacity: 0.55; transition: all .25s;
   }
@@ -172,7 +166,6 @@
   .panel.show { display: block; }
   .panel h4 { font-family: var(--serif); font-size: 17px; font-weight: 600; margin-bottom: 10px; }
 
-  /* wash station */
   .wash .wrows { display: grid; gap: 8px; }
   .wash .wrow {
     display: grid; grid-template-columns: 132px 1fr 86px 20px; gap: 12px; align-items: center;
@@ -189,20 +182,26 @@
     border-left: 2px solid var(--amber-soft); padding-left: 10px; line-height: 1.6;
   }
 
-  /* developer dip */
-  .dip { display: none; }
-  .dip.show { display: block; }
-  .dip .diprow { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-  .dip button {
+  /* dryer */
+  .dryer .drow { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .dryer button {
     font-family: var(--sans); font-weight: 700; font-size: 14px;
     background: var(--amber); color: #fff; border: none; border-radius: 2px;
     padding: 14px 24px; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none;
   }
-  .dip button:hover { background: #9a3a12; }
-  .dip button:disabled { background: #8b8677; cursor: default; }
-  .dip .dipbar { flex: 1 1 200px; height: 10px; background: #e0dacb; border-radius: 99px; overflow: hidden; min-width: 160px; }
-  .dip .dipbar i { display: block; height: 100%; width: 0%; background: var(--clean-blue); border-radius: 99px; }
-  .dip .fb { font-size: 12.5px; color: var(--ink-faded); flex-basis: 100%; }
+  .dryer button:hover { background: #9a3a12; }
+  .dryer button:disabled { background: #8b8677; cursor: default; }
+  .dryer .gauge { flex: 1 1 190px; min-width: 170px; }
+  .dryer .glabel { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faded); margin-bottom: 4px; }
+  .dryer .glabel b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .dryer .gbar { height: 12px; background: #e0dacb; border-radius: 99px; overflow: hidden; position: relative; }
+  .dryer .gbar i { display: block; height: 100%; width: 0%; border-radius: 99px; }
+  .dryer .gbar.moist i { background: var(--clean-blue); }
+  .dryer .gbar.temp i { background: var(--good); }
+  .dryer .gbar.temp.hot i { background: var(--pen-red); }
+  .dryer .gbar .lim { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--pen-red); }
+  .dryer .fb { font-size: 12.5px; color: var(--ink-faded); flex-basis: 100%; }
+  .dryer .fb.bad { color: var(--pen-red); font-weight: 600; }
 
   /* measurement */
   .measure .rows { display: grid; gap: 8px; }
@@ -242,7 +241,9 @@
   .stage svg.overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   .stage svg.overlay .ruler { pointer-events: auto; cursor: grab; }
   .stage svg.overlay .ruler.grabbing { cursor: grabbing; }
-  .stage.cantool { cursor: none; }
+  .stage.grabbable { cursor: grab; }
+  .stage.grabbing { cursor: grabbing; }
+  .stage.washing-cursor { cursor: none; }
   .lightchip {
     position: absolute; top: 10px; right: 12px;
     font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase;
@@ -267,36 +268,6 @@
     position: fixed; left: 0; top: 0; pointer-events: none; z-index: 50;
     display: none; will-change: transform; filter: drop-shadow(0 4px 6px rgba(0,0,0,.3));
   }
-  #ghost.spraying svg.can { transform: rotate(-14deg); }
-  #ghost svg { transition: transform .12s; transform-origin: 30% 70%; }
-
-  /* ---------- tool tray ---------- */
-  .tray { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
-  .tool {
-    flex: 1 1 130px; max-width: 200px;
-    background: var(--paper-deep); border: 1px solid var(--rule); border-radius: 2px;
-    padding: 10px 12px; cursor: pointer; text-align: center;
-    transition: border-color .15s, transform .15s, background .15s;
-    position: relative;
-  }
-  .tool:hover { border-color: var(--amber-soft); transform: translateY(-1px); }
-  .tool.selected { border-color: var(--amber); background: var(--amber-tint); box-shadow: 0 0 0 1px var(--amber); }
-  .tool .icon { height: 52px; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; }
-  .tool .name { font-size: 12.5px; font-weight: 700; }
-  .tool .meta { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faded); margin-top: 1px; }
-  .tool .badge {
-    display: inline-block; font-family: var(--mono); font-size: 9px; letter-spacing: .08em;
-    text-transform: uppercase; padding: 2px 7px; border-radius: 99px; margin-top: 5px;
-  }
-  .tool .badge.dry   { background: #e7e2d6; color: var(--ink-soft); }
-  .tool .badge.dirty { background: #eae3c8; color: #7a6a1c; }
-  .tool button.newrag {
-    margin-top: 6px; font-family: var(--mono); font-size: 10px; letter-spacing: .06em;
-    background: none; border: 1px solid var(--rule); border-radius: 2px;
-    color: var(--ink-soft); padding: 3px 10px; cursor: pointer; text-transform: uppercase;
-  }
-  .tool button.newrag:hover { border-color: var(--amber); color: var(--amber); }
-  .tool.hidden { display: none; }
 
   /* ---------- overlays ---------- */
   .veil {
@@ -366,7 +337,7 @@
   <header>
     <div>
       <div class="eyebrow">Penetrant Testing · Level I–II Practical · Method A</div>
-      <h1>Water Washable <em>Technique</em></h1>
+      <h1>Water Washable <em>Line</em></h1>
     </div>
     <div class="hdr-actions">
       <button class="fsbtn" id="fsBtn" type="button">⛶ Fullscreen</button>
@@ -375,18 +346,19 @@
   </header>
 
   <div class="steps" id="steps">
-    <div class="s" data-i="1"><span class="n">1</span><span class="l">Pre-clean</span></div>
+    <div class="s" data-i="1"><span class="n">1</span><span class="l">Pre-wash</span></div>
     <div class="s" data-i="2"><span class="n">2</span><span class="l">Penetrant</span></div>
-    <div class="s" data-i="3"><span class="n">3</span><span class="l">Water wash</span></div>
+    <div class="s" data-i="3"><span class="n">3</span><span class="l">Rinse</span></div>
     <div class="s" data-i="4"><span class="n">4</span><span class="l">Developer</span></div>
-    <div class="s" data-i="5"><span class="n">5</span><span class="l">Dry &amp; dwell</span></div>
-    <div class="s" data-i="6"><span class="n">6</span><span class="l">Inspect</span></div>
-    <div class="s" data-i="7"><span class="n">7</span><span class="l">Post-clean</span></div>
+    <div class="s" data-i="5"><span class="n">5</span><span class="l">Dry &amp; dust</span></div>
+    <div class="s" data-i="6"><span class="n">6</span><span class="l">Develop</span></div>
+    <div class="s" data-i="7"><span class="n">7</span><span class="l">Inspect</span></div>
+    <div class="s" data-i="8"><span class="n">8</span><span class="l">Post-clean</span></div>
   </div>
 
   <div class="instr" id="instr">
     <div>
-      <div class="step-tag" id="stepTag">Step 1 of 7 · Pre-clean</div>
+      <div class="step-tag" id="stepTag">Step 1 of 8 · Pre-wash</div>
       <div class="text" id="stepText">…</div>
     </div>
     <div class="widget" id="widget"></div>
@@ -399,9 +371,9 @@
     <div class="toast" id="toast"></div>
   </div>
 
-  <!-- wash station -->
+  <!-- wash station params (rinse step) -->
   <div class="panel wash" id="washPanel">
-    <h4>Wash station setup</h4>
+    <h4>Rinse station setup</h4>
     <div class="wrows">
       <div class="wrow">
         <label>Water pressure</label>
@@ -427,13 +399,20 @@
     <div class="spec">Procedure: coarse spray · 38 PSI (40 max) · water 60–100 °F · nozzle ≈ 12 in from part · ≈ 45° to the surface, never perpendicular.</div>
   </div>
 
-  <!-- developer dip -->
-  <div class="panel dip" id="dipPanel">
-    <h4>Aqueous developer tank</h4>
-    <div class="diprow">
-      <button id="dipBtn" type="button">Hold to immerse the part</button>
-      <div class="dipbar"><i id="dipFill"></i></div>
-      <span class="fb" id="dipFb">Press and hold — the part goes into the developer while you hold, straight after the wash while it’s still wet.</span>
+  <!-- dryer -->
+  <div class="panel dryer" id="dryerPanel">
+    <h4>Forced-air dryer</h4>
+    <div class="drow">
+      <button id="blowBtn" type="button">Hold to blow warm air</button>
+      <div class="gauge">
+        <div class="glabel"><span>Surface moisture</span><b id="gMoistV">100%</b></div>
+        <div class="gbar moist"><i id="gMoist" style="width:100%"></i></div>
+      </div>
+      <div class="gauge">
+        <div class="glabel"><span>Part temperature</span><b id="gTempV">75 °F</b></div>
+        <div class="gbar temp" id="gTempBar"><i id="gTemp"></i><span class="lim" style="left:81%"></span></div>
+      </div>
+      <span class="fb" id="dryFb">Dry the developer coat — but keep the part under <b>140 °F</b> or the penetrant in the flaws bakes off. Pulse the air and let it cool.</span>
     </div>
   </div>
 
@@ -463,36 +442,7 @@
     </div>
   </div>
 
-  <div class="tray" id="tray">
-    <div class="tool" data-tool="cleaner" id="toolCleaner">
-      <div class="icon" id="icCleaner"></div>
-      <div class="name">Cleaner / Remover</div>
-      <div class="meta">Solvent · aerosol</div>
-    </div>
-    <div class="tool" data-tool="penetrant" id="toolPen">
-      <div class="icon" id="icPen"></div>
-      <div class="name">Penetrant</div>
-      <div class="meta">Fluorescent · water washable</div>
-    </div>
-    <div class="tool" data-tool="nozzle" id="toolNozzle">
-      <div class="icon" id="icNozzle"></div>
-      <div class="name">Wash nozzle</div>
-      <div class="meta">Coarse water spray</div>
-    </div>
-    <div class="tool" data-tool="rag" id="toolRag">
-      <div class="icon" id="icRag"></div>
-      <div class="name">Lint-free rag</div>
-      <span class="badge dry" id="ragBadge">Dry · Fresh</span><br>
-      <button class="newrag" id="newRagBtn" type="button">＋ New rag</button>
-    </div>
-    <div class="tool hidden" data-tool="ruler" id="toolRuler">
-      <div class="icon" id="icRuler"></div>
-      <div class="name">Steel ruler</div>
-      <div class="meta">Drag it on the plate</div>
-    </div>
-  </div>
-
-  <footer>PT-1 Practical · Method A · Timers accelerated for training · Tip: press Esc to put a tool down</footer>
+  <footer>PT-1 Practical · Method A tank line · Timers accelerated for training · Drag the part along the rail; drag down to dip</footer>
 </div>
 
 <div id="ghost"></div>
@@ -501,16 +451,16 @@
 <div class="veil" id="intro">
   <div class="card">
     <div class="eyebrow">Practical Exercise · Liquid Penetrant Testing · Method A</div>
-    <h2>Inspect a welded plate — <em>water washable</em>, fluorescent</h2>
-    <p><b>Scope:</b> perform PT on the butt weld below using Type 1 fluorescent, water-washable penetrant, and evaluate under UV-A light.</p>
-    <p><b>Area of inspection:</b> the entire weld length <b>plus 1 inch on either side</b> to cover the HAZ. It is marked on the plate.</p>
+    <h2>Run a part through the <em>water washable line</em></h2>
+    <p><b>Scope:</b> process the welded plate through an in-line fluorescent penetrant system and evaluate it under UV-A.</p>
+    <p><b>How it works:</b> the part hangs from an overhead carrier. <b>Drag it along the rail</b> to move between stations, and <b>drag it down</b> to lower it into a tank — you'll see it go under and come back out.</p>
     <ul>
-      <li>The excess penetrant comes off with a <b>water spray</b>, not a rag — and the wash station must be set per procedure before you spray.</li>
-      <li>Washing happens under UV-A so you can see when the fluorescent background is gone. <b>Over-washing pulls penetrant back out of flaws</b> — stop when the background is clean.</li>
-      <li>Developer is <b>aqueous</b>: dip the part while it’s still wet, then dry it in warm air.</li>
+      <li>Stations, in order: water pre-wash · penetrant tank · drain rack (dwell) · <b>rinse under UV-A</b> · wet developer tank · forced-air dryer · dry-powder dust chamber · development rack · inspection booth.</li>
+      <li>The rinse station must be set per procedure — and <b>over-washing pulls penetrant back out of flaws</b>.</li>
+      <li>In the dryer, watch the part temperature: too hot and the penetrant in the flaws dries up.</li>
     </ul>
     <div class="note">Dwell timers are accelerated: 10 min runs in ~45 s. In the real shop you wait the full time.</div>
-    <button class="primary" id="beginBtn">Begin inspection →</button>
+    <button class="primary" id="beginBtn">Begin — part on the hook →</button>
     <p class="fsnote" id="fsNote">Opens fullscreen for room to work — press <b>Esc</b> to exit.</p>
   </div>
 </div>
@@ -527,7 +477,7 @@
       <tbody id="repRows"></tbody>
     </table>
     <p class="mist" id="repMistakes"></p>
-    <button class="primary" onclick="location.reload()">Run the inspection again</button>
+    <button class="primary" onclick="location.reload()">Run the line again</button>
   </div>
 </div>
 
@@ -535,8 +485,9 @@
 (function(){
 'use strict';
 
-/* ================= geometry & constants ================= */
+/* ================= constants ================= */
 const W = 940, H = 430, PPI = 45;
+/* zoom view (close-up plate) geometry — same plate as the bench exercises */
 const PLATE = { x0: 40, y0: 88, x1: 900, y1: 342 };
 const WELD_Y = 215, BEAD_HALF = 15;
 const Z = { x0: PLATE.x0, x1: PLATE.x1,
@@ -544,21 +495,39 @@ const Z = { x0: PLATE.x0, x1: PLATE.x1,
 const CS = 10;
 const COLS = Math.floor((Z.x1 - Z.x0) / CS), ROWS = Math.floor((Z.y1 - Z.y0) / CS);
 
-/* defects — different set from the Method C plate */
 const PORES = [ {x: 250, y: 214, r: 5.5}, {x: 522, y: 209, r: 6}, {x: 706, y: 220, r: 4.5} ];
 const CRACKS = [
-  { id:'CL',  x0: 380, y0: 215, x1: 436.25, y1: 215, len: 1.25 },   // centerline, 1.25 in
-  { id:'HAZ', x0: 592, y0: 250, x1: 632.5,  y1: 253, len: 0.9  }    // weld toe / HAZ, 0.9 in
+  { id:'CL',  x0: 380, y0: 215, x1: 436.25, y1: 215, len: 1.25 },
+  { id:'HAZ', x0: 592, y0: 250, x1: 632.5,  y1: 253, len: 0.9  }
 ];
 const TOL = 0.3;
 
-/* wash procedure limits */
 const WASH = {
   psi:  { target: 38, max: 40, min: 20 },
   temp: { lo: 60, hi: 100 },
   dist: { lo: 10, hi: 16, tooClose: 8 },
   ang:  { lo: 30, hi: 60, perp: 75 }
 };
+const DRY = { limit: 140, ambient: 75, scaleMax: 155 };
+
+/* ================= line view geometry ================= */
+const RAIL_Y = 46;
+const FLOOR_Y = 402;
+const PART_W = 58, PART_H = 92;
+const CARRY_Y = 96;                        // part top y while carried
+const SURF_Y = 292;                        // liquid / chamber working level
+const ST = [
+  { id:'prewash',  x: 88,  label:'PRE-WASH',    type:'booth'  },
+  { id:'pen',      x: 192, label:'PENETRANT',   type:'tank', liquid:'#7ba821' },
+  { id:'dwell',    x: 296, label:'DRAIN RACK',  type:'rack'   },
+  { id:'rinse',    x: 400, label:'RINSE · UV',  type:'booth', uv:true },
+  { id:'dev',      x: 504, label:'DEVELOPER',   type:'tank', liquid:'#e9ebe6' },
+  { id:'dryer',    x: 608, label:'DRYER',       type:'dryer'  },
+  { id:'dust',     x: 712, label:'DUST DEV',    type:'dust'   },
+  { id:'devrack',  x: 816, label:'DEVELOP RACK',type:'rack'   },
+  { id:'inspect',  x: 902, label:'INSPECT',     type:'booth', uv:true }
+];
+const stById = id => ST.find(s => s.id === id);
 
 /* ================= dom ================= */
 const $ = id => document.getElementById(id);
@@ -566,13 +535,12 @@ const stage = $('stage'), cv = $('cv'), ctx = cv.getContext('2d');
 const ovl = $('ovl'), toastEl = $('toast'), ghost = $('ghost');
 const widget = $('widget'), stepTag = $('stepTag'), stepText = $('stepText');
 
-/* ================= offscreen layers ================= */
+/* ================= zoom-view offscreen layers ================= */
 function layer(){ const c = document.createElement('canvas'); c.width = W; c.height = H; return c; }
-const baseC = layer(), dirtC = layer(), sheenC = layer(), penC = layer(), devTexC = layer();
+const baseC = layer(), dirtC = layer(), penC = layer(), devTexC = layer();
 const bctx = baseC.getContext('2d'), dctx = dirtC.getContext('2d'),
-      shctx = sheenC.getContext('2d'), pctx = penC.getContext('2d'), xctx = devTexC.getContext('2d');
+      pctx = penC.getContext('2d'), xctx = devTexC.getContext('2d');
 
-/* ================= coverage grids ================= */
 function makeGrid(){ return new Float32Array(COLS * ROWS); }
 function stampGrid(g, x, y, rad, amt){
   const c0 = Math.max(0, Math.floor((x - rad - Z.x0) / CS)),
@@ -599,23 +567,24 @@ let grid = makeGrid();
 /* ================= state ================= */
 const state = {
   idx: -1,
-  tool: null,
-  rag: 'fresh',
-  spraying: false, wiping: false, washing: false, dipping: false,
+  mode: 'line',              // 'line' | 'zoom'
+  zoomKind: null,            // 'prewash' | 'rinse' | 'inspect' | 'postclean'
+  part: { x: 88, y: CARRY_Y, station: 'prewash', grabbed: false, gx: 0, gy: 0 },
+  dipProg: 0, dipDone: false, wasOut: true,
+  dustProg: 0,
+  washing: false,
   px: 0, py: 0, clientX: 0, clientY: 0,
-  penA: 0,            // penetrant layer visibility
-  sheenA: 0, dirtA: 1,
-  devState: 0,        // 0 none, 1 wet, 2 dry
-  dipProg: 0,
-  bleed: 0, bleedFade: 1,
-  uvT: 0, uvTarget: 0,   // scene lighting blend 0 white → 1 UV
-  washDamage: 0,         // over-wash penalty 0..1
-  washIssues: {},        // logged once per issue
+  penA: 0, dirtA: 1,
+  devState: 0,               // 0 none, 1 wet, 2 dried
+  dustA: 0,
+  moisture: 0, partTemp: DRY.ambient, blowing: false, overheat: 0, overheatWarned: false,
+  bleed: 0, bleedFade: 1, devFade: 0,
+  uvT: 0, uvTarget: 0,
+  washDamage: 0, washIssues: {},
   timer: null,
   mistakes: [],
   hintAt: 0, lastHint: '',
   lastApplyAt: 0, gapHintShown: false,
-  oversprayRun: 0,
   advancing: false,
   results: null,
   done: false
@@ -623,71 +592,34 @@ const state = {
 
 /* ================= procedure flow ================= */
 const FLOW = [
- { step:1, name:'Pre-clean',   id:'s1a', light:0, text:'Spray the <b>Cleaner</b> over the whole marked inspection area.', tool:'cleaner', widget:'cov', covLabel:'Cleaner coverage', need:0.97, rad:26 },
- { step:1, name:'Pre-clean',   id:'s1b', light:0, text:'Wipe the area down with the <b>lint-free rag</b>, then it dries.', tool:'rag', widget:'cov', covLabel:'Wiped', need:0.95, rad:30 },
- { step:1, name:'Pre-clean',   id:'s1c', light:0, text:'Let the surface dry for <b>30 seconds</b>.', tool:null, widget:'timer', sim:30, real:10 },
- { step:2, name:'Penetrant',   id:'s2a', light:0, text:'Spray the <b class="fl">fluorescent penetrant</b> over the entire inspection area.', tool:'penetrant', widget:'cov', covLabel:'Penetrant coverage', need:0.97, rad:26 },
- { step:2, name:'Penetrant',   id:'s2b', light:0, text:'Penetrant dwell — <b>10 minutes</b> for it to seep into any flaws.', tool:null, widget:'timer', sim:600, real:45 },
- { step:3, name:'Water wash',  id:'s3a', light:1, text:'Set the <b>wash station</b> per procedure below, then wash under UV-A until the glowing background is gone. <b>Don’t over-wash.</b>', tool:'nozzle', widget:'cov', covLabel:'Background removed', need:0.97, rad:34 },
- { step:4, name:'Developer',   id:'s4a', light:0, text:'Straight into the <b>aqueous developer</b> while the part is still wet — hold the button to immerse it.', tool:null, widget:'none' },
- { step:5, name:'Dry & dwell', id:'s5a', light:0, text:'Into the warm-air dryer — <b>5 minutes at 140 °F</b>.', tool:null, widget:'timer', sim:300, real:25 },
- { step:5, name:'Dry & dwell', id:'s5b', light:1, text:'Developer dwell — <b>10 minutes</b> under UV-A. Watch for bleedout.', tool:null, widget:'timer', sim:600, real:45 },
- { step:6, name:'Inspect',     id:'s6',  light:1, text:'Drag the <b>ruler</b> to each glowing indication, measure tip-to-tip, and enter your readings below.', tool:'ruler', widget:'none' },
- { step:7, name:'Post-clean',  id:'s7a', light:0, text:'Good work. Post-clean: spray <b>Cleaner</b> over the area.', tool:'cleaner', widget:'cov', covLabel:'Cleaner coverage', need:0.95, rad:26 },
- { step:7, name:'Post-clean',  id:'s7b', light:0, text:'Wipe the plate down with a <b>rag</b> and you’re done.', tool:'rag', widget:'cov', covLabel:'Wiped clean', need:0.95, rad:30 }
+ { step:1, name:'Pre-wash',   id:'p1', type:'zoomwash', station:'prewash', light:0, need:0.95,
+   text:'Everything on this line runs on water — no solvents. Carry the part to the <b>pre-wash booth</b> and drop it in to clean it.',
+   ztext:'Wash the grime off with the <b>water spray</b> — press and sweep across the whole part.', covLabel:'Surface cleaned' },
+ { step:2, name:'Penetrant',  id:'p2', type:'dip', station:'pen',
+   text:'Lower the part into the <b class="fl">penetrant tank</b> until it’s fully under, hold, then pull it out.' },
+ { step:2, name:'Penetrant',  id:'p3', type:'rack', station:'dwell', sim:600, real:45,
+   text:'Hang the part on the <b>drain rack</b> — penetrant dwell, <b>10 minutes</b>.' },
+ { step:3, name:'Rinse',      id:'p4', type:'zoomwash', station:'rinse', light:1, need:0.97, params:true,
+   text:'Carry the part to the <b>rinse station</b>. The booth runs UV-A so you can see the wash.',
+   ztext:'Set the station per procedure below, then rinse until the glowing background is gone. <b>Don’t over-wash.</b>', covLabel:'Background removed' },
+ { step:4, name:'Developer',  id:'p5', type:'dip', station:'dev',
+   text:'Straight to the <b>developer tank</b> while the part is wet — lower it in, hold, pull it out.' },
+ { step:5, name:'Dry & dust', id:'p6', type:'dryer', station:'dryer',
+   text:'Into the <b>forced-air dryer</b>. Dry the coat — but don’t let the part get hot enough to bake the penetrant.' },
+ { step:5, name:'Dry & dust', id:'p7', type:'dip', station:'dust',
+   text:'Lower the part into the <b>dust chamber</b> — dry powder is circulating. Hold it in the cloud, then pull it out.' },
+ { step:6, name:'Develop',    id:'p8', type:'rack', station:'devrack', sim:600, real:45,
+   text:'Onto the <b>development rack</b> — developer dwell, <b>10 minutes</b>, while the indications bleed out.' },
+ { step:7, name:'Inspect',    id:'p9', type:'inspect', station:'inspect', light:1,
+   text:'Carry the part into the <b>inspection booth</b> for evaluation under UV-A.',
+   ztext:'Drag the <b>ruler</b> to each glowing indication, measure tip-to-tip, and enter your readings below.' },
+ { step:8, name:'Post-clean', id:'p10', type:'zoomwash', station:'prewash', light:0, need:0.9,
+   text:'Good work. Back to the <b>pre-wash booth</b> for post-cleaning.',
+   ztext:'Rinse the developer and residue off the part.', covLabel:'Cleaned' }
 ];
 const cur = () => FLOW[state.idx];
 
-/* ================= svg icons ================= */
-function canSVG(color, h){
-  h = h || 52;
-  return `<svg class="can" width="${h*0.62}" height="${h}" viewBox="0 0 36 58">
-    <rect x="7" y="14" width="22" height="42" rx="3" fill="#dedbd2" stroke="#a8a49a" stroke-width="1"/>
-    <rect x="7" y="23" width="22" height="20" fill="${color}"/>
-    <rect x="7" y="23" width="22" height="3" fill="rgba(255,255,255,.25)"/>
-    <rect x="12" y="8.5" width="12" height="6.5" rx="1.5" fill="#b3afa6" stroke="#8d897f" stroke-width="0.8"/>
-    <rect x="15.4" y="3.5" width="5.2" height="5.5" rx="1" fill="#6f6c66"/>
-    <circle cx="18" cy="5.4" r="1.1" fill="#2c2a27"/>
-  </svg>`;
-}
-function nozzleSVG(h){
-  h = h || 48;
-  return `<svg class="can" width="${h*1.15}" height="${h}" viewBox="0 0 60 52">
-    <rect x="26" y="20" width="12" height="26" rx="3" fill="#3f4750" stroke="#20262c" stroke-width="1.2"/>
-    <rect x="22" y="14" width="24" height="9" rx="3" fill="#5a636d" stroke="#2c333a" stroke-width="1.2"/>
-    <rect x="10" y="15.5" width="13" height="6" rx="2" fill="#c7ccd2" stroke="#8d949c" stroke-width="1"/>
-    <path d="M30 26 L34 26 L36 34 L28 34 Z" fill="#e0653a"/>
-    <rect x="36" y="30" width="7" height="14" rx="2.5" fill="#3f4750"/>
-    <path d="M43 42 Q52 44 56 50" fill="none" stroke="#2c333a" stroke-width="3.4" stroke-linecap="round"/>
-  </svg>`;
-}
-function ragSVG(kind, h){
-  h = h || 44;
-  const base = kind === 'dirty' ? '#e9e3c4' : '#efece4';
-  const fold = kind === 'dirty' ? '#d5cb9c' : '#ddd8cc';
-  const spots = kind === 'dirty' ? '<ellipse cx="20" cy="22" rx="6" ry="3.4" fill="rgba(154,190,40,.5)"/><ellipse cx="34" cy="27" rx="4.4" ry="2.6" fill="rgba(154,190,40,.38)"/>' : '';
-  return `<svg width="${h*1.25}" height="${h}" viewBox="0 0 54 42">
-    <path d="M4 14 Q14 4 30 8 Q48 4 50 16 Q52 28 40 34 Q26 40 12 34 Q2 28 4 14 Z" fill="${base}" stroke="#b9b4a6" stroke-width="1"/>
-    <path d="M10 18 Q22 12 34 16 Q44 18 44 24" fill="none" stroke="${fold}" stroke-width="2.4" stroke-linecap="round"/>
-    <path d="M14 26 Q26 22 38 27" fill="none" stroke="${fold}" stroke-width="2" stroke-linecap="round"/>
-    ${spots}
-  </svg>`;
-}
-function rulerSVG(h){
-  h = h || 30;
-  let t = '';
-  for (let i = 0; i <= 20; i++) t += `<rect x="${6 + i*4.4}" y="4" width="1" height="${i%4===0?10:6}" fill="#6b5a1e"/>`;
-  return `<svg width="${h*3.3}" height="${h}" viewBox="0 0 100 30">
-    <rect x="2" y="2" width="96" height="26" rx="2" fill="#eecf6d" stroke="#b89b3d" stroke-width="1.2"/>${t}
-  </svg>`;
-}
-$('icCleaner').innerHTML = canSVG('#1d6fa5');
-$('icPen').innerHTML = canSVG('#9adb2c');
-$('icNozzle').innerHTML = nozzleSVG();
-$('icRag').innerHTML = ragSVG('fresh');
-$('icRuler').innerHTML = rulerSVG();
-
-/* ================= base plate ================= */
+/* ================= prerendered zoom art ================= */
 function drawBase(){
   const g = bctx;
   g.fillStyle = '#2b2723'; g.fillRect(0, 0, W, H);
@@ -707,9 +639,8 @@ function drawBase(){
   for (let i = 0; i < 240; i++){
     const y = PLATE.y0 + rnd() * (PLATE.y1 - PLATE.y0);
     const x = PLATE.x0 + rnd() * (PLATE.x1 - PLATE.x0);
-    const len = 30 + rnd() * 120;
     g.strokeStyle = `rgba(255,255,255,${0.02 + rnd() * 0.05})`;
-    g.beginPath(); g.moveTo(x, y); g.lineTo(x + len, y); g.stroke();
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x + 30 + rnd() * 120, y); g.stroke();
   }
   const hz = g.createLinearGradient(0, WELD_Y - BEAD_HALF - 34, 0, WELD_Y);
   hz.addColorStop(0, 'rgba(120,110,140,0)'); hz.addColorStop(1, 'rgba(96,88,120,.18)');
@@ -760,7 +691,6 @@ function drawDirt(){
   g.restore();
 }
 function drawDevTex(){
-  // speckled developer coat texture, prerendered over the zone (dip covers the whole part)
   const g = xctx; g.clearRect(0, 0, W, H);
   let seed = 133;
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -775,19 +705,25 @@ function drawDevTex(){
   }
   g.restore();
 }
+function coatPenetrant(){
+  /* dip coat: uniform fluorescent film with slight streaking */
+  const g = pctx; g.clearRect(0, 0, W, H);
+  g.save();
+  g.beginPath(); g.rect(PLATE.x0, PLATE.y0, PLATE.x1 - PLATE.x0, PLATE.y1 - PLATE.y0); g.clip();
+  g.fillStyle = 'rgba(154,219,44,.85)';
+  g.fillRect(PLATE.x0, PLATE.y0, PLATE.x1 - PLATE.x0, PLATE.y1 - PLATE.y0);
+  let seed = 55;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 60; i++){
+    const x = PLATE.x0 + rnd() * (PLATE.x1 - PLATE.x0);
+    g.strokeStyle = `rgba(190,240,90,${0.1 + rnd() * 0.2})`;
+    g.lineWidth = 2 + rnd() * 6;
+    g.beginPath(); g.moveTo(x, PLATE.y0); g.lineTo(x + 10 - rnd() * 20, PLATE.y1); g.stroke();
+  }
+  g.restore();
+}
 drawBase(); drawDirt(); drawDevTex();
 
-/* ================= chemical stamps ================= */
-function clampPlate(x, y){
-  return { x: Math.max(PLATE.x0, Math.min(PLATE.x1, x)), y: Math.max(PLATE.y0, Math.min(PLATE.y1, y)) };
-}
-function sprayLayer(g, x, y, r, rgb, a){
-  const gr = g.createRadialGradient(x, y, 0, x, y, r);
-  gr.addColorStop(0, `rgba(${rgb},${a})`);
-  gr.addColorStop(0.7, `rgba(${rgb},${a * 0.55})`);
-  gr.addColorStop(1, `rgba(${rgb},0)`);
-  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
-}
 function wipeLayer(g, x, y, r, a){
   g.save(); g.globalCompositeOperation = 'destination-out';
   const gr = g.createRadialGradient(x, y, 0, x, y, r);
@@ -798,20 +734,23 @@ function wipeLayer(g, x, y, r, a){
 
 /* ================= particles ================= */
 const parts = [];
-function spawnSpray(x, y, rgb, n, spread){
-  n = n || 7;
+function spawn(x, y, rgb, n, opts){
+  opts = opts || {};
   for (let i = 0; i < n; i++){
-    const ang = Math.PI * (0.15 + Math.random() * (spread || 0.7)) + Math.PI * 0.55;
-    const sp = 40 + Math.random() * 130;
-    parts.push({ x: x + (Math.random()*10-5), y: y - 2, vx: Math.cos(ang)*sp*-1, vy: Math.sin(ang)*sp,
-      life: 0.28 + Math.random() * 0.22, t: 0, r: 1.2 + Math.random() * 2.6, rgb });
+    parts.push({
+      x: x + (Math.random()*(opts.jx||10) - (opts.jx||10)/2),
+      y: y + (Math.random()*(opts.jy||4) - (opts.jy||4)/2),
+      vx: (opts.vx||0) + (Math.random()-0.5)*(opts.sx||40),
+      vy: (opts.vy||60) + Math.random()*(opts.sy||60),
+      life: (opts.life||0.4) + Math.random()*0.25, t: 0,
+      r: (opts.r||1.2) + Math.random()*2, rgb, g: opts.g == null ? 120 : opts.g });
   }
 }
 function stepParts(dt){
   for (let i = parts.length - 1; i >= 0; i--){
     const p = parts[i]; p.t += dt;
     if (p.t > p.life){ parts.splice(i, 1); continue; }
-    p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 60 * dt;
+    p.x += p.vx * dt; p.y += p.vy * dt; p.vy += p.g * dt;
   }
 }
 
@@ -830,8 +769,7 @@ function crackPts(c){
   c.pts = pts; return pts;
 }
 function indicationBrightness(){
-  // over-wash dims what's left in the flaws; keep a floor so it stays evaluable
-  return Math.max(0.3, 1 - 0.7 * state.washDamage);
+  return Math.max(0.3, 1 - 0.7 * Math.min(1, state.washDamage + state.overheat));
 }
 function drawBleed(g){
   const bp = state.bleed * state.bleedFade;
@@ -861,21 +799,19 @@ function drawBleed(g){
   g.restore();
 }
 
-/* ================= overlay svg: zone + ruler ================= */
+/* ================= overlay svg: zone + ruler (zoom mode) ================= */
 const NS = 'http://www.w3.org/2000/svg';
 function el(n, attrs){ const e = document.createElementNS(NS, n);
   for (const k in attrs) e.setAttribute(k, attrs[k]); return e; }
-(function zoneMark(){
-  const g = el('g', { class: 'zone' });
-  g.appendChild(el('rect', { x: Z.x0, y: Z.y0, width: Z.x1 - Z.x0, height: Z.y1 - Z.y0,
-    fill: 'none', stroke: '#e8a87c', 'stroke-width': 1.4, 'stroke-dasharray': '7 6', opacity: 0.85 }));
-  const label = el('text', { x: Z.x0 + 2, y: Z.y0 - 8, fill: '#8a3810', 'font-size': 11,
-    'font-family': "'JetBrains Mono', monospace", 'letter-spacing': '1.5',
-    stroke: 'rgba(250,247,242,.85)', 'stroke-width': 2.5, 'paint-order': 'stroke' });
-  label.textContent = 'INSPECTION AREA — FULL WELD + 1 IN EACH SIDE (HAZ)';
-  g.appendChild(label);
-  ovl.appendChild(g);
-})();
+const zoneG = el('g', { class: 'zone', visibility: 'hidden' });
+zoneG.appendChild(el('rect', { x: Z.x0, y: Z.y0, width: Z.x1 - Z.x0, height: Z.y1 - Z.y0,
+  fill: 'none', stroke: '#e8a87c', 'stroke-width': 1.4, 'stroke-dasharray': '7 6', opacity: 0.85 }));
+const zoneLabel = el('text', { x: Z.x0 + 2, y: Z.y0 - 8, fill: '#8a3810', 'font-size': 11,
+  'font-family': "'JetBrains Mono', monospace", 'letter-spacing': '1.5',
+  stroke: 'rgba(250,247,242,.85)', 'stroke-width': 2.5, 'paint-order': 'stroke' });
+zoneLabel.textContent = 'INSPECTION AREA — FULL WELD + 1 IN EACH SIDE (HAZ)';
+zoneG.appendChild(zoneLabel);
+ovl.appendChild(zoneG);
 
 const RULER_L = 5 * PPI, RULER_H = 44;
 let rulerG = null, rulerPos = { x: 340, y: 350 };
@@ -940,14 +876,14 @@ function mistake(msg){
   toast('⚠ ' + msg, 'warn');
 }
 
-/* ================= widgets ================= */
+/* ================= widgets & timers ================= */
 function renderWidget(){
   const s = cur();
   if (!s){ widget.innerHTML = ''; return; }
-  if (s.widget === 'cov'){
+  if (s.type === 'zoomwash' && state.mode === 'zoom'){
     widget.innerHTML = `<div class="covbox"><div class="covlabel">${s.covLabel} · <span id="covpct">0%</span></div>
       <div class="covbar" id="covbar"><i id="covfill"></i></div></div>`;
-  } else if (s.widget === 'timer'){
+  } else if (s.type === 'rack' && state.part.station === s.station && !state.part.grabbed){
     const mm = Math.floor(s.sim / 60), ss = s.sim % 60;
     widget.innerHTML = `<div class="timerbox" id="timerbox">
       <div><div class="digits" id="tdig">${mm}:${String(ss).padStart(2,'0')}</div>
@@ -963,10 +899,8 @@ function setCovBar(v, need){
   const b = $('covbar'); if (b) b.classList.toggle('full', v >= need);
   const p = $('covpct'); if (p) p.textContent = Math.floor(v * 100) + '%';
 }
-
-/* ================= timers ================= */
 function startTimer(){
-  const s = cur(); if (!s || s.widget !== 'timer' || state.timer) return;
+  const s = cur(); if (!s || s.type !== 'rack' || state.timer) return;
   state.timer = { sim: s.sim, left: s.sim, rate: s.sim / s.real, running: true };
   const btn = $('tstart'); if (btn){ btn.disabled = true; btn.textContent = 'Running…'; }
   const box = $('timerbox'); if (box) box.classList.add('running');
@@ -975,8 +909,7 @@ function stepTimer(dt){
   const t = state.timer; if (!t || !t.running) return;
   t.left = Math.max(0, t.left - dt * t.rate);
   const id = cur() && cur().id;
-  if (id === 's1c') state.sheenA = Math.max(0, state.sheenA - dt * 0.5);
-  if (id === 's5b') state.bleed = Math.min(1, 1 - t.left / t.sim + 0.02);
+  if (id === 'p8') state.bleed = Math.min(1, 1 - t.left / t.sim + 0.02);
   const d = $('tdig');
   if (d){
     const mm = Math.floor(t.left / 60), ss = Math.floor(t.left % 60);
@@ -985,11 +918,8 @@ function stepTimer(dt){
   if (t.left <= 0){
     t.running = false;
     const box = $('timerbox'); if (box){ box.classList.remove('running'); box.classList.add('done'); }
-    if (id === 's1c') state.sheenA = 0;
-    if (id === 's5a') state.devState = 2;
-    if (id === 's5b'){ state.bleed = 1;
-      toast('✓ Dwell complete — those glowing marks are your indications.', 'good');
-    } else toast('✓ Time.', 'good');
+    if (id === 'p8'){ state.bleed = 1; toast('✓ Developed — carry it to inspection.', 'good'); }
+    else toast('✓ Dwell complete.', 'good');
     advance();
   }
 }
@@ -1002,63 +932,95 @@ function advance(){
     state.advancing = false;
     state.timer = null;
     const leaving = cur();
-    if (leaving){
-      if (leaving.id === 's1b'){ state.dirtA = 0; state.rag = 'dirty'; updateRagUI(); }
-      if (leaving.id === 's2a') state.penA = 1;
-      if (leaving.id === 's3a'){ state.penA = 0; pctx.clearRect(0,0,W,H); }
-      if (leaving.id === 's7b'){ finish(); return; }
-    }
+    if (leaving && leaving.id === 'p10'){ finish(); return; }
     state.idx++;
     grid = makeGrid();
     state.gapHintShown = false;
+    state.dipProg = 0; state.dipDone = false; state.dustProg = 0;
     enterStep();
   }, 650);
 }
 function enterStep(){
   const s = cur(); if (!s) return;
-  stepTag.textContent = `Step ${s.step} of 7 · ${s.name}`;
+  stepTag.textContent = `Step ${s.step} of 8 · ${s.name}`;
   stepText.innerHTML = s.text;
-  renderWidget();
-  state.uvTarget = s.light;
+  state.uvTarget = 0;   // line view is white light; UV comes on inside zoom booths
   document.querySelectorAll('#steps .s').forEach(p => {
     const i = +p.dataset.i;
     p.classList.toggle('active', i === s.step);
     p.classList.toggle('done', i < s.step);
   });
-  $('washPanel').classList.toggle('show', s.id === 's3a');
-  $('dipPanel').classList.toggle('show', s.id === 's4a');
-  if (s.id === 's6'){
-    if (state.tool) selectTool(state.tool);
+  $('washPanel').classList.remove('show');
+  $('dryerPanel').classList.remove('show');
+  $('measure').classList.remove('show');
+  zoneG.setAttribute('visibility', 'hidden');
+  rulerG.setAttribute('visibility', 'hidden');
+  renderWidget();
+  /* if the part is already sitting at the right station, trigger arrival */
+  if (!state.part.grabbed && state.part.station === s.station) onArrive(s.station);
+  refit();
+}
+
+/* part placed at a station (after snap) */
+function onArrive(stationId){
+  const s = cur(); if (!s || state.mode !== 'line') return;
+  if (stationId !== s.station) return;
+  if (s.type === 'zoomwash'){
+    enterZoom(s.id === 'p10' ? 'postclean' : s.station, s.light);
+    stepText.innerHTML = s.ztext;
+    if (s.params) $('washPanel').classList.add('show');
+    renderWidget();
+  } else if (s.type === 'rack'){
+    renderWidget();
+    toast('On the rack — start the dwell timer.', 'good');
+  } else if (s.type === 'dryer'){
+    state.moisture = 1; state.partTemp = DRY.ambient;
+    $('dryerPanel').classList.add('show');
+    toast('Part in the dryer — pulse the warm air.', 'good');
+  } else if (s.type === 'inspect'){
+    enterZoom('inspect', 1);
+    stepText.innerHTML = s.ztext;
+    zoneG.setAttribute('visibility', 'visible');
     rulerG.setAttribute('visibility', 'visible');
     setRuler(330, 300);
     $('measure').classList.add('show');
-    $('toolRuler').classList.remove('hidden');
-    toast('Ruler is on the bench — drag it up to the plate.', 'good');
-  }
-  if (s.step === 7){
-    $('measure').classList.remove('show');
-    rulerG.setAttribute('visibility', 'hidden');
-    $('toolRuler').classList.add('hidden');
+    toast('Ruler is on the bench — drag it up to the part.', 'good');
   }
   refit();
 }
+function enterZoom(kind, uv){
+  state.mode = 'zoom'; state.zoomKind = kind;
+  state.uvTarget = uv ? 1 : 0;
+  stage.classList.remove('grabbable');
+}
+function exitZoom(){
+  state.mode = 'line'; state.zoomKind = null;
+  state.uvTarget = 0;
+  zoneG.setAttribute('visibility', 'hidden');
+  rulerG.setAttribute('visibility', 'hidden');
+  stage.classList.remove('washing-cursor');
+  ghost.style.display = 'none';
+}
 function checkCoverage(){
-  const s = cur(); if (!s || (s.widget !== 'cov')) return;
+  const s = cur(); if (!s || s.type !== 'zoomwash') return;
   const c = coverage(grid);
   setCovBar(c, s.need);
   if (c >= s.need && !state.advancing){
-    toast(s.id === 's3a' ? '✓ Background is clean — stop washing. Straight to developer.' : '✓ Full, even coverage — that’s the standard.', 'good');
+    if (s.id === 'p1'){ state.dirtA = 0; toast('✓ Clean — on to the penetrant tank.', 'good'); }
+    if (s.id === 'p4'){ state.penA = 0; pctx.clearRect(0,0,W,H); toast('✓ Background is clean — stop. Straight to the developer.', 'good'); }
+    if (s.id === 'p10'){ toast('✓ Part is clean.', 'good'); }
+    setTimeout(exitZoom, 600);
     advance();
   }
 }
 
-/* ================= wash station controls ================= */
+/* ================= wash controls ================= */
 const washCtl = { psi: 55, temp: 115, dist: 6, ang: 90 };
-function bindWash(id, key, unit, fmt){
+function bindWash(id, key, unit){
   const inp = $(id), val = $(id + 'V'), mark = $(id + 'M');
   const upd = () => {
     washCtl[key] = +inp.value;
-    val.textContent = (fmt ? fmt(+inp.value) : inp.value) + unit;
+    val.textContent = inp.value + unit;
     const ok = washSettingOk(key);
     mark.textContent = ok ? '✓' : '✗';
     mark.className = 'wmark ' + (ok ? 'ok' : 'bad');
@@ -1077,7 +1039,6 @@ bindWash('wPsi', 'psi', ' PSI');
 bindWash('wTemp', 'temp', ' °F');
 bindWash('wDist', 'dist', ' in');
 bindWash('wAng', 'ang', '°');
-
 function washIssue(key, msg, damaging){
   if (!state.washIssues[key]){
     state.washIssues[key] = true;
@@ -1085,238 +1046,226 @@ function washIssue(key, msg, damaging){
   } else if (damaging) toast('⚠ ' + msg, 'warn');
 }
 
-/* ================= tool selection ================= */
-const toolEls = { cleaner: $('toolCleaner'), penetrant: $('toolPen'),
-                  nozzle: $('toolNozzle'), rag: $('toolRag'), ruler: $('toolRuler') };
-function selectTool(t){
-  state.tool = (state.tool === t) ? null : t;
-  for (const k in toolEls) toolEls[k].classList.toggle('selected', state.tool === k);
-  updateGhost();
-}
-for (const k in toolEls){
-  toolEls[k].addEventListener('click', e => {
-    if (e.target.closest('.newrag')) return;
-    if (k === 'ruler'){ toast('Just drag the yellow ruler itself — grab it on the plate.'); return; }
-    selectTool(k);
-  });
-}
-$('newRagBtn').addEventListener('click', () => {
-  state.rag = 'fresh'; updateRagUI();
-  toast('Fresh lint-free rag ready.', 'good');
-});
-function updateRagUI(){
-  const b = $('ragBadge');
-  b.className = 'badge ' + (state.rag === 'dirty' ? 'dirty' : 'dry');
-  b.textContent = state.rag === 'dirty' ? 'Dirty · Used' : 'Dry · Fresh';
-  $('icRag').innerHTML = ragSVG(state.rag);
-  if (state.tool === 'rag') updateGhost();
-}
-window.addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT') return;
-  if (e.key === 'Escape' && !document.fullscreenElement) selectTool(state.tool);
-  if (e.key === '1') selectTool('cleaner');
-  if (e.key === '2') selectTool('penetrant');
-  if (e.key === '3') selectTool('nozzle');
-  if (e.key === 'r' || e.key === 'R') selectTool('rag');
-});
-
-function updateGhost(){
-  if (!state.tool){ ghost.style.display = 'none'; stage.classList.remove('cantool'); return; }
-  stage.classList.add('cantool');
-  ghost.style.display = 'block';
-  if (state.tool === 'rag') ghost.innerHTML = ragSVG(state.rag, 54);
-  else if (state.tool === 'nozzle') ghost.innerHTML = nozzleSVG(64);
-  else ghost.innerHTML = canSVG(state.tool === 'cleaner' ? '#1d6fa5' : '#9adb2c', 72);
-  moveGhost();
-}
-function moveGhost(){
-  if (!state.tool) return;
-  const dx = state.tool === 'rag' ? -33 : state.tool === 'nozzle' ? -12 : -6;
-  const dy = state.tool === 'rag' ? -27 : state.tool === 'nozzle' ? -4 : 2;
-  ghost.style.transform = `translate(${state.clientX + dx}px, ${state.clientY + dy}px)`;
-  const active = state.spraying || state.wiping || state.washing;
-  ghost.classList.toggle('spraying', active);
-  if (state.tool === 'nozzle'){
-    const svg = ghost.querySelector('svg');
-    if (svg) svg.style.transform = `rotate(${-(90 - washCtl.ang)}deg)`;
-  }
-}
-
 /* ================= pointer interaction ================= */
 function stagePos(e){
   const r = cv.getBoundingClientRect();
   return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
 }
+function overPart(p){
+  const pt = state.part;
+  return p.x >= pt.x - PART_W/2 - 10 && p.x <= pt.x + PART_W/2 + 10 &&
+         p.y >= pt.y - 14 && p.y <= pt.y + PART_H + 8;
+}
 stage.addEventListener('pointerdown', e => {
   if (e.target.closest('.ruler')) return;
-  if (!state.tool || state.tool === 'ruler') return;
-  e.preventDefault();
-  const s = cur(); if (!s) return;
-  if (state.tool === 'rag'){
-    if (!wipeAllowed(true)) return;
-    state.wiping = true;
-  } else if (state.tool === 'nozzle'){
-    if (!washAllowed(true)) return;
-    state.washing = true;
-  } else {
-    if (!sprayAllowed(true)) return;
-    state.spraying = true;
+  const p = stagePos(e);
+  state.px = p.x; state.py = p.y;
+  if (state.mode === 'line'){
+    if (overPart(p) && !isPartLocked()){
+      e.preventDefault();
+      state.part.grabbed = true;
+      state.part.gx = p.x - state.part.x;
+      state.part.gy = p.y - state.part.y;
+      stage.classList.add('grabbing');
+      state.wasOut = true;
+      stage.setPointerCapture(e.pointerId);
+      widget.innerHTML = '';
+    }
+  } else if (state.mode === 'zoom'){
+    const s = cur();
+    if (s && s.type === 'zoomwash'){
+      e.preventDefault();
+      state.washing = true;
+      stage.setPointerCapture(e.pointerId);
+    }
   }
-  const p = stagePos(e); state.px = p.x; state.py = p.y;
-  stage.setPointerCapture(e.pointerId);
-  moveGhost();
 });
+function isPartLocked(){
+  const s = cur(); if (!s) return false;
+  /* part can't be pulled off a running rack timer or out of the dryer mid-cycle */
+  if (s.type === 'rack' && state.timer && state.timer.running) { toast('Let the dwell finish before moving the part.'); return true; }
+  return false;
+}
 window.addEventListener('pointerdown', e => {
   state.clientX = e.clientX; state.clientY = e.clientY;
-  const p = stagePos(e); state.px = p.x; state.py = p.y;
 }, true);
 window.addEventListener('pointermove', e => {
   state.clientX = e.clientX; state.clientY = e.clientY;
   const p = stagePos(e); state.px = p.x; state.py = p.y;
+  if (state.part.grabbed){
+    movePart(p.x - state.part.gx, p.y - state.part.gy);
+  }
   moveGhost();
+  if (state.mode === 'line') stage.classList.toggle('grabbable', overPart(p) && !state.part.grabbed);
 });
 window.addEventListener('pointerup', () => {
-  state.spraying = false; state.wiping = false; state.washing = false;
+  state.washing = false;
+  if (state.part.grabbed){
+    state.part.grabbed = false;
+    stage.classList.remove('grabbing');
+    snapPart();
+  }
   moveGhost();
 });
 
-/* permission checks with contextual hints */
-function plain(html){ return html.replace(/<[^>]+>/g, ''); }
-function sprayAllowed(announce){
-  const s = cur();
-  const t = state.tool;
-  if (s.tool === t && s.widget === 'cov') return true;
-  if (announce){
-    if (t === 'penetrant' && s.id === 's1c') toast('Hold on — let the cleaner flash off first. Run the 30 s dry timer.');
-    else if (s.widget === 'timer') toast('Nothing to spray right now — start the timer and let it run.');
-    else if (t === 'cleaner' && s.id === 's3a') mistake('Solvent cleaner is not used for removal in Method A — the excess penetrant comes off with the water spray.');
-    else if (t === 'penetrant' && s.step >= 3 && s.step < 7) toast('The penetrant has already dwelled — no more goes on now.');
-    else toast('Right now: ' + plain(s.text));
+function dipStationAt(x){
+  for (const st of ST){
+    if ((st.type === 'tank' || st.type === 'dust') && Math.abs(x - st.x) < 62) return st;
   }
-  return false;
+  return null;
 }
-function washAllowed(announce){
-  const s = cur();
-  if (s.id === 's3a') return true;
-  if (announce){
-    if (s.id === 's2b') toast('Let the penetrant finish its full dwell before washing.');
-    else if (s.step < 3) toast('The wash comes after the penetrant dwell (Step 3).');
-    else toast('The wash is done — right now: ' + plain(s.text));
+function movePart(nx, ny){
+  const pt = state.part;
+  pt.x = Math.max(56, Math.min(W - 34, nx));
+  const dipSt = dipStationAt(pt.x);
+  const maxY = dipSt ? SURF_Y + 6 : CARRY_Y + 34;
+  pt.y = Math.max(CARRY_Y - 26, Math.min(maxY, ny));
+  pt.station = null;
+}
+function snapPart(){
+  const pt = state.part;
+  let best = null, bd = 1e9;
+  for (const st of ST){
+    const d = Math.abs(pt.x - st.x);
+    if (d < bd){ bd = d; best = st; }
   }
-  return false;
-}
-function wipeAllowed(announce){
+  pt.x = best.x; pt.y = CARRY_Y; pt.station = best.id;
   const s = cur();
-  if (s.tool !== 'rag'){
-    if (announce){
-      if (s.id === 's3a') mistake('No rags in Method A removal — wiping drags penetrant out of flaws. Use the water spray.');
-      else if (s.widget === 'timer') toast('Let the timer run — no wiping during a dwell.');
-      else toast('Right now: ' + plain(s.text));
+  /* released while still in the tank after coating: lifting it out on snap completes the dip */
+  if (s && s.type === 'dip' && s.station === best.id && state.dipDone){ advance(); return; }
+  if (s && best.id !== s.station && bd < 900){
+    /* wrong-station coaching, but only if they clearly parked it somewhere */
+    const target = stById(s.station);
+    if (best.type === 'tank' || best.type === 'dust' || best.type === 'booth' || best.type === 'dryer' || best.type === 'rack'){
+      if (state.lastWrongAt !== best.id){
+        state.lastWrongAt = best.id;
+        toast(`Not this station yet — next is ${target.label.replace(' ·', ' under')}.`);
+      }
     }
-    return false;
-  }
-  if (state.rag === 'dirty'){
-    if (announce) toast('That rag is loaded — take a fresh one (＋ New rag).');
-    return false;
-  }
-  return true;
+  } else state.lastWrongAt = null;
+  onArrive(best.id);
+  renderWidget();
 }
 
-/* ================= per-frame actions ================= */
-function applySpray(dt){
-  const s = cur(); if (!s) return;
-  const t = state.tool;
-  if (!sprayAllowed(false)) return;
-  state.lastApplyAt = performance.now();
-  const p = clampPlate(state.px, state.py);
-  const inZone = state.px >= Z.x0 - 14 && state.px <= Z.x1 + 14 && state.py >= Z.y0 - 14 && state.py <= Z.y1 + 14;
-  if (!inZone){
-    state.oversprayRun += dt;
-    if (state.oversprayRun > 0.7){ toast('Aim inside the dashed inspection area.'); state.oversprayRun = 0; }
-  } else state.oversprayRun = 0;
-  const r = s.rad || 26;
-  if (t === 'cleaner'){
-    sprayLayer(shctx, p.x, p.y, r, '215,232,240', 0.10);
-    state.sheenA = 1;
-    spawnSpray(state.px, state.py, '200,225,240');
-    stampGrid(grid, p.x, p.y, r, 0.3);
-    if (s.id === 's7a') state.bleedFade = Math.max(0, 1 - coverage(grid) * 1.15);
-    checkCoverage();
-  } else if (t === 'penetrant'){
-    sprayLayer(pctx, p.x, p.y, r, '154,219,44', 0.13);
-    spawnSpray(state.px, state.py, '170,225,60');
-    state.penA = 1;
-    stampGrid(grid, p.x, p.y, r, 0.3); checkCoverage();
-  }
+/* ================= per-frame: dipping ================= */
+function submergedFrac(){
+  const bottom = state.part.y + PART_H;
+  return Math.max(0, Math.min(1, (bottom - SURF_Y) / PART_H));
 }
-function applyWash(dt){
-  const s = cur(); if (!s || s.id !== 's3a') return;
-  state.lastApplyAt = performance.now();
-  const p = clampPlate(state.px, state.py);
-
-  /* live procedure checks — bad settings damage the flaw entrapment */
-  let unsafe = false, eff = 1;
-  if (washCtl.psi > WASH.psi.max){ unsafe = true; washIssue('psi', `Water pressure ${washCtl.psi} PSI — the procedure caps it at 40. High pressure drives penetrant out of flaws.`, true); }
-  else if (washCtl.psi < WASH.psi.min){ eff *= 0.35; washIssue('psiLo', 'Pressure is too low to move the penetrant — bring it up toward 38 PSI.'); }
-  if (washCtl.ang >= WASH.ang.perp){ unsafe = true; washIssue('ang', `Spraying at ${washCtl.ang}° — never perpendicular to the surface. Hold the nozzle near 45°.`, true); }
-  else if (washCtl.ang < WASH.ang.lo){ eff *= 0.6; washIssue('angLo', 'Too shallow an angle — the spray just skates across. Bring it up toward 45°.'); }
-  if (washCtl.dist < WASH.dist.tooClose){ unsafe = true; washIssue('dist', `Nozzle at ${washCtl.dist} in is far too close — back off to about 12 in.`, true); }
-  else if (washCtl.dist > WASH.dist.hi + 4){ eff *= 0.5; washIssue('distFar', 'Nozzle is too far away to wash effectively — move in to about 12 in.'); }
-  if (washCtl.temp > WASH.temp.hi){ eff *= 0.9; washIssue('tempHi', `Water at ${washCtl.temp} °F is above the 100 °F procedure limit.`, true); }
-  else if (washCtl.temp < WASH.temp.lo){ eff *= 0.7; washIssue('tempLo', `Water at ${washCtl.temp} °F is below the 60 °F procedure limit — cold water washes poorly.`); }
-
-  if (unsafe){
-    eff *= 1.5;                                     // aggressive washing removes faster…
-    state.washDamage = Math.min(1, state.washDamage + dt * 0.11);   // …and flushes the flaws
-  }
-  /* re-washing already-clean surface = over-wash even at good settings */
-  if (cellAt(grid, p.x, p.y) >= 0.95)
-    state.washDamage = Math.min(1, state.washDamage + dt * 0.02);
-
-  const r = s.rad;
-  wipeLayer(pctx, p.x, p.y, r, Math.min(0.6, 0.34 * eff));
-  wipeLayer(shctx, p.x, p.y, r, 0.4);
-  stampGrid(grid, p.x, p.y, r, 0.26 * eff);
-  spawnSpray(state.px, state.py, '150,190,255', 9, 0.9);
-  checkCoverage();
-}
-function applyWipe(dt){
-  const s = cur(); if (!s) return;
-  if (!wipeAllowed(false)) return;
-  state.lastApplyAt = performance.now();
-  const p = clampPlate(state.px, state.py);
-  const r = s.rad || 30;
-  stampGrid(grid, p.x, p.y, r, 0.28);
-  if (s.id === 's1b'){ wipeLayer(dctx, p.x, p.y, r, 0.5); wipeLayer(shctx, p.x, p.y, r, 0.4); }
-  if (s.id === 's7b'){ state.devFade = coverage(grid); wipeLayer(shctx, p.x, p.y, r, 0.6); }
-  checkCoverage();
-}
-
-/* ================= developer dip ================= */
-const dipBtn = $('dipBtn');
-let dipHold = false;
-dipBtn.addEventListener('pointerdown', e => {
-  e.preventDefault();
-  const s = cur(); if (!s || s.id !== 's4a' || state.devState) return;
-  dipHold = true;
-  dipBtn.setPointerCapture(e.pointerId);
-});
-['pointerup','pointercancel'].forEach(ev => dipBtn.addEventListener(ev, () => { dipHold = false; }));
 function stepDip(dt){
-  const s = cur(); if (!s || s.id !== 's4a' || state.devState) return;
-  if (dipHold) state.dipProg = Math.min(1, state.dipProg + dt / 1.8);
-  else if (state.dipProg > 0 && state.dipProg < 1){
-    state.dipProg = Math.max(0, state.dipProg - dt / 1.2);
-    if (state.dipProg > 0.15) $('dipFb').textContent = 'Keep holding — the part needs full immersion for an even coat.';
+  const pt = state.part;
+  if (!pt.grabbed) return;
+  const st = dipStationAt(pt.x);
+  if (!st) return;
+  const frac = submergedFrac();
+  const s = cur();
+  if (!s) return;
+  const isTarget = (s.type === 'dip') && s.station === st.id;
+  if (frac > 0.15 && !isTarget){
+    if (state.lastWrongDip !== st.id + s.id){
+      state.lastWrongDip = st.id + s.id;
+      mistake(`The part went into the ${st.label} tank out of sequence — that contaminates the bath. Follow the line order.`);
+    }
+    return;
   }
-  $('dipFill').style.width = Math.round(state.dipProg * 100) + '%';
-  if (state.dipProg >= 1){
-    state.devState = 1;
-    dipBtn.disabled = true;
-    $('dipFb').textContent = '✓ Even aqueous developer coat — into the dryer.';
-    toast('✓ Developer applied — now dry the part.', 'good');
+  if (!isTarget) return;
+  if (frac >= 0.98){
+    state.wasOut = false;
+    const need = st.id === 'dust' ? 2.4 : 1.6;
+    if (!state.dipDone){
+      state.dipProg = Math.min(1, state.dipProg + dt / need);
+      if (state.dipProg >= 1){
+        state.dipDone = true;
+        if (st.id === 'pen'){ state.penA = 1; coatPenetrant(); toast('✓ Coated — pull it out and up.', 'good'); }
+        if (st.id === 'dev'){ state.devState = 1; toast('✓ Wet developer applied — out and into the dryer.', 'good'); }
+        if (st.id === 'dust'){ state.dustA = 1; toast('✓ Dusted — pull it out gently.', 'good'); }
+      }
+    }
+  } else if (frac <= 0.02 && state.dipDone){
+    /* fully out with the coat on → step complete */
+    advance();
+    state.lastWrongDip = null;
+  }
+  if (frac > 0 && frac < 0.98 && !state.dipDone && state.dipProg > 0){
+    state.dipProg = Math.max(0, state.dipProg - dt / 3);
+  }
+}
+
+/* ================= dryer ================= */
+const blowBtn = $('blowBtn');
+blowBtn.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  const s = cur(); if (!s || s.type !== 'dryer') return;
+  state.blowing = true;
+  blowBtn.setPointerCapture(e.pointerId);
+});
+['pointerup','pointercancel'].forEach(ev => blowBtn.addEventListener(ev, () => { state.blowing = false; }));
+function stepDryer(dt){
+  const s = cur(); if (!s || s.type !== 'dryer' || state.part.station !== 'dryer' || state.devState === 2) return;
+  if (state.blowing){
+    state.moisture = Math.max(0, state.moisture - dt * 0.12);
+    state.partTemp = Math.min(DRY.scaleMax, state.partTemp + dt * 9);
+  } else {
+    state.partTemp = Math.max(DRY.ambient, state.partTemp - dt * 6);
+  }
+  if (state.partTemp > DRY.limit){
+    state.overheat = Math.min(1, state.overheat + dt * 0.12);
+    if (!state.overheatWarned){
+      state.overheatWarned = true;
+      mistake(`Part temperature passed ${DRY.limit} °F — hot enough to dry the penetrant in the flaws. Let it cool between blasts.`);
+    }
+    $('dryFb').textContent = `⚠ TOO HOT — release and let the part cool below ${DRY.limit} °F.`;
+    $('dryFb').className = 'fb bad';
+  } else if (state.overheatWarned && state.partTemp < DRY.limit - 5){
+    $('dryFb').textContent = 'Better — keep pulsing the air, watch the temperature.';
+    $('dryFb').className = 'fb';
+  }
+  $('gMoist').style.width = Math.round(state.moisture * 100) + '%';
+  $('gMoistV').textContent = Math.round(state.moisture * 100) + '%';
+  const tFrac = (state.partTemp - DRY.ambient) / (DRY.scaleMax - DRY.ambient);
+  $('gTemp').style.width = Math.round(tFrac * 100) + '%';
+  $('gTempV').textContent = Math.round(state.partTemp) + ' °F';
+  $('gTempBar').classList.toggle('hot', state.partTemp > DRY.limit);
+  if (state.moisture <= 0){
+    state.devState = 2;
+    state.blowing = false;
+    toast('✓ Coat is dry — on to the dust chamber.', 'good');
+    $('dryerPanel').classList.remove('show');
     advance();
   }
+}
+
+/* ================= zoom washing ================= */
+function applyWash(dt){
+  const s = cur(); if (!s || s.type !== 'zoomwash' || state.mode !== 'zoom') return;
+  state.lastApplyAt = performance.now();
+  const x = Math.max(PLATE.x0, Math.min(PLATE.x1, state.px));
+  const y = Math.max(PLATE.y0, Math.min(PLATE.y1, state.py));
+  let eff = 1;
+  if (s.params){
+    let unsafe = false;
+    if (washCtl.psi > WASH.psi.max){ unsafe = true; washIssue('psi', `Water pressure ${washCtl.psi} PSI — the procedure caps it at 40. High pressure drives penetrant out of flaws.`, true); }
+    else if (washCtl.psi < WASH.psi.min){ eff *= 0.35; washIssue('psiLo', 'Pressure is too low to move the penetrant — bring it up toward 38 PSI.'); }
+    if (washCtl.ang >= WASH.ang.perp){ unsafe = true; washIssue('ang', `Spraying at ${washCtl.ang}° — never perpendicular to the surface. Hold the nozzle near 45°.`, true); }
+    else if (washCtl.ang < WASH.ang.lo){ eff *= 0.6; washIssue('angLo', 'Too shallow an angle — the spray just skates across. Bring it up toward 45°.'); }
+    if (washCtl.dist < WASH.dist.tooClose){ unsafe = true; washIssue('dist', `Nozzle at ${washCtl.dist} in is far too close — back off to about 12 in.`, true); }
+    else if (washCtl.dist > WASH.dist.hi + 4){ eff *= 0.5; washIssue('distFar', 'Nozzle is too far away to wash effectively — move in to about 12 in.'); }
+    if (washCtl.temp > WASH.temp.hi){ eff *= 0.9; washIssue('tempHi', `Water at ${washCtl.temp} °F is above the 100 °F procedure limit.`, true); }
+    else if (washCtl.temp < WASH.temp.lo){ eff *= 0.7; washIssue('tempLo', `Water at ${washCtl.temp} °F is below the 60 °F procedure limit — cold water washes poorly.`); }
+    if (unsafe){
+      eff *= 1.5;
+      state.washDamage = Math.min(1, state.washDamage + dt * 0.11);
+    }
+    if (cellAt(grid, x, y) >= 0.95)
+      state.washDamage = Math.min(1, state.washDamage + dt * 0.02);
+  }
+  const r = 34;
+  if (s.id === 'p1'){ wipeLayer(dctx, x, y, r, 0.4 * eff); }
+  if (s.id === 'p4'){ wipeLayer(pctx, x, y, r, Math.min(0.6, 0.34 * eff)); }
+  if (s.id === 'p10'){ state.devFade = Math.max(state.devFade, coverage(grid)); state.bleedFade = Math.max(0, 1 - coverage(grid) * 1.15); state.dustA = Math.max(0, 1 - coverage(grid) * 1.2); }
+  stampGrid(grid, x, y, r, 0.26 * eff);
+  spawn(state.px, state.py, '150,190,255', 9, { vy: 40, sy: 80, jx: 16 });
+  checkCoverage();
 }
 
 /* ================= measurement check ================= */
@@ -1333,6 +1282,7 @@ $('checkBtn').addEventListener('click', () => {
     state.results = { cl: vCL, haz: vHZ, por: vPO };
     ['mCL','mHAZ','mPOR'].forEach(id => $(id).disabled = true);
     $('checkBtn').disabled = true;
+    setTimeout(exitZoom, 600);
     advance();
   } else {
     const bad = [];
@@ -1349,10 +1299,10 @@ function markInput(id, ok){
   e.className = 'mark ' + (ok ? 'ok' : 'bad');
 }
 
-/* ================= finish / report ================= */
+/* ================= finish ================= */
 function finish(){
   state.done = true;
-  if (state.tool) selectTool(state.tool);
+  exitZoom();
   const sel = window.getSelection && window.getSelection();
   if (sel) sel.removeAllRanges();
   const r = state.results || { cl: '—', haz: '—', por: '—' };
@@ -1361,56 +1311,275 @@ function finish(){
     <tr><td>Weld toe / HAZ</td><td>Linear — crack</td><td>${r.haz} in (actual 0.9 in)</td><td class="ok">✓</td></tr>
     <tr><td>Weld face</td><td>Rounded — porosity</td><td>${r.por} indications</td><td class="ok">✓</td></tr>`;
   $('verdictBox').textContent = 'Disposition: REJECT — cracks (linear indications) are not acceptable in any amount. The weld requires repair and re-inspection.';
-  const wg = $('washGrade'), d = state.washDamage;
-  if (d < 0.15){ wg.className = 'washgrade'; wg.textContent = 'Wash control: GOOD — settings per procedure, stopped when the background was clean. Indications developed at full strength.'; }
-  else if (d < 0.5){ wg.className = 'washgrade warn'; wg.textContent = `Wash control: OVER-WASHED (${Math.round(d*100)}%) — some penetrant was flushed out of the flaws, so the indications came up dimmer than they should. Watch pressure, angle, distance, and stop at clean.`; }
-  else { wg.className = 'washgrade bad'; wg.textContent = `Wash control: HEAVY OVER-WASH (${Math.round(d*100)}%) — in the field these indications could have been missed entirely. Re-clean and reprocess the part from Step 1.`; }
+  const wg = $('washGrade');
+  const d = state.washDamage, o = state.overheat;
+  const notes = [];
+  if (d < 0.15 && o < 0.1){ wg.className = 'washgrade'; wg.textContent = 'Process control: GOOD — rinse per procedure, part never overheated. Indications developed at full strength.'; }
+  else {
+    if (d >= 0.15) notes.push(`over-washed ${Math.round(d*100)}% (penetrant flushed from flaws)`);
+    if (o >= 0.1) notes.push(`overheated in the dryer ${Math.round(o*100)}% (penetrant dried in the flaws)`);
+    const sev = (d + o) < 0.5 ? 'warn' : 'bad';
+    wg.className = 'washgrade ' + sev;
+    wg.textContent = 'Process control: ' + notes.join(' · ') + ' — the indications came up dimmer than they should. ' +
+      (sev === 'bad' ? 'In the field these could have been missed entirely — reprocess from pre-clean.' : 'Watch the rinse parameters and the dryer temperature.');
+  }
   const n = state.mistakes.length;
   $('repMistakes').textContent = n === 0
     ? 'Procedure followed with no deviations. Excellent technique.'
-    : `Procedure deviations flagged during the run: ${n}. Review the wash parameters — 38 PSI, 60–100 °F, ~12 in standoff, ~45° angle.`;
+    : `Procedure deviations flagged during the run: ${n}.`;
   $('report').classList.remove('hidden');
 }
 
-/* ================= render loop ================= */
-let last = performance.now();
-function frame(now){
-  const dt = Math.min(0.05, (now - last) / 1000); last = now;
-  if (state.idx >= 0 && !state.done){
-    if (state.spraying) applySpray(dt);
-    if (state.washing) applyWash(dt);
-    if (state.wiping) applyWipe(dt);
-    stepTimer(dt);
-    stepDip(dt);
-    if (!state.spraying) state.sheenA = Math.max(0, state.sheenA - dt * 0.06);
+/* ================= LINE VIEW rendering ================= */
+function drawPartMini(g, x, y, uvLocal){
+  /* x,y = top-left of hanging part */
+  const w = PART_W, h = PART_H;
+  g.save();
+  /* hanger wire + hook */
+  g.strokeStyle = '#6b6560'; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(x + w/2, RAIL_Y + 8); g.lineTo(x + w/2, y - 2); g.stroke();
+  g.fillStyle = '#4c4844';
+  g.fillRect(x + w/2 - 7, RAIL_Y + 2, 14, 8);
+  /* plate */
+  const pg = g.createLinearGradient(x, y, x + w, y);
+  pg.addColorStop(0, '#c3c8cd'); pg.addColorStop(0.5, '#aab0b7'); pg.addColorStop(1, '#969ca4');
+  g.fillStyle = pg;
+  g.fillRect(x, y, w, h);
+  /* weld seam (part hangs with the weld vertical) */
+  g.fillStyle = 'rgba(126,132,140,.9)';
+  g.fillRect(x + w/2 - 5, y, 10, h);
+  g.strokeStyle = 'rgba(70,76,84,.6)'; g.lineWidth = 1;
+  for (let yy = y + 3; yy < y + h - 2; yy += 6){
+    g.beginPath(); g.ellipse(x + w/2, yy, 4.5, 3, 0, 0, Math.PI * 2); g.stroke();
   }
-  stepParts(dt);
-  /* scene lighting blend */
-  const dtv = dt * 2.2;
-  state.uvT += Math.max(-dtv, Math.min(dtv, state.uvTarget - state.uvT));
-  const uv = Math.max(0, Math.min(1, state.uvT));
-  const chip = $('lightChip');
-  if (uv > 0.5 && !chip.classList.contains('uv')){ chip.classList.add('uv'); chip.textContent = 'UV-A · 365 nm'; }
-  if (uv <= 0.5 && chip.classList.contains('uv')){ chip.classList.remove('uv'); chip.textContent = 'White light'; }
+  /* state tints */
+  if (state.dirtA > 0){ g.fillStyle = `rgba(74,60,40,${0.28 * state.dirtA})`; g.fillRect(x, y, w, h); }
+  if (state.penA > 0){
+    g.fillStyle = uvLocal ? `rgba(170,240,60,${0.85 * state.penA})` : `rgba(154,219,44,${0.5 * state.penA})`;
+    g.fillRect(x, y, w, h);
+  }
+  if (state.devState > 0){
+    g.fillStyle = `rgba(240,242,238,${(state.devState === 1 ? 0.55 : 0.78) * (1 - state.devFade)})`;
+    g.fillRect(x, y, w, h);
+  }
+  if (state.dustA > 0){ g.fillStyle = `rgba(248,248,244,${0.5 * state.dustA})`; g.fillRect(x, y, w, h); }
+  /* wet gloss */
+  if (state.devState === 1){ g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(x, y, w, h/3); }
+  /* developed indications faintly visible on the mini part */
+  if (state.bleed > 0 && state.bleedFade > 0.05){
+    const br = indicationBrightness();
+    g.fillStyle = `rgba(160,220,60,${0.5 * state.bleed * state.bleedFade * br})`;
+    g.fillRect(x + w/2 - 1.5, y + h*0.42, 3, h*0.16);
+    g.beginPath(); g.arc(x + w/2 + 1, y + h*0.25, 2, 0, Math.PI*2); g.fill();
+    g.beginPath(); g.arc(x + w/2 - 2, y + h*0.6, 2, 0, Math.PI*2); g.fill();
+  }
+  g.strokeStyle = 'rgba(50,54,60,.7)'; g.lineWidth = 1.2;
+  g.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+  g.restore();
+}
+function drawStation(g, st, isTarget, now){
+  const w = 96, x0 = st.x - w/2;
+  g.save();
+  if (st.type === 'tank' || st.type === 'dust'){
+    /* tank body */
+    g.fillStyle = '#3a3f45';
+    g.fillRect(x0, 258, w, FLOOR_Y - 258);
+    g.fillStyle = '#2c3036';
+    g.fillRect(x0 + 5, 264, w - 10, FLOOR_Y - 270);
+    if (st.type === 'tank'){
+      g.fillStyle = st.liquid;
+      g.globalAlpha = st.id === 'pen' ? 0.92 : 0.95;
+      g.fillRect(x0 + 5, SURF_Y - 8, w - 10, FLOOR_Y - 6 - (SURF_Y - 8));
+      g.globalAlpha = 1;
+      g.fillStyle = 'rgba(255,255,255,.25)';
+      g.fillRect(x0 + 5, SURF_Y - 8, w - 10, 3);
+    } else {
+      /* dust chamber: enclosed with window */
+      g.fillStyle = '#494f56';
+      g.fillRect(x0, 246, w, 16);
+      g.fillStyle = 'rgba(230,230,222,.14)';
+      g.fillRect(x0 + 5, 264, w - 10, FLOOR_Y - 270);
+      /* swirling powder */
+      g.fillStyle = 'rgba(240,240,232,.5)';
+      for (let i = 0; i < 14; i++){
+        const a = now / 700 + i * 1.9;
+        const px = st.x + Math.cos(a + i) * (16 + (i % 4) * 8);
+        const py = (SURF_Y + 30) + Math.sin(a * 1.3 + i) * 38;
+        g.globalAlpha = 0.25 + 0.3 * Math.abs(Math.sin(a + i * 2));
+        g.beginPath(); g.arc(px, py, 1.4 + (i % 3), 0, Math.PI * 2); g.fill();
+      }
+      g.globalAlpha = 1;
+    }
+    /* rim */
+    g.fillStyle = '#555b62';
+    g.fillRect(x0 - 3, 252, w + 6, 8);
+  } else if (st.type === 'booth'){
+    g.fillStyle = '#34383d';
+    g.fillRect(x0 - 2, 150, w + 4, FLOOR_Y - 150);
+    g.fillStyle = '#26292d';
+    g.fillRect(x0 + 4, 158, w - 8, FLOOR_Y - 166);
+    if (st.uv){
+      g.fillStyle = 'rgba(90,60,220,.35)';
+      g.fillRect(x0 + 4, 158, w - 8, FLOOR_Y - 166);
+      g.fillStyle = '#8a6cff';
+      g.fillRect(x0 + 10, 162, w - 20, 4);
+      g.shadowColor = '#8a6cff'; g.shadowBlur = 12;
+      g.fillRect(x0 + 10, 162, w - 20, 4);
+      g.shadowBlur = 0;
+    } else {
+      /* water jets marks */
+      g.strokeStyle = 'rgba(150,190,230,.4)'; g.lineWidth = 1.5;
+      for (let i = 0; i < 4; i++){
+        g.beginPath();
+        g.moveTo(x0 + 14 + i * 20, 166);
+        g.lineTo(x0 + 10 + i * 20, 200);
+        g.stroke();
+      }
+    }
+    /* drain grate */
+    g.fillStyle = '#1d2023';
+    g.fillRect(x0 + 4, FLOOR_Y - 14, w - 8, 8);
+  } else if (st.type === 'rack'){
+    g.strokeStyle = '#5c6167'; g.lineWidth = 4;
+    g.beginPath(); g.moveTo(x0 + 8, FLOOR_Y); g.lineTo(x0 + 8, 200); g.lineTo(x0 + w - 8, 200); g.lineTo(x0 + w - 8, FLOOR_Y); g.stroke();
+    g.lineWidth = 2.5;
+    g.beginPath(); g.moveTo(st.x, 200); g.lineTo(st.x, 216); g.stroke();
+    g.fillStyle = '#5c6167';
+    g.beginPath(); g.arc(st.x, 220, 4, 0, Math.PI * 2); g.fill();
+    /* drip tray */
+    g.fillStyle = '#3a3f45';
+    g.fillRect(x0 + 4, FLOOR_Y - 10, w - 8, 10);
+  } else if (st.type === 'dryer'){
+    g.fillStyle = '#454a51';
+    g.fillRect(x0 - 2, 170, w + 4, FLOOR_Y - 170);
+    g.fillStyle = '#33373c';
+    g.fillRect(x0 + 6, 182, w - 12, FLOOR_Y - 192);
+    /* fan */
+    g.save();
+    g.translate(st.x, 200);
+    const spin = (state.blowing ? now / 60 : now / 800);
+    g.rotate(spin);
+    g.fillStyle = '#7d848c';
+    for (let i = 0; i < 4; i++){ g.rotate(Math.PI / 2); g.fillRect(-2, 0, 4, 12); }
+    g.restore();
+    g.strokeStyle = '#7d848c'; g.lineWidth = 1.5;
+    g.beginPath(); g.arc(st.x, 200, 14, 0, Math.PI * 2); g.stroke();
+    /* heat glow when blowing */
+    if (state.blowing){
+      g.fillStyle = 'rgba(255,150,60,.15)';
+      g.fillRect(x0 + 6, 182, w - 12, FLOOR_Y - 192);
+    }
+  }
+  /* target highlight */
+  if (isTarget){
+    const pulse = 0.5 + 0.5 * Math.sin(now / 320);
+    g.strokeStyle = `rgba(232,168,124,${0.5 + 0.45 * pulse})`;
+    g.lineWidth = 2; g.setLineDash([7, 6]);
+    g.strokeRect(x0 - 7, 146, w + 14, FLOOR_Y - 140);
+    g.setLineDash([]);
+    /* down arrow */
+    g.fillStyle = `rgba(232,168,124,${0.6 + 0.4 * pulse})`;
+    const ay = 122 + pulse * 6;
+    g.beginPath();
+    g.moveTo(st.x - 8, ay); g.lineTo(st.x + 8, ay); g.lineTo(st.x, ay + 12);
+    g.closePath(); g.fill();
+  }
+  /* label */
+  g.fillStyle = isTarget ? '#e8a87c' : 'rgba(230,225,215,.55)';
+  g.font = '600 9px "JetBrains Mono", monospace';
+  g.textAlign = 'center';
+  g.fillText(st.label, st.x, FLOOR_Y + 16);
+  g.restore();
+}
+function renderLine(now, dt){
+  /* room */
+  ctx.fillStyle = '#2b2723'; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(255,255,255,.03)';
+  for (let y = 0; y < H; y += 7){ ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y + 2); ctx.stroke(); }
+  /* floor */
+  ctx.fillStyle = '#211e1b';
+  ctx.fillRect(0, FLOOR_Y, W, H - FLOOR_Y);
+  ctx.strokeStyle = 'rgba(255,255,255,.06)';
+  ctx.beginPath(); ctx.moveTo(0, FLOOR_Y); ctx.lineTo(W, FLOOR_Y); ctx.stroke();
+  /* rail */
+  ctx.fillStyle = '#4c4844';
+  ctx.fillRect(20, RAIL_Y, W - 40, 6);
+  ctx.fillStyle = '#3a3733';
+  for (let x = 40; x < W - 30; x += 60) ctx.fillRect(x, RAIL_Y - 6, 4, 6);
+  const s = cur();
+  for (const st of ST) drawStation(ctx, st, s && st.id === s.station && state.mode === 'line' && !state.done, now);
+  /* part */
+  const pt = state.part;
+  const uvLocal = pt.station === 'rinse' || pt.station === 'inspect';
+  /* clip part inside tank when submerged so it visibly goes under */
+  const dipSt = dipStationAt(pt.x);
+  if (dipSt && pt.y + PART_H > SURF_Y - 10){
+    /* draw part behind liquid: draw part, then liquid overlay strip */
+    drawPartMini(ctx, pt.x - PART_W/2, pt.y, uvLocal);
+    if (dipSt.type === 'tank'){
+      ctx.fillStyle = dipSt.liquid;
+      ctx.globalAlpha = dipSt.id === 'pen' ? 0.75 : 0.8;
+      const lx = dipSt.x - 48 + 5, lw = 96 - 10;
+      ctx.fillRect(lx, SURF_Y - 8, lw, FLOOR_Y - 6 - (SURF_Y - 8));
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(255,255,255,.3)';
+      ctx.fillRect(lx, SURF_Y - 8, lw, 3);
+      /* ripples where the hanger wire enters */
+      if (pt.y + PART_H > SURF_Y){
+        ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.ellipse(pt.x, SURF_Y - 7, 12 + Math.sin(now/200) * 2, 3, 0, 0, Math.PI * 2); ctx.stroke();
+      }
+    } else if (dipSt.type === 'dust'){
+      ctx.fillStyle = 'rgba(235,235,228,.28)';
+      ctx.fillRect(dipSt.x - 43, 264, 86, FLOOR_Y - 270);
+    }
+  } else {
+    drawPartMini(ctx, pt.x - PART_W/2, pt.y, uvLocal);
+  }
+  /* dip progress ring */
+  if (state.dipProg > 0 && state.dipProg < 1 && pt.grabbed){
+    ctx.strokeStyle = 'rgba(232,168,124,.9)'; ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(pt.x, Math.min(pt.y - 26, 240), 13, -Math.PI/2, -Math.PI/2 + state.dipProg * Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.15)';
+    ctx.beginPath(); ctx.arc(pt.x, Math.min(pt.y - 26, 240), 13, 0, Math.PI * 2); ctx.stroke();
+  }
+  /* drips: on drain rack during dwell, or freshly dipped */
+  if (!state.done){
+    if (s && s.id === 'p3' && pt.station === 'dwell' && state.timer && state.timer.running && Math.random() < 0.2)
+      spawn(pt.x + (Math.random()*30 - 15), pt.y + PART_H, '154,219,44', 1, { vy: 90, sy: 30, jx: 4, r: 1.4 });
+    if (state.devState === 1 && pt.station !== 'dev' && Math.random() < 0.12)
+      spawn(pt.x + (Math.random()*30 - 15), pt.y + PART_H, '235,237,232', 1, { vy: 90, sy: 30, jx: 4, r: 1.4 });
+  }
+  /* particles */
+  for (const p of parts){
+    ctx.globalAlpha = Math.max(0, 1 - p.t / p.life) * 0.6;
+    ctx.fillStyle = `rgb(${p.rgb})`;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  /* debug hooks for automated tests */
+  stage.dataset.px = Math.round(pt.x); stage.dataset.py = Math.round(pt.y);
+}
 
+/* ================= ZOOM VIEW rendering ================= */
+function renderZoom(now){
+  const uv = Math.max(0, Math.min(1, state.uvT));
   ctx.clearRect(0, 0, W, H);
   ctx.drawImage(baseC, 0, 0);
-  if (state.dirtA > 0){ ctx.globalAlpha = state.dirtA * (1 - uv * 0.5); ctx.drawImage(dirtC, 0, 0); ctx.globalAlpha = 1; }
-  /* developer coat (white light view) */
+  if (state.dirtA > 0){ ctx.globalAlpha = (1 - uv * 0.5); ctx.drawImage(dirtC, 0, 0); ctx.globalAlpha = 1; }
   if (state.devState > 0){
-    ctx.globalAlpha = (state.devState === 1 ? 0.55 : 0.8) * (1 - uv * 0.85) * (1 - (state.devFade || 0));
+    ctx.globalAlpha = (state.devState === 1 ? 0.55 : 0.8) * (1 - uv * 0.85) * (1 - state.devFade);
     ctx.drawImage(devTexC, 0, 0);
     ctx.globalAlpha = 1;
   }
-  /* penetrant under white light: yellow-green stain */
   if (state.penA > 0 && uv < 1){ ctx.globalAlpha = 0.4 * state.penA * (1 - uv); ctx.drawImage(penC, 0, 0); ctx.globalAlpha = 1; }
-  /* darkness */
   if (uv > 0){
     ctx.fillStyle = `rgba(10,8,30,${0.86 * uv})`;
     ctx.fillRect(0, 0, W, H);
-    /* developer reflects UV slightly */
-    if (state.devState > 0){ ctx.globalAlpha = 0.22 * uv; ctx.drawImage(devTexC, 0, 0); ctx.globalAlpha = 1; }
-    /* fluorescent glow */
+    if (state.devState > 0){ ctx.globalAlpha = 0.22 * uv * (1 - state.devFade); ctx.drawImage(devTexC, 0, 0); ctx.globalAlpha = 1; }
+    if (state.dustA > 0){ ctx.globalAlpha = 0.12 * uv * state.dustA; ctx.drawImage(devTexC, 0, 0); ctx.globalAlpha = 1; }
     if (state.penA > 0){
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = 0.95 * uv * state.penA;
@@ -1419,9 +1588,8 @@ function frame(now){
     }
     ctx.save(); ctx.globalAlpha = uv; drawBleed(ctx); ctx.restore();
   }
-  /* thin-spot highlight */
   const cs = cur();
-  if (cs && cs.widget === 'cov' && !state.done && !state.spraying && !state.wiping && !state.washing){
+  if (cs && cs.type === 'zoomwash' && !state.done && !state.washing){
     const c = coverage(grid);
     if (c > 0.3 && c < cs.need && now - state.lastApplyAt > 1200){
       const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1431,18 +1599,66 @@ function frame(now){
         if (grid[r * COLS + cc] < 0.5) ctx.fillRect(Z.x0 + cc * CS, Z.y0 + r * CS, CS, CS);
       if (!state.gapHintShown){
         state.gapHintShown = true;
-        toast(cs.id === 's3a' ? 'The glowing patches are penetrant still on the surface — wash them off.' :
-          'The glowing patches are still thin — go back over them. Full coverage, no gaps.');
+        toast(cs.id === 'p4' ? 'The glowing patches are penetrant still on the surface — wash them off.' :
+          'The highlighted patches still need washing — cover the whole part.');
       }
     }
   }
-  if (state.sheenA > 0){ ctx.globalAlpha = Math.min(0.85, state.sheenA) * (1 - uv * 0.6); ctx.drawImage(sheenC, 0, 0); ctx.globalAlpha = 1; }
   for (const p of parts){
     ctx.globalAlpha = Math.max(0, 1 - p.t / p.life) * 0.55;
     ctx.fillStyle = `rgb(${p.rgb})`;
     ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1;
+}
+
+/* nozzle ghost cursor in zoom wash mode */
+function nozzleSVG(h){
+  h = h || 64;
+  return `<svg class="can" width="${h*1.15}" height="${h}" viewBox="0 0 60 52">
+    <rect x="26" y="20" width="12" height="26" rx="3" fill="#3f4750" stroke="#20262c" stroke-width="1.2"/>
+    <rect x="22" y="14" width="24" height="9" rx="3" fill="#5a636d" stroke="#2c333a" stroke-width="1.2"/>
+    <rect x="10" y="15.5" width="13" height="6" rx="2" fill="#c7ccd2" stroke="#8d949c" stroke-width="1"/>
+    <path d="M30 26 L34 26 L36 34 L28 34 Z" fill="#e0653a"/>
+    <rect x="36" y="30" width="7" height="14" rx="2.5" fill="#3f4750"/>
+    <path d="M43 42 Q52 44 56 50" fill="none" stroke="#2c333a" stroke-width="3.4" stroke-linecap="round"/>
+  </svg>`;
+}
+function moveGhost(){
+  const s = cur();
+  const showNozzle = state.mode === 'zoom' && s && s.type === 'zoomwash';
+  if (!showNozzle){ ghost.style.display = 'none'; stage.classList.remove('washing-cursor'); return; }
+  const r = stage.getBoundingClientRect();
+  const inside = state.clientX >= r.left && state.clientX <= r.right && state.clientY >= r.top && state.clientY <= r.bottom;
+  if (!inside){ ghost.style.display = 'none'; stage.classList.remove('washing-cursor'); return; }
+  stage.classList.add('washing-cursor');
+  if (!ghost.innerHTML) ghost.innerHTML = nozzleSVG(64);
+  if (!ghost.dataset.kind || ghost.dataset.kind !== 'nozzle'){ ghost.innerHTML = nozzleSVG(64); ghost.dataset.kind = 'nozzle'; }
+  ghost.style.display = 'block';
+  ghost.style.transform = `translate(${state.clientX - 12}px, ${state.clientY - 4}px)`;
+  const svg = ghost.querySelector('svg');
+  if (svg && s.params) svg.style.transform = `rotate(${-(90 - washCtl.ang)}deg)`;
+}
+
+/* ================= main loop ================= */
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (state.idx >= 0 && !state.done){
+    if (state.washing) applyWash(dt);
+    stepTimer(dt);
+    stepDip(dt);
+    stepDryer(dt);
+  }
+  stepParts(dt);
+  const dtv = dt * 2.2;
+  state.uvT += Math.max(-dtv, Math.min(dtv, state.uvTarget - state.uvT));
+  const uv = Math.max(0, Math.min(1, state.uvT));
+  const chip = $('lightChip');
+  if (uv > 0.5 && !chip.classList.contains('uv')){ chip.classList.add('uv'); chip.textContent = 'UV-A · 365 nm'; }
+  if (uv <= 0.5 && chip.classList.contains('uv')){ chip.classList.remove('uv'); chip.textContent = 'White light'; }
+  if (state.mode === 'zoom') renderZoom(now);
+  else renderLine(now, dt);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
