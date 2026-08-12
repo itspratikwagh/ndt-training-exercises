@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PT — Solvent Removable Technique</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #faf7f2;
+    --paper-deep: #f1ece2;
+    --ink: #1a1a1a;
+    --ink-soft: #4a4a47;
+    --ink-faded: #8a8a85;
+    --rule: #d9d2c4;
+    --amber: #b54515;
+    --amber-soft: #e8a87c;
+    --amber-tint: #fdf2e6;
+    --pen-red: #c8102e;
+    --clean-blue: #1d6fa5;
+    --dev-grey: #7a7f86;
+    --good: #2e7d4f;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px -12px rgba(60,40,20,0.12);
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'Manrope', -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--paper); }
+  body {
+    font-family: var(--sans);
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.55;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(181, 69, 21, 0.04), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(181, 69, 21, 0.03), transparent 50%);
+  }
+  .container { max-width: 1080px; margin: 0 auto; padding: 36px 28px 72px; }
+
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--amber); margin-bottom: 8px; font-weight: 500;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 600;
+    font-size: clamp(26px, 4vw, 38px); line-height: 1.05; letter-spacing: -0.02em;
+    font-variation-settings: 'opsz' 144;
+  }
+  h1 em { font-style: italic; color: var(--amber); font-weight: 500; }
+  a.back {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-faded); text-decoration: none; padding-bottom: 6px;
+  }
+  a.back:hover { color: var(--amber); }
+
+  /* ---------- step progress ---------- */
+  .steps {
+    display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .steps .s {
+    flex: 1 1 120px; display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; border: 1px solid var(--rule); border-radius: 2px;
+    background: var(--paper-deep); opacity: 0.55; transition: all .25s;
+  }
+  .steps .s .n {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    width: 20px; height: 20px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1.5px solid var(--ink-faded); color: var(--ink-faded); flex: none;
+  }
+  .steps .s .l { font-size: 12px; font-weight: 600; color: var(--ink-soft); white-space: nowrap; }
+  .steps .s.active { opacity: 1; border-color: var(--amber); background: var(--amber-tint); }
+  .steps .s.active .n { border-color: var(--amber); color: var(--amber); }
+  .steps .s.done { opacity: 1; }
+  .steps .s.done .n { background: var(--good); border-color: var(--good); color: #fff; }
+
+  /* ---------- instruction card ---------- */
+  .instr {
+    background: var(--ink); color: var(--paper); border-radius: 2px;
+    padding: 18px 22px; margin-bottom: 14px; box-shadow: var(--shadow);
+    display: grid; grid-template-columns: 1fr auto; gap: 8px 24px; align-items: center;
+    min-height: 86px; position: relative;
+  }
+  .instr::before {
+    content: ''; position: absolute; inset: 4px;
+    border: 1px solid rgba(232,168,124,0.18); border-radius: 2px; pointer-events: none;
+  }
+  .instr .step-tag {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--amber-soft); margin-bottom: 5px;
+  }
+  .instr .text { font-size: 16.5px; font-weight: 500; max-width: 620px; }
+  .instr .text b { color: var(--amber-soft); }
+  .instr .widget { justify-self: end; min-width: 190px; }
+  @media (max-width: 720px) {
+    .instr { grid-template-columns: 1fr; }
+    .instr .widget { justify-self: start; }
+  }
+
+  /* coverage bar */
+  .covbox { text-align: right; }
+  .covbox .covlabel { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #b9b4aa; margin-bottom: 6px; }
+  .covbar { width: 190px; height: 10px; background: rgba(255,255,255,.12); border-radius: 99px; overflow: hidden; }
+  .covbar i { display: block; height: 100%; width: 0%; background: var(--amber-soft); border-radius: 99px; transition: width .12s linear, background .3s; }
+  .covbar.full i { background: #6fce9a; }
+
+  /* timer */
+  .timerbox { display: flex; align-items: center; gap: 14px; }
+  .timerbox .digits {
+    font-family: var(--mono); font-size: 32px; font-weight: 600; letter-spacing: .04em;
+    font-variant-numeric: tabular-nums; color: var(--paper); line-height: 1;
+  }
+  .timerbox .sub { font-family: var(--mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: #b9b4aa; margin-top: 4px; }
+  .timerbox button {
+    font-family: var(--sans); font-weight: 700; font-size: 13px;
+    background: var(--amber); color: #fff; border: none; border-radius: 2px;
+    padding: 10px 18px; cursor: pointer; letter-spacing: .02em;
+  }
+  .timerbox button:hover { background: #9a3a12; }
+  .timerbox button:disabled { background: #565349; cursor: default; }
+  .timerbox.running .digits { color: var(--amber-soft); }
+  .timerbox.done .digits { color: #6fce9a; }
+
+  /* measure widget lives below stage instead */
+  .measure {
+    background: var(--paper-deep); border: 1px solid var(--rule); border-radius: 2px;
+    padding: 16px 18px; margin-top: 12px; display: none;
+  }
+  .measure.show { display: block; }
+  .measure h4 { font-family: var(--serif); font-size: 17px; font-weight: 600; margin-bottom: 10px; }
+  .measure .rows { display: grid; gap: 8px; }
+  .measure .row {
+    display: grid; grid-template-columns: 1fr 110px 26px; gap: 12px; align-items: center;
+    font-size: 13.5px; color: var(--ink-soft);
+  }
+  .measure .row label b { color: var(--ink); }
+  .measure input {
+    font-family: var(--mono); font-size: 14px; padding: 7px 10px;
+    border: 1px solid var(--rule); border-radius: 2px; background: #fff; color: var(--ink);
+    width: 100%; text-align: right;
+  }
+  .measure input:focus { outline: 2px solid var(--amber-soft); border-color: var(--amber); }
+  .measure .mark { font-size: 15px; text-align: center; }
+  .measure .mark.ok { color: var(--good); }
+  .measure .mark.bad { color: var(--pen-red); }
+  .measure .actions { margin-top: 12px; display: flex; align-items: center; gap: 14px; }
+  .measure .actions button {
+    font-family: var(--sans); font-weight: 700; font-size: 13px;
+    background: var(--amber); color: #fff; border: none; border-radius: 2px;
+    padding: 10px 20px; cursor: pointer;
+  }
+  .measure .actions button:hover { background: #9a3a12; }
+  .measure .fb { font-size: 12.5px; color: var(--ink-faded); }
+  .measure .fb.bad { color: var(--pen-red); }
+  .measure .fb.ok { color: var(--good); font-weight: 600; }
+
+  /* ---------- stage ---------- */
+  .stage {
+    position: relative; border-radius: 2px; overflow: hidden;
+    box-shadow: var(--shadow); border: 1px solid var(--rule);
+    touch-action: none; user-select: none; -webkit-user-select: none;
+    background: #262320;
+  }
+  .stage canvas { display: block; width: 100%; height: auto; }
+  .stage svg.overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .stage svg.overlay .ruler { pointer-events: auto; cursor: grab; }
+  .stage svg.overlay .ruler.grabbing { cursor: grabbing; }
+  .stage.cantool { cursor: none; }
+
+  /* toast */
+  .toast {
+    position: absolute; left: 50%; bottom: 14px; transform: translate(-50%, 8px);
+    background: rgba(20,18,16,.94); color: var(--paper);
+    font-size: 13.5px; font-weight: 500; line-height: 1.4;
+    padding: 10px 16px; border-radius: 3px; max-width: 480px;
+    opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s;
+    border-left: 3px solid var(--amber-soft);
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast.warn { border-left-color: var(--pen-red); background: rgba(60,12,16,.95); }
+  .toast.good { border-left-color: #6fce9a; }
+
+  /* tool ghost following cursor */
+  #ghost {
+    position: fixed; left: 0; top: 0; pointer-events: none; z-index: 50;
+    display: none; will-change: transform; filter: drop-shadow(0 4px 6px rgba(0,0,0,.3));
+  }
+  #ghost.spraying svg.can { transform: rotate(-14deg); }
+  #ghost svg { transition: transform .12s; }
+
+  /* ---------- tool tray ---------- */
+  .tray {
+    display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap;
+  }
+  .tool {
+    flex: 1 1 130px; max-width: 190px;
+    background: var(--paper-deep); border: 1px solid var(--rule); border-radius: 2px;
+    padding: 10px 12px; cursor: pointer; text-align: center;
+    transition: border-color .15s, transform .15s, background .15s;
+    position: relative;
+  }
+  .tool:hover { border-color: var(--amber-soft); transform: translateY(-1px); }
+  .tool.selected { border-color: var(--amber); background: var(--amber-tint); box-shadow: 0 0 0 1px var(--amber); }
+  .tool .icon { height: 52px; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; }
+  .tool .name { font-size: 12.5px; font-weight: 700; }
+  .tool .meta { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faded); margin-top: 1px; }
+  .tool .badge {
+    display: inline-block; font-family: var(--mono); font-size: 9px; letter-spacing: .08em;
+    text-transform: uppercase; padding: 2px 7px; border-radius: 99px; margin-top: 5px;
+  }
+  .tool .badge.dry   { background: #e7e2d6; color: var(--ink-soft); }
+  .tool .badge.moist { background: #d6e8f4; color: var(--clean-blue); }
+  .tool .badge.dirty { background: #f6dede; color: var(--pen-red); }
+  .tool button.newrag {
+    margin-top: 6px; font-family: var(--mono); font-size: 10px; letter-spacing: .06em;
+    background: none; border: 1px solid var(--rule); border-radius: 2px;
+    color: var(--ink-soft); padding: 3px 10px; cursor: pointer; text-transform: uppercase;
+  }
+  .tool button.newrag:hover { border-color: var(--amber); color: var(--amber); }
+  .tool .wetfx {
+    position: absolute; inset: 0; border-radius: 2px; pointer-events: none;
+    background: radial-gradient(circle at 50% 45%, rgba(29,111,165,.22), transparent 65%);
+    opacity: 0; transition: opacity .2s;
+  }
+  .tool.getting-wet .wetfx { opacity: 1; }
+  .tool.hidden { display: none; }
+
+  /* ---------- overlays (intro / report) ---------- */
+  .veil {
+    position: fixed; inset: 0; background: rgba(26,24,20,.55); backdrop-filter: blur(2px);
+    display: flex; align-items: center; justify-content: center; z-index: 100; padding: 24px;
+  }
+  .veil.hidden { display: none; }
+  .card {
+    background: var(--paper); border-radius: 3px; box-shadow: 0 24px 80px -20px rgba(0,0,0,.5);
+    max-width: 620px; width: 100%; padding: 34px 38px; max-height: 90vh; overflow-y: auto;
+  }
+  .card .eyebrow { margin-bottom: 10px; }
+  .card h2 { font-family: var(--serif); font-weight: 600; font-size: 28px; letter-spacing: -0.01em; margin-bottom: 12px; }
+  .card h2 em { font-style: italic; color: var(--amber); }
+  .card p { font-size: 14.5px; color: var(--ink-soft); margin-bottom: 12px; }
+  .card ul { margin: 0 0 14px 18px; font-size: 14px; color: var(--ink-soft); }
+  .card ul li { margin-bottom: 5px; }
+  .card .note {
+    font-family: var(--mono); font-size: 11.5px; color: var(--ink-faded);
+    border-left: 2px solid var(--amber-soft); padding-left: 12px; margin: 16px 0;
+  }
+  .card button.primary {
+    font-family: var(--sans); font-weight: 700; font-size: 15px;
+    background: var(--amber); color: #fff; border: none; border-radius: 2px;
+    padding: 13px 28px; cursor: pointer; margin-top: 6px;
+  }
+  .card button.primary:hover { background: #9a3a12; }
+  .card table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 10px 0 16px; }
+  .card table th {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-faded); text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--rule);
+  }
+  .card table td { padding: 7px 8px; border-bottom: 1px solid var(--paper-deep); color: var(--ink-soft); }
+  .card table td:first-child { color: var(--ink); font-weight: 600; }
+  .card td.ok { color: var(--good); font-weight: 700; }
+  .verdict {
+    background: #f6dede; border: 1px solid #eab8b8; color: #7c1420;
+    border-radius: 2px; padding: 12px 16px; font-size: 14px; font-weight: 600; margin-bottom: 14px;
+  }
+  .mist { font-size: 13px; color: var(--ink-faded); margin-bottom: 4px; }
+
+  footer {
+    margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--rule);
+    font-size: 12px; color: var(--ink-faded); font-family: var(--mono);
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <div class="eyebrow">Penetrant Testing · Level I–II Practical</div>
+      <h1>Solvent Removable <em>Technique</em></h1>
+    </div>
+    <a class="back" href="index.html">← Exercise Hub</a>
+  </header>
+
+  <div class="steps" id="steps">
+    <div class="s" data-i="1"><span class="n">1</span><span class="l">Pre-clean</span></div>
+    <div class="s" data-i="2"><span class="n">2</span><span class="l">Penetrant</span></div>
+    <div class="s" data-i="3"><span class="n">3</span><span class="l">Removal</span></div>
+    <div class="s" data-i="4"><span class="n">4</span><span class="l">Developer</span></div>
+    <div class="s" data-i="5"><span class="n">5</span><span class="l">Evaluate</span></div>
+    <div class="s" data-i="6"><span class="n">6</span><span class="l">Post-clean</span></div>
+  </div>
+
+  <div class="instr" id="instr">
+    <div>
+      <div class="step-tag" id="stepTag">Step 1 of 6 · Pre-clean</div>
+      <div class="text" id="stepText">…</div>
+    </div>
+    <div class="widget" id="widget"></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="cv" width="940" height="430"></canvas>
+    <svg class="overlay" id="ovl" viewBox="0 0 940 430" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <div class="measure" id="measure">
+    <h4>Indication measurements</h4>
+    <div class="rows">
+      <div class="row">
+        <label>Longitudinal crack on the <b>weld centerline</b> — length, inches</label>
+        <input id="mCL" type="number" step="0.05" min="0" inputmode="decimal" placeholder="0.00">
+        <span class="mark" id="kCL"></span>
+      </div>
+      <div class="row">
+        <label>Crack in the <b>HAZ</b> (below the weld toe) — length, inches</label>
+        <input id="mHAZ" type="number" step="0.05" min="0" inputmode="decimal" placeholder="0.00">
+        <span class="mark" id="kHAZ"></span>
+      </div>
+      <div class="row">
+        <label>Number of <b>rounded indications</b> (porosity)</label>
+        <input id="mPOR" type="number" step="1" min="0" inputmode="numeric" placeholder="0">
+        <span class="mark" id="kPOR"></span>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="checkBtn">Check measurements</button>
+      <span class="fb" id="mFb">Drag the ruler over each indication. Measure red indications tip-to-tip.</span>
+    </div>
+  </div>
+
+  <div class="tray" id="tray">
+    <div class="tool" data-tool="cleaner" id="toolCleaner">
+      <div class="icon" id="icCleaner"></div>
+      <div class="name">Cleaner / Remover</div>
+      <div class="meta">Solvent · aerosol</div>
+    </div>
+    <div class="tool" data-tool="penetrant" id="toolPen">
+      <div class="icon" id="icPen"></div>
+      <div class="name">Penetrant</div>
+      <div class="meta">Visible red dye</div>
+    </div>
+    <div class="tool" data-tool="developer" id="toolDev">
+      <div class="icon" id="icDev"></div>
+      <div class="name">Developer</div>
+      <div class="meta">Non-aqueous</div>
+    </div>
+    <div class="tool" data-tool="rag" id="toolRag">
+      <div class="wetfx"></div>
+      <div class="icon" id="icRag"></div>
+      <div class="name">Lint-free rag</div>
+      <span class="badge dry" id="ragBadge">Dry · Fresh</span><br>
+      <button class="newrag" id="newRagBtn" type="button">＋ New rag</button>
+    </div>
+    <div class="tool hidden" data-tool="ruler" id="toolRuler">
+      <div class="icon" id="icRuler"></div>
+      <div class="name">Steel ruler</div>
+      <div class="meta">Drag it on the plate</div>
+    </div>
+  </div>
+
+  <footer>PT-1 Practical · Timers accelerated for training · Tip: press Esc to put a tool down</footer>
+</div>
+
+<div id="ghost"></div>
+
+<!-- intro -->
+<div class="veil" id="intro">
+  <div class="card">
+    <div class="eyebrow">Practical Exercise · Liquid Penetrant Testing</div>
+    <h2>Inspect a welded plate — <em>solvent removable</em>, visible dye</h2>
+    <p><b>Scope:</b> perform PT on the butt weld below and evaluate any indications.</p>
+    <p><b>Area of inspection:</b> the entire weld length <b>plus 1 inch on either side</b> of the weld to cover the heat-affected zone (HAZ). It is marked on the plate.</p>
+    <ul>
+      <li>Pick a spray can from the tray, then <b>press and hold</b> on the plate and drag along the weld to spray.</li>
+      <li>Rags wipe the same way — select, then press and drag.</li>
+      <li>One step is shown at a time. If you reach for the wrong thing, you'll get a nudge, not a penalty.</li>
+    </ul>
+    <div class="note">Dwell timers are accelerated: 30 s runs in ~10 s, 5 min runs in ~40 s. In the real shop you wait the full time.</div>
+    <button class="primary" id="beginBtn">Begin inspection →</button>
+  </div>
+</div>
+
+<!-- report -->
+<div class="veil hidden" id="report">
+  <div class="card">
+    <div class="eyebrow">Inspection complete</div>
+    <h2>PT Report — <em>welded plate</em></h2>
+    <div class="verdict" id="verdictBox"></div>
+    <table>
+      <thead><tr><th>Indication</th><th>Type</th><th>Your measurement</th><th></th></tr></thead>
+      <tbody id="repRows"></tbody>
+    </table>
+    <p class="mist" id="repMistakes"></p>
+    <button class="primary" onclick="location.reload()">Run the inspection again</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ================= geometry & constants ================= */
+const W = 940, H = 430, PPI = 45;             // 45 px = 1 inch
+const PLATE = { x0: 40, y0: 88, x1: 900, y1: 342 };
+const WELD_Y = 215, BEAD_HALF = 15;            // bead ≈ 0.67 in wide
+const Z = { x0: PLATE.x0, x1: PLATE.x1,       // inspection zone: weld + 1 in each side
+            y0: WELD_Y - BEAD_HALF - PPI, y1: WELD_Y + BEAD_HALF + PPI };
+const CS = 10;                                 // coverage grid cell, px
+const COLS = Math.floor((Z.x1 - Z.x0) / CS), ROWS = Math.floor((Z.y1 - Z.y0) / CS);
+
+/* defects (true bleedout sizes students must measure) */
+const PORES = [ {x: 222, y: 213, r: 6}, {x: 588, y: 219, r: 5} ];
+const CRACKS = [
+  { id:'CL',  x0: 368, y0: 215, x1: 435.5, y1: 215, len: 1.5 },   // centerline, 1.5 in
+  { id:'HAZ', x0: 700, y0: 252, x1: 745,   y1: 255, len: 1.0 }    // HAZ, 1.0 in
+];
+const TOL = 0.3;   // ± inches accepted
+
+/* ================= dom ================= */
+const $ = id => document.getElementById(id);
+const stage = $('stage'), cv = $('cv'), ctx = cv.getContext('2d');
+const ovl = $('ovl'), toastEl = $('toast'), ghost = $('ghost');
+const widget = $('widget'), stepTag = $('stepTag'), stepText = $('stepText');
+
+/* ================= offscreen layers ================= */
+function layer(){ const c = document.createElement('canvas'); c.width = W; c.height = H; return c; }
+const baseC = layer(), dirtC = layer(), sheenC = layer(), penC = layer(), devC = layer();
+const bctx = baseC.getContext('2d'), dctx = dirtC.getContext('2d'),
+      shctx = sheenC.getContext('2d'), pctx = penC.getContext('2d'), vctx = devC.getContext('2d');
+
+/* ================= coverage grids ================= */
+function makeGrid(){ return new Float32Array(COLS * ROWS); }
+function stampGrid(g, x, y, rad, amt){
+  const c0 = Math.max(0, Math.floor((x - rad - Z.x0) / CS)),
+        c1 = Math.min(COLS - 1, Math.floor((x + rad - Z.x0) / CS)),
+        r0 = Math.max(0, Math.floor((y - rad - Z.y0) / CS)),
+        r1 = Math.min(ROWS - 1, Math.floor((y + rad - Z.y0) / CS));
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++){
+    const cx = Z.x0 + c * CS + CS/2, cy = Z.y0 + r * CS + CS/2;
+    if ((cx-x)*(cx-x) + (cy-y)*(cy-y) <= rad*rad){
+      const i = r * COLS + c; g[i] = Math.min(1, g[i] + amt);
+    }
+  }
+}
+function coverage(g){ let n = 0; for (let i = 0; i < g.length; i++) if (g[i] >= 0.5) n++; return n / g.length; }
+let grid = makeGrid();   // shared, reset each spray/wipe sub-step
+
+/* ================= state ================= */
+const state = {
+  idx: -1,               // index into FLOW
+  tool: null,            // 'cleaner' | 'penetrant' | 'developer' | 'rag' | null
+  rag: 'fresh',          // 'fresh' | 'moist' | 'dirty'
+  spraying: false, wiping: false, onRag: false,
+  px: 0, py: 0,          // pointer in stage coords
+  clientX: 0, clientY: 0,
+  penMult: 0,            // visible penetrant multiplier (wipe passes step it down)
+  sheenA: 0,             // cleaner film opacity
+  dirtA: 1,              // pre-clean soil
+  bleed: 0,              // 0..1 bleedout growth
+  bleedFade: 1,          // post-clean fade
+  devA: 1,
+  moistProg: 0,
+  timer: null,           // {sim, rate, left, running, done}
+  mistakes: [],
+  hintAt: 0, lastHint: '',
+  oversprayRun: 0,
+  advancing: false,
+  results: null,
+  done: false
+};
+
+/* ================= procedure flow ================= */
+const FLOW = [
+ { step:1, name:'Pre-clean',  id:'s1a', text:'Spray the <b>Cleaner</b> over the whole marked inspection area, then it gets a wipe.', tool:'cleaner', widget:'cov', covLabel:'Cleaner coverage', need:0.85, rad:26 },
+ { step:1, name:'Pre-clean',  id:'s1b', text:'Now wipe the area down with the <b>lint-free rag</b> to lift off the grime.', tool:'rag', ragNeed:'any', widget:'cov', covLabel:'Wiped', need:0.8, rad:30 },
+ { step:1, name:'Pre-clean',  id:'s1c', text:'Let the solvent flash off — give it <b>30 seconds</b> to dry.', tool:null, widget:'timer', sim:30, real:10 },
+ { step:2, name:'Penetrant',  id:'s2a', text:'Spray the <b>Red Dye Penetrant</b> over the entire inspection area.', tool:'penetrant', widget:'cov', covLabel:'Penetrant coverage', need:0.9, rad:26 },
+ { step:2, name:'Penetrant',  id:'s2b', text:'Penetrant dwell — leave it on for <b>5 minutes</b> so it can seep into any flaws.', tool:null, widget:'timer', sim:300, real:40 },
+ { step:3, name:'Removal',    id:'s3a', text:'Wipe off the excess penetrant with a <b>dry rag</b>. One direction, steady passes.', tool:'rag', ragNeed:'fresh', widget:'cov', covLabel:'First wipe', need:0.8, rad:30 },
+ { step:3, name:'Removal',    id:'s3b', text:'Take a <b>fresh rag</b> and spray <b>Cleaner onto the rag</b> to moisten it — never spray cleaner straight onto the part now.', tool:'cleaner', widget:'moist' },
+ { step:3, name:'Removal',    id:'s3c', text:'Wipe the area with the <b>moistened rag</b> to pull off the last of the surface dye.', tool:'rag', ragNeed:'moist', widget:'cov', covLabel:'Solvent wipe', need:0.8, rad:30 },
+ { step:3, name:'Removal',    id:'s3d', text:'Finish with one more pass using a <b>fresh dry rag</b>.', tool:'rag', ragNeed:'fresh', widget:'cov', covLabel:'Final wipe', need:0.8, rad:30 },
+ { step:4, name:'Developer',  id:'s4a', text:'Spray a <b>thin, even coat of Developer</b> over the inspection area.', tool:'developer', widget:'cov', covLabel:'Developer coverage', need:0.85, rad:26 },
+ { step:4, name:'Developer',  id:'s4b', text:'Developer dwell — <b>5 minutes</b>. Watch the plate: trapped penetrant will bleed out.', tool:null, widget:'timer', sim:300, real:40 },
+ { step:5, name:'Evaluate',   id:'s5',  text:'Drag the <b>ruler</b> onto the plate, measure each indication tip-to-tip, and enter your readings below.', tool:'ruler', widget:'none' },
+ { step:6, name:'Post-clean', id:'s6a', text:'Good work. Post-clean: spray <b>Cleaner</b> over the area to dissolve the developer.', tool:'cleaner', widget:'cov', covLabel:'Cleaner coverage', need:0.8, rad:26 },
+ { step:6, name:'Post-clean', id:'s6b', text:'Wipe the plate down with a <b>rag</b> and you’re done.', tool:'rag', ragNeed:'any', widget:'cov', covLabel:'Wiped clean', need:0.8, rad:30 }
+];
+const cur = () => FLOW[state.idx];
+
+/* ================= svg icons ================= */
+function canSVG(color, h){
+  h = h || 52;
+  return `<svg class="can" width="${h*0.62}" height="${h}" viewBox="0 0 36 58">
+    <rect x="7" y="14" width="22" height="42" rx="3" fill="#dedbd2" stroke="#a8a49a" stroke-width="1"/>
+    <rect x="7" y="23" width="22" height="20" fill="${color}"/>
+    <rect x="7" y="23" width="22" height="3" fill="rgba(255,255,255,.25)"/>
+    <rect x="12" y="8.5" width="12" height="6.5" rx="1.5" fill="#b3afa6" stroke="#8d897f" stroke-width="0.8"/>
+    <rect x="15.4" y="3.5" width="5.2" height="5.5" rx="1" fill="#6f6c66"/>
+    <circle cx="18" cy="5.4" r="1.1" fill="#2c2a27"/>
+  </svg>`;
+}
+function ragSVG(kind, h){
+  h = h || 44;
+  const base = kind === 'moist' ? '#cfe3f0' : kind === 'dirty' ? '#e8c7c7' : '#efece4';
+  const fold = kind === 'moist' ? '#b7d3e6' : kind === 'dirty' ? '#d8a8a8' : '#ddd8cc';
+  const spots = kind === 'dirty' ? '<ellipse cx="20" cy="22" rx="6" ry="3.4" fill="rgba(200,16,46,.55)"/><ellipse cx="34" cy="27" rx="4.4" ry="2.6" fill="rgba(200,16,46,.4)"/>' : '';
+  return `<svg width="${h*1.25}" height="${h}" viewBox="0 0 54 42">
+    <path d="M4 14 Q14 4 30 8 Q48 4 50 16 Q52 28 40 34 Q26 40 12 34 Q2 28 4 14 Z" fill="${base}" stroke="#b9b4a6" stroke-width="1"/>
+    <path d="M10 18 Q22 12 34 16 Q44 18 44 24" fill="none" stroke="${fold}" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M14 26 Q26 22 38 27" fill="none" stroke="${fold}" stroke-width="2" stroke-linecap="round"/>
+    ${spots}
+  </svg>`;
+}
+function rulerSVG(h){
+  h = h || 30;
+  let t = '';
+  for (let i = 0; i <= 20; i++) t += `<rect x="${6 + i*4.4}" y="4" width="1" height="${i%4===0?10:6}" fill="#6b5a1e"/>`;
+  return `<svg width="${h*3.3}" height="${h}" viewBox="0 0 100 30">
+    <rect x="2" y="2" width="96" height="26" rx="2" fill="#eecf6d" stroke="#b89b3d" stroke-width="1.2"/>${t}
+  </svg>`;
+}
+$('icCleaner').innerHTML = canSVG('#1d6fa5');
+$('icPen').innerHTML = canSVG('#c8102e');
+$('icDev').innerHTML = canSVG('#8a8f96');
+$('icRag').innerHTML = ragSVG('fresh');
+$('icRuler').innerHTML = rulerSVG();
+
+/* ================= base plate rendering ================= */
+function drawBase(){
+  const g = bctx;
+  // bench
+  g.fillStyle = '#2b2723'; g.fillRect(0, 0, W, H);
+  g.strokeStyle = 'rgba(255,255,255,.03)';
+  for (let y = 0; y < H; y += 7){ g.beginPath(); g.moveTo(0, y); g.lineTo(W, y + 2); g.stroke(); }
+  // plate shadow + body
+  g.save();
+  g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = 18; g.shadowOffsetY = 6;
+  const pg = g.createLinearGradient(0, PLATE.y0, 0, PLATE.y1);
+  pg.addColorStop(0, '#c3c8cd'); pg.addColorStop(0.5, '#aab0b7'); pg.addColorStop(1, '#969ca4');
+  g.fillStyle = pg;
+  g.fillRect(PLATE.x0, PLATE.y0, PLATE.x1 - PLATE.x0, PLATE.y1 - PLATE.y0);
+  g.restore();
+  // brushed texture
+  g.save();
+  g.beginPath(); g.rect(PLATE.x0, PLATE.y0, PLATE.x1 - PLATE.x0, PLATE.y1 - PLATE.y0); g.clip();
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 240; i++){
+    const y = PLATE.y0 + rnd() * (PLATE.y1 - PLATE.y0);
+    const x = PLATE.x0 + rnd() * (PLATE.x1 - PLATE.x0);
+    const len = 30 + rnd() * 120;
+    g.strokeStyle = `rgba(255,255,255,${0.02 + rnd() * 0.05})`;
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x + len, y); g.stroke();
+  }
+  // heat tint bands beside the weld (HAZ)
+  const hz = g.createLinearGradient(0, WELD_Y - BEAD_HALF - 34, 0, WELD_Y);
+  hz.addColorStop(0, 'rgba(120,110,140,0)'); hz.addColorStop(1, 'rgba(96,88,120,.18)');
+  g.fillStyle = hz; g.fillRect(PLATE.x0, WELD_Y - BEAD_HALF - 34, PLATE.x1 - PLATE.x0, 34 + BEAD_HALF);
+  const hz2 = g.createLinearGradient(0, WELD_Y + BEAD_HALF + 34, 0, WELD_Y);
+  hz2.addColorStop(0, 'rgba(120,110,140,0)'); hz2.addColorStop(1, 'rgba(96,88,120,.18)');
+  g.fillStyle = hz2; g.fillRect(PLATE.x0, WELD_Y - BEAD_HALF, PLATE.x1 - PLATE.x0, 34 + BEAD_HALF);
+  g.fillStyle = 'rgba(190,150,80,.10)';
+  g.fillRect(PLATE.x0, WELD_Y - BEAD_HALF - 12, PLATE.x1 - PLATE.x0, 12);
+  g.fillRect(PLATE.x0, WELD_Y + BEAD_HALF, PLATE.x1 - PLATE.x0, 12);
+  // weld bead: stacked ripple arcs
+  const bg = g.createLinearGradient(0, WELD_Y - BEAD_HALF, 0, WELD_Y + BEAD_HALF);
+  bg.addColorStop(0, '#9298a0'); bg.addColorStop(0.45, '#c9ced4'); bg.addColorStop(1, '#7e848c');
+  g.fillStyle = bg;
+  g.beginPath();
+  g.moveTo(PLATE.x0, WELD_Y - BEAD_HALF);
+  g.lineTo(PLATE.x1, WELD_Y - BEAD_HALF);
+  g.lineTo(PLATE.x1, WELD_Y + BEAD_HALF);
+  g.lineTo(PLATE.x0, WELD_Y + BEAD_HALF);
+  g.closePath(); g.fill();
+  for (let x = PLATE.x0 - 6; x < PLATE.x1 + 8; x += 11){
+    g.beginPath();
+    g.ellipse(x, WELD_Y, 10, BEAD_HALF - 1.5, 0, -Math.PI/2, Math.PI/2);
+    g.strokeStyle = 'rgba(70,76,84,.5)'; g.lineWidth = 1.6; g.stroke();
+    g.beginPath();
+    g.ellipse(x - 3, WELD_Y, 10, BEAD_HALF - 2.5, 0, -Math.PI/2, Math.PI/2);
+    g.strokeStyle = 'rgba(235,238,242,.55)'; g.lineWidth = 1; g.stroke();
+  }
+  g.strokeStyle = 'rgba(60,66,74,.65)'; g.lineWidth = 1.4;
+  g.strokeRect(PLATE.x0, WELD_Y - BEAD_HALF, PLATE.x1 - PLATE.x0, BEAD_HALF * 2);
+  // plate edge bevel
+  g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1;
+  g.strokeRect(PLATE.x0 + 0.5, PLATE.y0 + 0.5, PLATE.x1 - PLATE.x0 - 1, PLATE.y1 - PLATE.y0 - 1);
+  g.restore();
+  // ID stencil
+  g.fillStyle = 'rgba(60,60,64,.5)';
+  g.font = '600 11px "JetBrains Mono", monospace';
+  g.fillText('PLATE  PT-114  ·  SA-516-70  ·  SMAW', PLATE.x0 + 8, PLATE.y1 - 10);
+}
+function drawDirt(){
+  const g = dctx; g.clearRect(0, 0, W, H);
+  let seed = 42;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  g.save();
+  g.beginPath(); g.rect(Z.x0 - 20, Z.y0 - 26, Z.x1 - Z.x0 + 40, Z.y1 - Z.y0 + 52); g.clip();
+  for (let i = 0; i < 26; i++){
+    const x = Z.x0 + rnd() * (Z.x1 - Z.x0), y = Z.y0 - 14 + rnd() * (Z.y1 - Z.y0 + 28);
+    const rx = 12 + rnd() * 34, ry = 5 + rnd() * 12;
+    const gr = g.createRadialGradient(x, y, 0, x, y, rx);
+    gr.addColorStop(0, `rgba(64,54,38,${0.12 + rnd() * 0.14})`);
+    gr.addColorStop(1, 'rgba(64,54,38,0)');
+    g.fillStyle = gr;
+    g.save(); g.translate(x, y); g.scale(1, ry / rx);
+    g.beginPath(); g.arc(0, 0, rx, 0, Math.PI * 2); g.fill(); g.restore();
+  }
+  for (let i = 0; i < 8; i++){
+    const x = Z.x0 + rnd() * (Z.x1 - Z.x0), y = Z.y0 + rnd() * (Z.y1 - Z.y0);
+    g.strokeStyle = `rgba(50,44,34,${0.16 + rnd() * 0.1})`; g.lineWidth = 1 + rnd() * 1.6;
+    g.beginPath(); g.moveTo(x, y);
+    g.quadraticCurveTo(x + 20 - rnd() * 40, y + 14 - rnd() * 28, x + 40 - rnd() * 80, y + 10 - rnd() * 20);
+    g.stroke();
+  }
+  g.restore();
+}
+drawBase(); drawDirt();
+
+/* ================= chemical layer stamps ================= */
+function clampPlate(x, y){
+  return { x: Math.max(PLATE.x0, Math.min(PLATE.x1, x)), y: Math.max(PLATE.y0, Math.min(PLATE.y1, y)) };
+}
+function sprayLayer(g, x, y, r, rgb, a){
+  const gr = g.createRadialGradient(x, y, 0, x, y, r);
+  gr.addColorStop(0, `rgba(${rgb},${a})`);
+  gr.addColorStop(0.7, `rgba(${rgb},${a * 0.55})`);
+  gr.addColorStop(1, `rgba(${rgb},0)`);
+  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+}
+function wipeLayer(g, x, y, r, a){
+  g.save(); g.globalCompositeOperation = 'destination-out';
+  const gr = g.createRadialGradient(x, y, 0, x, y, r);
+  gr.addColorStop(0, `rgba(0,0,0,${a})`); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+
+/* ================= particles ================= */
+const parts = [];
+function spawnSpray(x, y, rgb){
+  for (let i = 0; i < 7; i++){
+    const ang = Math.PI * (0.15 + Math.random() * 0.7) + Math.PI * 0.55;
+    const sp = 40 + Math.random() * 130;
+    parts.push({ x: x + (Math.random()*8-4), y: y - 2, vx: Math.cos(ang)*sp*-1, vy: Math.sin(ang)*sp,
+      life: 0.28 + Math.random() * 0.22, t: 0, r: 1.2 + Math.random() * 2.6, rgb });
+  }
+}
+function stepParts(dt){
+  for (let i = parts.length - 1; i >= 0; i--){
+    const p = parts[i]; p.t += dt;
+    if (p.t > p.life){ parts.splice(i, 1); continue; }
+    p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 60 * dt;
+  }
+}
+
+/* ================= bleedout indications ================= */
+function crackPts(c){
+  if (c.pts) return c.pts;
+  const pts = []; const n = 9;
+  let seed = c.id === 'CL' ? 5 : 11;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i <= n; i++){
+    const t = i / n;
+    const jx = (i === 0 || i === n) ? 0 : (rnd() - 0.5) * 2.4;
+    const jy = (i === 0 || i === n) ? 0 : (rnd() - 0.5) * 3.4;
+    pts.push({ x: c.x0 + (c.x1 - c.x0) * t + jx, y: c.y0 + (c.y1 - c.y0) * t + jy });
+  }
+  c.pts = pts; return pts;
+}
+function drawBleed(g){
+  const bp = state.bleed, fade = state.bleedFade;
+  if (bp <= 0 || fade <= 0) return;
+  g.save(); g.globalAlpha = fade;
+  // porosity
+  for (const p of PORES){
+    const r = p.r * (0.55 + 0.75 * bp);
+    const halo = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 2.1);
+    halo.addColorStop(0, `rgba(198,18,44,${0.85 * bp})`);
+    halo.addColorStop(0.45, `rgba(214,60,80,${0.5 * bp})`);
+    halo.addColorStop(1, 'rgba(220,90,100,0)');
+    g.fillStyle = halo; g.beginPath(); g.arc(p.x, p.y, r * 2.1, 0, Math.PI * 2); g.fill();
+    g.fillStyle = `rgba(150,8,30,${0.9 * bp})`;
+    g.beginPath(); g.arc(p.x, p.y, r * 0.62, 0, Math.PI * 2); g.fill();
+  }
+  // cracks
+  for (const c of CRACKS){
+    const pts = crackPts(c);
+    const path = () => { g.beginPath(); g.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y); };
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    path(); g.strokeStyle = `rgba(214,70,88,${0.28 * bp})`; g.lineWidth = 2.5 + 7.5 * bp; g.stroke();
+    path(); g.strokeStyle = `rgba(200,20,46,${0.55 * bp})`; g.lineWidth = 1.8 + 3.6 * bp; g.stroke();
+    path(); g.strokeStyle = `rgba(140,6,26,${0.95 * bp})`; g.lineWidth = 1.6; g.stroke();
+  }
+  g.restore();
+}
+
+/* ================= overlay svg: zone + ruler ================= */
+const NS = 'http://www.w3.org/2000/svg';
+function el(n, attrs){ const e = document.createElementNS(NS, n);
+  for (const k in attrs) e.setAttribute(k, attrs[k]); return e; }
+(function zoneMark(){
+  const g = el('g', { class: 'zone' });
+  g.appendChild(el('rect', { x: Z.x0, y: Z.y0, width: Z.x1 - Z.x0, height: Z.y1 - Z.y0,
+    fill: 'none', stroke: '#e8a87c', 'stroke-width': 1.4, 'stroke-dasharray': '7 6', opacity: 0.85 }));
+  const label = el('text', { x: Z.x0 + 2, y: Z.y0 - 8, fill: '#8a3810', 'font-size': 11,
+    'font-family': "'JetBrains Mono', monospace", 'letter-spacing': '1.5',
+    stroke: 'rgba(250,247,242,.85)', 'stroke-width': 2.5, 'paint-order': 'stroke' });
+  label.textContent = 'INSPECTION AREA — FULL WELD + 1 IN EACH SIDE (HAZ)';
+  g.appendChild(label);
+  ovl.appendChild(g);
+})();
+
+/* ruler */
+const RULER_L = 5 * PPI, RULER_H = 44;
+let rulerG = null, rulerPos = { x: 340, y: 350 };
+function buildRuler(){
+  rulerG = el('g', { class: 'ruler', visibility: 'hidden' });
+  rulerG.appendChild(el('rect', { x: 0, y: 0, width: RULER_L + 16, height: RULER_H, rx: 3,
+    fill: 'rgba(238,207,109,.88)', stroke: '#a88b32', 'stroke-width': 1.4 }));
+  for (let e = 0; e <= 5 * 8; e++){         // 1/8-inch ticks
+    const x = 8 + e * PPI / 8;
+    const major = e % 8 === 0, half = e % 4 === 0;
+    rulerG.appendChild(el('rect', { x: x - 0.6, y: 0, width: 1.2,
+      height: major ? 16 : half ? 11 : 7, fill: '#4d3f12' }));
+    if (major){
+      const t = el('text', { x: x, y: 30, 'text-anchor': 'middle', fill: '#4d3f12',
+        'font-size': 13, 'font-weight': 700, 'font-family': "'JetBrains Mono', monospace" });
+      t.textContent = e / 8; rulerG.appendChild(t);
+    }
+  }
+  const lbl = el('text', { x: RULER_L / 2 + 8, y: 41, 'text-anchor': 'middle', fill: 'rgba(77,63,18,.6)',
+    'font-size': 8, 'letter-spacing': '2', 'font-family': "'JetBrains Mono', monospace" });
+  lbl.textContent = 'INCHES'; rulerG.appendChild(lbl);
+  ovl.appendChild(rulerG);
+  setRuler(rulerPos.x, rulerPos.y);
+  let drag = null;
+  rulerG.addEventListener('pointerdown', e => {
+    e.preventDefault(); e.stopPropagation();
+    rulerG.classList.add('grabbing');
+    const p = svgPoint(e);
+    drag = { dx: p.x - rulerPos.x, dy: p.y - rulerPos.y, id: e.pointerId };
+    rulerG.setPointerCapture(e.pointerId);
+  });
+  rulerG.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const p = svgPoint(e);
+    setRuler(
+      Math.max(-RULER_L * 0.5, Math.min(W - RULER_L * 0.5, p.x - drag.dx)),
+      Math.max(0, Math.min(H - RULER_H, p.y - drag.dy)));
+  });
+  const end = e => { if (drag && e.pointerId === drag.id){ drag = null; rulerG.classList.remove('grabbing'); } };
+  rulerG.addEventListener('pointerup', end); rulerG.addEventListener('pointercancel', end);
+}
+function setRuler(x, y){ rulerPos = { x, y }; rulerG.setAttribute('transform', `translate(${x} ${y})`); }
+function svgPoint(e){
+  const r = ovl.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
+}
+buildRuler();
+
+/* ================= toast & mistakes ================= */
+let toastTimer = 0;
+function toast(msg, kind){
+  const now = performance.now();
+  if (msg === state.lastHint && now - state.hintAt < 2600) return;
+  state.lastHint = msg; state.hintAt = now;
+  toastEl.textContent = msg;
+  toastEl.className = 'toast show' + (kind ? ' ' + kind : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3400);
+}
+function mistake(msg){
+  state.mistakes.push(msg);
+  toast('⚠ ' + msg, 'warn');
+}
+
+/* ================= widgets ================= */
+function renderWidget(){
+  const s = cur();
+  if (!s){ widget.innerHTML = ''; return; }
+  if (s.widget === 'cov'){
+    widget.innerHTML = `<div class="covbox"><div class="covlabel">${s.covLabel}</div>
+      <div class="covbar" id="covbar"><i id="covfill"></i></div></div>`;
+  } else if (s.widget === 'timer'){
+    const mm = Math.floor(s.sim / 60), ss = s.sim % 60;
+    widget.innerHTML = `<div class="timerbox" id="timerbox">
+      <div><div class="digits" id="tdig">${String(mm).padStart(1,'0')}:${String(ss).padStart(2,'0')}</div>
+      <div class="sub">simulated ×${(s.sim / s.real).toFixed(1)} speed</div></div>
+      <button id="tstart">Start timer</button></div>`;
+    $('tstart').addEventListener('click', startTimer);
+  } else if (s.widget === 'moist'){
+    widget.innerHTML = `<div class="covbox"><div class="covlabel">Rag moistened</div>
+      <div class="covbar" id="covbar"><i id="covfill"></i></div></div>`;
+  } else widget.innerHTML = '';
+}
+function setCovBar(v){
+  const f = $('covfill'); if (!f) return;
+  f.style.width = Math.round(v * 100) + '%';
+  const b = $('covbar'); if (b) b.classList.toggle('full', v >= 1);
+}
+
+/* ================= timers ================= */
+function startTimer(){
+  const s = cur(); if (!s || s.widget !== 'timer' || state.timer) return;
+  state.timer = { sim: s.sim, left: s.sim, rate: s.sim / s.real, running: true };
+  const btn = $('tstart'); if (btn){ btn.disabled = true; btn.textContent = 'Running…'; }
+  const box = $('timerbox'); if (box) box.classList.add('running');
+}
+function stepTimer(dt){
+  const t = state.timer; if (!t || !t.running) return;
+  t.left = Math.max(0, t.left - dt * t.rate);
+  if (cur() && cur().id === 's1c') state.sheenA = Math.max(0, state.sheenA - dt * 0.5);
+  if (cur() && cur().id === 's4b') state.bleed = Math.min(1, 1 - t.left / t.sim + 0.02);
+  const d = $('tdig');
+  if (d){
+    const mm = Math.floor(t.left / 60), ss = Math.floor(t.left % 60);
+    d.textContent = `${mm}:${String(ss).padStart(2, '0')}`;
+  }
+  if (t.left <= 0){
+    t.running = false;
+    const box = $('timerbox'); if (box){ box.classList.remove('running'); box.classList.add('done'); }
+    if (cur().id === 's1c') state.sheenA = 0;
+    if (cur().id === 's4b') state.bleed = 1;
+    toast(cur().id === 's4b' ? '✓ Dwell complete — those red marks are your indications.' : '✓ Time — surface is ready.', 'good');
+    advance();
+  }
+}
+
+/* ================= step machine ================= */
+function advance(){
+  if (state.advancing) return;
+  state.advancing = true;
+  setTimeout(() => {
+    state.advancing = false;
+    state.timer = null;
+    // side effects when leaving a sub-step
+    const leaving = cur();
+    if (leaving){
+      if (leaving.id === 's1b'){ state.dirtA = 0; state.rag = 'dirty'; updateRagUI(); }
+      if (leaving.id === 's2a') state.penMult = 1;
+      if (leaving.id === 's3a'){ state.penMult = 0.34; state.rag = 'dirty'; updateRagUI(); }
+      if (leaving.id === 's3c'){ state.penMult = 0.08; state.rag = 'dirty'; updateRagUI(); }
+      if (leaving.id === 's3d'){ state.penMult = 0; pctx.clearRect(0,0,W,H); state.rag = 'dirty'; updateRagUI(); }
+      if (leaving.id === 's6b'){ finish(); return; }
+    }
+    state.idx++;
+    grid = makeGrid();
+    state.moistProg = 0;
+    enterStep();
+  }, 650);
+}
+function enterStep(){
+  const s = cur(); if (!s) return;
+  stepTag.textContent = `Step ${s.step} of 6 · ${s.name}`;
+  stepText.innerHTML = s.text;
+  renderWidget();
+  // progress pills
+  document.querySelectorAll('#steps .s').forEach(p => {
+    const i = +p.dataset.i;
+    p.classList.toggle('active', i === s.step);
+    p.classList.toggle('done', i < s.step);
+  });
+  // ruler + measure panel
+  if (s.id === 's5'){
+    if (state.tool) selectTool(state.tool);   // put the can down for evaluation
+    rulerG.setAttribute('visibility', 'visible');
+    setRuler(330, 300);
+    $('measure').classList.add('show');
+    $('toolRuler').classList.remove('hidden');
+    toast('Ruler is on the bench — drag it up to the plate.', 'good');
+  }
+  if (s.step === 6){
+    $('measure').classList.remove('show');
+    rulerG.setAttribute('visibility', 'hidden');
+    $('toolRuler').classList.add('hidden');
+  }
+  if (s.id === 's3b' && state.rag !== 'fresh')
+    toast('First take a fresh rag (＋ New rag), then spray cleaner on it.');
+}
+
+/* completion checks for spray / wipe coverage */
+function checkCoverage(){
+  const s = cur(); if (!s || (s.widget !== 'cov')) return;
+  const v = Math.min(1, coverage(grid) / s.need);
+  setCovBar(v);
+  if (v >= 1 && !state.advancing){
+    toast('✓ Good, even coverage.', 'good');
+    advance();
+  }
+}
+
+/* ================= tool selection ================= */
+const toolEls = { cleaner: $('toolCleaner'), penetrant: $('toolPen'),
+                  developer: $('toolDev'), rag: $('toolRag'), ruler: $('toolRuler') };
+function selectTool(t){
+  state.tool = (state.tool === t) ? null : t;
+  for (const k in toolEls) toolEls[k].classList.toggle('selected', state.tool === k);
+  updateGhost();
+}
+for (const k in toolEls){
+  toolEls[k].addEventListener('click', e => {
+    if (e.target.closest('.newrag')) return;
+    if (k === 'ruler'){ toast('Just drag the yellow ruler itself — grab it on the plate.'); return; }
+    if (k === 'rag' && state.ragSprayLatch
+        && performance.now() - state.ragHoldStart > 280) return;   // held = moisten action, not a select
+    selectTool(k);
+  });
+}
+$('newRagBtn').addEventListener('click', () => {
+  state.rag = 'fresh'; updateRagUI();
+  toast('Fresh lint-free rag ready.', 'good');
+});
+function updateRagUI(){
+  const b = $('ragBadge');
+  b.className = 'badge ' + (state.rag === 'moist' ? 'moist' : state.rag === 'dirty' ? 'dirty' : 'dry');
+  b.textContent = state.rag === 'moist' ? 'Moist · Cleaner' : state.rag === 'dirty' ? 'Dirty · Used' : 'Dry · Fresh';
+  $('icRag').innerHTML = ragSVG(state.rag);
+  if (state.tool === 'rag') updateGhost();
+}
+window.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'Escape') selectTool(state.tool);
+  if (e.key === '1') selectTool('cleaner');
+  if (e.key === '2') selectTool('penetrant');
+  if (e.key === '3') selectTool('developer');
+  if (e.key === 'r' || e.key === 'R') selectTool('rag');
+});
+
+/* ghost following pointer */
+function updateGhost(){
+  if (!state.tool){ ghost.style.display = 'none'; stage.classList.remove('cantool'); return; }
+  stage.classList.add('cantool');
+  ghost.style.display = 'block';
+  if (state.tool === 'rag') ghost.innerHTML = ragSVG(state.rag, 54);
+  else ghost.innerHTML = canSVG(state.tool === 'cleaner' ? '#1d6fa5' : state.tool === 'penetrant' ? '#c8102e' : '#8a8f96', 72);
+  moveGhost();
+}
+function moveGhost(){
+  if (!state.tool) return;
+  const dx = state.tool === 'rag' ? -33 : -6, dy = state.tool === 'rag' ? -27 : 2;
+  ghost.style.transform = `translate(${state.clientX + dx}px, ${state.clientY + dy}px)`;
+  ghost.classList.toggle('spraying', state.spraying || state.wiping);
+}
+
+/* ================= pointer interaction ================= */
+function stagePos(e){
+  const r = cv.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
+}
+function overRagCard(e){
+  const r = toolEls.rag.getBoundingClientRect();
+  return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+}
+
+stage.addEventListener('pointerdown', e => {
+  if (e.target.closest('.ruler')) return;
+  if (!state.tool || state.tool === 'ruler') return;
+  e.preventDefault();
+  const s = cur(); if (!s) return;
+  if (state.tool === 'rag'){
+    if (!wipeAllowed(true)) return;
+    state.wiping = true;
+  } else {
+    if (!sprayAllowed(true)) return;
+    state.spraying = true;
+  }
+  const p = stagePos(e); state.px = p.x; state.py = p.y;
+  stage.setPointerCapture(e.pointerId);
+  moveGhost();
+});
+window.addEventListener('pointerdown', e => {
+  state.clientX = e.clientX; state.clientY = e.clientY;
+  const p = stagePos(e); state.px = p.x; state.py = p.y;
+}, true);
+window.addEventListener('pointermove', e => {
+  state.clientX = e.clientX; state.clientY = e.clientY;
+  const p = stagePos(e); state.px = p.x; state.py = p.y;
+  moveGhost();
+});
+window.addEventListener('pointerup', () => {
+  state.spraying = false; state.wiping = false;
+  setTimeout(() => { state.ragSprayLatch = false; }, 0);   // let the click handler see the latch first
+  moveGhost();
+});
+
+/* moistening: hold cleaner spray over the rag card */
+toolEls.rag.addEventListener('pointerdown', e => {
+  if (state.tool === 'cleaner'){
+    e.preventDefault();
+    state.ragSprayLatch = true;
+    state.ragHoldStart = performance.now();
+    state.spraying = true;
+  }
+});
+
+/* permission checks with contextual hints */
+function sprayAllowed(announce){
+  const s = cur();
+  const t = state.tool;
+  if (s.tool === t && s.widget === 'cov') return true;
+  if (announce){
+    if (t === 'penetrant' && s.id === 's1c') toast('Hold on — let the cleaner flash off first. Run the 30 s dry timer.');
+    else if (s.widget === 'timer') toast('Nothing to spray right now — start the timer and let it run.');
+    else if (t === 'cleaner' && (s.step === 3)) sprayCleanerOnPartWarning();
+    else if (t === 'penetrant' && s.step === 3) toast('The penetrant has already dwelled — now we remove the excess, not add more.');
+    else if (t === 'developer' && s.step < 4) toast('Developer comes after the excess penetrant is removed (Step 4).');
+    else if (t === 'cleaner' && s.step === 2) toast('Cleaner now would wash the penetrant away. It needs its full dwell.');
+    else toast('Right now: ' + plain(s.text));
+  }
+  return false;
+}
+let lastPartWarn = -9999;
+function sprayCleanerOnPartWarning(){
+  const now = performance.now();
+  if (now - lastPartWarn < 2000) return;
+  lastPartWarn = now;
+  mistake('Cleaner was sprayed directly on the part during removal — that can flush penetrant out of flaws and hide defects. Spray the rag instead.');
+}
+function wipeAllowed(announce){
+  const s = cur();
+  if (s.tool !== 'rag'){
+    if (announce){
+      if (s.widget === 'timer') toast('Let the timer run — no wiping during a dwell.');
+      else toast('Right now: ' + plain(s.text));
+    }
+    return false;
+  }
+  const need = s.ragNeed || 'any';
+  if (state.rag === 'dirty'){
+    if (announce) toast('That rag is loaded — take a fresh one (＋ New rag).');
+    return false;
+  }
+  if (need === 'fresh' && state.rag === 'moist'){
+    if (announce) toast('This pass needs a dry rag. Grab a fresh one.');
+    return false;
+  }
+  if (need === 'moist' && state.rag !== 'moist'){
+    if (announce) toast('The rag needs cleaner on it first — spray cleaner onto the rag in the tray.');
+    return false;
+  }
+  return true;
+}
+function plain(html){ return html.replace(/<[^>]+>/g, ''); }
+
+/* ================= per-frame spraying / wiping ================= */
+function applySpray(dt){
+  const s = cur(); if (!s) return;
+  const t = state.tool;
+
+  /* moistening the rag (pointer over rag card, cleaner in hand) */
+  if (t === 'cleaner' && overRagCard({ clientX: state.clientX, clientY: state.clientY })){
+    toolEls.rag.classList.add('getting-wet');
+    if (s.id === 's3b'){
+      if (state.rag === 'dirty'){ toast('Fresh rag first — this one is saturated.'); return; }
+      state.moistProg = Math.min(1, state.moistProg + dt * 1.4);
+      setCovBar(state.moistProg);
+      if (state.moistProg >= 1 && state.rag !== 'moist'){
+        state.rag = 'moist'; updateRagUI();
+        toast('✓ Rag is moistened with cleaner.', 'good');
+        advance();
+      }
+    } else if (s.step === 3) {
+      toast('Moistening comes after the first dry wipe — follow the step shown above.');
+    } else {
+      toast('No need to moisten the rag for this step.');
+    }
+    return;
+  }
+  toolEls.rag.classList.remove('getting-wet');
+
+  /* spraying the plate */
+  if (!sprayAllowed(false)){
+    // wrong-time spray attempts still show mist but do nothing chemical
+    if (t === 'cleaner' && cur().step === 3 && state.py > 0) sprayCleanerOnPartWarning();
+    return;
+  }
+  const p = clampPlate(state.px, state.py);
+  const inZone = state.px >= Z.x0 - 14 && state.px <= Z.x1 + 14 && state.py >= Z.y0 - 14 && state.py <= Z.y1 + 14;
+  if (!inZone){
+    state.oversprayRun += dt;
+    if (state.oversprayRun > 0.7){ toast('Aim inside the dashed inspection area.'); state.oversprayRun = 0; }
+  } else state.oversprayRun = 0;
+
+  const r = s.rad || 26;
+  if (t === 'cleaner'){
+    sprayLayer(shctx, p.x, p.y, r, '215,232,240', 0.10);
+    state.sheenA = 1;
+    spawnSpray(state.px, state.py, '200,225,240');
+    if (s.id === 's6a'){
+      stampGrid(grid, p.x, p.y, r, 0.3);
+      state.bleedFade = Math.max(0, 1 - coverage(grid) * 1.15);
+      checkCoverage();
+    } else { stampGrid(grid, p.x, p.y, r, 0.3); checkCoverage(); }
+  } else if (t === 'penetrant'){
+    sprayLayer(pctx, p.x, p.y, r, '200,16,46', 0.14);
+    spawnSpray(state.px, state.py, '210,30,55');
+    state.penMult = 1;
+    stampGrid(grid, p.x, p.y, r, 0.3); checkCoverage();
+  } else if (t === 'developer'){
+    sprayLayer(vctx, p.x, p.y, r, '246,244,238', 0.16);
+    spawnSpray(state.px, state.py, '240,240,235');
+    stampGrid(grid, p.x, p.y, r, 0.3); checkCoverage();
+  }
+}
+function applyWipe(dt){
+  const s = cur(); if (!s) return;
+  if (!wipeAllowed(false)) return;
+  const p = clampPlate(state.px, state.py);
+  const r = s.rad || 30;
+  stampGrid(grid, p.x, p.y, r, 0.28);
+  if (s.id === 's1b'){ wipeLayer(dctx, p.x, p.y, r, 0.5); wipeLayer(shctx, p.x, p.y, r, 0.4); }
+  if (s.id === 's3a'){ wipeLayer(pctx, p.x, p.y, r, 0.30); }
+  if (s.id === 's3c'){ wipeLayer(pctx, p.x, p.y, r, 0.55); }
+  if (s.id === 's3d'){ wipeLayer(pctx, p.x, p.y, r, 0.85); }
+  if (s.id === 's6b'){ wipeLayer(vctx, p.x, p.y, r, 0.6); wipeLayer(shctx, p.x, p.y, r, 0.6); }
+  checkCoverage();
+}
+
+/* ================= measurement check ================= */
+$('checkBtn').addEventListener('click', () => {
+  const vCL = parseFloat($('mCL').value), vHZ = parseFloat($('mHAZ').value), vPO = parseFloat($('mPOR').value);
+  const okCL = Number.isFinite(vCL) && Math.abs(vCL - CRACKS[0].len) <= TOL;
+  const okHZ = Number.isFinite(vHZ) && Math.abs(vHZ - CRACKS[1].len) <= TOL;
+  const okPO = Number.isFinite(vPO) && vPO === PORES.length;
+  markInput('kCL', okCL); markInput('kHAZ', okHZ); markInput('kPOR', okPO);
+  const fb = $('mFb');
+  if (okCL && okHZ && okPO){
+    fb.textContent = '✓ Measurements accepted and recorded.';
+    fb.className = 'fb ok';
+    state.results = { cl: vCL, haz: vHZ, por: vPO };
+    ['mCL','mHAZ','mPOR'].forEach(id => $(id).disabled = true);
+    $('checkBtn').disabled = true;
+    advance();
+  } else {
+    const bad = [];
+    if (!okCL) bad.push('the centerline crack');
+    if (!okHZ) bad.push('the HAZ crack');
+    if (!okPO) bad.push('the porosity count');
+    fb.textContent = 'Re-check ' + bad.join(' and ') + '. Line the 0 mark on one tip of the indication and read at the other tip.';
+    fb.className = 'fb bad';
+    state.mistakes.push('Measurement retry: ' + bad.join(', '));
+  }
+});
+function markInput(id, ok){
+  const e = $(id); e.textContent = ok ? '✓' : '✗';
+  e.className = 'mark ' + (ok ? 'ok' : 'bad');
+}
+
+/* ================= finish / report ================= */
+function finish(){
+  state.done = true;
+  if (state.tool) selectTool(state.tool);
+  const sel = window.getSelection && window.getSelection();
+  if (sel) sel.removeAllRanges();
+  const r = state.results || { cl: '—', haz: '—', por: '—' };
+  $('repRows').innerHTML = `
+    <tr><td>Weld centerline</td><td>Linear — longitudinal crack</td><td>${r.cl} in (actual 1.5 in)</td><td class="ok">✓</td></tr>
+    <tr><td>Heat-affected zone</td><td>Linear — crack at weld toe</td><td>${r.haz} in (actual 1.0 in)</td><td class="ok">✓</td></tr>
+    <tr><td>Weld face</td><td>Rounded — porosity</td><td>${r.por} indications</td><td class="ok">✓</td></tr>`;
+  $('verdictBox').textContent = 'Disposition: REJECT — cracks (linear indications) are not acceptable in any amount. The weld requires repair and re-inspection.';
+  const n = state.mistakes.length;
+  $('repMistakes').textContent = n === 0
+    ? 'Procedure followed with no deviations. Excellent technique.'
+    : `Procedure deviations flagged during the run: ${n}. Most common on the shop floor too — review Step 3: cleaner goes on the rag, never on the part.`;
+  $('report').classList.remove('hidden');
+}
+
+/* ================= render loop ================= */
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (state.idx >= 0 && !state.done){
+    if (state.spraying) applySpray(dt);
+    else toolEls.rag.classList.remove('getting-wet');
+    if (state.wiping) applyWipe(dt);
+    stepTimer(dt);
+    // sheen slowly evaporates on its own
+    if (!state.spraying) state.sheenA = Math.max(0, state.sheenA - dt * 0.06);
+  }
+  stepParts(dt);
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.drawImage(baseC, 0, 0);
+  if (state.dirtA > 0){ ctx.globalAlpha = state.dirtA; ctx.drawImage(dirtC, 0, 0); ctx.globalAlpha = 1; }
+  if (state.penMult > 0){ ctx.globalAlpha = state.penMult; ctx.drawImage(penC, 0, 0); ctx.globalAlpha = 1; }
+  if (state.devA > 0){ ctx.globalAlpha = state.devA; ctx.drawImage(devC, 0, 0); ctx.globalAlpha = 1; }
+  drawBleed(ctx);
+  if (state.sheenA > 0){ ctx.globalAlpha = Math.min(0.85, state.sheenA); ctx.drawImage(sheenC, 0, 0); ctx.globalAlpha = 1; }
+  // particles
+  for (const p of parts){
+    ctx.globalAlpha = Math.max(0, 1 - p.t / p.life) * 0.55;
+    ctx.fillStyle = `rgb(${p.rgb})`;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ================= begin ================= */
+$('beginBtn').addEventListener('click', () => {
+  $('intro').classList.add('hidden');
+  state.idx = 0;
+  enterStep();
+});
+
+})();
+</script>
+</body>
+</html>
