@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MT — The Skin Effect</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #faf7f2;
+    --paper-deep: #f1ece2;
+    --ink: #1a1a1a;
+    --ink-soft: #4a4a47;
+    --ink-faded: #8a8a85;
+    --rule: #d9d2c4;
+    --amber: #b54515;
+    --amber-soft: #e8a87c;
+    --amber-tint: #fdf2e6;
+    --good: #2e7d4f;
+    --bad: #c8102e;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px -12px rgba(60,40,20,0.12);
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'Manrope', -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--paper); }
+  body {
+    font-family: var(--sans);
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.55;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(181, 69, 21, 0.04), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(181, 69, 21, 0.03), transparent 50%);
+  }
+  .container { max-width: 1080px; margin: 0 auto; padding: 36px 28px 72px; }
+
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 22px; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--amber); margin-bottom: 8px; font-weight: 500;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 600;
+    font-size: clamp(26px, 4vw, 38px); line-height: 1.05; letter-spacing: -0.02em;
+    font-variation-settings: 'opsz' 144;
+  }
+  h1 em { font-style: italic; color: var(--amber); font-weight: 500; }
+  .hdr-actions { display: flex; align-items: center; gap: 18px; padding-bottom: 2px; }
+  a.back {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-faded); text-decoration: none; padding-bottom: 6px;
+  }
+  a.back:hover { color: var(--amber); }
+  .fsbtn {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    background: none; border: 1px solid var(--rule); border-radius: 2px;
+    color: var(--ink-soft); padding: 7px 13px; cursor: pointer; white-space: nowrap;
+  }
+  .fsbtn:hover { border-color: var(--amber); color: var(--amber); }
+  .fsbtn:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  .fsbtn.hidden { display: none; }
+  :fullscreen .container { padding: 16px 28px 24px; }
+  :fullscreen header { margin-bottom: 12px; }
+
+  /* ---------- concept card ---------- */
+  .concept {
+    background: var(--ink); color: var(--paper); border-radius: 2px;
+    padding: 20px 24px; margin-bottom: 24px; box-shadow: var(--shadow);
+    position: relative;
+  }
+  .concept::before {
+    content: ''; position: absolute; inset: 4px;
+    border: 1px solid rgba(232,168,124,0.18); border-radius: 2px; pointer-events: none;
+  }
+  .concept .tag {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--amber-soft); margin-bottom: 6px;
+  }
+  .concept p { font-size: 15px; max-width: 860px; color: var(--paper-deep); }
+  .concept p b { color: var(--amber-soft); }
+  .concept .formula {
+    font-family: var(--mono); font-size: 14px; margin-top: 10px; color: var(--paper);
+    background: rgba(255,255,255,0.07); display: inline-block; padding: 6px 14px; border-radius: 2px;
+  }
+  .concept .formula i { color: var(--amber-soft); font-style: normal; }
+
+  h2.part {
+    font-family: var(--serif); font-weight: 500; font-size: 22px; margin: 34px 0 4px;
+  }
+  h2.part em { color: var(--amber); font-style: italic; }
+  p.partsub {
+    font-size: 13px; color: var(--ink-faded); font-family: var(--mono);
+    letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 16px;
+  }
+
+  /* ---------- lab layout ---------- */
+  .lab {
+    display: grid; grid-template-columns: minmax(300px, 430px) 1fr; gap: 18px;
+    align-items: start;
+  }
+  @media (max-width: 840px) { .lab { grid-template-columns: 1fr; } }
+  .panel {
+    background: #fff; border: 1px solid var(--rule); border-radius: 2px;
+    box-shadow: var(--shadow); padding: 18px 20px;
+  }
+  .panel h4 {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--ink-faded); font-weight: 600; margin-bottom: 12px;
+  }
+  .barwrap { text-align: center; }
+  .barwrap svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+  .legend {
+    display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; margin-top: 10px;
+    font-size: 11.5px; color: var(--ink-soft);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i.sw { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  /* waveform buttons */
+  .modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+  @media (max-width: 480px) { .modes { grid-template-columns: repeat(2, 1fr); } }
+  .modes button {
+    font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
+    padding: 10px 6px; background: var(--paper-deep); color: var(--ink-soft);
+    border: 1px solid var(--rule); border-radius: 2px; cursor: pointer;
+    transition: all .15s;
+  }
+  .modes button small { display: block; font-size: 9px; font-weight: 500; letter-spacing: 0.04em; color: var(--ink-faded); margin-top: 2px; }
+  .modes button:hover { border-color: var(--amber); }
+  .modes button.active { background: var(--amber); border-color: var(--amber); color: #fff; }
+  .modes button.active small { color: rgba(255,255,255,0.75); }
+  .modes button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+  .freqrow { margin-bottom: 14px; transition: opacity .2s; }
+  .freqrow.off { opacity: 0.35; pointer-events: none; }
+  .freqrow label {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--ink-soft); display: flex; justify-content: space-between; margin-bottom: 6px;
+  }
+  .freqrow label b { color: var(--amber); font-weight: 600; }
+  input[type=range] { width: 100%; accent-color: var(--amber); }
+
+  .readouts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  @media (max-width: 480px) { .readouts { grid-template-columns: 1fr; } }
+  .readout {
+    background: var(--amber-tint); border: 1px solid var(--rule); border-radius: 2px;
+    padding: 10px 12px;
+  }
+  .readout .k {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-faded); margin-bottom: 3px;
+  }
+  .readout .v { font-size: 14px; font-weight: 600; color: var(--ink); line-height: 1.35; }
+  .readout .v .big { font-family: var(--mono); font-size: 19px; color: var(--amber); }
+
+  .defrows { display: grid; gap: 6px; }
+  .defrow {
+    display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 10px;
+    padding: 8px 12px; border: 1px solid var(--rule); border-radius: 2px; background: var(--paper);
+  }
+  .defrow .id {
+    font-family: var(--mono); font-size: 12px; font-weight: 600;
+    width: 24px; height: 24px; border-radius: 50%; display: inline-flex;
+    align-items: center; justify-content: center; border: 1.5px solid var(--ink-soft); color: var(--ink-soft);
+  }
+  .defrow .nm { font-size: 13px; font-weight: 600; }
+  .defrow .nm small { display: block; font-weight: 500; font-size: 11px; color: var(--ink-faded); }
+  .badge {
+    font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; padding: 4px 9px; border-radius: 99px; white-space: nowrap;
+  }
+  .badge.strong { background: #1f2a22; color: #7ee2a8; }
+  .badge.faint { background: #fdf2e6; color: #a4630e; border: 1px solid #e6c391; }
+  .badge.none { background: var(--paper-deep); color: var(--ink-faded); border: 1px solid var(--rule); }
+
+  .trybox {
+    margin-top: 16px; border-left: 3px solid var(--amber); background: var(--amber-tint);
+    padding: 12px 16px; border-radius: 2px; font-size: 13.5px; color: var(--ink-soft);
+  }
+  .trybox b { color: var(--amber); font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; }
+  .trybox ul { margin: 6px 0 0 18px; }
+  .trybox li { margin-bottom: 3px; }
+
+  /* profile chart */
+  .chartwrap { margin-top: 4px; }
+  .chartwrap svg { width: 100%; height: auto; display: block; }
+
+  /* ---------- quiz ---------- */
+  .quiz {
+    background: #fff; border: 1px solid var(--rule); border-radius: 2px;
+    box-shadow: var(--shadow); padding: 22px 26px; max-width: 760px;
+  }
+  .quiz .qmeta {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faded);
+  }
+  .quiz .qmeta .score b { color: var(--amber); }
+  .quiz .qtext { font-family: var(--serif); font-size: 19px; font-weight: 500; line-height: 1.35; margin-bottom: 16px; }
+  .opts { display: grid; gap: 8px; }
+  .opts button {
+    text-align: left; font-family: var(--sans); font-size: 14px; font-weight: 500;
+    padding: 12px 16px; background: var(--paper); border: 1px solid var(--rule);
+    border-radius: 2px; cursor: pointer; color: var(--ink); transition: all .15s; line-height: 1.4;
+  }
+  .opts button:hover:not(:disabled) { border-color: var(--amber); background: var(--amber-tint); }
+  .opts button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  .opts button:disabled { cursor: default; }
+  .opts button.correct { border-color: var(--good); background: #edf7f0; color: #1d5637; font-weight: 600; }
+  .opts button.wrong { border-color: var(--bad); background: #fdf0f2; color: #8f0f24; }
+  .opts button.dim { opacity: 0.55; }
+  .explain {
+    margin-top: 14px; padding: 12px 16px; border-radius: 2px; font-size: 13.5px;
+    border-left: 3px solid var(--good); background: #edf7f0; color: var(--ink-soft); display: none;
+  }
+  .explain.show { display: block; }
+  .explain.miss { border-left-color: var(--bad); background: #fdf0f2; }
+  .explain b { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .qnav { margin-top: 16px; display: flex; justify-content: flex-end; }
+  .qnav button, .result button {
+    font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    background: var(--amber); color: #fff; border: none; border-radius: 2px;
+    padding: 11px 22px; cursor: pointer;
+  }
+  .qnav button:hover, .result button:hover { background: #9a3a12; }
+  .qnav button.hidden { display: none; }
+  .result { text-align: center; padding: 8px 0 4px; }
+  .result .rscore { font-family: var(--serif); font-size: 44px; font-weight: 600; color: var(--amber); margin-bottom: 4px; }
+  .result .rmsg { font-size: 15px; color: var(--ink-soft); margin-bottom: 18px; max-width: 460px; margin-left: auto; margin-right: auto; }
+
+  footer {
+    margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--rule);
+    font-size: 12px; color: var(--ink-faded); font-family: var(--mono);
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div>
+      <div class="eyebrow">Magnetic Particle Testing · MT</div>
+      <h1>The <em>Skin Effect</em></h1>
+    </div>
+    <div class="hdr-actions">
+      <button class="fsbtn" id="fsBtn" type="button">⛶ Fullscreen</button>
+      <a class="back" href="index.html">← Exercise Hub</a>
+    </div>
+  </header>
+
+  <div class="concept">
+    <div class="tag">The Concept</div>
+    <p>When <b>alternating current</b> flows through a conductor, the changing magnetic field induces opposing eddy currents that are strongest at the center of the part. The result: current — and the magnetic flux it produces — crowds toward the <b>surface</b>. This is the <b>skin effect</b>. In MT it means AC magnetization concentrates the field where surface defects live, while direct current penetrates the full cross-section and can reveal subsurface defects. The higher the frequency, the thinner the "skin."</p>
+    <div class="formula">δ&nbsp;=&nbsp;1&nbsp;/&nbsp;√(π&nbsp;·&nbsp;<i>f</i>&nbsp;·&nbsp;μ&nbsp;·&nbsp;σ) &nbsp;&nbsp;— standard depth of penetration (J drops to ≈37% of surface value)</div>
+  </div>
+
+  <h2 class="part">Part 1 — The <em>Penetration Lab</em></h2>
+  <p class="partsub">Circular magnetization · 25 mm steel bar · head-shot current</p>
+
+  <div class="lab">
+    <div class="panel barwrap">
+      <h4>Bar cross-section — current flows into the page ⊗</h4>
+      <svg id="barSvg" viewBox="0 0 380 380" role="img" aria-label="Cross-section of a steel bar showing current density distribution and defect indications">
+        <defs>
+          <radialGradient id="jgrad" cx="50%" cy="50%" r="50%"></radialGradient>
+          <filter id="fuzz" x="-60%" y="-60%" width="220%" height="220%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="n"/>
+            <feDisplacementMap in="SourceGraphic" in2="n" scale="5"/>
+            <feGaussianBlur stdDeviation="0.7"/>
+          </filter>
+        </defs>
+        <!-- steel bar -->
+        <circle cx="190" cy="190" r="152" fill="#c9c6bf"/>
+        <circle cx="190" cy="190" r="152" fill="url(#jgrad)"/>
+        <circle cx="190" cy="190" r="152" fill="none" stroke="#6f6c66" stroke-width="2.5"/>
+        <!-- depth rings (reference) -->
+        <g stroke="#6f6c66" stroke-dasharray="2 5" stroke-width="0.8" fill="none" opacity="0.5">
+          <circle cx="190" cy="190" r="121.6"/> <!-- 2.5 mm deep -->
+          <circle cx="190" cy="190" r="91.2"/>  <!-- 5.0 mm deep -->
+          <circle cx="190" cy="190" r="60.8"/>  <!-- 7.5 mm deep -->
+        </g>
+        <g font-family="'JetBrains Mono', monospace" font-size="9" fill="#6f6c66" opacity="0.85">
+          <text x="190" y="74" text-anchor="middle">2.5 mm</text>
+          <text x="190" y="105" text-anchor="middle">5 mm</text>
+          <text x="190" y="135" text-anchor="middle">7.5 mm</text>
+        </g>
+
+        <!-- defects (scale: 12.16 px per mm; rim at r=152) -->
+        <!-- A: surface crack at top-left (depth 0, breaks surface) -->
+        <g id="defA-shape">
+          <path d="M 97.5 70.5 l 8 12 l -3 6 l 8 10" fill="none" stroke="#3b3934" stroke-width="2.2" stroke-linecap="round"/>
+        </g>
+        <!-- B: near-surface seam, 1.5 mm deep, right side -->
+        <ellipse id="defB-shape" cx="320" cy="221" rx="4" ry="12" transform="rotate(14 320 221)" fill="#55524c"/>
+        <!-- C: subsurface inclusion, 4 mm deep, lower-left -->
+        <ellipse id="defC-shape" cx="107" cy="251" rx="11" ry="5" transform="rotate(-38 107 251)" fill="#55524c"/>
+        <!-- D: deep inclusion, 8 mm deep, lower-right of center -->
+        <ellipse id="defD-shape" cx="225" cy="232" rx="10" ry="5" transform="rotate(20 225 232)" fill="#55524c"/>
+
+        <!-- particle indications (opacity driven by JS) -->
+        <g filter="url(#fuzz)">
+          <path id="indA" d="M 95 67 l 11 15 l -3 6 l 9 12" fill="none" stroke="#14110c" stroke-width="7" stroke-linecap="round" opacity="0"/>
+          <ellipse id="indB" cx="320" cy="221" rx="8" ry="17" transform="rotate(14 320 221)" fill="#14110c" opacity="0"/>
+          <ellipse id="indC" cx="107" cy="251" rx="16" ry="9" transform="rotate(-38 107 251)" fill="#14110c" opacity="0"/>
+          <ellipse id="indD" cx="225" cy="232" rx="15" ry="9" transform="rotate(20 225 232)" fill="#14110c" opacity="0"/>
+        </g>
+
+        <!-- labels -->
+        <g font-family="'JetBrains Mono', monospace" font-size="13" font-weight="600" fill="#1a1a1a">
+          <text x="76" y="58">A</text>
+          <text x="352" y="212">B</text>
+          <text x="78" y="270">C</text>
+          <text x="245" y="222">D</text>
+        </g>
+        <!-- current-into-page symbol -->
+        <g transform="translate(190 190)" opacity="0.55">
+          <circle r="9" fill="none" stroke="#3b3934" stroke-width="1.6"/>
+          <line x1="-5" y1="-5" x2="5" y2="5" stroke="#3b3934" stroke-width="1.6"/>
+          <line x1="5" y1="-5" x2="-5" y2="5" stroke="#3b3934" stroke-width="1.6"/>
+        </g>
+      </svg>
+      <div class="legend">
+        <span><i class="sw" style="background:linear-gradient(90deg,#c9c6bf,#b54515)"></i> current density</span>
+        <span><i class="sw" style="background:#14110c"></i> particle indication</span>
+        <span><i class="sw" style="background:#55524c"></i> discontinuity</span>
+      </div>
+      <div class="chartwrap">
+        <h4 style="margin-top:16px">Current density vs. depth</h4>
+        <svg id="chartSvg" viewBox="0 0 380 150" role="img" aria-label="Graph of current density versus depth below the surface">
+          <g font-family="'JetBrains Mono', monospace" font-size="9" fill="#8a8a85">
+            <text x="6" y="22">100%</text>
+            <text x="12" y="129">0%</text>
+            <text x="40" y="146">0</text>
+            <text x="355" y="146">12.5 mm depth →</text>
+          </g>
+          <line x1="42" y1="18" x2="42" y2="132" stroke="#d9d2c4" stroke-width="1"/>
+          <line x1="42" y1="132" x2="372" y2="132" stroke="#d9d2c4" stroke-width="1"/>
+          <line id="deltaLine" x1="0" y1="18" x2="0" y2="132" stroke="#b54515" stroke-width="1" stroke-dasharray="4 3" opacity="0"/>
+          <text id="deltaLabel" x="0" y="14" font-family="'JetBrains Mono', monospace" font-size="9" fill="#b54515" text-anchor="middle" opacity="0"></text>
+          <path id="jcurve" d="" fill="none" stroke="#b54515" stroke-width="2.2"/>
+        </svg>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel" style="margin-bottom:14px">
+        <h4>Magnetizing current</h4>
+        <div class="modes" role="group" aria-label="Magnetizing current type">
+          <button type="button" data-mode="AC" class="active">AC<small>alternating</small></button>
+          <button type="button" data-mode="HWDC">HWDC<small>half-wave</small></button>
+          <button type="button" data-mode="FWDC">FWDC<small>full-wave</small></button>
+          <button type="button" data-mode="DC">DC<small>straight</small></button>
+        </div>
+        <div class="freqrow" id="freqRow">
+          <label>AC frequency <b id="freqVal">60 Hz</b></label>
+          <input type="range" id="freqSlider" min="0" max="100" value="24" step="1" aria-label="AC frequency">
+        </div>
+        <div class="readouts">
+          <div class="readout">
+            <div class="k">Skin depth δ</div>
+            <div class="v" id="deltaOut"><span class="big">1.9</span> mm</div>
+          </div>
+          <div class="readout">
+            <div class="k">Particle mobility</div>
+            <div class="v" id="mobOut">Excellent</div>
+          </div>
+        </div>
+        <div class="readout" style="margin-bottom:0">
+          <div class="k">What the current is doing</div>
+          <div class="v" id="descOut" style="font-weight:500;font-size:13px"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h4>Discontinuities in this bar</h4>
+        <div class="defrows" id="defRows"></div>
+        <div class="trybox">
+          <b>Try this</b>
+          <ul>
+            <li>On <strong>AC</strong>, drag the frequency up — watch defect <strong>B</strong> disappear as the skin gets thinner.</li>
+            <li>Drop AC to 25&nbsp;Hz — the skin thickens and B comes back.</li>
+            <li>Switch <strong>AC → HWDC</strong> and watch subsurface defect <strong>C</strong> light up.</li>
+            <li>Can any current type find <strong>D</strong> reliably? What does that tell you about MT's limits?</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="part">Part 2 — <em>Predict &amp; Check</em></h2>
+  <p class="partsub">8 questions · instant feedback</p>
+
+  <div class="quiz" id="quizBox">
+    <div class="qmeta">
+      <span id="qNum">Question 1 / 8</span>
+      <span class="score">Score <b id="qScore">0</b></span>
+    </div>
+    <div id="qBody">
+      <div class="qtext" id="qText"></div>
+      <div class="opts" id="qOpts"></div>
+      <div class="explain" id="qExplain"></div>
+      <div class="qnav"><button type="button" id="qNext" class="hidden">Next →</button></div>
+    </div>
+  </div>
+
+  <footer>MT Skin Effect · Values computed for steel (μᵣ ≈ 240, σ ≈ 5×10⁶ S/m) — real parts vary</footer>
+</div>
+
+<script>
+/* ================= physics ================= */
+const MU0 = 4e-7 * Math.PI;
+const MUR = 240;          // relative permeability, magnetized structural steel (approx.)
+const SIGMA = 5e6;        // conductivity S/m
+const R_MM = 12.5;        // bar radius
+
+function skinDepthMM(f) {
+  return 1000 / Math.sqrt(Math.PI * f * MU0 * MUR * SIGMA);
+}
+
+/* slider (log scale 25 → 1000 Hz), with a detent list for friendly values */
+const FREQS = [25, 50, 60, 100, 120, 200, 400, 700, 1000];
+function sliderToFreq(t) {
+  const f = 25 * Math.pow(1000 / 25, t / 100);
+  // snap to a friendly value if close
+  for (const s of FREQS) if (Math.abs(f - s) / s < 0.06) return s;
+  return Math.round(f);
+}
+
+const DEFECTS = [
+  { id: 'A', name: 'Surface crack',        sub: 'breaks the surface · 0 mm',   depth: 0   },
+  { id: 'B', name: 'Near-surface seam',    sub: '1.5 mm below surface',        depth: 1.5 },
+  { id: 'C', name: 'Subsurface inclusion', sub: '4 mm below surface',          depth: 4   },
+  { id: 'D', name: 'Deep inclusion',       sub: '8 mm below surface',          depth: 8   },
+];
+
+/* Simplified pedagogical model of indication strength 0..1.
+   AC follows the true skin-depth decay; rectified currents keep a DC
+   component that penetrates the section, HWDC's strong ripple adds the
+   particle mobility that makes its subsurface indications the crispest. */
+function strength(mode, depth, f) {
+  switch (mode) {
+    case 'AC':   return Math.exp(-depth / skinDepthMM(f));
+    case 'HWDC': return Math.exp(-depth / 8);
+    case 'FWDC': return 0.78 * Math.exp(-depth / 8);
+    case 'DC':   return 0.70 * Math.exp(-depth / 8);
+  }
+}
+function classify(s) { return s >= 0.55 ? 'strong' : s >= 0.30 ? 'faint' : 'none'; }
+
+const MODE_INFO = {
+  AC:   { mob: 'Excellent — pulsating field keeps particles dancing',
+          desc: 'Skin effect confines current and flux to a thin surface layer. Superb for surface cracks; blind to anything much deeper than δ.' },
+  HWDC: { mob: 'Excellent — strong ripple vibrates particles',
+          desc: 'Half-wave rectified AC: the DC component penetrates the section while the heavy ripple keeps particles mobile. Best all-round choice for subsurface defects.' },
+  FWDC: { mob: 'Moderate — only slight ripple remains',
+          desc: 'Full-wave rectified AC penetrates like DC with a little residual ripple. Good depth, but indications of fine defects are less crisp than HWDC.' },
+  DC:   { mob: 'Low — steady field, sluggish particles',
+          desc: 'Pure DC has no skin effect: current density is uniform across the section. Deep penetration, but no particle-shaking ripple at all.' },
+};
+
+/* ================= state + render ================= */
+let mode = 'AC';
+let freq = 60;
+
+const $ = id => document.getElementById(id);
+
+function buildDefRows() {
+  $('defRows').innerHTML = DEFECTS.map(d => `
+    <div class="defrow">
+      <span class="id">${d.id}</span>
+      <span class="nm">${d.name}<small>${d.sub}</small></span>
+      <span class="badge none" id="badge${d.id}">no indication</span>
+    </div>`).join('');
+}
+
+function renderGradient() {
+  const grad = document.getElementById('jgrad');
+  grad.innerHTML = '';
+  const stops = [];
+  const N = 14;
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;                       // 0 = center, 1 = surface
+    const depth = R_MM * (1 - t);
+    let a;
+    if (mode === 'AC')        a = Math.exp(-depth / skinDepthMM(freq));
+    else if (mode === 'HWDC') a = 0.42 + 0.58 * Math.exp(-depth / skinDepthMM(60));
+    else if (mode === 'FWDC') a = 0.52 + 0.28 * Math.exp(-depth / skinDepthMM(60));
+    else                      a = 0.58;   // DC: uniform
+    stops.push({ off: t, a: Math.min(1, a) * 0.9 });
+  }
+  for (const s of stops) {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+    el.setAttribute('offset', (s.off * 100).toFixed(1) + '%');
+    el.setAttribute('stop-color', '#b54515');
+    el.setAttribute('stop-opacity', s.a.toFixed(3));
+    grad.appendChild(el);
+  }
+}
+
+function renderChart() {
+  const x0 = 42, x1 = 372, y0 = 132, y1 = 18;   // plot box
+  const pts = [];
+  const N = 60;
+  for (let i = 0; i <= N; i++) {
+    const depth = R_MM * i / N;
+    let j;
+    if (mode === 'AC')        j = Math.exp(-depth / skinDepthMM(freq));
+    else if (mode === 'HWDC') j = 0.42 + 0.58 * Math.exp(-depth / skinDepthMM(60));
+    else if (mode === 'FWDC') j = 0.52 + 0.28 * Math.exp(-depth / skinDepthMM(60));
+    else                      j = 1;
+    const x = x0 + (x1 - x0) * depth / R_MM;
+    const y = y0 + (y1 - y0) * j;
+    pts.push((i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1));
+  }
+  $('jcurve').setAttribute('d', pts.join(' '));
+
+  const dl = $('deltaLine'), lbl = $('deltaLabel');
+  if (mode === 'AC') {
+    const dmm = skinDepthMM(freq);
+    const x = x0 + (x1 - x0) * Math.min(dmm, R_MM) / R_MM;
+    dl.setAttribute('x1', x); dl.setAttribute('x2', x); dl.setAttribute('opacity', 1);
+    lbl.setAttribute('x', x); lbl.textContent = 'δ (37%)'; lbl.setAttribute('opacity', 1);
+  } else {
+    dl.setAttribute('opacity', 0); lbl.setAttribute('opacity', 0);
+  }
+}
+
+function render() {
+  document.querySelectorAll('.modes button').forEach(b =>
+    b.classList.toggle('active', b.dataset.mode === mode));
+  $('freqRow').classList.toggle('off', mode !== 'AC');
+  $('freqVal').textContent = freq + ' Hz';
+
+  if (mode === 'AC') {
+    $('deltaOut').innerHTML = `<span class="big">${skinDepthMM(freq).toFixed(1)}</span> mm`;
+  } else if (mode === 'DC') {
+    $('deltaOut').innerHTML = `<span class="big">—</span> uniform`;
+  } else {
+    $('deltaOut').innerHTML = `<span class="big">DC+</span> ripple`;
+  }
+  $('mobOut').textContent = MODE_INFO[mode].mob;
+  $('descOut').textContent = MODE_INFO[mode].desc;
+
+  for (const d of DEFECTS) {
+    const s = strength(mode, d.depth, freq);
+    const cls = classify(s);
+    const badge = $('badge' + d.id);
+    badge.className = 'badge ' + cls;
+    badge.textContent = cls === 'strong' ? 'strong indication' : cls === 'faint' ? 'faint indication' : 'no indication';
+    const ind = $('ind' + d.id);
+    ind.setAttribute('opacity', cls === 'none' ? 0 : (cls === 'faint' ? 0.35 : Math.min(0.95, 0.55 + s * 0.45)).toFixed(2));
+  }
+
+  renderGradient();
+  renderChart();
+}
+
+document.querySelectorAll('.modes button').forEach(b =>
+  b.addEventListener('click', () => { mode = b.dataset.mode; render(); }));
+$('freqSlider').addEventListener('input', e => { freq = sliderToFreq(+e.target.value); render(); });
+
+/* ================= quiz ================= */
+const QUESTIONS = [
+  {
+    q: 'Why does alternating current crowd toward the surface of a conductor?',
+    opts: [
+      'The surface of the metal has lower electrical resistance',
+      'Self-induced opposing eddy currents are strongest at the center, pushing current outward',
+      'Magnetic particles on the surface attract the current',
+      'Heat generated at the center repels the electrons',
+    ],
+    a: 1,
+    ex: 'The changing AC field induces eddy currents inside the conductor that oppose the main current most strongly at the center. Net current therefore concentrates in a thin surface "skin." Resistance and heat are not the cause.',
+  },
+  {
+    q: 'You raise the AC frequency from 60 Hz to 400 Hz. What happens to the skin depth δ?',
+    opts: [
+      'It increases — higher frequency drives current deeper',
+      'It stays the same — δ depends only on the material',
+      'It decreases — δ is proportional to 1/√f',
+      'It becomes zero — no current flows at all',
+    ],
+    a: 2,
+    ex: 'δ = 1/√(πfμσ). Frequency sits under the square root in the denominator, so quadrupling f roughly halves the skin depth. You saw this on the slider: defect B vanished as f went up.',
+  },
+  {
+    q: 'An inspector must find fine, tight fatigue cracks open to the surface. Which magnetizing current is the best choice?',
+    opts: [
+      'AC — the field concentrates at the surface and the pulsation gives excellent particle mobility',
+      'Straight DC — deepest penetration finds everything',
+      'FWDC — the compromise option is always safest',
+      'Any current works equally well for surface cracks',
+    ],
+    a: 0,
+    ex: 'Skin effect is an advantage here: AC packs the flux into the surface layer where the cracks are, and the alternating field vibrates the particles so they migrate to weak leakage fields and form crisp indications.',
+  },
+  {
+    q: 'A forging may contain lack-of-fusion about 5 mm below the surface. Which current type gives the best chance of finding it?',
+    opts: [
+      'AC at 60 Hz',
+      'AC at 1000 Hz',
+      'HWDC — DC penetration plus ripple for particle mobility',
+      'No magnetizing current can see below the surface',
+    ],
+    a: 2,
+    ex: 'At 60 Hz the skin depth in steel is only a couple of millimetres, and raising frequency makes it worse. HWDC keeps a DC component that magnetizes the full section while its half-wave ripple keeps particles mobile — the classic choice for subsurface sensitivity.',
+  },
+  {
+    q: 'At a depth of exactly one skin depth (δ) below the surface, the current density is about…',
+    opts: [
+      '100% of the surface value',
+      '63% of the surface value',
+      '37% of the surface value',
+      '0% — no current flows below δ',
+    ],
+    a: 2,
+    ex: 'δ is the depth where current density has fallen to 1/e ≈ 37% of its surface value. Current still flows below δ — it just keeps decaying exponentially (about 13.5% at 2δ, 5% at 3δ).',
+  },
+  {
+    q: 'Compared with a non-magnetic conductor, the high magnetic permeability (μ) of steel makes the skin depth…',
+    opts: [
+      'Smaller — δ is proportional to 1/√μ, so AC hugs the surface even tighter',
+      'Larger — permeability pulls the field deeper into the part',
+      'Unchanged — permeability only affects DC fields',
+      'Infinite — steel has no skin effect',
+    ],
+    a: 0,
+    ex: 'μ sits under the square root in the denominator of δ = 1/√(πfμσ). Ferromagnetic steel with μᵣ in the hundreds has a far thinner skin than aluminium at the same frequency — which is why 60 Hz AC in steel penetrates only ~1–3 mm.',
+  },
+  {
+    q: 'Besides concentrating flux at the surface, what second benefit does AC give a magnetic particle inspection?',
+    opts: [
+      'It demagnetizes the part while inspecting it',
+      'The pulsating field vibrates the particles, helping them migrate to leakage fields and form sharper indications',
+      'It heats the part, improving penetrant action',
+      'It eliminates the need for a yoke or prods',
+    ],
+    a: 1,
+    ex: 'The 50/60 Hz reversal shakes the particles loose from the surface so they are free to gather at flux-leakage sites. This "particle mobility" is a major reason AC gives such crisp surface indications.',
+  },
+  {
+    q: 'A thick shaft magnetized with DC is demagnetized using an AC coil with decaying current, yet a residual field remains deep in the part. Why?',
+    opts: [
+      'The AC coil was wound in the wrong direction',
+      'DC fields can never be removed once applied',
+      'Skin effect confines the AC demagnetizing field to the surface layer, so the deep interior is never reversed',
+      'The particles left on the surface shield the part from the coil',
+    ],
+    a: 2,
+    ex: 'AC demagnetization only works to roughly one skin depth. On thick sections magnetized through their volume (DC), the interior never sees the reversing field — that is why deep demag calls for reversing, stepped-down DC instead.',
+  },
+];
+
+let qi = 0, qScore = 0, answered = false;
+
+function renderQuestion() {
+  answered = false;
+  const Q = QUESTIONS[qi];
+  $('qNum').textContent = `Question ${qi + 1} / ${QUESTIONS.length}`;
+  $('qScore').textContent = qScore;
+  $('qText').textContent = Q.q;
+  $('qExplain').className = 'explain';
+  $('qNext').classList.add('hidden');
+  $('qOpts').innerHTML = '';
+  Q.opts.forEach((o, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = o;
+    b.addEventListener('click', () => answer(i, b));
+    $('qOpts').appendChild(b);
+  });
+}
+
+function answer(i, btn) {
+  if (answered) return;
+  answered = true;
+  const Q = QUESTIONS[qi];
+  const right = i === Q.a;
+  if (right) qScore++;
+  $('qScore').textContent = qScore;
+  [...$('qOpts').children].forEach((b, j) => {
+    b.disabled = true;
+    if (j === Q.a) b.classList.add('correct');
+    else if (j === i) b.classList.add('wrong');
+    else b.classList.add('dim');
+  });
+  const ex = $('qExplain');
+  ex.innerHTML = `<b>${right ? 'Correct' : 'Not quite'}</b><br>${Q.ex}`;
+  ex.className = 'explain show' + (right ? '' : ' miss');
+  $('qNext').textContent = qi === QUESTIONS.length - 1 ? 'See result →' : 'Next →';
+  $('qNext').classList.remove('hidden');
+}
+
+$('qNext').addEventListener('click', () => {
+  qi++;
+  if (qi < QUESTIONS.length) { renderQuestion(); }
+  else showResult();
+});
+
+function showResult() {
+  const n = QUESTIONS.length;
+  let msg;
+  if (qScore === n)      msg = 'Perfect. You can explain skin effect to the rest of the class — δ, frequency, permeability, current choice, the lot.';
+  else if (qScore >= 6)  msg = 'Strong work. Review the ones you missed — the AC-vs-HWDC choice and the 37% definition of δ are exam favourites.';
+  else if (qScore >= 4)  msg = 'Getting there. Go back to the Penetration Lab, replay the "Try this" steps, then take the quiz again.';
+  else                   msg = 'Time for another pass. Work the lab slowly: watch what the frequency slider does to defect B, and what HWDC does to defect C.';
+  $('qBody').innerHTML = `
+    <div class="result">
+      <div class="rscore">${qScore} / ${n}</div>
+      <div class="rmsg">${msg}</div>
+      <button type="button" id="qRetry">Try again</button>
+    </div>`;
+  document.getElementById('qRetry').addEventListener('click', () => {
+    qi = 0; qScore = 0;
+    $('qBody').innerHTML = `
+      <div class="qtext" id="qText"></div>
+      <div class="opts" id="qOpts"></div>
+      <div class="explain" id="qExplain"></div>
+      <div class="qnav"><button type="button" id="qNext" class="hidden">Next →</button></div>`;
+    document.getElementById('qNext').addEventListener('click', () => {
+      qi++;
+      if (qi < QUESTIONS.length) renderQuestion();
+      else showResult();
+    });
+    renderQuestion();
+  });
+}
+
+/* ================= fullscreen ================= */
+const fsBtn = $('fsBtn');
+const fsSupported = !!(document.documentElement.requestFullscreen && document.fullscreenEnabled);
+if (!fsSupported) fsBtn.classList.add('hidden');
+fsBtn.addEventListener('click', () => {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen().catch(() => {});
+});
+document.addEventListener('fullscreenchange', () => {
+  fsBtn.textContent = document.fullscreenElement ? '⛶ Exit fullscreen' : '⛶ Fullscreen';
+});
+
+/* ================= init ================= */
+/* set slider position to 60 Hz on the log scale */
+$('freqSlider').value = Math.round(100 * Math.log(60 / 25) / Math.log(1000 / 25));
+freq = 60;
+buildDefRows();
+render();
+renderQuestion();
+</script>
+</body>
+</html>
