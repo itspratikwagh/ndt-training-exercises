@@ -84,11 +84,6 @@
   }
   .concept p { font-size: 15px; max-width: 860px; color: var(--paper-deep); }
   .concept p b { color: var(--amber-soft); }
-  .concept .formula {
-    font-family: var(--mono); font-size: 14px; margin-top: 10px; color: var(--paper);
-    background: rgba(255,255,255,0.07); display: inline-block; padding: 6px 14px; border-radius: 2px;
-  }
-  .concept .formula i { color: var(--amber-soft); font-style: normal; }
 
   h2.part {
     font-family: var(--serif); font-weight: 500; font-size: 22px; margin: 34px 0 4px;
@@ -101,63 +96,85 @@
 
   /* ---------- lab layout ---------- */
   .lab {
-    display: grid; grid-template-columns: minmax(300px, 430px) 1fr; gap: 18px;
+    display: grid; grid-template-columns: minmax(320px, 1fr) minmax(280px, 400px); gap: 18px;
     align-items: start;
   }
-  @media (max-width: 840px) { .lab { grid-template-columns: 1fr; } }
+  @media (max-width: 900px) { .lab { grid-template-columns: 1fr; } }
   .panel {
     background: #fff; border: 1px solid var(--rule); border-radius: 2px;
     box-shadow: var(--shadow); padding: 18px 20px;
   }
   .panel h4 {
     font-family: var(--mono); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
-    color: var(--ink-faded); font-weight: 600; margin-bottom: 12px;
+    color: var(--ink-faded); font-weight: 600; margin-bottom: 10px;
   }
-  .barwrap { text-align: center; }
-  .barwrap svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+  .scene svg, .slice svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+  .cutnote {
+    text-align: center; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--ink-faded); margin: 6px 0 10px;
+  }
+  .cutnote b { color: var(--amber); }
   .legend {
-    display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; margin-top: 10px;
+    display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; margin-top: 10px;
     font-size: 11.5px; color: var(--ink-soft);
   }
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
   .legend i.sw { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
 
-  /* waveform buttons */
-  .modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
-  @media (max-width: 480px) { .modes { grid-template-columns: repeat(2, 1fr); } }
-  .modes button {
-    font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
-    padding: 10px 6px; background: var(--paper-deep); color: var(--ink-soft);
-    border: 1px solid var(--rule); border-radius: 2px; cursor: pointer;
-    transition: all .15s;
+  /* current flow animation */
+  @keyframes flow { to { stroke-dashoffset: -48; } }
+  .iline { stroke-dasharray: 9 15; animation: flow 1.1s linear infinite; }
+  @keyframes acpulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+  .ac-on .pulseable { animation: flow 1.1s linear infinite, acpulse 0.9s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    .iline, .ac-on .pulseable { animation: none; }
   }
-  .modes button small { display: block; font-size: 9px; font-weight: 500; letter-spacing: 0.04em; color: var(--ink-faded); margin-top: 2px; }
+
+  /* waveform buttons */
+  .modes { display: grid; gap: 8px; margin-bottom: 14px; }
+  .modes button {
+    display: grid; grid-template-columns: 74px 1fr; align-items: center; gap: 12px;
+    text-align: left; padding: 11px 14px; background: var(--paper-deep); color: var(--ink-soft);
+    border: 1px solid var(--rule); border-radius: 2px; cursor: pointer; transition: all .15s;
+  }
+  .modes button .code { font-family: var(--mono); font-size: 14px; font-weight: 600; letter-spacing: 0.04em; }
+  .modes button .use { font-size: 12px; line-height: 1.35; color: var(--ink-faded); }
   .modes button:hover { border-color: var(--amber); }
   .modes button.active { background: var(--amber); border-color: var(--amber); color: #fff; }
-  .modes button.active small { color: rgba(255,255,255,0.75); }
+  .modes button.active .use { color: rgba(255,255,255,0.8); }
   .modes button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
 
-  .freqrow { margin-bottom: 14px; transition: opacity .2s; }
-  .freqrow.off { opacity: 0.35; pointer-events: none; }
-  .freqrow label {
-    font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
-    color: var(--ink-soft); display: flex; justify-content: space-between; margin-bottom: 6px;
+  /* reach gauge */
+  .reach { margin-bottom: 14px; }
+  .reach .lbl {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-faded); display: flex; justify-content: space-between; margin-bottom: 5px;
   }
-  .freqrow label b { color: var(--amber); font-weight: 600; }
-  input[type=range] { width: 100%; accent-color: var(--amber); }
+  .reach .lbl b { color: var(--amber); font-size: 11px; }
+  .reach .track {
+    height: 14px; background: var(--paper-deep); border: 1px solid var(--rule);
+    border-radius: 99px; overflow: hidden;
+  }
+  .reach .track i {
+    display: block; height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--amber), var(--amber-soft));
+    border-radius: 99px; transition: width .45s ease;
+  }
+  .reach .ticks {
+    display: flex; justify-content: space-between; font-family: var(--mono);
+    font-size: 9px; color: var(--ink-faded); margin-top: 3px;
+  }
 
-  .readouts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
-  @media (max-width: 480px) { .readouts { grid-template-columns: 1fr; } }
   .readout {
     background: var(--amber-tint); border: 1px solid var(--rule); border-radius: 2px;
-    padding: 10px 12px;
+    padding: 10px 12px; margin-bottom: 14px;
   }
   .readout .k {
     font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
     color: var(--ink-faded); margin-bottom: 3px;
   }
-  .readout .v { font-size: 14px; font-weight: 600; color: var(--ink); line-height: 1.35; }
-  .readout .v .big { font-family: var(--mono); font-size: 19px; color: var(--amber); }
+  .readout .v { font-size: 13px; font-weight: 500; color: var(--ink); line-height: 1.4; }
+  .readout .v b { color: var(--amber); }
 
   .defrows { display: grid; gap: 6px; }
   .defrow {
@@ -186,10 +203,6 @@
   .trybox b { color: var(--amber); font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; }
   .trybox ul { margin: 6px 0 0 18px; }
   .trybox li { margin-bottom: 3px; }
-
-  /* profile chart */
-  .chartwrap { margin-top: 4px; }
-  .chartwrap svg { width: 100%; height: auto; display: block; }
 
   /* ---------- quiz ---------- */
   .quiz {
@@ -256,124 +269,191 @@
 
   <div class="concept">
     <div class="tag">The Concept</div>
-    <p>When <b>alternating current</b> flows through a conductor, the changing magnetic field induces opposing eddy currents that are strongest at the center of the part. The result: current — and the magnetic flux it produces — crowds toward the <b>surface</b>. This is the <b>skin effect</b>. In MT it means AC magnetization concentrates the field where surface defects live, while direct current penetrates the full cross-section and can reveal subsurface defects. The higher the frequency, the thinner the "skin."</p>
-    <div class="formula">δ&nbsp;=&nbsp;1&nbsp;/&nbsp;√(π&nbsp;·&nbsp;<i>f</i>&nbsp;·&nbsp;μ&nbsp;·&nbsp;σ) &nbsp;&nbsp;— standard depth of penetration (J drops to ≈37% of surface value)</div>
+    <p><b>AC hugs the surface.</b> When alternating current runs through a part, the current doesn't spread through the whole bar — it crowds into a thin layer at the surface, like water flowing only along the outside of a pipe. That's the <b>skin effect</b>. It makes AC great at finding <b>surface cracks</b> (all the magnetism is right where the crack is), and blind to defects hiding deeper inside. To reach those, we rectify the current toward <b>DC</b>, which flows through the whole cross-section.</p>
   </div>
 
   <h2 class="part">Part 1 — The <em>Penetration Lab</em></h2>
-  <p class="partsub">Circular magnetization · 25 mm steel bar · head-shot current</p>
+  <p class="partsub">Pick a current · watch where it flows · see which defects show up</p>
 
   <div class="lab">
-    <div class="panel barwrap">
-      <h4>Bar cross-section — current flows into the page ⊗</h4>
-      <svg id="barSvg" viewBox="0 0 380 380" role="img" aria-label="Cross-section of a steel bar showing current density distribution and defect indications">
-        <defs>
-          <radialGradient id="jgrad" cx="50%" cy="50%" r="50%"></radialGradient>
-          <filter id="fuzz" x="-60%" y="-60%" width="220%" height="220%">
-            <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="n"/>
-            <feDisplacementMap in="SourceGraphic" in2="n" scale="5"/>
-            <feGaussianBlur stdDeviation="0.7"/>
-          </filter>
-        </defs>
-        <!-- steel bar -->
-        <circle cx="190" cy="190" r="152" fill="#c9c6bf"/>
-        <circle cx="190" cy="190" r="152" fill="url(#jgrad)"/>
-        <circle cx="190" cy="190" r="152" fill="none" stroke="#6f6c66" stroke-width="2.5"/>
-        <!-- depth rings (reference) -->
-        <g stroke="#6f6c66" stroke-dasharray="2 5" stroke-width="0.8" fill="none" opacity="0.5">
-          <circle cx="190" cy="190" r="121.6"/> <!-- 2.5 mm deep -->
-          <circle cx="190" cy="190" r="91.2"/>  <!-- 5.0 mm deep -->
-          <circle cx="190" cy="190" r="60.8"/>  <!-- 7.5 mm deep -->
-        </g>
-        <g font-family="'JetBrains Mono', monospace" font-size="9" fill="#6f6c66" opacity="0.85">
-          <text x="190" y="74" text-anchor="middle">2.5 mm</text>
-          <text x="190" y="105" text-anchor="middle">5 mm</text>
-          <text x="190" y="135" text-anchor="middle">7.5 mm</text>
-        </g>
+    <div class="panel">
+      <div class="scene">
+        <h4>Head shot — the bar is clamped between the bench head-stocks and current passes through it</h4>
+        <svg id="benchSvg" viewBox="0 0 640 320" role="img" aria-label="A steel bar clamped between two head-stock contact pads with current flowing through it">
+          <defs>
+            <linearGradient id="steelV" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"  stop-color="#e2dfd8"/>
+              <stop offset="28%" stop-color="#c9c6bf"/>
+              <stop offset="70%" stop-color="#9d9a93"/>
+              <stop offset="100%" stop-color="#807d76"/>
+            </linearGradient>
+            <linearGradient id="clampV" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#4a4a47"/>
+              <stop offset="100%" stop-color="#282826"/>
+            </linearGradient>
+            <radialGradient id="jgrad" cx="50%" cy="50%" r="50%"></radialGradient>
+            <marker id="arrowAmber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0 0 L10 5 L0 10 z" fill="#b54515"/>
+            </marker>
+          </defs>
 
-        <!-- defects (scale: 12.16 px per mm; rim at r=152) -->
-        <!-- A: surface crack at top-left (depth 0, breaks surface) -->
-        <g id="defA-shape">
-          <path d="M 97.5 70.5 l 8 12 l -3 6 l 8 10" fill="none" stroke="#3b3934" stroke-width="2.2" stroke-linecap="round"/>
-        </g>
-        <!-- B: near-surface seam, 1.5 mm deep, right side -->
-        <ellipse id="defB-shape" cx="320" cy="221" rx="4" ry="12" transform="rotate(14 320 221)" fill="#55524c"/>
-        <!-- C: subsurface inclusion, 4 mm deep, lower-left -->
-        <ellipse id="defC-shape" cx="107" cy="251" rx="11" ry="5" transform="rotate(-38 107 251)" fill="#55524c"/>
-        <!-- D: deep inclusion, 8 mm deep, lower-right of center -->
-        <ellipse id="defD-shape" cx="225" cy="232" rx="10" ry="5" transform="rotate(20 225 232)" fill="#55524c"/>
+          <!-- bench base -->
+          <rect x="30" y="252" width="580" height="14" rx="2" fill="#d9d2c4"/>
+          <rect x="52" y="216" width="34" height="40" fill="#bdb5a4"/>
+          <rect x="554" y="216" width="34" height="40" fill="#bdb5a4"/>
 
-        <!-- particle indications (opacity driven by JS) -->
-        <g filter="url(#fuzz)">
-          <path id="indA" d="M 95 67 l 11 15 l -3 6 l 9 12" fill="none" stroke="#14110c" stroke-width="7" stroke-linecap="round" opacity="0"/>
-          <ellipse id="indB" cx="320" cy="221" rx="8" ry="17" transform="rotate(14 320 221)" fill="#14110c" opacity="0"/>
-          <ellipse id="indC" cx="107" cy="251" rx="16" ry="9" transform="rotate(-38 107 251)" fill="#14110c" opacity="0"/>
-          <ellipse id="indD" cx="225" cy="232" rx="15" ry="9" transform="rotate(20 225 232)" fill="#14110c" opacity="0"/>
-        </g>
+          <!-- head-stock blocks (behind bar ends) -->
+          <g>
+            <rect x="42" y="88" width="82" height="132" rx="4" fill="url(#clampV)"/>
+            <rect x="516" y="88" width="82" height="132" rx="4" fill="url(#clampV)"/>
+            <!-- copper contact pads -->
+            <rect x="116" y="100" width="12" height="108" rx="2" fill="#c98a4b"/>
+            <rect x="512" y="100" width="12" height="108" rx="2" fill="#c98a4b"/>
+          </g>
 
-        <!-- labels -->
-        <g font-family="'JetBrains Mono', monospace" font-size="13" font-weight="600" fill="#1a1a1a">
-          <text x="76" y="58">A</text>
-          <text x="352" y="212">B</text>
-          <text x="78" y="270">C</text>
-          <text x="245" y="222">D</text>
-        </g>
-        <!-- current-into-page symbol -->
-        <g transform="translate(190 190)" opacity="0.55">
-          <circle r="9" fill="none" stroke="#3b3934" stroke-width="1.6"/>
-          <line x1="-5" y1="-5" x2="5" y2="5" stroke="#3b3934" stroke-width="1.6"/>
-          <line x1="5" y1="-5" x2="-5" y2="5" stroke="#3b3934" stroke-width="1.6"/>
-        </g>
-      </svg>
+          <!-- bar body -->
+          <rect x="124" y="110" width="396" height="88" fill="url(#steelV)"/>
+          <!-- DC body glow (whole section carries current) -->
+          <rect id="bodyGlow" x="124" y="110" width="396" height="88" fill="#b54515" opacity="0"/>
+          <!-- bar end face, showing the same current shading as the slice -->
+          <ellipse cx="520" cy="154" rx="17" ry="44" fill="url(#steelV)"/>
+          <ellipse cx="520" cy="154" rx="17" ry="44" fill="url(#jgrad)"/>
+          <ellipse cx="520" cy="154" rx="17" ry="44" fill="none" stroke="#6f6c66" stroke-width="1.6"/>
+          <!-- bar silhouette edges -->
+          <line x1="124" y1="110" x2="520" y2="110" stroke="#6f6c66" stroke-width="1.6"/>
+          <line x1="124" y1="198" x2="520" y2="198" stroke="#6f6c66" stroke-width="1.6"/>
+
+          <!-- skin glow: current riding the surface -->
+          <g id="skinGlow" stroke="#b54515" fill="none" opacity="0.95">
+            <line x1="126" y1="112.5" x2="518" y2="112.5" stroke-width="5" stroke-linecap="round"/>
+            <line x1="126" y1="195.5" x2="518" y2="195.5" stroke-width="5" stroke-linecap="round"/>
+          </g>
+
+          <!-- animated current lines: skin (surface) -->
+          <g id="skinLines" stroke="#7a2703" stroke-width="2.2" fill="none">
+            <line class="iline pulseable" x1="128" y1="112.5" x2="516" y2="112.5"/>
+            <line class="iline pulseable" x1="128" y1="195.5" x2="516" y2="195.5"/>
+          </g>
+          <!-- animated current lines: core (only when DC component present) -->
+          <g id="coreLines" stroke="#b54515" stroke-width="2" fill="none" opacity="0">
+            <line class="iline" x1="128" y1="134" x2="516" y2="134"/>
+            <line class="iline" x1="128" y1="154" x2="516" y2="154"/>
+            <line class="iline" x1="128" y1="174" x2="516" y2="174"/>
+          </g>
+
+          <!-- circular magnetic field loop around the bar -->
+          <ellipse cx="240" cy="154" rx="14" ry="58" fill="none" stroke="#4a4a47" stroke-width="1.6" stroke-dasharray="5 5" opacity="0.75"/>
+          <path d="M 254 148 l -1.5 8 l 6 -3 z" fill="#4a4a47" opacity="0.75"/>
+          <text x="240" y="238" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="10" fill="#4a4a47">circular magnetic field</text>
+
+          <!-- cut plane -->
+          <ellipse cx="376" cy="154" rx="15" ry="46" fill="rgba(181,69,21,0.06)" stroke="#b54515" stroke-width="1.4" stroke-dasharray="5 4"/>
+          <text x="376" y="92" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="10" fill="#b54515">we cut here ↓</text>
+
+          <!-- current in/out cables + labels -->
+          <path d="M 8 154 L 40 154" stroke="#b54515" stroke-width="3" marker-end="url(#arrowAmber)"/>
+          <path d="M 600 154 L 632 154" stroke="#b54515" stroke-width="3" marker-end="url(#arrowAmber)"/>
+          <text x="34" y="80" font-family="'JetBrains Mono', monospace" font-size="10" fill="#b54515">current in</text>
+          <text x="530" y="80" font-family="'JetBrains Mono', monospace" font-size="10" fill="#b54515">current out</text>
+          <text x="72" y="240" font-family="'JetBrains Mono', monospace" font-size="10" fill="#8a8a85">head-stock</text>
+          <text x="418" y="240" font-family="'JetBrains Mono', monospace" font-size="10" fill="#8a8a85">steel bar · 25 mm</text>
+        </svg>
+      </div>
+
+      <div class="cutnote">↓ the slice at the cut, face-on — <b>orange = where the current flows</b> ↓</div>
+
+      <div class="slice">
+        <svg id="sliceSvg" viewBox="0 0 380 330" role="img" aria-label="Cross-section slice of the bar showing current density shading and defect indications">
+          <defs>
+            <filter id="fuzz" x="-60%" y="-60%" width="220%" height="220%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="n"/>
+              <feDisplacementMap in="SourceGraphic" in2="n" scale="5"/>
+              <feGaussianBlur stdDeviation="0.7"/>
+            </filter>
+          </defs>
+          <g transform="translate(0 -25)">
+            <!-- steel slice -->
+            <circle cx="190" cy="190" r="152" fill="#c9c6bf"/>
+            <circle cx="190" cy="190" r="152" fill="url(#jgrad)"/>
+            <circle cx="190" cy="190" r="152" fill="none" stroke="#6f6c66" stroke-width="2.5"/>
+            <!-- depth rings (reference) -->
+            <g stroke="#6f6c66" stroke-dasharray="2 5" stroke-width="0.8" fill="none" opacity="0.5">
+              <circle cx="190" cy="190" r="121.6"/>
+              <circle cx="190" cy="190" r="91.2"/>
+              <circle cx="190" cy="190" r="60.8"/>
+            </g>
+            <g font-family="'JetBrains Mono', monospace" font-size="9" fill="#6f6c66" opacity="0.85">
+              <text x="190" y="74" text-anchor="middle">2.5 mm</text>
+              <text x="190" y="105" text-anchor="middle">5 mm</text>
+              <text x="190" y="135" text-anchor="middle">7.5 mm</text>
+            </g>
+
+            <!-- defects (scale: 12.16 px per mm; rim at r=152) -->
+            <path d="M 97.5 70.5 l 8 12 l -3 6 l 8 10" fill="none" stroke="#3b3934" stroke-width="2.2" stroke-linecap="round"/>
+            <ellipse cx="320" cy="221" rx="4" ry="12" transform="rotate(14 320 221)" fill="#55524c"/>
+            <ellipse cx="107" cy="251" rx="11" ry="5" transform="rotate(-38 107 251)" fill="#55524c"/>
+            <ellipse cx="225" cy="232" rx="10" ry="5" transform="rotate(20 225 232)" fill="#55524c"/>
+
+            <!-- particle indications (opacity driven by JS) -->
+            <g filter="url(#fuzz)">
+              <path id="indA" d="M 95 67 l 11 15 l -3 6 l 9 12" fill="none" stroke="#14110c" stroke-width="7" stroke-linecap="round" opacity="0"/>
+              <ellipse id="indB" cx="320" cy="221" rx="8" ry="17" transform="rotate(14 320 221)" fill="#14110c" opacity="0"/>
+              <ellipse id="indC" cx="107" cy="251" rx="16" ry="9" transform="rotate(-38 107 251)" fill="#14110c" opacity="0"/>
+              <ellipse id="indD" cx="225" cy="232" rx="15" ry="9" transform="rotate(20 225 232)" fill="#14110c" opacity="0"/>
+            </g>
+
+            <!-- labels -->
+            <g font-family="'JetBrains Mono', monospace" font-size="13" font-weight="600" fill="#1a1a1a">
+              <text x="76" y="58">A</text>
+              <text x="352" y="212">B</text>
+              <text x="78" y="270">C</text>
+              <text x="245" y="222">D</text>
+            </g>
+            <!-- current-into-page symbol -->
+            <g transform="translate(190 190)" opacity="0.55">
+              <circle r="9" fill="none" stroke="#3b3934" stroke-width="1.6"/>
+              <line x1="-5" y1="-5" x2="5" y2="5" stroke="#3b3934" stroke-width="1.6"/>
+              <line x1="5" y1="-5" x2="-5" y2="5" stroke="#3b3934" stroke-width="1.6"/>
+            </g>
+          </g>
+        </svg>
+      </div>
       <div class="legend">
         <span><i class="sw" style="background:linear-gradient(90deg,#c9c6bf,#b54515)"></i> current density</span>
         <span><i class="sw" style="background:#14110c"></i> particle indication</span>
         <span><i class="sw" style="background:#55524c"></i> discontinuity</span>
       </div>
-      <div class="chartwrap">
-        <h4 style="margin-top:16px">Current density vs. depth</h4>
-        <svg id="chartSvg" viewBox="0 0 380 150" role="img" aria-label="Graph of current density versus depth below the surface">
-          <g font-family="'JetBrains Mono', monospace" font-size="9" fill="#8a8a85">
-            <text x="6" y="22">100%</text>
-            <text x="12" y="129">0%</text>
-            <text x="40" y="146">0</text>
-            <text x="355" y="146">12.5 mm depth →</text>
-          </g>
-          <line x1="42" y1="18" x2="42" y2="132" stroke="#d9d2c4" stroke-width="1"/>
-          <line x1="42" y1="132" x2="372" y2="132" stroke="#d9d2c4" stroke-width="1"/>
-          <line id="deltaLine" x1="0" y1="18" x2="0" y2="132" stroke="#b54515" stroke-width="1" stroke-dasharray="4 3" opacity="0"/>
-          <text id="deltaLabel" x="0" y="14" font-family="'JetBrains Mono', monospace" font-size="9" fill="#b54515" text-anchor="middle" opacity="0"></text>
-          <path id="jcurve" d="" fill="none" stroke="#b54515" stroke-width="2.2"/>
-        </svg>
-      </div>
     </div>
 
     <div>
       <div class="panel" style="margin-bottom:14px">
-        <h4>Magnetizing current</h4>
+        <h4>Pick the magnetizing current</h4>
         <div class="modes" role="group" aria-label="Magnetizing current type">
-          <button type="button" data-mode="AC" class="active">AC<small>alternating</small></button>
-          <button type="button" data-mode="HWDC">HWDC<small>half-wave</small></button>
-          <button type="button" data-mode="FWDC">FWDC<small>full-wave</small></button>
-          <button type="button" data-mode="DC">DC<small>straight</small></button>
+          <button type="button" data-mode="AC" class="active">
+            <span class="code">AC</span>
+            <span class="use">Alternating · 60 Hz line current</span>
+          </button>
+          <button type="button" data-mode="HWDC">
+            <span class="code">HWDC</span>
+            <span class="use">Half-wave rectified · DC with a strong pulse</span>
+          </button>
+          <button type="button" data-mode="DC">
+            <span class="code">DC</span>
+            <span class="use">Straight direct current · steady flow</span>
+          </button>
         </div>
-        <div class="freqrow" id="freqRow">
-          <label>AC frequency <b id="freqVal">60 Hz</b></label>
-          <input type="range" id="freqSlider" min="0" max="100" value="24" step="1" aria-label="AC frequency">
+        <div class="reach">
+          <div class="lbl"><span>Reach into the part</span><b id="reachVal">≈ 2 mm</b></div>
+          <div class="track"><i id="reachFill"></i></div>
+          <div class="ticks"><span>surface</span><span>center (12.5 mm)</span></div>
         </div>
-        <div class="readouts">
-          <div class="readout">
-            <div class="k">Skin depth δ</div>
-            <div class="v" id="deltaOut"><span class="big">1.9</span> mm</div>
-          </div>
-          <div class="readout">
-            <div class="k">Particle mobility</div>
-            <div class="v" id="mobOut">Excellent</div>
-          </div>
+        <div class="readout" style="margin-bottom:8px">
+          <div class="k">Particle mobility</div>
+          <div class="v" id="mobOut"></div>
         </div>
         <div class="readout" style="margin-bottom:0">
-          <div class="k">What the current is doing</div>
-          <div class="v" id="descOut" style="font-weight:500;font-size:13px"></div>
+          <div class="k">What's happening</div>
+          <div class="v" id="descOut"></div>
         </div>
       </div>
 
@@ -383,10 +463,10 @@
         <div class="trybox">
           <b>Try this</b>
           <ul>
-            <li>On <strong>AC</strong>, drag the frequency up — watch defect <strong>B</strong> disappear as the skin gets thinner.</li>
-            <li>Drop AC to 25&nbsp;Hz — the skin thickens and B comes back.</li>
-            <li>Switch <strong>AC → HWDC</strong> and watch subsurface defect <strong>C</strong> light up.</li>
-            <li>Can any current type find <strong>D</strong> reliably? What does that tell you about MT's limits?</li>
+            <li>Start on <strong>AC</strong> — only the surface crack shows strongly. The current (and flux) never reaches B, C or D.</li>
+            <li>Switch to <strong>HWDC</strong> — watch <strong>C</strong> light up. This is why we rectify the current for subsurface defects.</li>
+            <li>Try <strong>DC</strong> — it reaches just as deep, but the indications are duller: no pulse shaking the particles.</li>
+            <li>Nothing finds <strong>D</strong> reliably. MT is a surface and <em>near</em>-surface method.</li>
           </ul>
         </div>
       </div>
@@ -394,11 +474,11 @@
   </div>
 
   <h2 class="part">Part 2 — <em>Predict &amp; Check</em></h2>
-  <p class="partsub">8 questions · instant feedback</p>
+  <p class="partsub">7 questions · instant feedback</p>
 
   <div class="quiz" id="quizBox">
     <div class="qmeta">
-      <span id="qNum">Question 1 / 8</span>
+      <span id="qNum">Question 1 / 7</span>
       <span class="score">Score <b id="qScore">0</b></span>
     </div>
     <div id="qBody">
@@ -409,65 +489,56 @@
     </div>
   </div>
 
-  <footer>MT Skin Effect · Values computed for steel (μᵣ ≈ 240, σ ≈ 5×10⁶ S/m) — real parts vary</footer>
+  <footer>MT Skin Effect · at 60 Hz in steel, AC current reaches only ≈ 2 mm below the surface</footer>
 </div>
 
 <script>
-/* ================= physics ================= */
-const MU0 = 4e-7 * Math.PI;
-const MUR = 240;          // relative permeability, magnetized structural steel (approx.)
-const SIGMA = 5e6;        // conductivity S/m
-const R_MM = 12.5;        // bar radius
-
-function skinDepthMM(f) {
-  return 1000 / Math.sqrt(Math.PI * f * MU0 * MUR * SIGMA);
-}
-
-/* slider (log scale 25 → 1000 Hz), with a detent list for friendly values */
-const FREQS = [25, 50, 60, 100, 120, 200, 400, 700, 1000];
-function sliderToFreq(t) {
-  const f = 25 * Math.pow(1000 / 25, t / 100);
-  // snap to a friendly value if close
-  for (const s of FREQS) if (Math.abs(f - s) / s < 0.06) return s;
-  return Math.round(f);
-}
+/* ================= simple pedagogical model =================
+   Depths in mm on a 12.5 mm-radius bar. AC at line frequency reaches
+   ~2 mm in steel; rectified currents keep a DC component that flows
+   through the whole section, and HWDC's strong pulse keeps the
+   particles mobile so its subsurface indications are the crispest. */
+const R_MM = 12.5;
+const AC_SKIN_MM = 1.9;   // ~ skin depth of 60 Hz AC in steel
 
 const DEFECTS = [
-  { id: 'A', name: 'Surface crack',        sub: 'breaks the surface · 0 mm',   depth: 0   },
-  { id: 'B', name: 'Near-surface seam',    sub: '1.5 mm below surface',        depth: 1.5 },
-  { id: 'C', name: 'Subsurface inclusion', sub: '4 mm below surface',          depth: 4   },
-  { id: 'D', name: 'Deep inclusion',       sub: '8 mm below surface',          depth: 8   },
+  { id: 'A', name: 'Surface crack',        sub: 'breaks the surface · 0 mm', depth: 0   },
+  { id: 'B', name: 'Near-surface seam',    sub: '1.5 mm below surface',      depth: 1.5 },
+  { id: 'C', name: 'Subsurface inclusion', sub: '4 mm below surface',        depth: 4   },
+  { id: 'D', name: 'Deep inclusion',       sub: '8 mm below surface',        depth: 8   },
 ];
 
-/* Simplified pedagogical model of indication strength 0..1.
-   AC follows the true skin-depth decay; rectified currents keep a DC
-   component that penetrates the section, HWDC's strong ripple adds the
-   particle mobility that makes its subsurface indications the crispest. */
-function strength(mode, depth, f) {
+function strength(mode, depth) {
   switch (mode) {
-    case 'AC':   return Math.exp(-depth / skinDepthMM(f));
+    case 'AC':   return Math.exp(-depth / AC_SKIN_MM);
     case 'HWDC': return Math.exp(-depth / 8);
-    case 'FWDC': return 0.78 * Math.exp(-depth / 8);
-    case 'DC':   return 0.70 * Math.exp(-depth / 8);
+    case 'DC':   return 0.72 * Math.exp(-depth / 8);
   }
 }
 function classify(s) { return s >= 0.55 ? 'strong' : s >= 0.30 ? 'faint' : 'none'; }
 
 const MODE_INFO = {
-  AC:   { mob: 'Excellent — pulsating field keeps particles dancing',
-          desc: 'Skin effect confines current and flux to a thin surface layer. Superb for surface cracks; blind to anything much deeper than δ.' },
-  HWDC: { mob: 'Excellent — strong ripple vibrates particles',
-          desc: 'Half-wave rectified AC: the DC component penetrates the section while the heavy ripple keeps particles mobile. Best all-round choice for subsurface defects.' },
-  FWDC: { mob: 'Moderate — only slight ripple remains',
-          desc: 'Full-wave rectified AC penetrates like DC with a little residual ripple. Good depth, but indications of fine defects are less crisp than HWDC.' },
-  DC:   { mob: 'Low — steady field, sluggish particles',
-          desc: 'Pure DC has no skin effect: current density is uniform across the section. Deep penetration, but no particle-shaking ripple at all.' },
+  AC: {
+    reach: '≈ 2 mm', reachFrac: 2 / R_MM,
+    mob: '★★★ Excellent — the alternating field keeps the particles dancing',
+    desc: 'Skin effect: the current rides the <b>surface</b> of the bar (watch the glowing edges above). All the magnetism is packed right where surface cracks live.',
+    skinGlow: 0.95, bodyGlow: 0.05, core: 0, acPulse: true,
+  },
+  HWDC: {
+    reach: '≈ 6–7 mm', reachFrac: 6.5 / R_MM,
+    mob: '★★★ Excellent — the half-wave pulse shakes the particles loose',
+    desc: 'The DC part flows through the <b>whole bar</b>, while the pulsing part still hugs the surface. Deep reach <em>and</em> lively particles — the go-to for subsurface defects.',
+    skinGlow: 0.75, bodyGlow: 0.38, core: 0.7, acPulse: false,
+  },
+  DC: {
+    reach: 'full section', reachFrac: 1,
+    mob: '★ Low — a steady field leaves the particles sitting still',
+    desc: 'No skin effect: steady current spreads evenly through the <b>entire cross-section</b>. It reaches deep, but nothing vibrates the particles, so indications are duller.',
+    skinGlow: 0.2, bodyGlow: 0.5, core: 1, acPulse: false,
+  },
 };
 
-/* ================= state + render ================= */
 let mode = 'AC';
-let freq = 60;
-
 const $ = id => document.getElementById(id);
 
 function buildDefRows() {
@@ -482,88 +553,52 @@ function buildDefRows() {
 function renderGradient() {
   const grad = document.getElementById('jgrad');
   grad.innerHTML = '';
-  const stops = [];
   const N = 14;
   for (let i = 0; i <= N; i++) {
     const t = i / N;                       // 0 = center, 1 = surface
     const depth = R_MM * (1 - t);
     let a;
-    if (mode === 'AC')        a = Math.exp(-depth / skinDepthMM(freq));
-    else if (mode === 'HWDC') a = 0.42 + 0.58 * Math.exp(-depth / skinDepthMM(60));
-    else if (mode === 'FWDC') a = 0.52 + 0.28 * Math.exp(-depth / skinDepthMM(60));
+    if (mode === 'AC')        a = Math.exp(-depth / AC_SKIN_MM);
+    else if (mode === 'HWDC') a = 0.42 + 0.58 * Math.exp(-depth / AC_SKIN_MM);
     else                      a = 0.58;   // DC: uniform
-    stops.push({ off: t, a: Math.min(1, a) * 0.9 });
-  }
-  for (const s of stops) {
     const el = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-    el.setAttribute('offset', (s.off * 100).toFixed(1) + '%');
+    el.setAttribute('offset', (t * 100).toFixed(1) + '%');
     el.setAttribute('stop-color', '#b54515');
-    el.setAttribute('stop-opacity', s.a.toFixed(3));
+    el.setAttribute('stop-opacity', (Math.min(1, a) * 0.9).toFixed(3));
     grad.appendChild(el);
-  }
-}
-
-function renderChart() {
-  const x0 = 42, x1 = 372, y0 = 132, y1 = 18;   // plot box
-  const pts = [];
-  const N = 60;
-  for (let i = 0; i <= N; i++) {
-    const depth = R_MM * i / N;
-    let j;
-    if (mode === 'AC')        j = Math.exp(-depth / skinDepthMM(freq));
-    else if (mode === 'HWDC') j = 0.42 + 0.58 * Math.exp(-depth / skinDepthMM(60));
-    else if (mode === 'FWDC') j = 0.52 + 0.28 * Math.exp(-depth / skinDepthMM(60));
-    else                      j = 1;
-    const x = x0 + (x1 - x0) * depth / R_MM;
-    const y = y0 + (y1 - y0) * j;
-    pts.push((i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1));
-  }
-  $('jcurve').setAttribute('d', pts.join(' '));
-
-  const dl = $('deltaLine'), lbl = $('deltaLabel');
-  if (mode === 'AC') {
-    const dmm = skinDepthMM(freq);
-    const x = x0 + (x1 - x0) * Math.min(dmm, R_MM) / R_MM;
-    dl.setAttribute('x1', x); dl.setAttribute('x2', x); dl.setAttribute('opacity', 1);
-    lbl.setAttribute('x', x); lbl.textContent = 'δ (37%)'; lbl.setAttribute('opacity', 1);
-  } else {
-    dl.setAttribute('opacity', 0); lbl.setAttribute('opacity', 0);
   }
 }
 
 function render() {
   document.querySelectorAll('.modes button').forEach(b =>
     b.classList.toggle('active', b.dataset.mode === mode));
-  $('freqRow').classList.toggle('off', mode !== 'AC');
-  $('freqVal').textContent = freq + ' Hz';
 
-  if (mode === 'AC') {
-    $('deltaOut').innerHTML = `<span class="big">${skinDepthMM(freq).toFixed(1)}</span> mm`;
-  } else if (mode === 'DC') {
-    $('deltaOut').innerHTML = `<span class="big">—</span> uniform`;
-  } else {
-    $('deltaOut').innerHTML = `<span class="big">DC+</span> ripple`;
-  }
-  $('mobOut').textContent = MODE_INFO[mode].mob;
-  $('descOut').textContent = MODE_INFO[mode].desc;
+  const info = MODE_INFO[mode];
+  $('reachVal').textContent = info.reach;
+  $('reachFill').style.width = (info.reachFrac * 100).toFixed(0) + '%';
+  $('mobOut').textContent = info.mob;
+  $('descOut').innerHTML = info.desc;
+
+  $('skinGlow').setAttribute('opacity', info.skinGlow);
+  $('bodyGlow').setAttribute('opacity', info.bodyGlow * 0.5);
+  $('coreLines').setAttribute('opacity', info.core);
+  $('benchSvg').classList.toggle('ac-on', info.acPulse);
 
   for (const d of DEFECTS) {
-    const s = strength(mode, d.depth, freq);
+    const s = strength(mode, d.depth);
     const cls = classify(s);
     const badge = $('badge' + d.id);
     badge.className = 'badge ' + cls;
     badge.textContent = cls === 'strong' ? 'strong indication' : cls === 'faint' ? 'faint indication' : 'no indication';
-    const ind = $('ind' + d.id);
-    ind.setAttribute('opacity', cls === 'none' ? 0 : (cls === 'faint' ? 0.35 : Math.min(0.95, 0.55 + s * 0.45)).toFixed(2));
+    $('ind' + d.id).setAttribute('opacity',
+      cls === 'none' ? 0 : (cls === 'faint' ? 0.35 : Math.min(0.95, 0.55 + s * 0.45)).toFixed(2));
   }
 
   renderGradient();
-  renderChart();
 }
 
 document.querySelectorAll('.modes button').forEach(b =>
   b.addEventListener('click', () => { mode = b.dataset.mode; render(); }));
-$('freqSlider').addEventListener('input', e => { freq = sliderToFreq(+e.target.value); render(); });
 
 /* ================= quiz ================= */
 const QUESTIONS = [
@@ -576,73 +611,62 @@ const QUESTIONS = [
       'Heat generated at the center repels the electrons',
     ],
     a: 1,
-    ex: 'The changing AC field induces eddy currents inside the conductor that oppose the main current most strongly at the center. Net current therefore concentrates in a thin surface "skin." Resistance and heat are not the cause.',
+    ex: 'The constantly changing AC field induces eddy currents inside the bar that fight the main current hardest at the center. The current takes the path of least opposition — a thin layer at the surface. Resistance and heat are not the cause.',
   },
   {
-    q: 'You raise the AC frequency from 60 Hz to 400 Hz. What happens to the skin depth δ?',
+    q: 'If the AC frequency were raised (say from 60 Hz to 400 Hz), the current-carrying "skin" would get…',
     opts: [
-      'It increases — higher frequency drives current deeper',
-      'It stays the same — δ depends only on the material',
-      'It decreases — δ is proportional to 1/√f',
-      'It becomes zero — no current flows at all',
+      'Thicker — higher frequency drives current deeper',
+      'Thinner — the faster the current alternates, the tighter it hugs the surface',
+      'The same — frequency has no effect',
+      'It would disappear — no current flows at high frequency',
     ],
-    a: 2,
-    ex: 'δ = 1/√(πfμσ). Frequency sits under the square root in the denominator, so quadrupling f roughly halves the skin depth. You saw this on the slider: defect B vanished as f went up.',
+    a: 1,
+    ex: 'The faster the field changes, the stronger the opposing eddy currents, and the tighter the current squeezes against the surface. Higher frequency = thinner skin = even more of a surface-only inspection.',
   },
   {
     q: 'An inspector must find fine, tight fatigue cracks open to the surface. Which magnetizing current is the best choice?',
     opts: [
       'AC — the field concentrates at the surface and the pulsation gives excellent particle mobility',
       'Straight DC — deepest penetration finds everything',
-      'FWDC — the compromise option is always safest',
-      'Any current works equally well for surface cracks',
+      'It makes no difference — any current works equally well for surface cracks',
+      'None — MT cannot find tight cracks',
     ],
     a: 0,
-    ex: 'Skin effect is an advantage here: AC packs the flux into the surface layer where the cracks are, and the alternating field vibrates the particles so they migrate to weak leakage fields and form crisp indications.',
+    ex: 'Here the skin effect is an advantage: AC packs the flux into the surface layer where the cracks are, and the alternating field vibrates the particles so they gather into crisp indications.',
   },
   {
     q: 'A forging may contain lack-of-fusion about 5 mm below the surface. Which current type gives the best chance of finding it?',
     opts: [
-      'AC at 60 Hz',
-      'AC at 1000 Hz',
-      'HWDC — DC penetration plus ripple for particle mobility',
-      'No magnetizing current can see below the surface',
+      'AC — just turn the amperage up',
+      'HWDC — the DC part reaches deep and the pulse keeps the particles mobile',
+      'It cannot matter — magnetism never goes below the surface',
+      'Straight DC is the only current that can do it',
     ],
-    a: 2,
-    ex: 'At 60 Hz the skin depth in steel is only a couple of millimetres, and raising frequency makes it worse. HWDC keeps a DC component that magnetizes the full section while its half-wave ripple keeps particles mobile — the classic choice for subsurface sensitivity.',
+    a: 1,
+    ex: 'More AC amperage makes a stronger surface field, not a deeper one — the skin effect still traps it in the top ~2 mm. HWDC is the classic subsurface choice: DC penetration plus a strong ripple that shakes the particles into visible indications. Straight DC also reaches deep, but its indications are duller.',
   },
   {
-    q: 'At a depth of exactly one skin depth (δ) below the surface, the current density is about…',
+    q: 'The "skin depth" is the depth where the current has dropped to about 37% of its surface value. Below that depth, the current…',
     opts: [
-      '100% of the surface value',
-      '63% of the surface value',
-      '37% of the surface value',
-      '0% — no current flows below δ',
+      'Stops completely',
+      'Keeps decreasing gradually — there is just less and less of it',
+      'Increases again toward the center',
+      'Reverses direction',
     ],
-    a: 2,
-    ex: 'δ is the depth where current density has fallen to 1/e ≈ 37% of its surface value. Current still flows below δ — it just keeps decaying exponentially (about 13.5% at 2δ, 5% at 3δ).',
-  },
-  {
-    q: 'Compared with a non-magnetic conductor, the high magnetic permeability (μ) of steel makes the skin depth…',
-    opts: [
-      'Smaller — δ is proportional to 1/√μ, so AC hugs the surface even tighter',
-      'Larger — permeability pulls the field deeper into the part',
-      'Unchanged — permeability only affects DC fields',
-      'Infinite — steel has no skin effect',
-    ],
-    a: 0,
-    ex: 'μ sits under the square root in the denominator of δ = 1/√(πfμσ). Ferromagnetic steel with μᵣ in the hundreds has a far thinner skin than aluminium at the same frequency — which is why 60 Hz AC in steel penetrates only ~1–3 mm.',
+    a: 1,
+    ex: 'The skin is not a hard wall — current density fades exponentially with depth. Skin depth is simply the agreed marker (37%, i.e. 1/e) for "most of the current is above here." In steel at 60 Hz that is only about 2 mm.',
   },
   {
     q: 'Besides concentrating flux at the surface, what second benefit does AC give a magnetic particle inspection?',
     opts: [
       'It demagnetizes the part while inspecting it',
       'The pulsating field vibrates the particles, helping them migrate to leakage fields and form sharper indications',
-      'It heats the part, improving penetrant action',
+      'It heats the part, making cracks open wider',
       'It eliminates the need for a yoke or prods',
     ],
     a: 1,
-    ex: 'The 50/60 Hz reversal shakes the particles loose from the surface so they are free to gather at flux-leakage sites. This "particle mobility" is a major reason AC gives such crisp surface indications.',
+    ex: 'The 60 Hz reversal shakes the particles loose from the surface so they are free to gather where flux leaks out of a crack. This "particle mobility" is a big reason AC gives such crisp surface indications.',
   },
   {
     q: 'A thick shaft magnetized with DC is demagnetized using an AC coil with decaying current, yet a residual field remains deep in the part. Why?',
@@ -653,7 +677,7 @@ const QUESTIONS = [
       'The particles left on the surface shield the part from the coil',
     ],
     a: 2,
-    ex: 'AC demagnetization only works to roughly one skin depth. On thick sections magnetized through their volume (DC), the interior never sees the reversing field — that is why deep demag calls for reversing, stepped-down DC instead.',
+    ex: 'AC demagnetization only works to roughly one skin depth. A thick section magnetized through its volume with DC never feels the reversing field at its core — deep demag needs reversing, stepped-down DC instead.',
   },
 ];
 
@@ -672,12 +696,12 @@ function renderQuestion() {
     const b = document.createElement('button');
     b.type = 'button';
     b.textContent = o;
-    b.addEventListener('click', () => answer(i, b));
+    b.addEventListener('click', () => answer(i));
     $('qOpts').appendChild(b);
   });
 }
 
-function answer(i, btn) {
+function answer(i) {
   if (answered) return;
   answered = true;
   const Q = QUESTIONS[qi];
@@ -697,19 +721,21 @@ function answer(i, btn) {
   $('qNext').classList.remove('hidden');
 }
 
-$('qNext').addEventListener('click', () => {
-  qi++;
-  if (qi < QUESTIONS.length) { renderQuestion(); }
-  else showResult();
-});
+function wireNext() {
+  document.getElementById('qNext').addEventListener('click', () => {
+    qi++;
+    if (qi < QUESTIONS.length) renderQuestion();
+    else showResult();
+  });
+}
 
 function showResult() {
   const n = QUESTIONS.length;
   let msg;
-  if (qScore === n)      msg = 'Perfect. You can explain skin effect to the rest of the class — δ, frequency, permeability, current choice, the lot.';
-  else if (qScore >= 6)  msg = 'Strong work. Review the ones you missed — the AC-vs-HWDC choice and the 37% definition of δ are exam favourites.';
-  else if (qScore >= 4)  msg = 'Getting there. Go back to the Penetration Lab, replay the "Try this" steps, then take the quiz again.';
-  else                   msg = 'Time for another pass. Work the lab slowly: watch what the frequency slider does to defect B, and what HWDC does to defect C.';
+  if (qScore === n)      msg = 'Perfect. You can explain the skin effect to the rest of the class — where the current flows, and which knob to turn for surface vs. subsurface.';
+  else if (qScore >= 5)  msg = 'Strong work. Review the ones you missed — the AC-vs-HWDC choice is an exam favourite.';
+  else if (qScore >= 3)  msg = 'Getting there. Go back to the lab, click through AC → HWDC → DC while watching the slice, then try again.';
+  else                   msg = 'Time for another pass. Watch the glowing edges on AC, then watch what HWDC does to defect C — the quiz follows straight from the picture.';
   $('qBody').innerHTML = `
     <div class="result">
       <div class="rscore">${qScore} / ${n}</div>
@@ -723,11 +749,7 @@ function showResult() {
       <div class="opts" id="qOpts"></div>
       <div class="explain" id="qExplain"></div>
       <div class="qnav"><button type="button" id="qNext" class="hidden">Next →</button></div>`;
-    document.getElementById('qNext').addEventListener('click', () => {
-      qi++;
-      if (qi < QUESTIONS.length) renderQuestion();
-      else showResult();
-    });
+    wireNext();
     renderQuestion();
   });
 }
@@ -745,11 +767,9 @@ document.addEventListener('fullscreenchange', () => {
 });
 
 /* ================= init ================= */
-/* set slider position to 60 Hz on the log scale */
-$('freqSlider').value = Math.round(100 * Math.log(60 / 25) / Math.log(1000 / 25));
-freq = 60;
 buildDefRows();
 render();
+wireNext();
 renderQuestion();
 </script>
 </body>
