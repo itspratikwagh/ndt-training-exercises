@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MT — Magnetization Techniques</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #faf7f2;
+    --paper-deep: #f1ece2;
+    --ink: #1a1a1a;
+    --ink-soft: #4a4a47;
+    --ink-faded: #8a8a85;
+    --rule: #d9d2c4;
+    --amber: #b54515;
+    --amber-soft: #e8a87c;
+    --amber-tint: #fdf2e6;
+    --flux: #1d6fa5;
+    --flux-tint: #e8f1f8;
+    --good: #2e7d4f;
+    --bad: #c8102e;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px -12px rgba(60,40,20,0.12);
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'Manrope', -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--paper); }
+  body {
+    font-family: var(--sans); background: var(--paper); color: var(--ink);
+    line-height: 1.55; min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(181, 69, 21, 0.04), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(29, 111, 165, 0.04), transparent 50%);
+  }
+  .container { max-width: 980px; margin: 0 auto; padding: 36px 28px 72px; }
+
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--amber); margin-bottom: 8px; font-weight: 500;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 600;
+    font-size: clamp(26px, 4vw, 38px); line-height: 1.05; letter-spacing: -0.02em;
+    font-variation-settings: 'opsz' 144;
+  }
+  h1 em { font-style: italic; color: var(--amber); font-weight: 500; }
+  .hdr-actions { display: flex; align-items: center; gap: 18px; padding-bottom: 2px; }
+  a.back {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-faded); text-decoration: none; padding-bottom: 6px;
+  }
+  a.back:hover { color: var(--amber); }
+  .fsbtn {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    background: none; border: 1px solid var(--rule); border-radius: 2px;
+    color: var(--ink-soft); padding: 7px 13px; cursor: pointer; white-space: nowrap;
+  }
+  .fsbtn:hover { border-color: var(--amber); color: var(--amber); }
+  .fsbtn.hidden { display: none; }
+  :fullscreen .container { padding: 16px 28px 24px; }
+
+  /* concept card */
+  .concept {
+    background: var(--ink); color: var(--paper); border-radius: 2px;
+    padding: 20px 24px; margin-bottom: 20px; box-shadow: var(--shadow); position: relative;
+  }
+  .concept::before {
+    content: ''; position: absolute; inset: 4px;
+    border: 1px solid rgba(232,168,124,0.18); border-radius: 2px; pointer-events: none;
+  }
+  .concept .tag {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--amber-soft); margin-bottom: 6px;
+  }
+  .concept p { font-size: 15px; max-width: 860px; color: var(--paper-deep); }
+  .concept p b { color: var(--amber-soft); }
+  .keychips { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+  .keychip {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    background: rgba(255,255,255,0.07); padding: 7px 13px; border-radius: 99px;
+  }
+  .keychip i { width: 26px; height: 0; border-top: 3px dashed; border-radius: 2px; }
+  .keychip.cur i { border-color: var(--amber-soft); }
+  .keychip.flx i { border-color: #7db8dd; }
+
+  /* progress steps */
+  .steps { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
+  .steps .s {
+    flex: 1 1 110px; display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; border: 1px solid var(--rule); border-radius: 2px;
+    background: var(--paper-deep); opacity: 0.55; transition: all .25s;
+  }
+  .steps .s .n {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    width: 20px; height: 20px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1.5px solid var(--ink-faded); color: var(--ink-faded); flex: none;
+  }
+  .steps .s .l { font-size: 12px; font-weight: 600; color: var(--ink-soft); white-space: nowrap; }
+  .steps .s.active { opacity: 1; border-color: var(--amber); background: var(--amber-tint); }
+  .steps .s.active .n { border-color: var(--amber); color: var(--amber); }
+  .steps .s.done { opacity: 1; }
+  .steps .s.done .n { background: var(--good); border-color: var(--good); color: #fff; }
+
+  /* technique section */
+  section.tech { display: none; margin-bottom: 26px; }
+  section.tech.current { display: block; }
+  body.review section.tech { display: block; }
+  .panel {
+    background: #fff; border: 1px solid var(--rule); border-radius: 2px;
+    box-shadow: var(--shadow); padding: 18px 20px;
+  }
+  .tech .thead { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
+  .tech .tnum {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-faded);
+  }
+  .tech h3 { font-family: var(--serif); font-weight: 500; font-size: 22px; }
+  .tech h3 em { color: var(--amber); font-style: italic; }
+  .tech .tdesc { font-size: 13.5px; color: var(--ink-soft); margin-bottom: 12px; max-width: 760px; }
+
+  .scene { user-select: none; -webkit-user-select: none; }
+  .scene svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+  .scene svg g.drag { cursor: grab; touch-action: none; }
+  .scene svg g.drag.placed { cursor: default; }
+  .scene svg g.drag.slidable { cursor: ew-resize; }
+
+  /* animated current / flux */
+  @keyframes dashflow { to { stroke-dashoffset: -36; } }
+  .flow { stroke-dasharray: 8 10; animation: dashflow 1s linear infinite; }
+  .flowslow { stroke-dasharray: 6 9; animation: dashflow 1.5s linear infinite; }
+  svg .egroup { opacity: 0; transition: opacity .6s; }
+  svg.on .egroup { opacity: 1; }
+  svg .ind { transition: opacity .6s; }
+  .dropzone {
+    fill: rgba(181,69,21,0.05); stroke: var(--amber); stroke-width: 1.6;
+    stroke-dasharray: 6 5; animation: dzpulse 1.6s ease-in-out infinite;
+  }
+  @keyframes dzpulse { 0%,100% { opacity: 0.85; } 50% { opacity: 0.3; } }
+  .dropzone.hidden { display: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .flow, .flowslow, .dropzone { animation: none; }
+  }
+
+  /* instruction + controls */
+  .ctlrow { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 12px; }
+  .instr {
+    flex: 1 1 260px; font-size: 14px; font-weight: 600; color: var(--ink-soft);
+    background: var(--amber-tint); border-left: 3px solid var(--amber);
+    padding: 10px 14px; border-radius: 2px;
+  }
+  .energize {
+    font-family: var(--mono); font-size: 13px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+    background: var(--amber); color: #fff; border: none; border-radius: 2px;
+    padding: 13px 26px; cursor: pointer; transition: background .15s, opacity .15s;
+  }
+  .energize:hover:not(:disabled) { background: #9a3a12; }
+  .energize:disabled { opacity: 0.35; cursor: not-allowed; }
+  .nextbtn {
+    font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    background: var(--ink); color: #fff; border: none; border-radius: 2px;
+    padding: 13px 22px; cursor: pointer; display: none;
+  }
+  .nextbtn.show { display: inline-block; }
+  .nextbtn:hover { background: #333; }
+  body.review .ctlrow { display: none; }
+
+  /* result strip */
+  .resultstrip { display: none; margin-top: 14px; border-top: 1px dashed var(--rule); padding-top: 14px; }
+  .resultstrip.show { display: block; }
+  .rowtop { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  .fieldbadge {
+    font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 6px 13px; border-radius: 99px; color: #fff; background: var(--flux);
+  }
+  .curbadge {
+    font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 6px 13px; border-radius: 99px; color: #fff; background: var(--amber);
+  }
+  .verdicts { display: grid; gap: 6px; margin-bottom: 10px; }
+  .vrow { display: flex; align-items: baseline; gap: 10px; font-size: 13.5px; }
+  .vrow b {
+    font-family: var(--mono); flex: none; width: 22px; height: 22px; border-radius: 50%;
+    border: 1.5px solid var(--ink-soft); display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px; transform: translateY(3px);
+  }
+  .vrow .hit { color: var(--good); font-weight: 700; }
+  .vrow .miss { color: var(--ink-faded); font-weight: 700; }
+  .why { font-size: 13.5px; color: var(--ink-soft); max-width: 800px; }
+  .why b { color: var(--amber); }
+
+  /* summary */
+  #summary { display: none; }
+  body.review #summary { display: block; }
+  #summary h2 { font-family: var(--serif); font-weight: 500; font-size: 22px; margin: 10px 0 12px; }
+  #summary h2 em { color: var(--amber); font-style: italic; }
+  .sumtable { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .sumtable th {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-faded); text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule);
+  }
+  .sumtable td { padding: 9px 10px; border-bottom: 1px solid var(--paper-deep); vertical-align: top; }
+  .sumtable td:first-child { font-weight: 700; white-space: nowrap; }
+  .sumtable .cur { color: var(--amber); font-weight: 600; }
+  .sumtable .flx { color: var(--flux); font-weight: 600; }
+  .rulecard {
+    margin-top: 14px; border-left: 3px solid var(--flux); background: var(--flux-tint);
+    padding: 12px 16px; border-radius: 2px; font-size: 13.5px; color: var(--ink-soft);
+  }
+  .rulecard b { color: var(--flux); }
+  .restart {
+    display: inline-block; margin-top: 14px; font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faded);
+    background: none; border: 1px solid var(--rule); border-radius: 2px; padding: 8px 14px; cursor: pointer;
+  }
+  .restart:hover { color: var(--amber); border-color: var(--amber); }
+
+  footer {
+    margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--rule);
+    font-size: 12px; color: var(--ink-faded); font-family: var(--mono);
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div>
+      <div class="eyebrow">Magnetic Particle Testing · MT</div>
+      <h1>Magnetization <em>Techniques</em></h1>
+    </div>
+    <div class="hdr-actions">
+      <button class="fsbtn" id="fsBtn" type="button">⛶ Fullscreen</button>
+      <a class="back" href="index.html">← Exercise Hub</a>
+    </div>
+  </header>
+
+  <div class="concept">
+    <div class="tag">Two colors · one rule</div>
+    <p><b>Electric current</b> always creates a <b>magnetic field</b> circling around it at 90° — the right-hand rule. Every MT technique is just a different way of aiming that field. A crack collects particles only when the flux runs <b>across</b> it (90° is best, and it still works down to about 45°). A crack lying <b>along</b> the flux is invisible — which is why every part gets magnetized in two directions before it passes.</p>
+    <div class="keychips">
+      <span class="keychip cur"><i></i> electric current</span>
+      <span class="keychip flx"><i></i> magnetic flux</span>
+    </div>
+  </div>
+
+  <div class="steps" id="steps">
+    <div class="s" data-step="0"><span class="n">1</span><span class="l">Yoke</span></div>
+    <div class="s" data-step="1"><span class="n">2</span><span class="l">Coil Shot</span></div>
+    <div class="s" data-step="2"><span class="n">3</span><span class="l">Head Shot</span></div>
+    <div class="s" data-step="3"><span class="n">4</span><span class="l">Prods</span></div>
+    <div class="s" data-step="4"><span class="n">5</span><span class="l">Central Conductor</span></div>
+    <div class="s" data-step="5"><span class="n">✓</span><span class="l">Review</span></div>
+  </div>
+
+  <!-- ============================== 1 · YOKE ============================== -->
+  <section class="tech" data-tech="yoke">
+    <div class="panel">
+      <div class="thead"><span class="tnum">Technique 1 / 5</span><h3>The <em>Yoke</em></h3></div>
+      <p class="tdesc">An electromagnet shaped like a horseshoe. Current flows only in its winding — never in the part — and the part becomes the bridge between the two poles.</p>
+      <div class="scene">
+        <svg viewBox="0 0 640 300" id="svg_yoke" role="img" aria-label="Yoke on a steel plate">
+          <defs>
+            <linearGradient id="y_steel" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#dedbd4"/><stop offset="100%" stop-color="#a5a29b"/>
+            </linearGradient>
+            <marker id="y_af" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+              <path d="M0 0 L10 5 L0 10 z" fill="#1d6fa5"/>
+            </marker>
+          </defs>
+          <!-- plate -->
+          <polygon points="110,208 470,208 560,168 200,168" fill="url(#y_steel)"/>
+          <polygon points="110,208 470,208 470,238 110,238" fill="#8b8881"/>
+          <polygon points="470,238 470,208 560,168 560,198" fill="#75726b"/>
+          <polygon points="110,208 470,208 560,168 200,168" fill="none" stroke="#6f6c66" stroke-width="1.4"/>
+          <text x="112" y="256" font-family="'JetBrains Mono', monospace" font-size="10" fill="#8a8a85">steel plate</text>
+
+          <!-- flaws (always present) -->
+          <path id="y_f1" d="M317,196 l8,-3 l-2,-3 l9,-4" fill="none" stroke="#3b3934" stroke-width="2"/>
+          <path id="y_f2" d="M352,201 l13,1 l4,-2 l14,1" fill="none" stroke="#3b3934" stroke-width="2"/>
+          <text x="298" y="184" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="600" fill="#1a1a1a">①</text>
+          <text x="388" y="198" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="600" fill="#1a1a1a">②</text>
+
+          <!-- flux in the plate, pole to pole (energized) -->
+          <g class="egroup">
+            <g stroke="#1d6fa5" stroke-width="2.4" fill="none" class="flow" marker-end="url(#y_af)">
+              <path d="M250,184 Q325,178 400,182"/>
+              <path d="M252,191 Q325,187 402,189"/>
+              <path d="M254,198 Q325,196 404,196"/>
+            </g>
+            <!-- indication on flaw 1 only -->
+            <path class="ind" d="M315,198 l10,-4 l-2,-3 l11,-5" fill="none" stroke="#14110c" stroke-width="7" stroke-linecap="round" opacity="0.85" filter="blur(1px)"/>
+          </g>
+
+          <!-- drop zone -->
+          <rect id="y_dz" class="dropzone" x="198" y="98" width="254" height="100" rx="4"/>
+
+          <!-- yoke (drawn at placed position; starts translated to tray) -->
+          <g id="y_yoke" class="drag" aria-label="Yoke — drag onto the plate">
+            <rect x="205" y="103" width="240" height="44" rx="8" fill="#3a3a38"/>
+            <rect x="205" y="140" width="42" height="52" rx="3" fill="#4a4a47"/>
+            <rect x="403" y="140" width="42" height="52" rx="3" fill="#4a4a47"/>
+            <path d="M290,103 Q325,74 360,103" fill="none" stroke="#3a3a38" stroke-width="9" stroke-linecap="round"/>
+            <!-- winding on the bridge -->
+            <g stroke="#c98a4b" stroke-width="4.5" fill="none">
+              <ellipse cx="277" cy="125" rx="6" ry="27"/>
+              <ellipse cx="293" cy="125" rx="6" ry="27"/>
+              <ellipse cx="309" cy="125" rx="6" ry="27"/>
+              <ellipse cx="325" cy="125" rx="6" ry="27"/>
+              <ellipse cx="341" cy="125" rx="6" ry="27"/>
+              <ellipse cx="357" cy="125" rx="6" ry="27"/>
+            </g>
+            <path d="M362,112 C 430,96 470,70 512,58" fill="none" stroke="#4a4a47" stroke-width="3.4"/>
+            <!-- current animates in the winding + cable when energized -->
+            <g class="egroup">
+              <g stroke="#b54515" stroke-width="2.6" fill="none" class="flowslow">
+                <ellipse cx="277" cy="125" rx="6" ry="27"/>
+                <ellipse cx="293" cy="125" rx="6" ry="27"/>
+                <ellipse cx="309" cy="125" rx="6" ry="27"/>
+                <ellipse cx="325" cy="125" rx="6" ry="27"/>
+                <ellipse cx="341" cy="125" rx="6" ry="27"/>
+                <ellipse cx="357" cy="125" rx="6" ry="27"/>
+              </g>
+              <path class="flow" d="M362,112 C 430,96 470,70 512,58" fill="none" stroke="#b54515" stroke-width="2.6"/>
+              <text x="218" y="172" font-family="'JetBrains Mono', monospace" font-size="13" font-weight="700" fill="#fff">N</text>
+              <text x="416" y="172" font-family="'JetBrains Mono', monospace" font-size="13" font-weight="700" fill="#fff">S</text>
+            </g>
+          </g>
+        </svg>
+      </div>
+      <div class="ctlrow">
+        <div class="instr" data-role="instr">👉 Drag (or tap) the yoke to place it on the plate.</div>
+        <button class="energize" type="button" disabled>⚡ Energize</button>
+        <button class="nextbtn" type="button">Next: Coil Shot →</button>
+      </div>
+      <div class="resultstrip">
+        <div class="rowtop">
+          <span class="curbadge">Current: in the yoke winding only</span>
+          <span class="fieldbadge">Field: longitudinal, pole → pole</span>
+        </div>
+        <div class="verdicts">
+          <div class="vrow"><b>①</b><span>Crack across the pole-to-pole line — <span class="hit">strong indication</span></span></div>
+          <div class="vrow"><b>②</b><span>Crack along the pole-to-pole line — <span class="miss">invisible</span></span></div>
+        </div>
+        <p class="why">The flux runs <b>pole to pole through the plate</b>. Flaw ① lies across those flux lines, interrupts them, and collects particles. Flaw ② lies along them, so the flux slips past. To catch ②, rotate the yoke 90° and shoot again. No current ever enters the part.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== 2 · COIL SHOT ============================== -->
+  <section class="tech" data-tech="coil">
+    <div class="panel">
+      <div class="thead"><span class="tnum">Technique 2 / 5</span><h3>The <em>Coil Shot</em></h3></div>
+      <p class="tdesc">The bar sits inside a coil of heavy cable. Current circles <em>around</em> the part in the windings — and the field it creates runs straight down the length of the bar.</p>
+      <div class="scene">
+        <svg viewBox="0 0 640 300" id="svg_coil" role="img" aria-label="Bar inside a magnetizing coil">
+          <defs>
+            <linearGradient id="c_steel" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#e2dfd8"/><stop offset="30%" stop-color="#c9c6bf"/><stop offset="100%" stop-color="#84817a"/>
+            </linearGradient>
+            <marker id="c_af" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+              <path d="M0 0 L10 5 L0 10 z" fill="#1d6fa5"/>
+            </marker>
+            <marker id="c_ac" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+              <path d="M0 0 L10 5 L0 10 z" fill="#b54515"/>
+            </marker>
+          </defs>
+          <!-- bench + supports -->
+          <rect x="60" y="255" width="520" height="14" rx="2" fill="#d9d2c4"/>
+          <polygon points="185,255 235,255 222,178 198,178" fill="#bdb5a4"/>
+          <polygon points="435,255 485,255 472,178 448,178" fill="#bdb5a4"/>
+          <!-- bar -->
+          <rect x="140" y="122" width="380" height="56" fill="url(#c_steel)"/>
+          <ellipse cx="520" cy="150" rx="11" ry="28" fill="url(#c_steel)" stroke="#6f6c66" stroke-width="1.4"/>
+          <ellipse cx="140" cy="150" rx="11" ry="28" fill="#a5a29b" stroke="#6f6c66" stroke-width="1.4"/>
+          <line x1="140" y1="122" x2="520" y2="122" stroke="#6f6c66" stroke-width="1.4"/>
+          <line x1="140" y1="178" x2="520" y2="178" stroke="#6f6c66" stroke-width="1.4"/>
+          <text x="140" y="288" font-family="'JetBrains Mono', monospace" font-size="10" fill="#8a8a85">steel bar on the bench</text>
+
+          <!-- flaws -->
+          <path id="c_f1" d="M228,138 l15,1 l5,-3 l16,2" fill="none" stroke="#3b3934" stroke-width="2"/>
+          <path id="c_f2" d="M372,124 q5,13 -2,26" fill="none" stroke="#3b3934" stroke-width="2"/>
+          <text x="212" y="128" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="600" fill="#1a1a1a">①</text>
+          <text x="384" y="120" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="600" fill="#1a1a1a">②</text>
+
+          <!-- longitudinal flux inside the bar — follows the coil -->
+          <g id="c_field">
+            <g class="egroup" stroke="#1d6fa5" stroke-width="2.4" fill="none">
+              <path class="flow" marker-end="url(#c_af)" d="M445,136 L215,136"/>
+              <path class="flow" marker-end="url(#c_af)" d="M445,150 L215,150"/>
+              <path class="flow" marker-end="url(#c_af)" d="M445,164 L215,164"/>
+            </g>
+          </g>
+          <!-- indications -->
+          <g class="egroup">
+            <path id="c_ind2" class="ind" d="M371,122 q7,14 -2,30" fill="none" stroke="#14110c" stroke-width="7" stroke-linecap="round" opacity="0.85" filter="blur(1px)"/>
+          </g>
+
+          <!-- drop zone -->
+          <rect id="c_dz" class="dropzone" x="272" y="92" width="116" height="120" rx="6"/>
+
+          <!-- coil (drag) -->
+          <g id="c_coil" class="drag" aria-label="Coil — drag it over the bar, then slide it along the length">
+            <rect x="276" y="96" width="108" height="110" fill="transparent"/>
+            <g stroke="#c98a4b" stroke-width="6" fill="none">
+              <ellipse cx="290" cy="150" rx="9" ry="52"/>
+              <ellipse cx="310" cy="150" rx="9" ry="52"/>
+              <ellipse cx="330" cy="150" rx="9" ry="52"/>
+              <ellipse cx="350" cy="150" rx="9" ry="52"/>
+              <ellipse cx="370" cy="150" rx="9" ry="52"/>
+            </g>
+            <path d="M376,196 C 420,240 460,252 500,256" fill="none" stroke="#4a4a47" stroke-width="3.4"/>
+            <g class="egroup">
+              <g stroke="#b54515" stroke-width="2.8" fill="none" class="flowslow">
+                <ellipse cx="290" cy="150" rx="9" ry="52"/>
+                <ellipse cx="310" cy="150" rx="9" ry="52"/>
+                <ellipse cx="330" cy="150" rx="9" ry="52"/>
+                <ellipse cx="350" cy="150" rx="9" ry="52"/>
+                <ellipse cx="370" cy="150" rx="9" ry="52"/>
+              </g>
+              <path class="flow" d="M376,196 C 420,240 460,252 500,256" fill="none" stroke="#b54515" stroke-width="2.6"/>
+              <path d="M326,208 l8,0 l-4,8 z" fill="#b54515"/>
+              <text x="342" y="218" font-family="'JetBrains Mono', monospace" font-size="9.5" fill="#b54515">current circles the part</text>
+            </g>
+          </g>
+        </svg>
+      </div>
+      <div class="ctlrow">
+        <div class="instr" data-role="instr">👉 Drag (or tap) the coil so the bar passes through it.</div>
+        <button class="energize" type="button" disabled>⚡ Energize</button>
+        <button class="nextbtn" type="button">Next: Head Shot →</button>
+      </div>
+      <div class="resultstrip">
+        <div class="rowtop">
+          <span class="curbadge">Current: in the coil, circling the part</span>
+          <span class="fieldbadge">Field: longitudinal, along the bar</span>
+        </div>
+        <div class="verdicts">
+          <div class="vrow"><b>①</b><span>Seam running along the bar — <span class="miss">invisible</span></span></div>
+          <div class="vrow"><b>②</b><span>Crack running around the bar (transverse) — <span class="hit">strong indication</span></span></div>
+        </div>
+        <p class="why">Right-hand rule: current circles the bar, so the flux runs <b>straight down its length</b>. The transverse crack ② cuts across that flux and shows; the seam ① runs with it and hides. <b>Now slide the coil left and right</b> — the crack only indicates while the field still reaches it. On a long part you magnetize and inspect in overlapping steps.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== 3 · HEAD SHOT ============================== -->
+  <section class="tech" data-tech="head">
+    <div class="panel">
+      <div class="thead"><span class="tnum">Technique 3 / 5</span><h3>The <em>Head Shot</em></h3></div>
+      <p class="tdesc">The bench head-stocks clamp the part and pass current straight through it, end to end. This time the part itself is the conductor.</p>
+      <div class="scene">
+        <svg viewBox="0 0 640 300" id="svg_head" role="img" aria-label="Bar clamped between head-stocks">
+          <defs>
+            <linearGradient id="h_steel" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#e2dfd8"/><stop offset="30%" stop-color="#c9c6bf"/><stop offset="100%" stop-color="#84817a"/>
+            </linearGradient>
+            <linearGradient id="h_clamp" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#4a4a47"/><stop offset="100%" stop-color="#282826"/>
+            </linearGradient>
+            <marker id="h_ac" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+              <path d="M0 0 L10 5 L0 10 z" fill="#b54515"/>
+            </marker>
+          </defs>
+          <!-- bench -->
+          <rect x="30" y="252" width="580" height="14" rx="2" fill="#d9d2c4"/>
+          <rect x="52" y="216" width="34" height="40" fill="#bdb5a4"/>
+          <rect x="554" y="216" width="34" height="40" fill="#bdb5a4"/>
+          <rect x="42" y="88" width="82" height="132" rx="4" fill="url(#h_clamp)"/>
+          <rect x="516" y="88" width="82" height="132" rx="4" fill="url(#h_clamp)"/>
+          <rect x="116" y="100" width="12" height="108" rx="2" fill="#c98a4b"/>
+          <rect x="512" y="100" width="12" height="108" rx="2" fill="#c98a4b"/>
+          <text x="60" y="240" font-family="'JetBrains Mono', monospace" font-size="10" fill="#8a8a85">head-stock</text>
+
+          <!-- drop zone -->
+          <rect id="h_dz" class="dropzone" x="126" y="106" width="390" height="96" rx="6"/>
+
+          <!-- bar (drag) -->
+          <g id="h_bar" class="drag" aria-label="Bar — drag it between the head-stocks">
+            <rect x="128" y="110" width="384" height="88" fill="url(#h_steel)"/>
+            <ellipse cx="512" cy="154" rx="15" ry="44" fill="url(#h_steel)" stroke="#6f6c66" stroke-width="1.4"/>
+            <ellipse cx="128" cy="154" rx="15" ry="44" fill="#a5a29b" stroke="#6f6c66" stroke-width="1.4"/>
+            <line x1="128" y1="110" x2="512" y2="110" stroke="#6f6c66" stroke-width="1.4"/>
+            <line x1="128" y1="198" x2="512" y2="198" stroke="#6f6c66" stroke-width="1.4"/>
+            <!-- flaws travel with the bar -->
+            <path id="h_f1" d="M228,128 l18,1 l6,-3 l19,2" fill="none" stroke="#3b3934" stroke-width="2"/>
+            <path id="h_f2" d="M392,116 q7,18 -2,38" fill="none" stroke="#3b3934" stroke-width="2"/>
+            <text x="208" y="120" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="600" fill="#1a1a1a">①</text>
+            <text x="404" y="112" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="600" fill="#1a1a1a">②</text>
+            <g class="egroup">
+              <!-- current straight through the bar -->
+              <g stroke="#b54515" stroke-width="2.6" fill="none">
+                <path class="flow" marker-end="url(#h_ac)" d="M134,132 L502,132"/>
+                <path class="flow" marker-end="url(#h_ac)" d="M134,154 L502,154"/>
+                <path class="flow" marker-end="url(#h_ac)" d="M134,176 L502,176"/>
+              </g>
+              <!-- circular flux hoops around the bar -->
+              <g stroke="#1d6fa5" stroke-width="2.4" fill="none" class="flowslow">
+                <ellipse cx="205" cy="154" rx="13" ry="52"/>
+                <ellipse cx="320" cy="154" rx="13" ry="52"/>
+                <ellipse cx="452" cy="154" rx="13" ry="52"/>
+              </g>
+              <g fill="#1d6fa5">
+                <path d="M222,158 l8,0 l-4,-9 z"/>
+                <path d="M337,158 l8,0 l-4,-9 z"/>
+                <path d="M469,158 l8,0 l-4,-9 z"/>
+              </g>
+              <!-- indication on the longitudinal seam only -->
+              <path class="ind" d="M226,130 l20,1 l6,-3 l21,2" fill="none" stroke="#14110c" stroke-width="7" stroke-linecap="round" opacity="0.85" filter="blur(1px)"/>
+            </g>
+          </g>
+          <!-- cables -->
+          <g class="egroup" stroke="#b54515" stroke-width="3" fill="none">
+            <path class="flow" d="M8,154 L40,154" marker-end="url(#h_ac)"/>
+            <path class="flow" d="M600,154 L632,154" marker-end="url(#h_ac)"/>
+          </g>
+        </svg>
+      </div>
+      <div class="ctlrow">
+        <div class="instr" data-role="instr">👉 Drag (or tap) the bar down between the head-stock pads.</div>
+        <button class="energize" type="button" disabled>⚡ Energize</button>
+        <button class="nextbtn" type="button">Next: Prods →</button>
+      </div>
+      <div class="resultstrip">
+        <div class="rowtop">
+          <span class="curbadge">Current: through the part, end to end</span>
+          <span class="fieldbadge">Field: circular, wrapping the bar</span>
+        </div>
+        <div class="verdicts">
+          <div class="vrow"><b>①</b><span>Seam running along the bar — <span class="hit">strong indication</span></span></div>
+          <div class="vrow"><b>②</b><span>Crack running around the bar (transverse) — <span class="miss">invisible</span></span></div>
+        </div>
+        <p class="why">Exactly the opposite of the coil shot. Current runs <b>through the bar</b>, so the flux wraps <b>around</b> it in hoops. The longitudinal seam ① cuts across the hoops and shows; the transverse crack ② runs with the hoops and hides. Coil shot + head shot together cover both directions — that's the pair a bench inspection uses.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== 4 · PRODS ============================== -->
+  <section class="tech" data-tech="prods">
+    <div class="panel">
+      <div class="thead"><span class="tnum">Technique 4 / 5</span><h3>The <em>Prods</em></h3></div>
+      <p class="tdesc">Two hand-held contact tips push current through a local patch of a big part — like a portable head shot for weld seams and castings too large for the bench.</p>
+      <div class="scene">
+        <svg viewBox="0 0 640 300" id="svg_prods" role="img" aria-label="Two prods on a steel plate">
+          <defs>
+            <linearGradient id="p_steel" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#dedbd4"/><stop offset="100%" stop-color="#a5a29b"/>
+            </linearGradient>
+            <marker id="p_ac" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+              <path d="M0 0 L10 5 L0 10 z" fill="#b54515"/>
+            </marker>
+          </defs>
+          <!-- plate -->
+          <polygon points="110,222 470,222 560,182 200,182" fill="url(#p_steel)"/>
+          <polygon points="110,222 470,222 470,252 110,252" fill="#8b8881"/>
+          <polygon points="470,252 470,222 560,182 560,212" fill="#75726b"/>
+          <polygon points="110,222 470,222 560,182 200,182" fill="none" stroke="#6f6c66" stroke-width="1.4"/>
+          <text x="112" y="270" font-family="'JetBrains Mono', monospace" font-size="10" fill="#8a8a85">steel plate — weld area</text>
+
+          <!-- flaws -->
+          <path id="p_f1" d="M306,186 l16,1 l5,-2 l15,2" fill="none" stroke="#3b3934" stroke-width="2"/>
+          <path id="p_f2" d="M346,216 l9,-4 l-2,-3 l9,-4" fill="none" stroke="#3b3934" stroke-width="2"/>
+          <text x="288" y="180" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="600" fill="#1a1a1a">①</text>
+          <text x="368" y="222" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="600" fill="#1a1a1a">②</text>
+
+          <!-- energized: current tip-to-tip + circular flux around it -->
+          <g class="egroup">
+            <g stroke="#b54515" stroke-width="2.6" fill="none" class="flow" marker-end="url(#p_ac)">
+              <path d="M252,198 C 300,190 360,190 408,196"/>
+              <path d="M252,203 L408,201"/>
+              <path d="M252,208 C 300,214 360,214 408,206"/>
+            </g>
+            <g stroke="#1d6fa5" stroke-width="2.2" fill="none" class="flowslow">
+              <ellipse cx="292" cy="202" rx="9" ry="27"/>
+              <ellipse cx="330" cy="202" rx="9" ry="27"/>
+              <ellipse cx="368" cy="202" rx="9" ry="27"/>
+            </g>
+            <g fill="#1d6fa5">
+              <path d="M303,206 l7,0 l-3.5,-8 z"/>
+              <path d="M341,206 l7,0 l-3.5,-8 z"/>
+              <path d="M379,206 l7,0 l-3.5,-8 z"/>
+            </g>
+            <!-- indication on flaw 1 only -->
+            <path class="ind" d="M304,188 l18,1 l5,-2 l17,2" fill="none" stroke="#14110c" stroke-width="7" stroke-linecap="round" opacity="0.85" filter="blur(1px)"/>
+          </g>
+
+          <!-- drop zones -->
+          <circle id="p_dzL" class="dropzone" cx="250" cy="200" r="26"/>
+          <circle id="p_dzR" class="dropzone" cx="410" cy="198" r="26"/>
+
+          <!-- prod L (drag) -->
+          <g id="p_prodL" class="drag" aria-label="Left prod — drag its tip onto the plate">
+            <rect x="232" y="112" width="36" height="92" fill="transparent"/>
+            <path d="M244,200 L250,186 L256,200 Z" fill="#c98a4b"/>
+            <rect x="238" y="118" width="24" height="70" rx="5" fill="#3a3a38"/>
+            <path d="M250,118 C 240,84 200,62 150,54" fill="none" stroke="#4a4a47" stroke-width="3.4"/>
+            <g class="egroup">
+              <path class="flow" d="M150,54 C 200,62 240,84 250,118" fill="none" stroke="#b54515" stroke-width="2.6"/>
+            </g>
+          </g>
+          <!-- prod R (drag) -->
+          <g id="p_prodR" class="drag" aria-label="Right prod — drag its tip onto the plate">
+            <rect x="392" y="110" width="36" height="92" fill="transparent"/>
+            <path d="M404,198 L410,184 L416,198 Z" fill="#c98a4b"/>
+            <rect x="398" y="116" width="24" height="70" rx="5" fill="#3a3a38"/>
+            <path d="M410,116 C 424,82 470,60 520,52" fill="none" stroke="#4a4a47" stroke-width="3.4"/>
+            <g class="egroup">
+              <path class="flow" d="M410,116 C 424,82 470,60 520,52" fill="none" stroke="#b54515" stroke-width="2.6"/>
+            </g>
+          </g>
+        </svg>
+      </div>
+      <div class="ctlrow">
+        <div class="instr" data-role="instr">👉 Drag (or tap) each prod so its tip lands in a marked spot.</div>
+        <button class="energize" type="button" disabled>⚡ Energize</button>
+        <button class="nextbtn" type="button">Next: Central Conductor →</button>
+      </div>
+      <div class="resultstrip">
+        <div class="rowtop">
+          <span class="curbadge">Current: through the plate, tip to tip</span>
+          <span class="fieldbadge">Field: circular, around the current path</span>
+        </div>
+        <div class="verdicts">
+          <div class="vrow"><b>①</b><span>Crack parallel to the prod line — <span class="hit">strong indication</span></span></div>
+          <div class="vrow"><b>②</b><span>Crack across the prod line — <span class="miss">invisible</span></span></div>
+        </div>
+        <p class="why">The current crossing the plate is wrapped in <b>circular flux</b>, just like the head shot — so on the surface, the flux runs <b>across</b> the tip-to-tip line. Flaw ①, parallel to the prods, interrupts it and shows. Flaw ② hides; move the prods 90° to catch it. Real-world caution: prods pass current <b>through the part</b> — poor contact can leave arc burns.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== 5 · CENTRAL CONDUCTOR ============================== -->
+  <section class="tech" data-tech="central">
+    <div class="panel">
+      <div class="thead"><span class="tnum">Technique 5 / 5</span><h3>The <em>Central Conductor</em></h3></div>
+      <p class="tdesc">For pipes, tubes and rings: a copper bar carries the current <em>through the bore</em>, and its circular field magnetizes the part around it — without a single amp touching the part.</p>
+      <div class="scene">
+        <svg viewBox="0 0 640 300" id="svg_central" role="img" aria-label="Pipe slid over a central conductor bar">
+          <defs>
+            <linearGradient id="cc_steel" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#e2dfd8"/><stop offset="30%" stop-color="#c9c6bf"/><stop offset="100%" stop-color="#84817a"/>
+            </linearGradient>
+            <linearGradient id="cc_clamp" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#4a4a47"/><stop offset="100%" stop-color="#282826"/>
+            </linearGradient>
+            <linearGradient id="cc_cu" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#e0a86b"/><stop offset="100%" stop-color="#9c6a35"/>
+            </linearGradient>
+            <marker id="cc_ac" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+              <path d="M0 0 L10 5 L0 10 z" fill="#b54515"/>
+            </marker>
+          </defs>
+          <!-- bench -->
+          <rect x="30" y="252" width="580" height="14" rx="2" fill="#d9d2c4"/>
+          <rect x="52" y="216" width="34" height="40" fill="#bdb5a4"/>
+          <rect x="554" y="216" width="34" height="40" fill="#bdb5a4"/>
+          <rect x="42" y="88" width="82" height="132" rx="4" fill="url(#cc_clamp)"/>
+          <rect x="516" y="88" width="82" height="132" rx="4" fill="url(#cc_clamp)"/>
+          <text x="60" y="240" font-family="'JetBrains Mono', monospace" font-size="10" fill="#8a8a85">head-stock</text>
+
+          <!-- copper conductor (behind the pipe) -->
+          <rect x="124" y="141" width="392" height="26" fill="url(#cc_cu)"/>
+          <ellipse cx="516" cy="154" rx="7" ry="13" fill="url(#cc_cu)" stroke="#7d5327" stroke-width="1.2"/>
+          <text x="132" y="186" font-family="'JetBrains Mono', monospace" font-size="10" fill="#9c6a35">copper bar</text>
+          <!-- current in the conductor -->
+          <g class="egroup" stroke="#b54515" stroke-width="2.8" fill="none">
+            <path class="flow" marker-end="url(#cc_ac)" d="M8,154 L44,154"/>
+            <path class="flow" d="M128,154 L512,154"/>
+            <path class="flow" marker-end="url(#cc_ac)" d="M598,154 L632,154"/>
+          </g>
+
+          <!-- drop zone -->
+          <rect id="cc_dz" class="dropzone" x="236" y="90" width="216" height="128" rx="8"/>
+
+          <!-- pipe (drag) -->
+          <g id="cc_pipe" class="drag" aria-label="Pipe — drag it over the copper conductor">
+            <rect x="240" y="94" width="190" height="120" fill="url(#cc_steel)"/>
+            <ellipse cx="430" cy="154" rx="20" ry="60" fill="url(#cc_steel)" stroke="#6f6c66" stroke-width="1.5"/>
+            <ellipse cx="430" cy="154" rx="9" ry="24" fill="#2b2b29"/>
+            <ellipse cx="240" cy="154" rx="20" ry="60" fill="#a5a29b" stroke="#6f6c66" stroke-width="1.5"/>
+            <line x1="240" y1="94" x2="430" y2="94" stroke="#6f6c66" stroke-width="1.5"/>
+            <line x1="240" y1="214" x2="430" y2="214" stroke="#6f6c66" stroke-width="1.5"/>
+            <!-- conductor visible in the bore once placed -->
+            <ellipse class="when-placed" cx="430" cy="154" rx="5" ry="11" fill="url(#cc_cu)" opacity="0"/>
+            <!-- flaws on the pipe -->
+            <path id="cc_f1" d="M292,101 l20,1 l6,-3 l21,2" fill="none" stroke="#3b3934" stroke-width="2"/>
+            <path id="cc_f2" d="M390,97 q8,26 -1,52" fill="none" stroke="#3b3934" stroke-width="2"/>
+            <text x="272" y="92" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="600" fill="#1a1a1a">①</text>
+            <text x="402" y="92" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="600" fill="#1a1a1a">②</text>
+            <g class="egroup">
+              <!-- circular flux around the conductor, passing through the pipe wall -->
+              <g stroke="#1d6fa5" stroke-width="2.4" fill="none" class="flowslow">
+                <ellipse cx="285" cy="154" rx="13" ry="44"/>
+                <ellipse cx="335" cy="154" rx="13" ry="44"/>
+                <ellipse cx="385" cy="154" rx="13" ry="44"/>
+              </g>
+              <g fill="#1d6fa5">
+                <path d="M302,158 l8,0 l-4,-9 z"/>
+                <path d="M352,158 l8,0 l-4,-9 z"/>
+                <path d="M402,158 l8,0 l-4,-9 z"/>
+              </g>
+              <!-- indication on longitudinal seam only -->
+              <path class="ind" d="M290,103 l22,1 l6,-3 l23,2" fill="none" stroke="#14110c" stroke-width="7" stroke-linecap="round" opacity="0.85" filter="blur(1px)"/>
+            </g>
+          </g>
+        </svg>
+      </div>
+      <div class="ctlrow">
+        <div class="instr" data-role="instr">👉 Drag (or tap) the pipe so the copper bar runs through its bore.</div>
+        <button class="energize" type="button" disabled>⚡ Energize</button>
+        <button class="nextbtn" type="button">Finish: see all five together →</button>
+      </div>
+      <div class="resultstrip">
+        <div class="rowtop">
+          <span class="curbadge">Current: through the copper bar only</span>
+          <span class="fieldbadge">Field: circular, in the pipe wall</span>
+        </div>
+        <div class="verdicts">
+          <div class="vrow"><b>①</b><span>Seam running along the pipe — <span class="hit">strong indication</span></span></div>
+          <div class="vrow"><b>②</b><span>Crack running around the pipe — <span class="miss">invisible</span></span></div>
+        </div>
+        <p class="why">Same physics as the head shot — circular flux around a current — but the current rides the <b>copper bar</b>, not the part. The pipe wall sits inside that circular field, so the longitudinal seam ① shows and the circumferential crack ② hides. Bonus: no arc-burn risk, and the <b>inside surface is magnetized too</b> — ID and OD in one shot.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== SUMMARY ============================== -->
+  <section id="summary">
+    <div class="panel">
+      <h2>All five, <em>side by side</em></h2>
+      <div style="overflow-x:auto">
+        <table class="sumtable">
+          <thead><tr><th>Technique</th><th>Where the current flows</th><th>Field direction</th><th>Finds cracks running…</th></tr></thead>
+          <tbody>
+            <tr><td>Yoke</td><td class="cur">In the yoke winding — none in the part</td><td class="flx">Longitudinal, pole to pole</td><td>Across the pole-to-pole line</td></tr>
+            <tr><td>Coil shot</td><td class="cur">In the coil, circling the part</td><td class="flx">Longitudinal, along the part</td><td>Around the part (transverse)</td></tr>
+            <tr><td>Head shot</td><td class="cur">Through the part, end to end</td><td class="flx">Circular, wrapping the part</td><td>Along the part (longitudinal)</td></tr>
+            <tr><td>Prods</td><td class="cur">Through the plate, tip to tip</td><td class="flx">Circular, around the current path</td><td>Parallel to the prod line</td></tr>
+            <tr><td>Central conductor</td><td class="cur">Through the copper bar — none in the part</td><td class="flx">Circular, in the pipe wall</td><td>Along the pipe — ID and OD</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="rulecard">
+        <b>One rule runs the whole table:</b> flux always circles the current at 90°, and a crack only shows when the flux runs across it (90° is best; it works down to about 45°). Current direction and field direction always trade places — that's why a complete inspection magnetizes every part in <b>two directions</b>.
+      </div>
+      <button class="restart" type="button" onclick="location.reload()">↺ Start over</button>
+    </div>
+  </section>
+
+  <footer>MT Magnetization Techniques · current in amber · flux in blue</footer>
+</div>
+
+<script>
+/* ============ generic drag / tap-to-place ============ */
+function toSvg(svg, cx, cy) {
+  const pt = svg.createSVGPoint();
+  pt.x = cx; pt.y = cy;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+/* Item is drawn at its placed position; `home` offsets it into the staging
+   area until the student drags (or taps) it onto the target. */
+function makeDraggable(svg, g, opt) {
+  let cur = { x: opt.home[0], y: opt.home[1] };
+  let start = null, moved = 0, placed = false, slideX = 0;
+  const set = () => g.setAttribute('transform', `translate(${cur.x} ${cur.y})`);
+  set();
+
+  function place() {
+    placed = true;
+    cur = { x: 0, y: 0 }; slideX = 0; set();
+    g.classList.add('placed');
+    if (opt.slide) g.classList.add('slidable');
+    if (opt.dz) opt.dz.classList.add('hidden');
+    opt.onPlace();
+  }
+
+  g.addEventListener('pointerdown', e => {
+    if (placed && !opt.slide) return;
+    e.preventDefault();
+    g.setPointerCapture(e.pointerId);
+    start = { px: e.clientX, py: e.clientY, x: cur.x, y: cur.y };
+    moved = 0;
+  });
+  g.addEventListener('pointermove', e => {
+    if (!start) return;
+    const p1 = toSvg(svg, start.px, start.py);
+    const p2 = toSvg(svg, e.clientX, e.clientY);
+    moved = Math.max(moved, Math.abs(e.clientX - start.px) + Math.abs(e.clientY - start.py));
+    if (placed && opt.slide) {
+      slideX = clamp(start.x + (p2.x - p1.x), opt.slide.min, opt.slide.max);
+      cur = { x: slideX, y: 0 }; set();
+      opt.slide.onSlide(slideX);
+      return;
+    }
+    cur = { x: start.x + (p2.x - p1.x), y: start.y + (p2.y - p1.y) };
+    set();
+  });
+  g.addEventListener('pointerup', () => {
+    if (!start) return;
+    const wasTap = moved < 6;
+    start = null;
+    if (placed) return;
+    if (wasTap || (Math.abs(cur.x) < opt.tol && Math.abs(cur.y) < opt.tol)) place();
+  });
+}
+
+/* ============ scene setup ============ */
+const $ = id => document.getElementById(id);
+const sections = [...document.querySelectorAll('section.tech')];
+const stepEls = [...document.querySelectorAll('#steps .s')];
+let stepIdx = 0;
+let coilDx = 0, coilEnergized = false;
+
+/* transverse crack on the coil-shot bar sits at x=372; the coil (base cx 330)
+   projects usable longitudinal flux roughly ±110 from its center */
+function updateCoilIndication() {
+  const visible = coilEnergized && Math.abs(372 - (330 + coilDx)) <= 110;
+  $('c_ind2').setAttribute('opacity', visible ? 0.85 : 0);
+  $('c_field').setAttribute('transform', `translate(${coilDx} 0)`);
+}
+
+const SCENES = [
+  { svg: 'svg_yoke',    items: [{ g: 'y_yoke', dz: 'y_dz', home: [40, -60], tol: 46 }] },
+  { svg: 'svg_coil',    items: [{ g: 'c_coil', dz: 'c_dz', home: [120, -72], tol: 52,
+      slide: { min: -130, max: 130, onSlide: dx => { coilDx = dx; updateCoilIndication(); } } }] },
+  { svg: 'svg_head',    items: [{ g: 'h_bar', dz: 'h_dz', home: [24, -104], tol: 50 }] },
+  { svg: 'svg_prods',   items: [
+      { g: 'p_prodL', dz: 'p_dzL', home: [-110, -52], tol: 42 },
+      { g: 'p_prodR', dz: 'p_dzR', home: [96, -46], tol: 42 } ] },
+  { svg: 'svg_central', items: [{ g: 'cc_pipe', dz: 'cc_dz', home: [30, -92], tol: 55 }] },
+];
+
+SCENES.forEach((scene, i) => {
+  const svg = $(scene.svg);
+  const section = sections[i];
+  const energizeBtn = section.querySelector('.energize');
+  const nextBtn = section.querySelector('.nextbtn');
+  const instr = section.querySelector('[data-role=instr]');
+  let placedCount = 0;
+
+  scene.items.forEach(item => {
+    makeDraggable(svg, $(item.g), {
+      home: item.home, tol: item.tol, dz: $(item.dz),
+      slide: item.slide,
+      onPlace: () => {
+        placedCount++;
+        if (placedCount === scene.items.length) {
+          energizeBtn.disabled = false;
+          instr.textContent = '✓ In position. Now press Energize.';
+        } else {
+          instr.textContent = '✓ One placed — now the other prod.';
+        }
+      },
+    });
+  });
+
+  energizeBtn.addEventListener('click', () => {
+    svg.classList.add('on');
+    energizeBtn.disabled = true;
+    section.querySelector('.resultstrip').classList.add('show');
+    nextBtn.classList.add('show');
+    instr.textContent = scene.svg === 'svg_coil'
+      ? '⚡ Energized. Try sliding the coil along the bar.'
+      : '⚡ Energized. Watch the two colors — then read the verdict below.';
+    if (scene.svg === 'svg_coil') { coilEnergized = true; updateCoilIndication(); }
+    stepEls[i].classList.add('done');
+  });
+
+  nextBtn.addEventListener('click', () => {
+    if (i < sections.length - 1) showStep(i + 1);
+    else showReview();
+  });
+});
+
+function showStep(i) {
+  stepIdx = i;
+  sections.forEach((s, j) => s.classList.toggle('current', j === i));
+  stepEls.forEach((s, j) => s.classList.toggle('active', j === i));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showReview() {
+  document.body.classList.add('review');
+  stepEls.forEach(s => s.classList.remove('active'));
+  stepEls[5].classList.add('active');
+  stepEls[5].classList.add('done');
+  document.getElementById('summary').scrollIntoView({ behavior: 'smooth' });
+}
+
+showStep(0);
+
+/* pipe bore shows the conductor once placed */
+const ccObserver = new MutationObserver(() => {
+  if ($('cc_pipe').classList.contains('placed'))
+    document.querySelector('#cc_pipe .when-placed').setAttribute('opacity', 1);
+});
+ccObserver.observe($('cc_pipe'), { attributes: true, attributeFilter: ['class'] });
+
+/* ============ fullscreen ============ */
+const fsBtn = $('fsBtn');
+const fsSupported = !!(document.documentElement.requestFullscreen && document.fullscreenEnabled);
+if (!fsSupported) fsBtn.classList.add('hidden');
+fsBtn.addEventListener('click', () => {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen().catch(() => {});
+});
+document.addEventListener('fullscreenchange', () => {
+  fsBtn.textContent = document.fullscreenElement ? '⛶ Exit fullscreen' : '⛶ Fullscreen';
+});
+</script>
+</body>
+</html>
