@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NDT Jeopardy — Class Review Game</title>
+<title>MT Jeopardy — Class Review Game</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -408,9 +408,9 @@
 <div class="container">
   <header>
     <div class="header-text">
-      <div class="eyebrow">Class Review Game</div>
-      <h1>NDT <em>Jeopardy</em></h1>
-      <p>Pick a category and value, read the clue aloud, then reveal the answer and score each team. Wrong answers lose points — Daily Doubles are worth double.</p>
+      <div class="eyebrow">Magnetic Particle · Class Review Game</div>
+      <h1>MT <em>Jeopardy</em></h1>
+      <p>Pick a category and value, read the clue aloud, then reveal the answer and score each team. Wrong answers lose points, and it all comes down to the Final Jeopardy wager.</p>
     </div>
     <a class="back-link" href="index.html">← Exercise Hub</a>
   </header>
@@ -456,6 +456,26 @@
     </div>
   </div>
 
+  <!-- ===== FINAL JEOPARDY ===== -->
+  <div class="overlay" id="fjOverlay">
+    <div class="clue-card">
+      <div class="clue-meta">Final Jeopardy</div>
+      <div class="clue-text" id="fjClue"></div>
+      <div class="answer-block" id="fjAnswerBlock">
+        <div class="label">Answer</div>
+        <div class="answer-text" id="fjAnswerText"></div>
+      </div>
+      <div class="scoring show">
+        <div class="label">Enter each team's wager, reveal the answer, then judge ✓ / ✗</div>
+        <div id="fjRows"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="fjRevealBtn">Reveal Answer</button>
+        <button class="btn" id="fjDoneBtn" style="display:none">Show Final Scores →</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== GAME OVER ===== -->
   <div class="overlay" id="finalOverlay">
     <div class="clue-card final-card">
@@ -466,78 +486,78 @@
     </div>
   </div>
 
-  <footer>NDT Training · Jeopardy Review · 6 categories × 5 clues</footer>
+  <footer>NDT Training · MT Jeopardy Review · From class slides</footer>
 </div>
 
 <script>
 /* =====================================================================
-   GAME DATA — edit this block to change categories, clues, and answers.
+   GAME DATA — taken verbatim from the class PPT (MT_Jeopardy).
    Each category has exactly 5 clues (100–500 points, in order).
    Set daily: true on a clue to make it a Daily Double (double points).
+
+   NOTE: the PPT board also has Demag, Discontinuities, and Theory II
+   plus a Final Jeopardy clue — those slides were not in the attached
+   PDF. Uncomment and fill them in below when available, and set
+   finalJeopardy to { clue: "...", answer: "..." } to enable the
+   wager round.
    ===================================================================== */
 const GAME_DATA = {
   categories: [
     {
-      title: "Radiation Safety",
+      title: "Theory I",
       clues: [
-        { value: 100, clue: "These are the three basic methods of reducing radiation exposure.", answer: "What are time, distance, and shielding?" },
-        { value: 200, clue: "Doubling your distance from a gamma source reduces the intensity to this fraction of the original.", answer: "What is one quarter? (inverse square law)" },
-        { value: 300, clue: "A worker standing in a 4 mR/hr field for 30 minutes receives this total dose.", answer: "What is 2 mR? (dose = dose rate × time)" },
-        { value: 400, clue: "This is the NRC annual whole-body occupational dose limit for radiation workers.", answer: "What is 5 rem (50 mSv)?" },
-        { value: 500, clue: "This many half-value layers of shielding will reduce an 800 mR/hr field to 25 mR/hr.", answer: "What is 5 HVLs? (800 → 400 → 200 → 100 → 50 → 25)", daily: true }
+        { value: 100, clue: "Explain the direction of magnetic lines of force inside and outside the magnet.", answer: "From North to South outside the magnet and South to North inside the magnet." },
+        { value: 200, clue: "The discontinuity indication for ________ is wide and fuzzy. Surface or Subsurface?", answer: "Subsurface" },
+        { value: 300, clue: "Discontinuity that are usually flat and parallel to the outside surface typically caused due to porosity trapped at and earlier stage is", answer: "Lamination" },
+        { value: 400, clue: "Describe Skin Effect and explain its relationship with frequency of the current?", answer: "When AC current is used to magnetize a part, the magnetism stays only on the surface (skin) of the part. High frequency, more skin effect." },
+        { value: 500, clue: "Which technique would you use for inspecting large casting? Prods, Central Conductor, AC magnetization or multidirectional magnetization?", answer: "Multidirectional magnetization" }
       ]
     },
     {
-      title: "Radiographic Testing",
+      title: "Equipment",
       clues: [
-        { value: 100, clue: "Unlike an X-ray machine, a gamma source such as Ir-192 can never be turned this.", answer: "What is off?" },
-        { value: 200, clue: "This device, placed on the source side of the part, verifies the sensitivity of a radiograph.", answer: "What is a penetrameter (IQI — Image Quality Indicator)?" },
-        { value: 300, clue: "This commonly used radiographic isotope has a half-life of about 74 days.", answer: "What is iridium-192?" },
-        { value: 400, clue: "This X-ray tube effect makes the beam intensity lower on the anode side than on the cathode side.", answer: "What is the anode heel effect?" },
-        { value: 500, clue: "If you double the source-to-film distance, you must multiply the exposure time by this factor to keep film density the same.", answer: "What is four? (inverse square law)" }
-      ]
-    },
-    {
-      title: "Ultrasonic Testing",
-      clues: [
-        { value: 100, clue: "The two principal wave modes used in UT are longitudinal waves and these.", answer: "What are shear (transverse) waves?" },
-        { value: 200, clue: "In angle-beam testing, this is the surface distance from the exit point to where the beam returns to the scanning surface after one full V-path.", answer: "What is the skip distance?" },
-        { value: 300, clue: "This flaw-sizing technique moves the transducer until the signal amplitude falls to half its peak height.", answer: "What is the 6 dB drop technique?" },
-        { value: 400, clue: "Snell's law describes this bending of the sound beam as it crosses an interface between two materials at an angle.", answer: "What is refraction?", daily: true },
-        { value: 500, clue: "In steel, a shear wave travels at roughly this fraction of the longitudinal wave velocity.", answer: "What is about one half?" }
-      ]
-    },
-    {
-      title: "Magnetic Particle",
-      clues: [
-        { value: 100, clue: "MT works only on materials that have this magnetic property.", answer: "What is ferromagnetism?" },
-        { value: 200, clue: "A discontinuity is best detected when it is oriented this way relative to the magnetic flux lines.", answer: "What is perpendicular (90°)?" },
-        { value: 300, clue: "This effect causes AC current to concentrate the magnetic field at the surface of the part.", answer: "What is the skin effect?" },
-        { value: 400, clue: "Passing current directly through the part (a head shot) produces this direction of magnetization.", answer: "What is circular magnetization?" },
-        { value: 500, clue: "Placing the part inside a current-carrying coil (a coil shot) produces this direction of magnetization.", answer: "What is longitudinal magnetization?" }
-      ]
-    },
-    {
-      title: "Liquid Penetrant",
-      clues: [
-        { value: 100, clue: "PT can only detect discontinuities that are open to this.", answer: "What is the surface?" },
-        { value: 200, clue: "This is the term for the time penetrant is allowed to remain on the part before removal.", answer: "What is dwell time?" },
-        { value: 300, clue: "This physical property draws penetrant into tight surface cracks.", answer: "What is capillary action?" },
-        { value: 400, clue: "In the solvent-removable technique, excess penetrant is wiped with a solvent-dampened cloth — never removed this way.", answer: "What is spraying or flushing solvent directly on the part?" },
-        { value: 500, clue: "This step, done after excess penetrant removal, draws trapped penetrant back out of discontinuities to form an indication.", answer: "What is applying developer?" }
-      ]
-    },
-    {
-      title: "Welds & Materials",
-      clues: [
-        { value: 100, clue: "The number of protons in the nucleus defines this number, which identifies the element.", answer: "What is the atomic number?" },
-        { value: 200, clue: "This handheld gauge measures the leg length and throat of a fillet weld.", answer: "What is a fillet weld gauge?" },
-        { value: 300, clue: "Isotopes of the same element differ in the number of these particles.", answer: "What are neutrons?" },
-        { value: 400, clue: "This weld discontinuity is a groove-weld face that dips below the surface of the adjacent base metal.", answer: "What is concavity (underfill)?" },
-        { value: 500, clue: "Iridium-192 has 77 protons, so its nucleus contains this many neutrons.", answer: "What is 115? (192 − 77)" }
+        { value: 100, clue: "What equipment is used to check if the part is demagnetized completely?", answer: "A field indicator / Gauss meter" },
+        { value: 200, clue: "A change in the hardness of the part will produce a non-relevant magnetic particle indication. T/F", answer: "True" },
+        { value: 300, clue: "List 2 uses of dry powder over the wet particles", answer: "1. Easier for field inspection with portable equipment such as yoke. 2. Work better for subsurface defects." },
+        { value: 400, clue: "For fine surface cracks we should use _______ current and _______ particles. For subsurface cracks we should use ________ current and ________ particles.", answer: "Alternating, Wet — HWDC and Dry" },
+        { value: 500, clue: "What should be the desirable property of the magnetic particles in terms of permeability and retentivity?", answer: "High Permeability and low retentivity." }
       ]
     }
-  ]
+    /* --- Waiting on the remaining PPT slides — fill in and uncomment: ---
+    ,{
+      title: "Demag",
+      clues: [
+        { value: 100, clue: "", answer: "" },
+        { value: 200, clue: "", answer: "" },
+        { value: 300, clue: "", answer: "" },
+        { value: 400, clue: "", answer: "" },
+        { value: 500, clue: "", answer: "" }
+      ]
+    },
+    {
+      title: "Discontinuities",
+      clues: [
+        { value: 100, clue: "", answer: "" },
+        { value: 200, clue: "", answer: "" },
+        { value: 300, clue: "", answer: "" },
+        { value: 400, clue: "", answer: "" },
+        { value: 500, clue: "", answer: "" }
+      ]
+    },
+    {
+      title: "Theory II",
+      clues: [
+        { value: 100, clue: "", answer: "" },
+        { value: 200, clue: "", answer: "" },
+        { value: 300, clue: "", answer: "" },
+        { value: 400, clue: "", answer: "" },
+        { value: 500, clue: "", answer: "" }
+      ]
+    }
+    --------------------------------------------------------------------- */
+  ],
+  // Set to { clue: "...", answer: "..." } when the Final Jeopardy slide is available.
+  finalJeopardy: null
 };
 /* ===================== END GAME DATA ===================== */
 
@@ -587,6 +607,7 @@ $('startBtn').addEventListener('click', () => {
 function renderBoard() {
   const board = $('board');
   board.innerHTML = '';
+  board.style.gridTemplateColumns = 'repeat(' + GAME_DATA.categories.length + ', 1fr)';
   GAME_DATA.categories.forEach(cat => {
     const h = document.createElement('div');
     h.className = 'cat-header';
@@ -699,8 +720,77 @@ function closeClue() {
   renderBoard();
   renderScores();
   const total = GAME_DATA.categories.length * 5;
-  if (usedClues.size >= total) showFinal();
+  if (usedClues.size >= total) {
+    if (GAME_DATA.finalJeopardy) openFinalJeopardy();
+    else showFinal();
+  }
 }
+
+/* ---------- final jeopardy ---------- */
+let fjJudged = new Set();
+
+function openFinalJeopardy() {
+  fjJudged = new Set();
+  $('fjClue').textContent = GAME_DATA.finalJeopardy.clue;
+  $('fjAnswerText').textContent = GAME_DATA.finalJeopardy.answer;
+  $('fjAnswerBlock').classList.remove('show');
+  $('fjRevealBtn').style.display = '';
+  $('fjDoneBtn').style.display = 'none';
+  renderFjRows(false);
+  $('fjOverlay').classList.add('open');
+}
+
+function renderFjRows(revealed) {
+  const rows = $('fjRows');
+  const savedWagers = [...rows.querySelectorAll('input')].map(i => i.value);
+  rows.innerHTML = '';
+  teams.forEach((t, ti) => {
+    const row = document.createElement('div');
+    row.className = 'scoring-row';
+    const name = document.createElement('div');
+    name.className = 'name';
+    name.textContent = t.name + ' (' + t.score + ')';
+    const controls = document.createElement('div');
+    controls.className = 'btns';
+    const wager = document.createElement('input');
+    wager.type = 'number';
+    wager.min = 0;
+    wager.max = Math.max(t.score, 500);
+    wager.placeholder = 'Wager';
+    wager.value = savedWagers[ti] || '';
+    wager.style.cssText = 'width:90px;padding:8px;font-family:JetBrains Mono,monospace;font-size:13px;border:1px solid var(--rule);border-radius:2px;background:var(--paper-deep);';
+    wager.disabled = revealed;
+    controls.appendChild(wager);
+    if (revealed) {
+      const ok = document.createElement('button');
+      ok.className = 'correct';
+      ok.textContent = '✓';
+      const bad = document.createElement('button');
+      bad.className = 'wrong';
+      bad.textContent = '✗';
+      const judged = fjJudged.has(ti);
+      ok.disabled = judged;
+      bad.disabled = judged;
+      const wagerAmt = () => Math.max(0, Math.min(parseInt(wager.value, 10) || 0, Math.max(t.score, 500)));
+      ok.addEventListener('click', () => { teams[ti].score += wagerAmt(); fjJudged.add(ti); renderFjRows(true); });
+      bad.addEventListener('click', () => { teams[ti].score -= wagerAmt(); fjJudged.add(ti); renderFjRows(true); });
+      controls.append(ok, bad);
+    }
+    row.append(name, controls);
+    rows.appendChild(row);
+  });
+}
+
+$('fjRevealBtn').addEventListener('click', () => {
+  $('fjAnswerBlock').classList.add('show');
+  $('fjRevealBtn').style.display = 'none';
+  $('fjDoneBtn').style.display = '';
+  renderFjRows(true);
+});
+$('fjDoneBtn').addEventListener('click', () => {
+  $('fjOverlay').classList.remove('open');
+  showFinal();
+});
 
 /* ---------- game over ---------- */
 function showFinal() {
@@ -729,6 +819,7 @@ function showFinal() {
 function resetGame() {
   $('finalOverlay').classList.remove('open');
   $('clueOverlay').classList.remove('open');
+  $('fjOverlay').classList.remove('open');
   $('gameArea').style.display = 'none';
   $('setupPanel').style.display = '';
   renderSetup();
