@@ -257,9 +257,14 @@
     var cssW = canvas.clientWidth || 900;
 
     var w = weldGeom(), wg = wedgeGeom(), lim = standoffLimits();
-    var legH = state.T * tanA();
-    var nearExtent = lim.max + wg.len + state.T * 0.4;                    // probe side of ℄
-    var farExtent = Math.max(MAX_LEGS * legH - lim.min + state.T * 0.4,   // far side of ℄
+    // Size the view for the steepest selectable wedge (70°), not the current one,
+    // so switching angles never rescales the drawing — the plate keeps the same
+    // visual thickness and only the beam legs stretch out.
+    var maxTan = Math.tan(70 * Math.PI / 180);
+    var legHMax = state.T * maxTan;
+    var maxStandoff = MAX_LEGS * legHMax + w.capHalf + state.T * 0.3;
+    var nearExtent = maxStandoff + wg.len + state.T * 0.4;                 // probe side of ℄
+    var farExtent = Math.max(MAX_LEGS * legHMax - lim.min + state.T * 0.4, // far side of ℄
                              state.T * 1.5, w.capHalf * 1.6);
 
     var padSide = 16, padTop = 118, padBot = 74;
@@ -455,7 +460,14 @@
     drawArrowhead(X(state.standoff), dimY, state.side === 1 ? 0 : Math.PI, 8, '#5f6368');
     ctx.fillStyle = '#5f6368';
     ctx.font = '12px "Segoe UI", sans-serif';
-    ctx.fillText(fmt(state.standoff), (view.clx + X(state.standoff)) / 2, dimY - 6);
+    if (Math.abs(X(state.standoff) - view.clx) >= 72) {
+      ctx.fillText(fmt(state.standoff), (view.clx + X(state.standoff)) / 2, dimY - 6);
+    } else {
+      // dimension too short to fit the text between the arrows — put it beside
+      ctx.textAlign = state.side === 1 ? 'left' : 'right';
+      ctx.fillText(fmt(state.standoff), X(state.standoff) + state.side * 10, dimY + 4);
+      ctx.textAlign = 'center';
+    }
 
     // ---- side labels
     ctx.fillStyle = '#5f6368';
