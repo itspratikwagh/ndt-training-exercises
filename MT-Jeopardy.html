@@ -491,20 +491,14 @@
 
 <script>
 /* =====================================================================
-   GAME DATA — taken verbatim from the class PPT (MT_Jeopardy).
+   GAME DATA — taken verbatim from the class PPT (MT_Jeopardy.pptx).
    Each category has exactly 5 clues (100–500 points, in order).
    Set daily: true on a clue to make it a Daily Double (double points).
-
-   NOTE: the PPT board also has Demag, Discontinuities, and Theory II
-   plus a Final Jeopardy clue — those slides were not in the attached
-   PDF. Uncomment and fill them in below when available, and set
-   finalJeopardy to { clue: "...", answer: "..." } to enable the
-   wager round.
    ===================================================================== */
 const GAME_DATA = {
   categories: [
     {
-      title: "Theory I",
+      title: "Theory",
       clues: [
         { value: 100, clue: "Explain the direction of magnetic lines of force inside and outside the magnet.", answer: "From North to South outside the magnet and South to North inside the magnet." },
         { value: 200, clue: "The discontinuity indication for ________ is wide and fuzzy. Surface or Subsurface?", answer: "Subsurface" },
@@ -522,42 +516,42 @@ const GAME_DATA = {
         { value: 400, clue: "For fine surface cracks we should use _______ current and _______ particles. For subsurface cracks we should use ________ current and ________ particles.", answer: "Alternating, Wet — HWDC and Dry" },
         { value: 500, clue: "What should be the desirable property of the magnetic particles in terms of permeability and retentivity?", answer: "High Permeability and low retentivity." }
       ]
-    }
-    /* --- Waiting on the remaining PPT slides — fill in and uncomment: ---
-    ,{
-      title: "Demag",
+    },
+    {
+      title: "Calibration",
       clues: [
-        { value: 100, clue: "", answer: "" },
-        { value: 200, clue: "", answer: "" },
-        { value: 300, clue: "", answer: "" },
-        { value: 400, clue: "", answer: "" },
-        { value: 500, clue: "", answer: "" }
+        { value: 100, clue: "The lifting power of Yoke for the AC mode is", answer: "10 lbs" },
+        { value: 200, clue: "Explain continuous and residual magnetizing techniques. Which one is stronger?", answer: "Continuous: when the magnetizing force is on the whole time. Residual: when magnetizing force is shut off before spraying of particles. Continuous is stronger." },
+        { value: 300, clue: "Categorize them as relevant and non-relevant indications. Lack of fusion, change of section thickness, grinding cracks, very high amperage, drilled hole near surface, blow holes, Joints between dissimilar metals, Brazed joints, Scratches", answer: "Relevant: Lack of Fusion, grinding cracks, blow holes." },
+        { value: 400, clue: "Explain the difference between a discontinuity and a defect. Also explain the difference between length of an indication vs length of actual defect.", answer: "Discontinuity may be acceptable or rejectable. Length of an indication is the buildup of particles. Typically longer than the actual defect." },
+        { value: 500, clue: "Explain permeability, retentivity, residual field, coercive force.", answer: "Ease with which part can be magnetized, ability to retain magnetic field, remaining field after magnetizing force is removed, magnetizing force to remove the residual magnetic field." }
       ]
     },
     {
-      title: "Discontinuities",
+      title: "Application & Interpretation",
       clues: [
-        { value: 100, clue: "", answer: "" },
-        { value: 200, clue: "", answer: "" },
-        { value: 300, clue: "", answer: "" },
-        { value: 400, clue: "", answer: "" },
-        { value: 500, clue: "", answer: "" }
+        { value: 100, clue: "A discontinuity is best detected when it is ________ to the direction of the magnetic field.", answer: "Perpendicular" },
+        { value: 200, clue: "Explain diamagnetic, paramagnetic and ferromagnetic materials.", answer: "Dia — slightly repelled. Para — slightly attracted. Ferro — strongly attracted." },
+        { value: 300, clue: "Name all the techniques that produce longitudinal field.", answer: "Yoke, Coil." },
+        { value: 400, clue: "Name all the techniques that produces circular magnetic field.", answer: "Headshot, prods, central conductor." },
+        { value: 500, clue: "What is the disadvantage of using HWDC or DC for demagnetization?", answer: "Current does not reverse itself." }
       ]
     },
     {
-      title: "Theory II",
+      title: "BYOB",
       clues: [
-        { value: 100, clue: "", answer: "" },
-        { value: 200, clue: "", answer: "" },
-        { value: 300, clue: "", answer: "" },
-        { value: 400, clue: "", answer: "" },
-        { value: 500, clue: "", answer: "" }
+        { value: 100, clue: "Name the three ferromagnetic materials", answer: "Fe Co Ni. Iron Cobalt Nickel" },
+        { value: 200, clue: "Name 2 in-service defects", answer: "Fatigue cracking, stress corrosion cracking, corrosion." },
+        { value: 300, clue: "In order to detect all possible defects using MT, a part must be magnetized in how many directions?", answer: "Two, perpendicular to each other." },
+        { value: 400, clue: "Which magnetization is hard to demagnetize? Longitudinal or circular?", answer: "Circular, no external poles to verify remaining field." },
+        { value: 500, clue: "Explain direct and indirect magnetization techniques. Which ones are direct and indirect techniques?", answer: "Direct: passing current directly through test objects" }
       ]
     }
-    --------------------------------------------------------------------- */
   ],
-  // Set to { clue: "...", answer: "..." } when the Final Jeopardy slide is available.
-  finalJeopardy: null
+  finalJeopardy: {
+    clue: "How many amps needed for a 10-turn coil for an object of length 20″ and diameter 2″?",
+    answer: "450 Amps"
+  }
 };
 /* ===================== END GAME DATA ===================== */
 
