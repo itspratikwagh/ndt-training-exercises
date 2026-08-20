@@ -98,6 +98,28 @@
   }
   .hit-banner.hit { background: var(--success-light); color: #0d6b3a; }
   .hit-banner.miss { background: var(--error-light); color: #a50e0e; }
+
+  .guide-bar {
+    margin-bottom: 0.9rem; padding: 0.8rem 1rem; border-radius: 10px;
+    background: #f3e5f5; border: 1px solid #ce93d8;
+  }
+  .guide-controls { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+  .btn-guide {
+    padding: 0.5rem 1.1rem; border-radius: 8px; border: none;
+    background: var(--accent); color: white; font-size: 0.88rem; font-weight: 600; cursor: pointer;
+  }
+  .btn-guide:hover { background: #38096b; }
+  .btn-guide.secondary {
+    background: white; color: var(--accent); border: 1px solid var(--accent);
+  }
+  .btn-guide.secondary:disabled { opacity: 0.4; cursor: default; }
+  .guide-step-label { font-size: 0.8rem; font-weight: 700; color: var(--accent); margin-left: auto; }
+  .guide-caption {
+    margin-top: 0.6rem; font-size: 0.92rem; color: #3d1266; line-height: 1.5;
+  }
+  .guide-caption.waiting::after {
+    content: ' ⏸ waiting for you…'; font-size: 0.8rem; font-weight: 700; color: #7b1fa2;
+  }
 </style>
 </head>
 <body>
@@ -125,11 +147,8 @@
       <div class="control-group">
         <label>Plate Thickness</label>
         <div class="num-row">
-          <input type="number" id="thicknessInput" value="25" min="1" step="1">
-          <div class="unit-seg" id="unitSeg">
-            <button data-unit="mm" class="active">mm</button>
-            <button data-unit="in">in</button>
-          </div>
+          <input type="number" id="thicknessInput" value="1" min="0.25" max="6" step="0.125">
+          <div class="unit-seg"><button class="active" style="cursor:default">in</button></div>
         </div>
       </div>
 
@@ -155,6 +174,16 @@
 
     <div class="panel-card">
       <h3>Side View — Scan Plan</h3>
+
+      <div class="guide-bar">
+        <div class="guide-controls">
+          <button class="btn-guide" id="guideStartBtn">🔊 Start Audio Guide</button>
+          <button class="btn-guide secondary" id="guideRepeatBtn" style="display:none" disabled>↻ Repeat</button>
+          <span class="guide-step-label" id="guideStepLabel"></span>
+        </div>
+        <div class="guide-caption" id="guideCaption" style="display:none"></div>
+      </div>
+
       <div class="canvas-wrap"><canvas id="scanCanvas"></canvas></div>
       <div class="drag-hint">Drag the wedge left / right to move it towards or away from the weld · showing up to 3 legs</div>
 
@@ -184,11 +213,11 @@
   // depth measured down from the scanning surface.
   var state = {
     angle: 45,        // refracted angle, degrees from the surface normal
-    T: 25,            // plate thickness in current units
-    unit: 'mm',
+    T: 1,             // plate thickness, inches
+    unit: 'in',
     weldAngle: 60,    // included angle of the V-groove
     side: 1,          // 1 = probe on Side 2 (right of weld), -1 = probe on Side 1 (left)
-    standoff: 25      // beam exit point to weld centerline, world units
+    standoff: 1       // beam exit point to weld centerline, inches
   };
 
   var MAX_LEGS = 3;
@@ -293,9 +322,7 @@
   function Y(depth) { return view.topY + depth * view.s; }
 
   function fmt(v) {
-    return state.unit === 'mm'
-      ? v.toFixed(1) + ' mm'
-      : v.toFixed(2) + ' in';
+    return v.toFixed(2) + ' in';
   }
 
   function drawArrowhead(x, y, angleRad, size, color) {
@@ -366,6 +393,32 @@
     ctx.font = '11px "Segoe UI", sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('℄', view.clx, capTop - 20);
+
+    // audio-guide zone highlight
+    if (guide.active && guide.idx >= 0 && guide.idx < GUIDE_STEPS.length) {
+      var zone = GUIDE_STEPS[guide.idx].zone;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,160,0,0.85)';
+      ctx.fillStyle = 'rgba(255,190,60,0.35)';
+      ctx.lineWidth = 5;
+      if (zone === 'root') {
+        ctx.beginPath();
+        ctx.arc(view.clx, view.botY, Math.max(10, w.rootHalf * view.s * 2.2), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      } else if (zone === 'fusion') {
+        ctx.beginPath();
+        ctx.moveTo(xTopL, view.topY); ctx.lineTo(xRootL, view.botY);
+        ctx.moveTo(xTopR, view.topY); ctx.lineTo(xRootR, view.botY);
+        ctx.stroke();
+      } else if (zone === 'cap') {
+        ctx.beginPath();
+        ctx.moveTo(xCapL, view.topY);
+        ctx.quadraticCurveTo((xCapL + xCapR) / 2, capTop - w.capH * view.s * 0.6, xCapR, view.topY);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
 
     // ---- beam (drawn before the wedge so the wedge sits on top of its start)
     var pts = beamPoints();
@@ -469,6 +522,15 @@
       ctx.textAlign = 'center';
     }
 
+    // audio-guide target marker on the scanning surface
+    if (guide.active && guide.waiting) {
+      var tx = X(GUIDE_STEPS[guide.idx].factor * halfSkip());
+      drawArrowhead(tx, view.topY - 3, Math.PI / 2, 12, '#0d904f');
+      ctx.fillStyle = '#0d904f';
+      ctx.font = 'bold 11px "Segoe UI", sans-serif';
+      ctx.fillText('target', tx, view.topY - 18);
+    }
+
     // ---- side labels
     ctx.fillStyle = '#5f6368';
     ctx.font = '13px "Segoe UI", sans-serif';
@@ -502,6 +564,171 @@
     }
   }
 
+  // ---- audio guide -----------------------------------------------------------
+  // The guide speaks an instruction, then goes silent and WAITS until the student
+  // drags the transducer to the requested skip distance; a chime plus the spoken
+  // explanation resume only once the position is reached.
+  var guide = { active: false, idx: -1, waiting: false };
+
+  function halfSkip() { return state.T * tanA(); }
+  function spoken(v) { return v.toFixed(1) + ' inches'; }
+
+  var GUIDE_STEPS = [
+    {
+      zone: 'root', factor: 1, name: 'Root',
+      instruction: function () {
+        return 'First, the root. Drag the transducer toward the weld until the surface ' +
+          'distance reads about ' + spoken(halfSkip()) + ' — that is the half skip distance. ' +
+          'Watch the beam as you go.';
+      },
+      success: 'Well done — you are at half skip. Leg one strikes the backwall right at the ' +
+        'weld centerline, so the sound is hitting the root of the weld. Root defects like ' +
+        'incomplete penetration show up from this position.'
+    },
+    {
+      zone: 'fusion', factor: 1.5, name: 'Fusion faces',
+      instruction: function () {
+        return 'Next, the fusion faces. Pull the transducer back to about ' +
+          spoken(1.5 * halfSkip()) + ' — one and a half times the half skip. The beam will ' +
+          'bounce off the backwall and climb into the weld on its second leg.';
+      },
+      success: 'Good. The second leg now crosses the weld at mid wall, sweeping across the ' +
+        'fusion faces — the bevel surfaces where the weld metal joins the plate. This is ' +
+        'where lack of fusion hides.'
+    },
+    {
+      zone: 'cap', factor: 2, name: 'Cap',
+      instruction: function () {
+        return 'Last, the cap. Keep pulling back until the surface distance reads about ' +
+          spoken(2 * halfSkip()) + ' — the full skip distance.';
+      },
+      success: 'That is it — at full skip, the second leg arrives back at the scanning ' +
+        'surface right at the weld, so the beam is examining the cap and the top corners ' +
+        'of the weld.'
+    }
+  ];
+
+  var GUIDE_INTRO = 'Welcome to the scan plan tutorial. A weld has three zones we need to ' +
+    'inspect: the root at the bottom, the fusion faces along the bevels, and the cap on top. ' +
+    'Where your sound beam lands depends on how far the transducer sits from the weld. ' +
+    'Let us inspect each zone.';
+  var GUIDE_OUTRO = 'Tutorial complete. You have covered the root, the fusion faces, and the ' +
+    'cap. Now try the other wedge angles and plate thicknesses, and watch how the skip ' +
+    'distances change.';
+
+  var guideStartBtn = document.getElementById('guideStartBtn');
+  var guideRepeatBtn = document.getElementById('guideRepeatBtn');
+  var guideCaption = document.getElementById('guideCaption');
+  var guideStepLabel = document.getElementById('guideStepLabel');
+
+  function speak(text, onend) {
+    guideCaption.style.display = 'block';
+    guideCaption.textContent = text;
+    guideCaption.classList.remove('waiting');
+    // Reading-time floor: if speech is unavailable (or a voiceless browser ends
+    // the utterance instantly), the caption still stays up long enough to read.
+    var minMs = Math.min(9000, 400 + text.length * 45);
+    var started = Date.now();
+    var done = false;
+    var finish = function () {
+      if (done) return;
+      done = true;
+      if (!onend) return;
+      setTimeout(onend, Math.max(0, minMs - (Date.now() - started)));
+    };
+    if (window.speechSynthesis && window.SpeechSynthesisUtterance) {
+      speechSynthesis.cancel();
+      var utt = new SpeechSynthesisUtterance(text);
+      utt.rate = 0.95;
+      utt.onend = finish;
+      utt.onerror = finish;
+      speechSynthesis.speak(utt);
+    } else {
+      finish();
+    }
+  }
+
+  function ding() {
+    try {
+      var ac = new (window.AudioContext || window.webkitAudioContext)();
+      [660, 990].forEach(function (f, i) {
+        var o = ac.createOscillator(), g = ac.createGain();
+        o.frequency.value = f; o.connect(g); g.connect(ac.destination);
+        g.gain.setValueAtTime(0.12, ac.currentTime + i * 0.12);
+        g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + i * 0.12 + 0.25);
+        o.start(ac.currentTime + i * 0.12); o.stop(ac.currentTime + i * 0.12 + 0.3);
+      });
+    } catch (e) {}
+  }
+
+  function guideAdvance() {
+    if (!guide.active) return;
+    guide.idx++;
+    if (guide.idx >= GUIDE_STEPS.length) {
+      guideStepLabel.textContent = 'Complete ✓';
+      speak(GUIDE_OUTRO, guideExit);
+      guide.waiting = false;
+      draw();
+      return;
+    }
+    var step = GUIDE_STEPS[guide.idx];
+    guide.waiting = true;
+    guideStepLabel.textContent = 'Step ' + (guide.idx + 1) + ' of ' + GUIDE_STEPS.length + ' — ' + step.name;
+    guideRepeatBtn.disabled = false;
+    speak(step.instruction());
+    guideCaption.classList.add('waiting');
+    draw();
+  }
+
+  function guideCheck() {
+    if (!guide.active || !guide.waiting) return;
+    var step = GUIDE_STEPS[guide.idx];
+    var target = step.factor * halfSkip();
+    var tol = Math.max(0.12 * halfSkip(), 0.06);
+    if (Math.abs(state.standoff - target) <= tol) {
+      guide.waiting = false;
+      guideRepeatBtn.disabled = true;
+      guideCaption.classList.remove('waiting');
+      ding();
+      speak(step.success, guideAdvance);
+      draw();
+    }
+  }
+
+  function guideExit() {
+    guide.active = false;
+    guide.idx = -1;
+    guide.waiting = false;
+    if (window.speechSynthesis) speechSynthesis.cancel();
+    guideStartBtn.textContent = '🔊 Start Audio Guide';
+    guideRepeatBtn.style.display = 'none';
+    guideCaption.style.display = 'none';
+    guideStepLabel.textContent = '';
+    draw();
+  }
+
+  guideStartBtn.addEventListener('click', function () {
+    if (guide.active) { guideExit(); return; }
+    guide.active = true;
+    guide.idx = -1;
+    guide.waiting = false;
+    guideStartBtn.textContent = '✕ Exit Guide';
+    guideRepeatBtn.style.display = '';
+    guideRepeatBtn.disabled = true;
+    // park the probe well away from the weld so every step needs a real drag
+    state.standoff = 2.6 * halfSkip();
+    clampStandoff();
+    draw();
+    speak(GUIDE_INTRO, guideAdvance);
+  });
+
+  guideRepeatBtn.addEventListener('click', function () {
+    if (guide.active && guide.waiting) {
+      speak(GUIDE_STEPS[guide.idx].instruction());
+      guideCaption.classList.add('waiting');
+    }
+  });
+
   // ---- dragging --------------------------------------------------------------
   var drag = null;
 
@@ -534,6 +761,7 @@
     state.standoff = pointerWorldX(evt) - drag.grabOffset;
     clampStandoff();
     draw();
+    guideCheck();
   });
 
   function endDrag(evt) {
@@ -560,8 +788,7 @@
   document.getElementById('thicknessInput').addEventListener('input', function () {
     var v = parseFloat(this.value);
     if (!isFinite(v) || v <= 0) return;
-    var max = state.unit === 'mm' ? 300 : 12;
-    state.T = Math.min(v, max);
+    state.T = Math.min(v, 6);
     clampStandoff();
     draw();
   });
@@ -570,20 +797,6 @@
     var v = parseFloat(this.value);
     if (!isFinite(v)) return;
     state.weldAngle = Math.min(Math.max(v, 20), 90);
-    clampStandoff();
-    draw();
-  });
-
-  document.getElementById('unitSeg').addEventListener('click', function (evt) {
-    var btn = evt.target.closest('button[data-unit]');
-    if (!btn || btn.dataset.unit === state.unit) return;
-    var toIn = btn.dataset.unit === 'in';
-    state.unit = btn.dataset.unit;
-    state.T = toIn ? +(state.T / 25.4).toFixed(3) : +(state.T * 25.4).toFixed(1);
-    state.standoff = toIn ? state.standoff / 25.4 : state.standoff * 25.4;
-    document.getElementById('thicknessInput').value = state.T;
-    document.getElementById('thicknessInput').step = toIn ? 0.125 : 1;
-    this.querySelectorAll('button').forEach(function (b) { b.classList.toggle('active', b === btn); });
     clampStandoff();
     draw();
   });
