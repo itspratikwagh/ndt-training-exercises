@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MT Jeopardy — Class Review Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #faf7f2;
+    --paper-deep: #f1ece2;
+    --ink: #1a1a1a;
+    --ink-soft: #4a4a47;
+    --ink-faded: #8a8a85;
+    --rule: #d9d2c4;
+    --amber: #b54515;
+    --amber-soft: #e8a87c;
+    --amber-tint: #fdf2e6;
+    --board: #241f1b;
+    --board-cell: #2f2823;
+    --green: #2e7d4f;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px -12px rgba(60,40,20,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Manrope', -apple-system, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.55;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(181, 69, 21, 0.04), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(181, 69, 21, 0.03), transparent 50%);
+  }
+  .container { max-width: 1200px; margin: 0 auto; padding: 48px 32px 80px; }
+
+  header {
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 28px;
+    margin-bottom: 32px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: end;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: clamp(30px, 5vw, 46px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    font-variation-settings: 'opsz' 144;
+    margin-bottom: 10px;
+  }
+  h1 em { font-style: italic; color: var(--amber); font-weight: 500; }
+  header p { font-size: 14px; color: var(--ink-soft); max-width: 560px; }
+  .back-link {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faded);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .back-link:hover { color: var(--amber); }
+
+  /* ===== SETUP ===== */
+  .setup {
+    background: var(--paper-deep);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    box-shadow: var(--shadow);
+    padding: 36px;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  .setup h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 24px;
+    margin-bottom: 6px;
+  }
+  .setup > p { font-size: 14px; color: var(--ink-soft); margin-bottom: 24px; }
+  .setup .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faded);
+    margin-bottom: 10px;
+  }
+  .team-count { display: flex; gap: 8px; margin-bottom: 24px; }
+  .team-count button {
+    flex: 1;
+    padding: 12px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    font-weight: 600;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    cursor: pointer;
+    color: var(--ink-soft);
+    transition: all 0.15s;
+  }
+  .team-count button:hover { border-color: var(--amber); }
+  .team-count button.active {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: var(--paper);
+  }
+  .team-names { display: grid; gap: 10px; margin-bottom: 28px; }
+  .team-names input {
+    width: 100%;
+    padding: 12px 14px;
+    font-family: 'Manrope', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    color: var(--ink);
+  }
+  .team-names input:focus { outline: none; border-color: var(--amber); }
+  .btn {
+    display: inline-block;
+    background: var(--amber);
+    color: var(--paper);
+    border: none;
+    padding: 14px 28px;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: #9a3a12; }
+  .btn.ghost {
+    background: transparent;
+    color: var(--ink-soft);
+    border: 1px solid var(--rule);
+  }
+  .btn.ghost:hover { border-color: var(--amber); color: var(--amber); background: transparent; }
+
+  /* ===== BOARD ===== */
+  #gameArea { display: none; }
+  .board {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    background: var(--board);
+    padding: 6px;
+    border-radius: 2px;
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+  }
+  .cat-header {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: clamp(11px, 1.4vw, 16px);
+    text-align: center;
+    padding: 16px 6px;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 74px;
+    line-height: 1.25;
+    border-bottom: 2px solid var(--amber);
+  }
+  .cell {
+    background: var(--board-cell);
+    color: var(--amber-soft);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: clamp(16px, 2.4vw, 28px);
+    text-align: center;
+    padding: 22px 6px;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, transform 0.1s;
+  }
+  .cell:hover:not(:disabled) {
+    background: var(--amber);
+    color: var(--paper);
+    transform: scale(1.02);
+  }
+  .cell:disabled {
+    background: var(--board);
+    color: rgba(232, 168, 124, 0.12);
+    cursor: default;
+  }
+
+  /* ===== SCOREBOARD ===== */
+  .scoreboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .score-card {
+    background: var(--paper-deep);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 14px 18px;
+    text-align: center;
+  }
+  .score-card.leader { border-color: var(--amber); background: var(--amber-tint); }
+  .score-card .team-name {
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .score-card .team-score {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--amber);
+  }
+  .score-card .team-score.negative { color: var(--ink-faded); }
+  .game-controls { text-align: center; }
+
+  /* ===== CLUE MODAL ===== */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(26, 22, 18, 0.82);
+    z-index: 50;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .overlay.open { display: flex; }
+  .clue-card {
+    background: var(--paper);
+    border-radius: 2px;
+    box-shadow: 0 20px 60px -20px rgba(0,0,0,0.5);
+    max-width: 760px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 40px 44px;
+    position: relative;
+  }
+  .clue-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgba(181, 69, 21, 0.25);
+    border-radius: 2px;
+    pointer-events: none;
+    margin: 5px;
+  }
+  .clue-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .daily-double {
+    display: none;
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 20px;
+    color: var(--paper);
+    background: var(--amber);
+    padding: 8px 18px;
+    border-radius: 2px;
+    margin-bottom: 16px;
+  }
+  .daily-double.show { display: inline-block; }
+  .clue-text {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: clamp(20px, 3vw, 28px);
+    line-height: 1.35;
+    margin: 18px 0 26px;
+  }
+  .answer-block {
+    display: none;
+    background: var(--amber-tint);
+    border-left: 3px solid var(--amber);
+    padding: 18px 22px;
+    margin-bottom: 26px;
+    border-radius: 2px;
+  }
+  .answer-block.show { display: block; }
+  .answer-block .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 4px;
+  }
+  .answer-block .answer-text {
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    font-weight: 600;
+  }
+  .scoring { display: none; }
+  .scoring.show { display: block; }
+  .scoring .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faded);
+    margin-bottom: 10px;
+  }
+  .scoring-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .scoring-row:last-of-type { border-bottom: none; }
+  .scoring-row .name { font-weight: 600; font-size: 15px; }
+  .scoring-row .btns { display: flex; gap: 8px; }
+  .scoring-row button {
+    padding: 8px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 2px;
+    border: 1px solid var(--rule);
+    background: var(--paper-deep);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .scoring-row button.correct:hover { background: var(--green); border-color: var(--green); color: #fff; }
+  .scoring-row button.wrong:hover { background: var(--amber); border-color: var(--amber); color: #fff; }
+  .scoring-row button:disabled { opacity: 0.35; cursor: default; }
+  .modal-actions { margin-top: 24px; display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+
+  /* ===== GAME OVER ===== */
+  .final-card { text-align: center; padding: 48px 44px; }
+  .final-card h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 34px;
+    margin-bottom: 6px;
+  }
+  .final-card h2 em { font-style: italic; color: var(--amber); }
+  .final-card .winner {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-style: italic;
+    color: var(--amber);
+    margin-bottom: 24px;
+  }
+  .final-ranks { max-width: 380px; margin: 0 auto 30px; text-align: left; }
+  .final-ranks .rank-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--rule);
+    font-size: 15px;
+  }
+  .final-ranks .rank-row .pts { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--amber); }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    font-size: 12px;
+    color: var(--ink-faded);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 640px) {
+    .container { padding: 32px 14px 60px; }
+    .clue-card { padding: 28px 22px; }
+    .cell { padding: 14px 4px; }
+    .cat-header { min-height: 58px; padding: 10px 4px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="header-text">
+      <div class="eyebrow">Magnetic Particle · Class Review Game</div>
+      <h1>MT <em>Jeopardy</em></h1>
+      <p>Pick a category and value, read the clue aloud, then reveal the answer and score each team. Wrong answers lose points, and it all comes down to the Final Jeopardy wager.</p>
+    </div>
+    <a class="back-link" href="index.html">← Exercise Hub</a>
+  </header>
+
+  <!-- ===== SETUP ===== -->
+  <div class="setup" id="setupPanel">
+    <h2>Set up the game</h2>
+    <p>Choose how many teams are playing and name them, then hit start.</p>
+    <div class="label">Number of teams</div>
+    <div class="team-count" id="teamCountBtns"></div>
+    <div class="label">Team names</div>
+    <div class="team-names" id="teamNameInputs"></div>
+    <button class="btn" id="startBtn">Start Game →</button>
+  </div>
+
+  <!-- ===== GAME ===== -->
+  <div id="gameArea">
+    <div class="board" id="board"></div>
+    <div class="scoreboard" id="scoreboard"></div>
+    <div class="game-controls">
+      <button class="btn ghost" id="resetBtn">Reset Game</button>
+    </div>
+  </div>
+
+  <!-- ===== CLUE MODAL ===== -->
+  <div class="overlay" id="clueOverlay">
+    <div class="clue-card">
+      <div class="clue-meta" id="clueMeta"></div>
+      <div class="daily-double" id="dailyDoubleBadge">★ Daily Double — points are doubled!</div>
+      <div class="clue-text" id="clueText"></div>
+      <div class="answer-block" id="answerBlock">
+        <div class="label">Answer</div>
+        <div class="answer-text" id="answerText"></div>
+      </div>
+      <div class="scoring" id="scoringPanel">
+        <div class="label">Who got it? Correct adds points · wrong deducts and play continues</div>
+        <div id="scoringRows"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="revealBtn">Reveal Answer</button>
+        <button class="btn ghost" id="nobodyBtn" style="display:none">No one answered</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== FINAL JEOPARDY ===== -->
+  <div class="overlay" id="fjOverlay">
+    <div class="clue-card">
+      <div class="clue-meta">Final Jeopardy</div>
+      <div class="clue-text" id="fjClue"></div>
+      <div class="answer-block" id="fjAnswerBlock">
+        <div class="label">Answer</div>
+        <div class="answer-text" id="fjAnswerText"></div>
+      </div>
+      <div class="scoring show">
+        <div class="label">Enter each team's wager, reveal the answer, then judge ✓ / ✗</div>
+        <div id="fjRows"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="fjRevealBtn">Reveal Answer</button>
+        <button class="btn" id="fjDoneBtn" style="display:none">Show Final Scores →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== GAME OVER ===== -->
+  <div class="overlay" id="finalOverlay">
+    <div class="clue-card final-card">
+      <h2>Final <em>Scores</em></h2>
+      <div class="winner" id="winnerLine"></div>
+      <div class="final-ranks" id="finalRanks"></div>
+      <button class="btn" id="playAgainBtn">Play Again</button>
+    </div>
+  </div>
+
+  <footer>NDT Training · MT Jeopardy Review · From class slides</footer>
+</div>
+
+<script>
+/* =====================================================================
+   GAME DATA — taken verbatim from the class PPT (MT_Jeopardy.pptx).
+   Each category has exactly 5 clues (100–500 points, in order).
+   Set daily: true on a clue to make it a Daily Double (double points).
+   ===================================================================== */
+const GAME_DATA = {
+  categories: [
+    {
+      title: "Theory",
+      clues: [
+        { value: 100, clue: "Explain the direction of magnetic lines of force inside and outside the magnet.", answer: "From North to South outside the magnet and South to North inside the magnet." },
+        { value: 200, clue: "The discontinuity indication for ________ is wide and fuzzy. Surface or Subsurface?", answer: "Subsurface" },
+        { value: 300, clue: "Discontinuity that are usually flat and parallel to the outside surface typically caused due to porosity trapped at and earlier stage is", answer: "Lamination" },
+        { value: 400, clue: "Describe Skin Effect and explain its relationship with frequency of the current?", answer: "When AC current is used to magnetize a part, the magnetism stays only on the surface (skin) of the part. High frequency, more skin effect." },
+        { value: 500, clue: "Which technique would you use for inspecting large casting? Prods, Central Conductor, AC magnetization or multidirectional magnetization?", answer: "Multidirectional magnetization" }
+      ]
+    },
+    {
+      title: "Equipment",
+      clues: [
+        { value: 100, clue: "What equipment is used to check if the part is demagnetized completely?", answer: "A field indicator / Gauss meter" },
+        { value: 200, clue: "A change in the hardness of the part will produce a non-relevant magnetic particle indication. T/F", answer: "True" },
+        { value: 300, clue: "List 2 uses of dry powder over the wet particles", answer: "1. Easier for field inspection with portable equipment such as yoke. 2. Work better for subsurface defects." },
+        { value: 400, clue: "For fine surface cracks we should use _______ current and _______ particles. For subsurface cracks we should use ________ current and ________ particles.", answer: "Alternating, Wet — HWDC and Dry" },
+        { value: 500, clue: "What should be the desirable property of the magnetic particles in terms of permeability and retentivity?", answer: "High Permeability and low retentivity." }
+      ]
+    },
+    {
+      title: "Calibration",
+      clues: [
+        { value: 100, clue: "The lifting power of Yoke for the AC mode is", answer: "10 lbs" },
+        { value: 200, clue: "Explain continuous and residual magnetizing techniques. Which one is stronger?", answer: "Continuous: when the magnetizing force is on the whole time. Residual: when magnetizing force is shut off before spraying of particles. Continuous is stronger." },
+        { value: 300, clue: "Categorize them as relevant and non-relevant indications. Lack of fusion, change of section thickness, grinding cracks, very high amperage, drilled hole near surface, blow holes, Joints between dissimilar metals, Brazed joints, Scratches", answer: "Relevant: Lack of Fusion, grinding cracks, blow holes." },
+        { value: 400, clue: "Explain the difference between a discontinuity and a defect. Also explain the difference between length of an indication vs length of actual defect.", answer: "Discontinuity may be acceptable or rejectable. Length of an indication is the buildup of particles. Typically longer than the actual defect." },
+        { value: 500, clue: "Explain permeability, retentivity, residual field, coercive force.", answer: "Ease with which part can be magnetized, ability to retain magnetic field, remaining field after magnetizing force is removed, magnetizing force to remove the residual magnetic field." }
+      ]
+    },
+    {
+      title: "Application & Interpretation",
+      clues: [
+        { value: 100, clue: "A discontinuity is best detected when it is ________ to the direction of the magnetic field.", answer: "Perpendicular" },
+        { value: 200, clue: "Explain diamagnetic, paramagnetic and ferromagnetic materials.", answer: "Dia — slightly repelled. Para — slightly attracted. Ferro — strongly attracted." },
+        { value: 300, clue: "Name all the techniques that produce longitudinal field.", answer: "Yoke, Coil." },
+        { value: 400, clue: "Name all the techniques that produces circular magnetic field.", answer: "Headshot, prods, central conductor." },
+        { value: 500, clue: "What is the disadvantage of using HWDC or DC for demagnetization?", answer: "Current does not reverse itself." }
+      ]
+    },
+    {
+      title: "BYOB",
+      clues: [
+        { value: 100, clue: "Name the three ferromagnetic materials", answer: "Fe Co Ni. Iron Cobalt Nickel" },
+        { value: 200, clue: "Name 2 in-service defects", answer: "Fatigue cracking, stress corrosion cracking, corrosion." },
+        { value: 300, clue: "In order to detect all possible defects using MT, a part must be magnetized in how many directions?", answer: "Two, perpendicular to each other." },
+        { value: 400, clue: "Which magnetization is hard to demagnetize? Longitudinal or circular?", answer: "Circular, no external poles to verify remaining field." },
+        { value: 500, clue: "Explain direct and indirect magnetization techniques. Which ones are direct and indirect techniques?", answer: "Direct: passing current directly through test objects" }
+      ]
+    }
+  ],
+  finalJeopardy: {
+    clue: "How many amps needed for a 10-turn coil for an object of length 20″ and diameter 2″?",
+    answer: "450 Amps"
+  }
+};
+/* ===================== END GAME DATA ===================== */
+
+const MAX_TEAMS = 4;
+let teamCount = 2;
+let teams = [];          // [{ name, score }]
+let usedClues = new Set();
+let currentClue = null;  // { catIndex, clueIndex }
+let answeredWrong = new Set(); // team indexes that already missed the open clue
+
+const $ = id => document.getElementById(id);
+
+/* ---------- setup ---------- */
+function renderSetup() {
+  const btns = $('teamCountBtns');
+  btns.innerHTML = '';
+  for (let n = 1; n <= MAX_TEAMS; n++) {
+    const b = document.createElement('button');
+    b.textContent = n;
+    b.className = n === teamCount ? 'active' : '';
+    b.addEventListener('click', () => { teamCount = n; renderSetup(); });
+    btns.appendChild(b);
+  }
+  const names = $('teamNameInputs');
+  const existing = [...names.querySelectorAll('input')].map(i => i.value);
+  names.innerHTML = '';
+  for (let n = 0; n < teamCount; n++) {
+    const input = document.createElement('input');
+    input.maxLength = 24;
+    input.placeholder = 'Team ' + (n + 1);
+    input.value = existing[n] || '';
+    names.appendChild(input);
+  }
+}
+
+$('startBtn').addEventListener('click', () => {
+  const inputs = [...$('teamNameInputs').querySelectorAll('input')];
+  teams = inputs.map((i, idx) => ({ name: i.value.trim() || ('Team ' + (idx + 1)), score: 0 }));
+  usedClues = new Set();
+  $('setupPanel').style.display = 'none';
+  $('gameArea').style.display = 'block';
+  renderBoard();
+  renderScores();
+});
+
+/* ---------- board ---------- */
+function renderBoard() {
+  const board = $('board');
+  board.innerHTML = '';
+  board.style.gridTemplateColumns = 'repeat(' + GAME_DATA.categories.length + ', 1fr)';
+  GAME_DATA.categories.forEach(cat => {
+    const h = document.createElement('div');
+    h.className = 'cat-header';
+    h.textContent = cat.title;
+    board.appendChild(h);
+  });
+  for (let row = 0; row < 5; row++) {
+    GAME_DATA.categories.forEach((cat, ci) => {
+      const key = ci + '-' + row;
+      const cell = document.createElement('button');
+      cell.className = 'cell';
+      cell.textContent = cat.clues[row].value;
+      cell.disabled = usedClues.has(key);
+      cell.addEventListener('click', () => openClue(ci, row));
+      board.appendChild(cell);
+    });
+  }
+}
+
+function renderScores() {
+  const sb = $('scoreboard');
+  sb.innerHTML = '';
+  const top = Math.max(...teams.map(t => t.score));
+  teams.forEach(t => {
+    const card = document.createElement('div');
+    card.className = 'score-card' + (t.score === top && t.score > 0 ? ' leader' : '');
+    const name = document.createElement('div');
+    name.className = 'team-name';
+    name.textContent = t.name;
+    const score = document.createElement('div');
+    score.className = 'team-score' + (t.score < 0 ? ' negative' : '');
+    score.textContent = t.score;
+    card.append(name, score);
+    sb.appendChild(card);
+  });
+}
+
+/* ---------- clue modal ---------- */
+function openClue(ci, row) {
+  currentClue = { catIndex: ci, clueIndex: row };
+  answeredWrong = new Set();
+  const cat = GAME_DATA.categories[ci];
+  const clue = cat.clues[row];
+  $('clueMeta').textContent = cat.title + ' · ' + clue.value + (clue.daily ? ' × 2' : '');
+  $('dailyDoubleBadge').classList.toggle('show', !!clue.daily);
+  $('clueText').textContent = clue.clue;
+  $('answerText').textContent = clue.answer;
+  $('answerBlock').classList.remove('show');
+  $('scoringPanel').classList.remove('show');
+  $('revealBtn').style.display = '';
+  $('nobodyBtn').style.display = 'none';
+  $('clueOverlay').classList.add('open');
+}
+
+$('revealBtn').addEventListener('click', () => {
+  $('answerBlock').classList.add('show');
+  $('scoringPanel').classList.add('show');
+  $('revealBtn').style.display = 'none';
+  $('nobodyBtn').style.display = '';
+  renderScoringRows();
+});
+
+function clueValue() {
+  const c = GAME_DATA.categories[currentClue.catIndex].clues[currentClue.clueIndex];
+  return c.value * (c.daily ? 2 : 1);
+}
+
+function renderScoringRows() {
+  const rows = $('scoringRows');
+  rows.innerHTML = '';
+  teams.forEach((t, ti) => {
+    const row = document.createElement('div');
+    row.className = 'scoring-row';
+    const name = document.createElement('div');
+    name.className = 'name';
+    name.textContent = t.name;
+    const btns = document.createElement('div');
+    btns.className = 'btns';
+    const ok = document.createElement('button');
+    ok.className = 'correct';
+    ok.textContent = '✓ +' + clueValue();
+    ok.disabled = answeredWrong.has(ti);
+    ok.addEventListener('click', () => {
+      teams[ti].score += clueValue();
+      closeClue();
+    });
+    const bad = document.createElement('button');
+    bad.className = 'wrong';
+    bad.textContent = '✗ −' + clueValue();
+    bad.disabled = answeredWrong.has(ti);
+    bad.addEventListener('click', () => {
+      teams[ti].score -= clueValue();
+      answeredWrong.add(ti);
+      renderScores();
+      if (answeredWrong.size >= teams.length) { closeClue(); return; }
+      renderScoringRows();
+    });
+    btns.append(ok, bad);
+    row.append(name, btns);
+    rows.appendChild(row);
+  });
+}
+
+$('nobodyBtn').addEventListener('click', closeClue);
+
+function closeClue() {
+  usedClues.add(currentClue.catIndex + '-' + currentClue.clueIndex);
+  currentClue = null;
+  $('clueOverlay').classList.remove('open');
+  renderBoard();
+  renderScores();
+  const total = GAME_DATA.categories.length * 5;
+  if (usedClues.size >= total) {
+    if (GAME_DATA.finalJeopardy) openFinalJeopardy();
+    else showFinal();
+  }
+}
+
+/* ---------- final jeopardy ---------- */
+let fjJudged = new Set();
+
+function openFinalJeopardy() {
+  fjJudged = new Set();
+  $('fjClue').textContent = GAME_DATA.finalJeopardy.clue;
+  $('fjAnswerText').textContent = GAME_DATA.finalJeopardy.answer;
+  $('fjAnswerBlock').classList.remove('show');
+  $('fjRevealBtn').style.display = '';
+  $('fjDoneBtn').style.display = 'none';
+  renderFjRows(false);
+  $('fjOverlay').classList.add('open');
+}
+
+function renderFjRows(revealed) {
+  const rows = $('fjRows');
+  const savedWagers = [...rows.querySelectorAll('input')].map(i => i.value);
+  rows.innerHTML = '';
+  teams.forEach((t, ti) => {
+    const row = document.createElement('div');
+    row.className = 'scoring-row';
+    const name = document.createElement('div');
+    name.className = 'name';
+    name.textContent = t.name + ' (' + t.score + ')';
+    const controls = document.createElement('div');
+    controls.className = 'btns';
+    const wager = document.createElement('input');
+    wager.type = 'number';
+    wager.min = 0;
+    wager.max = Math.max(t.score, 500);
+    wager.placeholder = 'Wager';
+    wager.value = savedWagers[ti] || '';
+    wager.style.cssText = 'width:90px;padding:8px;font-family:JetBrains Mono,monospace;font-size:13px;border:1px solid var(--rule);border-radius:2px;background:var(--paper-deep);';
+    wager.disabled = revealed;
+    controls.appendChild(wager);
+    if (revealed) {
+      const ok = document.createElement('button');
+      ok.className = 'correct';
+      ok.textContent = '✓';
+      const bad = document.createElement('button');
+      bad.className = 'wrong';
+      bad.textContent = '✗';
+      const judged = fjJudged.has(ti);
+      ok.disabled = judged;
+      bad.disabled = judged;
+      const wagerAmt = () => Math.max(0, Math.min(parseInt(wager.value, 10) || 0, Math.max(t.score, 500)));
+      ok.addEventListener('click', () => { teams[ti].score += wagerAmt(); fjJudged.add(ti); renderFjRows(true); });
+      bad.addEventListener('click', () => { teams[ti].score -= wagerAmt(); fjJudged.add(ti); renderFjRows(true); });
+      controls.append(ok, bad);
+    }
+    row.append(name, controls);
+    rows.appendChild(row);
+  });
+}
+
+$('fjRevealBtn').addEventListener('click', () => {
+  $('fjAnswerBlock').classList.add('show');
+  $('fjRevealBtn').style.display = 'none';
+  $('fjDoneBtn').style.display = '';
+  renderFjRows(true);
+});
+$('fjDoneBtn').addEventListener('click', () => {
+  $('fjOverlay').classList.remove('open');
+  showFinal();
+});
+
+/* ---------- game over ---------- */
+function showFinal() {
+  const ranked = [...teams].sort((a, b) => b.score - a.score);
+  const topScore = ranked[0].score;
+  const winners = ranked.filter(t => t.score === topScore).map(t => t.name);
+  $('winnerLine').textContent = winners.length > 1
+    ? 'It’s a tie: ' + winners.join(' & ') + '!'
+    : ranked[0].name + ' wins!';
+  const ranks = $('finalRanks');
+  ranks.innerHTML = '';
+  ranked.forEach((t, i) => {
+    const row = document.createElement('div');
+    row.className = 'rank-row';
+    const n = document.createElement('div');
+    n.textContent = (i + 1) + '. ' + t.name;
+    const p = document.createElement('div');
+    p.className = 'pts';
+    p.textContent = t.score;
+    row.append(n, p);
+    ranks.appendChild(row);
+  });
+  $('finalOverlay').classList.add('open');
+}
+
+function resetGame() {
+  $('finalOverlay').classList.remove('open');
+  $('clueOverlay').classList.remove('open');
+  $('fjOverlay').classList.remove('open');
+  $('gameArea').style.display = 'none';
+  $('setupPanel').style.display = '';
+  renderSetup();
+}
+$('playAgainBtn').addEventListener('click', resetGame);
+$('resetBtn').addEventListener('click', () => {
+  if (confirm('Reset the game? All scores and board progress will be lost.')) resetGame();
+});
+
+renderSetup();
+</script>
+</body>
+</html>
