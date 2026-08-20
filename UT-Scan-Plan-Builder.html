@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UT Scan Plan Builder — Angle Beam Weld Inspection</title>
+<style>
+  :root {
+    --primary: #1a73e8;
+    --primary-light: #e8f0fe;
+    --success: #0d904f;
+    --success-light: #e6f4ea;
+    --error: #d93025;
+    --error-light: #fce8e6;
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --text: #202124;
+    --text-secondary: #5f6368;
+    --border: #dadce0;
+    --accent: #4a148c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+  header {
+    background: linear-gradient(135deg, #4a148c, #7b1fa2);
+    color: white; padding: 2rem 1.5rem; text-align: center;
+  }
+  header h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.25rem; }
+  header p { opacity: 0.85; font-size: 0.95rem; }
+
+  .container { max-width: 1380px; margin: 0 auto; padding: 1.5rem; }
+  .layout { display: grid; grid-template-columns: 300px 1fr; gap: 1rem; align-items: start; }
+  @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
+
+  .panel-card {
+    background: var(--card); border-radius: 12px; border: 1px solid var(--border);
+    padding: 1.1rem 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .panel-card h3 { font-size: 0.95rem; color: var(--accent); margin-bottom: 0.75rem; }
+
+  .control-group { margin-bottom: 1rem; }
+  .control-group label {
+    display: block; font-size: 0.8rem; font-weight: 600;
+    color: var(--text-secondary); margin-bottom: 0.35rem;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .seg { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button {
+    flex: 1; padding: 0.55rem 0.5rem; border: none; background: white;
+    font-size: 0.95rem; font-weight: 600; color: var(--text-secondary); cursor: pointer;
+    transition: background 0.15s;
+  }
+  .seg button + button { border-left: 1px solid var(--border); }
+  .seg button.active { background: var(--primary); color: white; }
+  .num-row { display: flex; gap: 0.5rem; }
+  .num-row input[type="number"] {
+    flex: 1; min-width: 0; padding: 0.5rem 0.65rem; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 0.95rem; font-family: inherit;
+  }
+  .num-row input:focus { outline: 2px solid var(--primary-light); border-color: var(--primary); }
+  .unit-seg { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .unit-seg button {
+    padding: 0.5rem 0.7rem; border: none; background: white; font-size: 0.85rem;
+    font-weight: 600; color: var(--text-secondary); cursor: pointer;
+  }
+  .unit-seg button + button { border-left: 1px solid var(--border); }
+  .unit-seg button.active { background: var(--primary); color: white; }
+  .btn-flip {
+    width: 100%; padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid var(--primary);
+    background: var(--primary-light); color: var(--primary); font-size: 0.9rem;
+    font-weight: 600; cursor: pointer; transition: background 0.15s;
+  }
+  .btn-flip:hover { background: #d4e3fc; }
+  .hint {
+    margin-top: 0.9rem; padding: 0.65rem 0.8rem; border-radius: 8px;
+    background: var(--primary-light); color: #1a56c4; font-size: 0.82rem;
+  }
+
+  .canvas-wrap canvas {
+    width: 100%; border-radius: 8px; border: 1px solid var(--border);
+    display: block; touch-action: none; cursor: grab;
+  }
+  .canvas-wrap canvas.dragging { cursor: grabbing; }
+  .drag-hint { font-size: 0.78rem; color: var(--text-secondary); text-align: center; margin-top: 0.4rem; }
+
+  .readouts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.6rem; margin-top: 0.9rem; }
+  .readout {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.55rem 0.75rem;
+  }
+  .readout .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); font-weight: 600; }
+  .readout .value { font-size: 1.15rem; font-weight: 700; color: var(--text); }
+  .readout .value small { font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); }
+
+  .hit-banner {
+    margin-top: 0.9rem; padding: 0.7rem 1rem; border-radius: 8px; font-size: 0.9rem; font-weight: 600;
+  }
+  .hit-banner.hit { background: var(--success-light); color: #0d6b3a; }
+  .hit-banner.miss { background: var(--error-light); color: #a50e0e; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>UT Scan Plan Builder</h1>
+  <p>Angle beam shear wave inspection — drag the wedge to see how the sound path skips through the plate</p>
+</header>
+
+<div class="container">
+  <div class="layout">
+
+    <div class="panel-card">
+      <h3>Scan Setup</h3>
+
+      <div class="control-group">
+        <label>Wedge (Refracted) Angle</label>
+        <div class="seg" id="angleSeg">
+          <button data-angle="45" class="active">45°</button>
+          <button data-angle="60">60°</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Plate Thickness</label>
+        <div class="num-row">
+          <input type="number" id="thicknessInput" value="25" min="1" step="1">
+          <div class="unit-seg" id="unitSeg">
+            <button data-unit="mm" class="active">mm</button>
+            <button data-unit="in">in</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Weld Included Angle (V-Groove)</label>
+        <div class="num-row">
+          <input type="number" id="weldAngleInput" value="60" min="20" max="90" step="5">
+          <div class="unit-seg"><button class="active" style="cursor:default">deg</button></div>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Probe Position</label>
+        <button class="btn-flip" id="flipBtn">⇄ Flip to Side 1</button>
+      </div>
+
+      <div class="hint">
+        <strong>Half skip</strong> hits the weld root area off the backwall.
+        <strong>Full skip</strong> returns to the scanning surface — use it to reach
+        the weld from the second leg.
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <h3>Side View — Scan Plan</h3>
+      <div class="canvas-wrap"><canvas id="scanCanvas"></canvas></div>
+      <div class="drag-hint">Drag the wedge left / right to move it towards or away from the weld · showing up to 3 legs</div>
+
+      <div class="readouts">
+        <div class="readout"><div class="label">Surface Distance to Weld ℄</div><div class="value" id="roSurface">—</div></div>
+        <div class="readout"><div class="label">Half Skip Distance</div><div class="value" id="roHalfSkip">—</div></div>
+        <div class="readout"><div class="label">Full Skip Distance</div><div class="value" id="roFullSkip">—</div></div>
+        <div class="readout"><div class="label">Sound Path per Leg</div><div class="value" id="roLegPath">—</div></div>
+        <div class="readout"><div class="label">Sound Path to Weld ℄</div><div class="value" id="roPathCL">—</div></div>
+      </div>
+
+      <div class="hit-banner hit" id="hitBanner">—</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var canvas = document.getElementById('scanCanvas');
+  var ctx = canvas.getContext('2d');
+
+  // All geometry is computed in "world" units = the user's chosen unit (mm or in),
+  // with x measured from the weld centerline (positive on the probe side) and
+  // depth measured down from the scanning surface.
+  var state = {
+    angle: 45,        // refracted angle, degrees from the surface normal
+    T: 25,            // plate thickness in current units
+    unit: 'mm',
+    weldAngle: 60,    // included angle of the V-groove
+    side: 1,          // 1 = probe on Side 2 (right of weld), -1 = probe on Side 1 (left)
+    standoff: 25      // beam exit point to weld centerline, world units
+  };
+
+  var MAX_LEGS = 3;
+
+  function u(mm) { return state.unit === 'mm' ? mm : mm / 25.4; }
+
+  function tanA() { return Math.tan(state.angle * Math.PI / 180); }
+  function cosA() { return Math.cos(state.angle * Math.PI / 180); }
+  function sinA() { return Math.sin(state.angle * Math.PI / 180); }
+
+  function weldGeom() {
+    var T = state.T;
+    var rootHalf = Math.max(u(1), T * 0.04);
+    var topHalf = T * Math.tan((state.weldAngle / 2) * Math.PI / 180) + rootHalf;
+    var capOver = Math.max(u(1.5), T * 0.08);
+    var capHalf = topHalf + capOver;
+    var capH = Math.max(u(1.2), T * 0.07);
+    return { rootHalf: rootHalf, topHalf: topHalf, capHalf: capHalf, capH: capH };
+  }
+
+  function wedgeGeom() {
+    var len = Math.min(Math.max(state.T * 0.9, u(18)), u(42));
+    return { len: len, h: len * 0.55, frontToExit: len * 0.25 };
+  }
+
+  function standoffLimits() {
+    var w = weldGeom(), wg = wedgeGeom();
+    var min = w.capHalf + wg.frontToExit + u(2);
+    var max = MAX_LEGS * state.T * tanA() + w.capHalf + state.T * 0.3;
+    return { min: min, max: max };
+  }
+
+  function clampStandoff() {
+    var lim = standoffLimits();
+    state.standoff = Math.min(Math.max(state.standoff, lim.min), lim.max);
+  }
+
+  // ---- beam path -------------------------------------------------------------
+  // Returns the bounce points of the beam in world coords, up to MAX_LEGS legs.
+  // Leg n spans horizontal distance T·tanθ; depth alternates 0 → T → 0 → T.
+  function beamPoints() {
+    var pts = [{ x: state.standoff, d: 0 }];
+    var legH = state.T * tanA();
+    for (var i = 1; i <= MAX_LEGS; i++) {
+      pts.push({ x: state.standoff - i * legH, d: (i % 2 === 1) ? state.T : 0 });
+    }
+    return pts;
+  }
+
+  // Where (if at all) the beam crosses the weld centerline within MAX_LEGS.
+  function centerlineCrossing() {
+    var legH = state.T * tanA();
+    var h = state.standoff;                 // horizontal travel needed to reach ℄
+    if (h > MAX_LEGS * legH) return null;
+    var leg = Math.min(Math.floor(h / legH) + 1, MAX_LEGS);
+    var within = h - (leg - 1) * legH;
+    var depth = (leg % 2 === 1) ? within / tanA() : state.T - within / tanA();
+    return { leg: leg, depth: depth, path: h / sinA() };
+  }
+
+  // ---- rendering -------------------------------------------------------------
+  var view = { s: 1, clx: 0, topY: 0, botY: 0, plateL: 0, plateR: 0, w: 0, h: 0 };
+
+  function computeView() {
+    var dpr = window.devicePixelRatio || 1;
+    var cssW = canvas.clientWidth || 900;
+
+    var w = weldGeom(), wg = wedgeGeom(), lim = standoffLimits();
+    var legH = state.T * tanA();
+    var nearExtent = lim.max + wg.len + state.T * 0.4;                    // probe side of ℄
+    var farExtent = Math.max(MAX_LEGS * legH - lim.min + state.T * 0.4,   // far side of ℄
+                             state.T * 1.5, w.capHalf * 1.6);
+
+    var padSide = 16, padTop = 118, padBot = 74;
+    var s = Math.min((cssW - 2 * padSide) / (nearExtent + farExtent),
+                     280 / state.T);
+    view.s = s;
+
+    // size the canvas to fit the drawing, so there's no dead space below the plate
+    var cssH = Math.max(300, Math.round(padTop + state.T * s + padBot));
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    canvas.style.height = cssH + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    view.w = cssW; view.h = cssH;
+
+    // Mirror the whole scene when the probe is on Side 1 (left of the weld).
+    var far = padSide + farExtent * s;
+    view.clx = (state.side === 1) ? far : cssW - far;
+    view.topY = padTop;
+    view.botY = padTop + state.T * s;
+    view.plateL = 0;
+    view.plateR = cssW;
+  }
+
+  function X(worldX) { return view.clx + state.side * worldX * view.s; }
+  function Y(depth) { return view.topY + depth * view.s; }
+
+  function fmt(v) {
+    return state.unit === 'mm'
+      ? v.toFixed(1) + ' mm'
+      : v.toFixed(2) + ' in';
+  }
+
+  function drawArrowhead(x, y, angleRad, size, color) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angleRad);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-size, -size * 0.45);
+    ctx.lineTo(-size, size * 0.45);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function draw() {
+    computeView();
+    var w = weldGeom(), wg = wedgeGeom();
+    ctx.clearRect(0, 0, view.w, view.h);
+
+    // background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, view.w, view.h);
+
+    // ---- plate
+    ctx.fillStyle = '#cfe6f2';
+    ctx.fillRect(view.plateL, view.topY, view.plateR - view.plateL, view.botY - view.topY);
+    ctx.strokeStyle = '#7fa8bd';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(view.plateL + 0.5, view.topY, view.plateR - view.plateL - 1, view.botY - view.topY);
+
+    // ---- weld (single-V, apex at the root) + cap
+    var xTopL = X(-w.topHalf), xTopR = X(w.topHalf);
+    var xRootL = X(-w.rootHalf), xRootR = X(w.rootHalf);
+    var xCapL = X(-w.capHalf), xCapR = X(w.capHalf);
+    var capTop = view.topY - w.capH * view.s;
+
+    ctx.fillStyle = '#8fb2c4';
+    ctx.strokeStyle = '#5f87a0';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();                       // cap bead
+    ctx.moveTo(xCapL, view.topY);
+    ctx.quadraticCurveTo((xCapL + xCapR) / 2, capTop - w.capH * view.s * 0.6, xCapR, view.topY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.beginPath();                       // V-groove body
+    ctx.moveTo(xTopL, view.topY);
+    ctx.lineTo(xRootL, view.botY);
+    ctx.lineTo(xRootR, view.botY);
+    ctx.lineTo(xTopR, view.topY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // weld centerline
+    ctx.strokeStyle = '#5f6368';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([6, 5]);
+    ctx.beginPath();
+    ctx.moveTo(view.clx, capTop - 14);
+    ctx.lineTo(view.clx, view.botY + 12);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#5f6368';
+    ctx.font = '11px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('℄', view.clx, capTop - 20);
+
+    // ---- beam (drawn before the wedge so the wedge sits on top of its start)
+    var pts = beamPoints();
+    ctx.strokeStyle = '#d93025';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(X(pts[0].x), Y(pts[0].d));
+    for (var i = 1; i < pts.length; i++) ctx.lineTo(X(pts[i].x), Y(pts[i].d));
+    ctx.stroke();
+
+    for (i = 1; i < pts.length; i++) {
+      var mx = (X(pts[i - 1].x) + X(pts[i].x)) / 2;
+      var my = (Y(pts[i - 1].d) + Y(pts[i].d)) / 2;
+      var ang = Math.atan2(Y(pts[i].d) - Y(pts[i - 1].d), X(pts[i].x) - X(pts[i - 1].x));
+      drawArrowhead(mx, my, ang, 11, '#d93025');
+
+      // leg label, offset perpendicular to the leg
+      var nx = Math.sin(ang) * 16 * (i % 2 === 1 ? -1 : 1) * state.side * -1;
+      var ny = -Math.cos(ang) * 16 * (i % 2 === 1 ? -1 : 1) * state.side * -1;
+      ctx.fillStyle = '#a50e0e';
+      ctx.font = 'bold 12px "Segoe UI", sans-serif';
+      ctx.fillText('Leg ' + i, mx + nx, my + ny + 4);
+    }
+
+    // bounce markers
+    ctx.fillStyle = '#d93025';
+    for (i = 1; i < pts.length; i++) {
+      ctx.beginPath();
+      ctx.arc(X(pts[i].x), Y(pts[i].d), 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // centerline crossing marker
+    var cross = centerlineCrossing();
+    if (cross) {
+      ctx.beginPath();
+      ctx.arc(view.clx, Y(cross.depth), 6, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(217,48,37,0.25)';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(view.clx, Y(cross.depth), 3, 0, Math.PI * 2);
+      ctx.fillStyle = '#d93025';
+      ctx.fill();
+    }
+
+    // ---- wedge / probe
+    var frontX = X(state.standoff - wg.frontToExit);
+    var backX = X(state.standoff - wg.frontToExit + wg.len);
+    var wTop = view.topY - wg.h * view.s;
+    var wl = Math.min(frontX, backX), wr = Math.max(frontX, backX);
+
+    ctx.fillStyle = '#4a4f55';
+    ctx.strokeStyle = '#2b2f33';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(wl, view.topY);
+    ctx.lineTo(wl, wTop);
+    ctx.lineTo(wr, wTop);
+    ctx.lineTo(wr, view.topY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 11px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(state.angle + '°', (wl + wr) / 2, (wTop + view.topY) / 2 + 4);
+
+    ctx.fillStyle = '#2b2f33';
+    ctx.font = '11px "Segoe UI", sans-serif';
+    ctx.fillText('Probe', (wl + wr) / 2, wTop - 7);
+
+    // beam exit point tick
+    ctx.strokeStyle = '#d93025';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(X(state.standoff), view.topY - 6);
+    ctx.lineTo(X(state.standoff), view.topY);
+    ctx.stroke();
+
+    // ---- surface distance dimension (exit point → ℄)
+    var dimY = view.botY + 30;
+    ctx.strokeStyle = '#5f6368';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(view.clx, view.botY + 14); ctx.lineTo(view.clx, dimY + 6);
+    ctx.moveTo(X(state.standoff), view.topY + 2); ctx.setLineDash([3, 4]);
+    ctx.lineTo(X(state.standoff), dimY + 6); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(view.clx, dimY); ctx.lineTo(X(state.standoff), dimY); ctx.stroke();
+    drawArrowhead(view.clx, dimY, state.side === 1 ? Math.PI : 0, 8, '#5f6368');
+    drawArrowhead(X(state.standoff), dimY, state.side === 1 ? 0 : Math.PI, 8, '#5f6368');
+    ctx.fillStyle = '#5f6368';
+    ctx.font = '12px "Segoe UI", sans-serif';
+    ctx.fillText(fmt(state.standoff), (view.clx + X(state.standoff)) / 2, dimY - 6);
+
+    // ---- side labels
+    ctx.fillStyle = '#5f6368';
+    ctx.font = '13px "Segoe UI", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('Side 1', 14, view.h - 12);
+    ctx.textAlign = 'right';
+    ctx.fillText('Side 2', view.w - 14, view.h - 12);
+    ctx.textAlign = 'center';
+
+    updateReadouts(cross);
+  }
+
+  function updateReadouts(cross) {
+    var halfSkip = state.T * tanA();
+    document.getElementById('roSurface').textContent = fmt(state.standoff);
+    document.getElementById('roHalfSkip').textContent = fmt(halfSkip);
+    document.getElementById('roFullSkip').textContent = fmt(2 * halfSkip);
+    document.getElementById('roLegPath').textContent = fmt(state.T / cosA());
+
+    var banner = document.getElementById('hitBanner');
+    if (cross) {
+      document.getElementById('roPathCL').textContent = fmt(cross.path);
+      banner.className = 'hit-banner hit';
+      banner.textContent = '✓ Beam crosses the weld centerline on Leg ' + cross.leg +
+        ' at a depth of ' + fmt(cross.depth) +
+        (cross.leg === 1 ? ' (first leg — direct)' : cross.leg === 2 ? ' (second leg — off the backwall)' : ' (third leg)');
+    } else {
+      document.getElementById('roPathCL').textContent = '—';
+      banner.className = 'hit-banner miss';
+      banner.textContent = '✗ The weld centerline is not reached within 3 legs — drag the wedge closer to the weld.';
+    }
+  }
+
+  // ---- dragging --------------------------------------------------------------
+  var drag = null;
+
+  function pointerWorldX(evt) {
+    var r = canvas.getBoundingClientRect();
+    return ((evt.clientX - r.left) - view.clx) / view.s * state.side;
+  }
+
+  function onWedge(evt) {
+    var r = canvas.getBoundingClientRect();
+    var px = evt.clientX - r.left, py = evt.clientY - r.top;
+    var wg = wedgeGeom();
+    var a = X(state.standoff - wg.frontToExit);
+    var b = X(state.standoff - wg.frontToExit + wg.len);
+    var wl = Math.min(a, b) - 8, wr = Math.max(a, b) + 8;
+    var wTop = view.topY - wg.h * view.s - 18;
+    return px >= wl && px <= wr && py >= wTop && py <= view.topY + 6;
+  }
+
+  canvas.addEventListener('pointerdown', function (evt) {
+    if (!onWedge(evt)) return;
+    drag = { grabOffset: pointerWorldX(evt) - state.standoff };
+    canvas.setPointerCapture(evt.pointerId);
+    canvas.classList.add('dragging');
+    evt.preventDefault();
+  });
+
+  canvas.addEventListener('pointermove', function (evt) {
+    if (!drag) return;
+    state.standoff = pointerWorldX(evt) - drag.grabOffset;
+    clampStandoff();
+    draw();
+  });
+
+  function endDrag(evt) {
+    if (!drag) return;
+    drag = null;
+    canvas.classList.remove('dragging');
+    if (evt.pointerId !== undefined) {
+      try { canvas.releasePointerCapture(evt.pointerId); } catch (e) {}
+    }
+  }
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
+
+  // ---- controls --------------------------------------------------------------
+  document.getElementById('angleSeg').addEventListener('click', function (evt) {
+    var btn = evt.target.closest('button[data-angle]');
+    if (!btn) return;
+    state.angle = parseInt(btn.dataset.angle, 10);
+    this.querySelectorAll('button').forEach(function (b) { b.classList.toggle('active', b === btn); });
+    clampStandoff();
+    draw();
+  });
+
+  document.getElementById('thicknessInput').addEventListener('input', function () {
+    var v = parseFloat(this.value);
+    if (!isFinite(v) || v <= 0) return;
+    var max = state.unit === 'mm' ? 300 : 12;
+    state.T = Math.min(v, max);
+    clampStandoff();
+    draw();
+  });
+
+  document.getElementById('weldAngleInput').addEventListener('input', function () {
+    var v = parseFloat(this.value);
+    if (!isFinite(v)) return;
+    state.weldAngle = Math.min(Math.max(v, 20), 90);
+    clampStandoff();
+    draw();
+  });
+
+  document.getElementById('unitSeg').addEventListener('click', function (evt) {
+    var btn = evt.target.closest('button[data-unit]');
+    if (!btn || btn.dataset.unit === state.unit) return;
+    var toIn = btn.dataset.unit === 'in';
+    state.unit = btn.dataset.unit;
+    state.T = toIn ? +(state.T / 25.4).toFixed(3) : +(state.T * 25.4).toFixed(1);
+    state.standoff = toIn ? state.standoff / 25.4 : state.standoff * 25.4;
+    document.getElementById('thicknessInput').value = state.T;
+    document.getElementById('thicknessInput').step = toIn ? 0.125 : 1;
+    this.querySelectorAll('button').forEach(function (b) { b.classList.toggle('active', b === btn); });
+    clampStandoff();
+    draw();
+  });
+
+  document.getElementById('flipBtn').addEventListener('click', function () {
+    state.side = -state.side;
+    this.textContent = state.side === 1 ? '⇄ Flip to Side 1' : '⇄ Flip to Side 2';
+    draw();
+  });
+
+  window.addEventListener('resize', draw);
+
+  // initial position: half skip, so leg 1 hits the root area at the ℄
+  state.standoff = state.T * tanA();
+  clampStandoff();
+  draw();
+})();
+</script>
+</body>
+</html>
