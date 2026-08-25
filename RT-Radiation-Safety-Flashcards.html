@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RT Radiation Safety Flashcards</title>
+<style>
+:root {
+  --bg:#f2f5f8; --surf:#ffffff; --surf2:#edf1f5;
+  --bdr:#cdd6e0; --bdr2:#aebccc;
+  --green:#1a6e38; --green-lo:rgba(26,110,56,.1);
+  --red:#b82028; --red-lo:rgba(184,32,40,.1);
+  --blue:#a82020; --blue-dk:#8a1818; --amber:#c47a08;
+  --txt:#18242e; --txt2:#243040; --mut:#566878; --mut2:#788898;
+  --mono:'Courier New',monospace; --sans:system-ui,sans-serif;
+  --r:10px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg)}
+body{font-family:var(--sans);color:var(--txt);min-height:100vh;display:flex;flex-direction:column;align-items:stretch}
+button{font-family:inherit;cursor:pointer}
+
+.hdr{background:var(--blue);padding:14px 20px 12px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:5px}
+.hdr-eye{font-family:var(--mono);font-size:10px;letter-spacing:3px;color:rgba(255,255,255,.55);text-transform:uppercase}
+.hdr h1{font-family:var(--mono);font-size:clamp(13px,2.5vw,19px);font-weight:700;color:#fff;letter-spacing:.4px}
+.hdr-rule{font-size:12px;color:rgba(255,255,255,.72);background:rgba(255,255,255,.1);border-left:3px solid #f6c830;padding:6px 14px;border-radius:4px;line-height:1.6;max-width:640px}
+.hdr-rule b{color:#f6c830}
+
+.app{width:100%;max-width:640px;align-self:center;padding:20px 16px 40px;display:flex;flex-direction:column;gap:16px;flex:1}
+
+/* PROGRESS */
+.progress-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.progress-track{flex:1;height:6px;background:var(--bdr);border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;background:var(--blue);border-radius:4px;transition:width .25s ease}
+.progress-label{font-family:var(--mono);font-size:11px;color:var(--mut2);white-space:nowrap}
+
+/* CARD STACK */
+.card-stage{position:relative;perspective:1600px;min-height:440px}
+.card{
+  position:absolute;inset:0;
+  border-radius:14px;
+  cursor:pointer;
+  transition:transform .5s cubic-bezier(.4,.1,.2,1);
+  transform-style:preserve-3d;
+}
+.card-face{
+  position:absolute;inset:0;
+  border-radius:14px;
+  backface-visibility:hidden;
+  display:flex;flex-direction:column;
+  border:2px solid var(--bdr2);
+  background:var(--surf);
+  box-shadow:0 4px 18px rgba(20,40,70,.08);
+  overflow:hidden;
+}
+.card-back{transform:rotateY(180deg);background:var(--blue);border-color:var(--blue);color:#fff}
+.card.flipped{transform:rotateY(180deg)}
+
+/* FRONT FACE */
+.card-front-hdr{
+  padding:14px 18px 10px;text-align:center;border-bottom:1px solid var(--bdr);
+  background:var(--surf2);
+}
+.card-eyebrow{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--mut2);text-transform:uppercase}
+.card-term{font-family:var(--mono);font-size:clamp(19px,4.5vw,26px);font-weight:700;color:var(--blue);letter-spacing:.5px;margin-top:6px;line-height:1.25}
+.card-question-zone{flex:1;display:flex;align-items:center;justify-content:center;padding:24px 28px;background:#fff}
+.card-question{font-size:17px;line-height:1.6;color:var(--txt2);text-align:center;max-width:440px}
+.card-tap-hint{
+  text-align:center;padding:10px;font-family:var(--mono);font-size:10px;color:var(--mut2);
+  letter-spacing:1px;text-transform:uppercase;border-top:1px solid var(--bdr);background:var(--surf2);
+}
+
+/* BACK FACE */
+.card-back-inner{padding:20px 22px 16px;display:flex;flex-direction:column;gap:12px;height:100%;overflow-y:auto}
+.back-name{font-family:var(--mono);font-size:20px;font-weight:700;letter-spacing:.5px}
+.back-stats{display:flex;gap:10px}
+.back-stat{flex:1;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:9px;text-align:center}
+.back-stat-val{font-family:var(--mono);font-size:20px;font-weight:700;color:#f6c830}
+.back-stat-lbl{font-size:10px;color:rgba(255,255,255,.7);margin-top:2px;letter-spacing:.5px}
+.back-text{font-size:13.5px;line-height:1.62;color:rgba(255,255,255,.92)}
+.back-callout{
+  font-family:var(--mono);font-size:11.5px;color:#f6c830;
+  background:rgba(246,200,48,.12);border:1px solid rgba(246,200,48,.3);
+  border-radius:6px;padding:8px 12px;line-height:1.5;
+}
+.back-tap-hint{
+  margin-top:auto;text-align:center;font-family:var(--mono);font-size:10px;
+  color:rgba(255,255,255,.55);letter-spacing:1px;text-transform:uppercase;
+  padding-top:10px;border-top:1px solid rgba(255,255,255,.15);
+}
+
+/* NAV CONTROLS */
+.nav-row{display:flex;gap:10px;align-items:center}
+.nav-btn{
+  flex:1;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+  padding:13px 10px;border-radius:var(--r);border:2px solid var(--bdr2);background:var(--surf);color:var(--txt);
+  transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.nav-btn:hover{border-color:var(--blue);color:var(--blue);background:#eaf0f8}
+.nav-btn:disabled{opacity:.4;cursor:default}
+.nav-btn.flip-btn{background:var(--blue);border-color:var(--blue);color:#fff;flex:1.4}
+.nav-btn.flip-btn:hover{background:#8a1818}
+
+/* SHUFFLE / KNOW TRACKER */
+.tools-row{display:flex;gap:10px}
+.tool-btn{
+  flex:1;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+  padding:10px;border-radius:var(--r);border:2px solid var(--bdr2);background:var(--surf2);color:var(--mut);
+  transition:all .15s;
+}
+.tool-btn:hover{border-color:var(--blue);color:var(--blue)}
+.tool-btn.active-know{border-color:var(--green);color:var(--green);background:var(--green-lo)}
+.tool-btn.active-review{border-color:var(--red);color:var(--red);background:var(--red-lo)}
+
+/* JUMP GRID */
+.jump-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+@media(max-width:480px){.jump-grid{grid-template-columns:repeat(5,1fr)}}
+.jump-btn{
+  font-family:var(--mono);font-size:10px;font-weight:700;padding:8px 2px;border-radius:6px;
+  border:2px solid var(--bdr2);background:var(--surf2);color:var(--mut2);transition:all .15s;text-align:center;line-height:1.3;
+}
+.jump-btn .jn{display:block;font-size:12px}
+.jump-btn:hover{border-color:var(--blue);color:var(--blue)}
+.jump-btn.cur{background:var(--blue);border-color:var(--blue);color:#fff}
+.jump-btn.know{border-color:var(--green);background:var(--green-lo)}
+.jump-btn.know:not(.cur){color:var(--green)}
+.jump-btn.review{border-color:var(--red);background:var(--red-lo)}
+.jump-btn.review:not(.cur){color:var(--red)}
+
+/* DONE SCREEN */
+.done-screen{display:none;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:40px 20px;background:var(--surf);border:2px solid var(--bdr2);border-radius:14px}
+.done-screen.show{display:flex}
+.done-title{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--blue)}
+.done-stats{display:flex;gap:14px}
+.done-stat{display:flex;flex-direction:column;align-items:center;gap:2px}
+.done-stat-val{font-family:var(--mono);font-size:32px;font-weight:700}
+.done-stat.know .done-stat-val{color:var(--green)}
+.done-stat.review .done-stat-val{color:var(--red)}
+.done-stat-lbl{font-size:10px;color:var(--mut2);letter-spacing:1px;text-transform:uppercase}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-eye">NDT · Trainee · Radiation Safety (ASNT)</div>
+  <h1>Radiation Safety Flashcards</h1>
+  <div class="hdr-rule">
+    <b>21 cards</b> covering X-ray production, tube construction, machine types, and atomic
+    physics.<br>Read the question, think of the answer, then tap the card to check yourself.
+  </div>
+</header>
+
+<div class="app">
+
+  <div class="progress-row">
+    <span class="progress-label" id="progLabel">Card 1 of 21</span>
+    <div class="progress-track"><div class="progress-fill" id="progFill"></div></div>
+    <span class="progress-label" id="progScore">✓0 ✗0</span>
+  </div>
+
+  <div class="card-stage" id="cardStage">
+    <div class="card" id="card" onclick="flipCard()">
+      <div class="card-face card-front">
+        <div class="card-front-hdr">
+          <div class="card-eyebrow" id="frontEyebrow">Card 1 of 21</div>
+          <div class="card-term" id="frontTerm">—</div>
+        </div>
+        <div class="card-question-zone"><div class="card-question" id="frontQuestion">—</div></div>
+        <div class="card-tap-hint">Tap card to reveal answer →</div>
+      </div>
+      <div class="card-face card-back">
+        <div class="card-back-inner">
+          <div class="back-name" id="backName">—</div>
+          <div class="back-stats" id="backStats"></div>
+          <div class="back-text" id="backText">—</div>
+          <div class="back-callout" id="backCallout">—</div>
+          <div class="back-tap-hint">← Tap card to flip back</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="done-screen" id="doneScreen">
+    <div class="done-title">🎉 Deck Complete</div>
+    <div class="done-stats">
+      <div class="done-stat know"><div class="done-stat-val" id="doneKnow">0</div><div class="done-stat-lbl">Know It</div></div>
+      <div class="done-stat review"><div class="done-stat-val" id="doneReview">0</div><div class="done-stat-lbl">Review</div></div>
+    </div>
+    <div style="font-size:13px;color:var(--mut);max-width:340px">Cards marked "Review" will come up again if you restart the deck.</div>
+    <button class="nav-btn flip-btn" style="max-width:200px" onclick="restartDeck()">↺ Study Again</button>
+  </div>
+
+  <div class="nav-row" id="navRow">
+    <button class="nav-btn" id="prevBtn" onclick="prevCard()">← Prev</button>
+    <button class="nav-btn flip-btn" onclick="flipCard()">⟲ Flip</button>
+    <button class="nav-btn" id="nextBtn" onclick="nextCard()">Next →</button>
+  </div>
+
+  <div class="tools-row" id="toolsRow">
+    <button class="tool-btn" id="reviewBtn" onclick="markCard('review')">🔴 Mark: Review Again</button>
+    <button class="tool-btn" id="knowBtn" onclick="markCard('know')">🟢 Mark: I Know This</button>
+  </div>
+
+  <div class="jump-grid" id="jumpGrid"></div>
+
+</div>
+
+<script>
+/* =============================================================
+   CARD DATA — edit here
+   cat     → category shown in the front eyebrow
+   term    → big term on the front of the card
+   q       → question the student answers before flipping
+   text    → full answer on the back
+   callout → one-line memory hook
+   stats   → optional pair of quick-fact boxes [{val,lbl},...]
+============================================================= */
+const CARDS = [
+  { cat:'Beam Properties', term:'X-ray Quantity',
+    q:'What is X-ray quantity, and which machine setting controls it?',
+    stats:[{val:'mA',lbl:'Controls it'},{val:'Intensity',lbl:'Same thing as'}],
+    text:'X-ray quantity is the NUMBER of X-ray photons in the beam — in other words, the beam INTENSITY. It is controlled by the tube current (mA) and exposure time: more mA means more electrons striking the target, which means more X-rays produced. Changing quantity does NOT change how penetrating the beam is.',
+    callout:'Quantity = Intensity = how MANY X-rays → controlled by mA' },
+
+  { cat:'Beam Properties', term:'X-ray Quality (Wavelength)',
+    q:'What is X-ray quality, and how is it related to wavelength?',
+    stats:[{val:'kV',lbl:'Controls it'},{val:'λ ↓ = E ↑',lbl:'Shorter wave = harder'}],
+    text:'X-ray quality is the PENETRATING POWER (energy) of the beam, and it is described by the beam’s wavelength. A SHORTER wavelength means higher energy and a more penetrating ("harder") beam; a longer wavelength means a lower-energy, less penetrating ("softer") beam. Quality is controlled by the kilovoltage (kV).',
+    callout:'Quality = penetrating power → SHORTER wavelength = HARDER beam → controlled by kV' },
+
+  { cat:'X-ray Production', term:'Characteristic Radiation',
+    q:'How is characteristic radiation produced at the target?',
+    text:'A high-speed electron from the cathode knocks an INNER-shell (K-shell) electron out of a target atom. An electron from an outer shell immediately drops in to fill the vacancy, and the energy difference is given off as an X-ray photon. These photons come out at discrete, fixed energies that are "characteristic" of the target material (tungsten).',
+    callout:'Inner-shell electron knocked out → outer electron fills the hole → discrete-energy X-ray' },
+
+  { cat:'X-ray Production', term:'Bremsstrahlung Radiation',
+    q:'What is Bremsstrahlung radiation, and what kind of spectrum does it produce?',
+    text:'German for "BRAKING radiation." A high-speed electron passes close to the NUCLEUS of a target atom, is slowed down and deflected, and the kinetic energy it loses is emitted as an X-ray photon. Because each electron loses a different amount of energy, this produces a CONTINUOUS spectrum of wavelengths — and it makes up the majority of the X-rays from an industrial X-ray tube.',
+    callout:'"Braking" radiation — electron slowed by the nucleus → continuous spectrum → most of the beam' },
+
+  { cat:'Machine Controls', term:'mA — Milliamperage',
+    q:'What is milliamperage, and what does turning up the mA do to the beam?',
+    stats:[{val:'2× mA',lbl:'= 2× intensity'},{val:'Quantity',lbl:'What it controls'}],
+    text:'Milliamperage is the TUBE CURRENT — the number of electrons flowing each second from the cathode (filament) to the anode (target). It controls the QUANTITY (intensity) of X-rays: double the mA and you double the intensity. It does NOT change the energy or penetrating power of the beam.',
+    callout:'mA = tube current → controls QUANTITY / intensity only' },
+
+  { cat:'Machine Controls', term:'kV — Kilovoltage',
+    q:'What is kilovoltage, and what does turning up the kV do to the beam?',
+    stats:[{val:'kV ↑',lbl:'= harder beam'},{val:'Quality',lbl:'What it controls'}],
+    text:'Kilovoltage is the electrical potential (voltage) applied across the tube from cathode to anode. It sets how hard the electrons are accelerated into the target, and therefore the ENERGY of the X-rays produced. Higher kV → shorter wavelength → a harder, more penetrating beam. kV controls QUALITY (it also raises quantity somewhat).',
+    callout:'kV = accelerating voltage → controls QUALITY / penetrating power' },
+
+  { cat:'Tube Construction', term:'Inherent Filtration',
+    q:'What is the inherent filtration of an X-ray tube?',
+    text:'The filtering that is BUILT INTO the tube itself — the glass or metal envelope, the insulating oil around the tube, and the tube window. Together they absorb the soft, low-energy (long-wavelength) rays before the beam ever leaves the tube head, slightly "hardening" the useful beam. Filtration placed in the beam on purpose (aluminum or copper sheets) is called ADDED filtration.',
+    callout:'Filtration built into the tube: envelope + oil + window absorb the soft rays' },
+
+  { cat:'Tube Construction', term:'Anode — Material & Charge',
+    q:'What charge does the anode carry, and what is it made of?',
+    stats:[{val:'+',lbl:'Charge'},{val:'W in Cu',lbl:'Tungsten target in copper'}],
+    text:'The anode is the POSITIVE electrode. It carries the target: a TUNGSTEN button embedded in a COPPER block. Tungsten is used because of its high atomic number (74 — efficient X-ray production) and very high melting point (~3,400 °C); the copper conducts the heat away. Roughly 97–99% of the electron energy becomes heat — only about 1–3% becomes X-rays.',
+    callout:'Anode = POSITIVE = tungsten target set in a copper body' },
+
+  { cat:'Tube Construction', term:'Cathode — Material & Charge',
+    q:'What charge does the cathode carry, and what is it made of?',
+    stats:[{val:'−',lbl:'Charge'},{val:'W',lbl:'Tungsten filament'}],
+    text:'The cathode is the NEGATIVE electrode. It is a coiled TUNGSTEN FILAMENT that is heated white-hot so it "boils off" electrons — this is called thermionic emission. A focusing cup around the filament shapes the electron stream so it strikes the small focal spot on the target.',
+    callout:'Cathode = NEGATIVE = heated tungsten filament → the source of the electrons' },
+
+  { cat:'X-ray Equipment', term:'Two Types of X-ray Machines',
+    q:'What are the two types of X-ray machines, and how does each emit its beam?',
+    stats:[{val:'Cone',lbl:'Directional'},{val:'360°',lbl:'Panoramic'}],
+    text:'DIRECTIONAL — radiation exits through a single window as a cone aimed in one direction, like a flashlight pointed at the part. PANORAMIC — radiation is emitted in a full 360° circle around the tube, exposing everything around it at once; ideal for shooting a complete pipe circumference in a single exposure.',
+    callout:'Directional = one cone · Panoramic = full 360° circle' },
+
+  { cat:'X-ray Equipment', term:'Panoramic Machine — Other Names',
+    q:'What two other names is a panoramic X-ray machine known by?',
+    text:'A panoramic machine is also called a ROD-ANODE X-ray tube — the anode is extended on a long rod so the target can be positioned inside a pipe — or a 360° X-RAY TUBE, because the beam is emitted radially in a full circle. Placed on the centerline of a pipe with film wrapped around the outside, it exposes an entire circumferential weld in one shot (the SWSI panoramic technique).',
+    callout:'Panoramic = Rod-anode tube = 360° tube' },
+
+  { cat:'Types of Radiation', term:'Alpha, Beta & Gamma',
+    q:'What is each particle/ray made of, and what does it take to stop each one?',
+    stats:[{val:'α β γ',lbl:'Least → most penetrating'},{val:'+2 −1 0',lbl:'Charges'}],
+    text:'ALPHA (α): 2 protons + 2 neutrons (a helium nucleus), charge +2, heavy and slow — stopped by a sheet of paper or your skin, but very hazardous if inhaled or ingested. BETA (β): a high-speed electron, charge −1 — stopped by thin aluminum or plastic. GAMMA (γ): electromagnetic radiation from the nucleus — no mass, no charge, highly penetrating — requires dense shielding such as lead, steel, or concrete.',
+    callout:'Stopped by: α → paper · β → aluminum · γ → lead' },
+
+  { cat:'Atomic Physics', term:'Isotopes',
+    q:'What makes two atoms isotopes of the same element?',
+    text:'Isotopes are atoms of the SAME element — same number of protons, same atomic number — that have a DIFFERENT number of NEUTRONS, and therefore a different atomic weight. Example: Co-59 and Co-60 are both cobalt (27 protons each), but Co-60 carries one extra neutron.',
+    callout:'Same protons, different neutrons = same element, different atomic weight' },
+
+  { cat:'Atomic Physics', term:'Radioisotopes',
+    q:'What is a radioisotope, and which ones are used in industrial radiography?',
+    text:'A radioisotope is an isotope whose nucleus is UNSTABLE. It decays — giving off radiation (alpha, beta, and/or gamma) — until it reaches a stable state. The radioisotopes used as gamma-ray sources in industrial radiography include Iridium-192, Cobalt-60, and Selenium-75.',
+    callout:'Unstable isotope → decays → emits radiation (Ir-192, Co-60, Se-75)' },
+
+  { cat:'Atomic Physics', term:'Atomic Number',
+    q:'What does the atomic number count, and what does it tell you?',
+    stats:[{val:'Z',lbl:'Symbol'},{val:'Protons',lbl:'What it counts'}],
+    text:'The atomic number (symbol Z) is the number of PROTONS in the nucleus. It identifies the ELEMENT — every atom with 74 protons is tungsten; every atom with 77 protons is iridium. In a neutral atom it also equals the number of orbital electrons.',
+    callout:'Atomic number Z = number of protons = which element it is' },
+
+  { cat:'Atomic Physics', term:'Atomic Weight',
+    q:'What does the atomic weight (mass number) count?',
+    stats:[{val:'A',lbl:'Symbol'},{val:'p + n',lbl:'Protons + neutrons'}],
+    text:'The atomic weight, or mass number (symbol A), is the total number of PROTONS plus NEUTRONS in the nucleus. It is the number written after the element name: Ir-192 has 77 protons + 115 neutrons = 192. Isotopes of an element share the same atomic number but differ in atomic weight.',
+    callout:'Atomic weight = protons + neutrons (the number in Ir-192, Co-60)' },
+
+  { cat:'X-ray Equipment', term:'Van de Graaff Generator',
+    q:'How does a Van de Graaff generator work, and what is it used for?',
+    text:'An ELECTROSTATIC high-voltage generator: a fast-moving insulated belt carries electric charge up to a large metal dome, building up potential in the MILLION-volt range (typically 1–2 MeV or more). That voltage accelerates electrons to produce very high-energy X-rays, used to radiograph thick sections that ordinary X-ray tubes cannot penetrate.',
+    callout:'Moving belt piles up charge → megavolt X-rays for thick sections' },
+
+  { cat:'Tube Construction', term:'Focal Spot',
+    q:'What is the focal spot, and why does its size matter?',
+    stats:[{val:'Smaller',lbl:'= sharper image'},{val:'Larger',lbl:'= handles more heat'}],
+    text:'The focal spot is the area on the TARGET (anode) that the electron stream strikes — the spot where the X-rays actually originate. A SMALLER focal spot gives a sharper radiograph (less geometric unsharpness), but concentrates the heat; a larger focal spot spreads the heat, but blurs image detail.',
+    callout:'Focal spot = where the electrons hit the target → smaller spot = sharper image' },
+
+  { cat:'Types of Radiation', term:'Electromagnetic Radiation',
+    q:'What is electromagnetic radiation, and which NDT radiations belong to it?',
+    stats:[{val:'0',lbl:'Mass & charge'},{val:'c',lbl:'Speed of light'}],
+    text:'Energy traveling as waves (photons) with NO mass and NO electrical charge, moving at the speed of light. X-RAYS and GAMMA RAYS are electromagnetic radiation — identical in nature, differing only in ORIGIN: X-rays come from electron interactions in a machine; gamma rays come from the nucleus of a radioactive atom. Visible light and radio waves are lower-energy members of the same family.',
+    callout:'No mass, no charge, speed of light — X-rays & gamma rays (differ only in origin)' },
+
+  { cat:'Types of Radiation', term:'Particulate Radiation',
+    q:'What is particulate radiation, and what are its four main examples?',
+    text:'Radiation made of actual PARTICLES that have MASS — alpha particles, beta particles, neutrons, and protons. Because these carry mass (and usually charge), they interact strongly with matter, which limits their range and penetrating power compared with electromagnetic radiation.',
+    callout:'Radiation with MASS: alpha, beta, neutrons, protons' },
+
+  { cat:'Atomic Physics', term:'Neutron Activation',
+    q:'What is neutron activation, and how is it used to make radiography sources?',
+    text:'Neutron activation is the process by which a STABLE material becomes RADIOACTIVE after absorbing neutrons into its nuclei. This is how radiography sources are manufactured: stable Co-59 is placed in a nuclear reactor, absorbs a neutron, and becomes radioactive Co-60. Ir-191 becomes Ir-192 the same way.',
+    callout:'Stable atom + neutron (in a reactor) → radioactive isotope (Co-59 → Co-60)' }
+];
+
+/* =============================================================
+   FLASHCARD STATE & LOGIC
+============================================================= */
+let curIdx = 0;
+let isFlipped = false;
+let cardStatus = new Array(CARDS.length).fill(null); // null | 'know' | 'review'
+
+function renderCard(){
+  const C = CARDS[curIdx];
+  document.getElementById('frontEyebrow').textContent = `Card ${curIdx+1} of ${CARDS.length} · ${C.cat}`;
+  document.getElementById('frontTerm').textContent = C.term;
+  document.getElementById('frontQuestion').textContent = C.q;
+  document.getElementById('backName').textContent = C.term;
+  document.getElementById('backText').textContent = C.text;
+  document.getElementById('backCallout').textContent = '→ ' + C.callout;
+
+  const statsEl = document.getElementById('backStats');
+  statsEl.innerHTML = '';
+  if(C.stats){
+    C.stats.forEach(s=>{
+      const d=document.createElement('div');
+      d.className='back-stat';
+      d.innerHTML=`<div class="back-stat-val"></div><div class="back-stat-lbl"></div>`;
+      d.querySelector('.back-stat-val').textContent=s.val;
+      d.querySelector('.back-stat-lbl').textContent=s.lbl;
+      statsEl.appendChild(d);
+    });
+    statsEl.style.display='flex';
+  } else {
+    statsEl.style.display='none';
+  }
+
+  // Reset flip state when navigating
+  isFlipped = false;
+  document.getElementById('card').classList.remove('flipped');
+
+  // Progress
+  document.getElementById('progLabel').textContent = `Card ${curIdx+1} of ${CARDS.length}`;
+  document.getElementById('progFill').style.width = `${((curIdx+1)/CARDS.length)*100}%`;
+  const knowCt = cardStatus.filter(s=>s==='know').length;
+  const revCt = cardStatus.filter(s=>s==='review').length;
+  document.getElementById('progScore').textContent = `✓${knowCt} ✗${revCt}`;
+
+  // Nav buttons
+  document.getElementById('prevBtn').disabled = (curIdx===0);
+  document.getElementById('nextBtn').textContent = (curIdx===CARDS.length-1) ? 'Finish ✓' : 'Next →';
+
+  // Mark buttons reflect current status
+  document.getElementById('knowBtn').classList.toggle('active-know', cardStatus[curIdx]==='know');
+  document.getElementById('reviewBtn').classList.toggle('active-review', cardStatus[curIdx]==='review');
+
+  renderJumpGrid();
+
+  document.getElementById('cardStage').classList.remove('hidden');
+  document.getElementById('navRow').classList.remove('hidden');
+  document.getElementById('toolsRow').classList.remove('hidden');
+  document.getElementById('jumpGrid').classList.remove('hidden');
+  document.getElementById('doneScreen').classList.remove('show');
+}
+
+function renderJumpGrid(){
+  const grid = document.getElementById('jumpGrid');
+  grid.innerHTML = '';
+  CARDS.forEach((C,i)=>{
+    const b=document.createElement('button');
+    let cls='jump-btn';
+    if(i===curIdx)cls+=' cur';
+    else if(cardStatus[i]==='know')cls+=' know';
+    else if(cardStatus[i]==='review')cls+=' review';
+    b.className=cls;
+    b.innerHTML=`<span class="jn">${i+1}</span>`;
+    b.title=C.term;
+    b.onclick=()=>{curIdx=i;renderCard();};
+    grid.appendChild(b);
+  });
+}
+
+function flipCard(){
+  isFlipped = !isFlipped;
+  document.getElementById('card').classList.toggle('flipped', isFlipped);
+}
+
+function nextCard(){
+  if(curIdx < CARDS.length-1){
+    curIdx++;
+    renderCard();
+  } else {
+    showDone();
+  }
+}
+
+function prevCard(){
+  if(curIdx>0){curIdx--; renderCard();}
+}
+
+function markCard(status){
+  cardStatus[curIdx] = (cardStatus[curIdx]===status) ? null : status;
+  document.getElementById('knowBtn').classList.toggle('active-know', cardStatus[curIdx]==='know');
+  document.getElementById('reviewBtn').classList.toggle('active-review', cardStatus[curIdx]==='review');
+  const knowCt = cardStatus.filter(s=>s==='know').length;
+  const revCt = cardStatus.filter(s=>s==='review').length;
+  document.getElementById('progScore').textContent = `✓${knowCt} ✗${revCt}`;
+  renderJumpGrid();
+  // auto-advance after marking, small delay for feedback
+  setTimeout(()=>{
+    if(curIdx < CARDS.length-1) nextCard(); else showDone();
+  }, 280);
+}
+
+function showDone(){
+  document.getElementById('cardStage').classList.add('hidden');
+  document.getElementById('navRow').classList.add('hidden');
+  document.getElementById('toolsRow').classList.add('hidden');
+  document.getElementById('jumpGrid').classList.add('hidden');
+  const knowCt = cardStatus.filter(s=>s==='know').length;
+  const revCt = cardStatus.filter(s=>s==='review').length;
+  document.getElementById('doneKnow').textContent = knowCt;
+  document.getElementById('doneReview').textContent = revCt;
+  document.getElementById('doneScreen').classList.add('show');
+}
+
+function restartDeck(){
+  curIdx = 0;
+  cardStatus = new Array(CARDS.length).fill(null);
+  renderCard();
+}
+
+renderCard();
+</script>
+</body>
+</html>
