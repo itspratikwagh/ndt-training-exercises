@@ -35,7 +35,7 @@ button{font-family:inherit;cursor:pointer}
 .progress-label{font-family:var(--mono);font-size:11px;color:var(--mut2);white-space:nowrap}
 
 /* CARD STACK */
-.card-stage{position:relative;perspective:1600px;min-height:440px}
+.card-stage{position:relative;perspective:1600px;min-height:500px}
 .card{
   position:absolute;inset:0;
   border-radius:14px;
@@ -88,6 +88,19 @@ button{font-family:inherit;cursor:pointer}
   color:rgba(255,255,255,.55);letter-spacing:1px;text-transform:uppercase;
   padding-top:10px;border-top:1px solid rgba(255,255,255,.15);
 }
+
+/* ANIMATION PANEL (on card backs) */
+.anim-panel{background:#fff;border-radius:10px;padding:10px 10px 8px;color:var(--txt);cursor:default}
+.anim-controls{display:flex;gap:8px;margin-bottom:8px;align-items:center;justify-content:center}
+.anim-btn{
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+  padding:7px 16px;border-radius:6px;border:2px solid var(--bdr2);background:var(--surf2);color:var(--mut);
+  transition:all .15s;
+}
+.anim-btn:hover{border-color:var(--blue);color:var(--blue)}
+.anim-btn.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.anim-caption{font-family:var(--mono);font-size:10px;color:var(--mut);text-align:center;margin-top:6px;line-height:1.5}
+.anim-panel svg{width:100%;height:auto;display:block}
 
 /* NAV CONTROLS */
 .nav-row{display:flex;gap:10px;align-items:center}
@@ -173,6 +186,7 @@ button{font-family:inherit;cursor:pointer}
         <div class="card-back-inner">
           <div class="back-name" id="backName">—</div>
           <div class="back-stats" id="backStats"></div>
+          <div id="backAnim"></div>
           <div class="back-text" id="backText">—</div>
           <div class="back-callout" id="backCallout">—</div>
           <div class="back-tap-hint">← Tap card to flip back</div>
@@ -208,6 +222,184 @@ button{font-family:inherit;cursor:pointer}
 
 <script>
 /* =============================================================
+   ANIMATIONS — interactive diagrams shown on a card's back.
+   An anim function receives a container element, builds its
+   content, and returns a cleanup function (stops timers/rAF).
+============================================================= */
+const NS='http://www.w3.org/2000/svg';
+function mk(tag,attrs){
+  const e=document.createElementNS(NS,tag);
+  for(const [k,v] of Object.entries(attrs||{})) e.setAttribute(k,v);
+  return e;
+}
+function svgLabel(svg,x,y,text,color,size,anchor,weight){
+  const t=mk('text',{x,y,fill:color||'#566878','font-size':size||9,'text-anchor':anchor||'middle','font-family':'Courier New,monospace'});
+  if(weight)t.setAttribute('font-weight',weight);
+  t.textContent=text; svg.appendChild(t);
+}
+
+/* --- X-RAY QUANTITY: low mA vs high mA -------------------- */
+function buildQuantityAnim(container){
+  const MODES = {
+    low: { label:'Low mA', ma:'2 mA', spawnMs:620,
+           caption:'LOW mA → cooler filament → FEWER electrons strike the target → FEWER X-rays (low intensity)' },
+    high:{ label:'High mA', ma:'10 mA', spawnMs:115,
+           caption:'HIGH mA → hotter filament → MORE electrons strike the target → MORE X-rays (high intensity). Note: electron SPEED is unchanged — that is set by kV.' }
+  };
+  let mode='low';
+
+  const panel=document.createElement('div');
+  panel.className='anim-panel';
+  panel.onclick=e=>e.stopPropagation(); // don't flip the card while playing with the controls
+
+  const ctr=document.createElement('div'); ctr.className='anim-controls';
+  const btns={};
+  for(const key of ['low','high']){
+    const b=document.createElement('button');
+    b.className='anim-btn'; b.textContent=MODES[key].label;
+    b.onclick=()=>{ mode=key; syncButtons(); };
+    ctr.appendChild(b); btns[key]=b;
+  }
+  panel.appendChild(ctr);
+
+  const svg=mk('svg',{viewBox:'0 0 440 200'});
+  panel.appendChild(svg);
+
+  const caption=document.createElement('div');
+  caption.className='anim-caption';
+  panel.appendChild(caption);
+  container.appendChild(panel);
+
+  /* --- static scene --- */
+  // tube envelope
+  svg.appendChild(mk('rect',{x:20,y:22,width:400,height:96,rx:42,fill:'#eef4fa',stroke:'#8aa0b8','stroke-width':'2'}));
+  // bottom window gap under the target
+  svg.appendChild(mk('rect',{x:308,y:112,width:56,height:10,fill:'#fff'}));
+  svg.appendChild(mk('line',{x1:308,y1:117,x2:364,y2:117,stroke:'#8aa0b8','stroke-width':'1','stroke-dasharray':'4,3'}));
+  svgLabel(svg,300,130,'window →','#8aa0b8',8,'end');
+  // anode block (copper) with angled tungsten target face
+  svg.appendChild(mk('polygon',{points:'352,40 408,40 408,104 372,104',fill:'#c07840',stroke:'#8a4a20','stroke-width':'1.5'}));
+  svg.appendChild(mk('polygon',{points:'352,40 362,40 382,104 372,104',fill:'#9aa4ae',stroke:'#5a646e','stroke-width':'1.5'}));
+  svgLabel(svg,390,140,'ANODE (+)','#8a4a20',9,'middle','700');
+  svgLabel(svg,390,152,'tungsten target','#5a646e',8,'middle');
+  // cathode: focusing cup + filament
+  svg.appendChild(mk('path',{d:'M50,52 L72,58 L72,86 L50,92',fill:'#c8d2dc',stroke:'#5a646e','stroke-width':'1.5'}));
+  const filGlow=mk('circle',{cx:66,cy:72,r:10,fill:'rgba(255,140,0,.25)'});
+  svg.appendChild(filGlow);
+  const filament=mk('path',{d:'M62,64 l8,4 l-8,4 l8,4 l-8,4',fill:'none',stroke:'#e8a000','stroke-width':'2.5','stroke-linecap':'round'});
+  svg.appendChild(filament);
+  svgLabel(svg,58,140,'CATHODE (−)','#5a646e',9,'middle','700');
+  svgLabel(svg,58,152,'heated filament','#8aa0b8',8,'middle');
+  // mA readout
+  const maText=mk('text',{x:220,y:16,'text-anchor':'middle','font-family':'Courier New,monospace','font-size':'12','font-weight':'700',fill:'#a82020'});
+  svg.appendChild(maText);
+  // intensity meter
+  svgLabel(svg,155,140,'X-RAY INTENSITY (quantity)','#566878',9,'start','700');
+  svg.appendChild(mk('rect',{x:155,y:146,width:130,height:12,rx:3,fill:'#e4eaf0',stroke:'#aebccc','stroke-width':'1'}));
+  const intensFill=mk('rect',{x:156.5,y:147.5,width:0,height:9,rx:2,fill:'#c47a08'});
+  svg.appendChild(intensFill);
+  // particle groups (drawn above the scene)
+  const gPhotons=mk('g',{}); svg.appendChild(gPhotons);
+  const gElectrons=mk('g',{}); svg.appendChild(gElectrons);
+  const gFlashes=mk('g',{}); svg.appendChild(gFlashes);
+
+  const BEAM_Y=72, SPAWN_X=80, IMPACT_X=360, E_SPEED=170, P_SPEED=125;
+  const electrons=[], photons=[], flashes=[];
+  let intensity=0, spawnAcc=0, lastT=null, raf=null;
+  const reduced=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function syncButtons(){
+    for(const key of ['low','high']) btns[key].classList.toggle('active', mode===key);
+    caption.textContent=MODES[mode].caption;
+    maText.textContent='Tube current: '+MODES[mode].ma;
+    const hot = mode==='high';
+    filament.setAttribute('stroke', hot?'#ff5a00':'#e8a000');
+    filGlow.setAttribute('r', hot?15:10);
+    filGlow.setAttribute('fill', hot?'rgba(255,90,0,.35)':'rgba(255,140,0,.25)');
+    if(reduced) drawStatic();
+  }
+
+  function spawnElectron(){
+    const c=mk('circle',{r:3,fill:'#1560c0'});
+    gElectrons.appendChild(c);
+    electrons.push({x:SPAWN_X, y:BEAM_Y+((electrons.length*7)%13)-6, el:c});
+  }
+  function spawnPhoton(){
+    // emitted downward out of the window, fanning slightly
+    const ang=(Math.PI/2)+(Math.random()-0.5)*0.55;
+    const ln=mk('line',{stroke:'#d89000','stroke-width':'2.5','stroke-linecap':'round'});
+    gPhotons.appendChild(ln);
+    photons.push({x:IMPACT_X-14+Math.random()*10, y:100, dx:Math.cos(ang+Math.PI/12)*-1*P_SPEED*0.25+ -20, dy:Math.sin(ang)*P_SPEED, el:ln});
+    intensity+=1;
+  }
+  function spawnFlash(){
+    const f=mk('circle',{cx:IMPACT_X-4,cy:BEAM_Y+4,r:5,fill:'rgba(246,200,48,.9)'});
+    gFlashes.appendChild(f);
+    flashes.push({t:0,el:f});
+  }
+
+  function step(ts){
+    if(lastT===null) lastT=ts;
+    const dt=Math.min(0.05,(ts-lastT)/1000); lastT=ts;
+    // spawn electrons at the mA-dependent rate
+    spawnAcc+=dt*1000;
+    const rate=MODES[mode].spawnMs;
+    while(spawnAcc>rate){ spawnAcc-=rate; spawnElectron(); }
+    // move electrons
+    for(let i=electrons.length-1;i>=0;i--){
+      const e=electrons[i]; e.x+=E_SPEED*dt;
+      if(e.x>=IMPACT_X-8){ e.el.remove(); electrons.splice(i,1); spawnFlash(); spawnPhoton(); }
+      else { e.el.setAttribute('cx',e.x); e.el.setAttribute('cy',e.y); }
+    }
+    // move photons
+    for(let i=photons.length-1;i>=0;i--){
+      const p=photons[i]; p.x+=p.dx*dt; p.y+=p.dy*dt;
+      if(p.y>205||p.x<0){ p.el.remove(); photons.splice(i,1); }
+      else {
+        const nx=p.dx/Math.hypot(p.dx,p.dy), ny=p.dy/Math.hypot(p.dx,p.dy);
+        p.el.setAttribute('x1',p.x); p.el.setAttribute('y1',p.y);
+        p.el.setAttribute('x2',p.x-nx*11); p.el.setAttribute('y2',p.y-ny*11);
+      }
+    }
+    // fade impact flashes
+    for(let i=flashes.length-1;i>=0;i--){
+      const f=flashes[i]; f.t+=dt;
+      if(f.t>0.25){ f.el.remove(); flashes.splice(i,1); }
+      else f.el.setAttribute('fill',`rgba(246,200,48,${0.9*(1-f.t/0.25)})`);
+    }
+    // intensity bar (smoothed)
+    intensity*=Math.exp(-dt/0.9);
+    intensFill.setAttribute('width', Math.min(127, intensity*16));
+    raf=requestAnimationFrame(step);
+  }
+
+  function drawStatic(){
+    // reduced-motion fallback: same scene, frozen particles
+    gElectrons.innerHTML=''; gPhotons.innerHTML=''; gFlashes.innerHTML='';
+    const n = mode==='high'?8:2;
+    for(let i=0;i<n;i++){
+      const x=SPAWN_X+ (i+0.5)*(IMPACT_X-SPAWN_X-16)/n;
+      gElectrons.appendChild(mk('circle',{cx:x,cy:BEAM_Y+((i*7)%13)-6,r:3,fill:'#1560c0'}));
+    }
+    const np = mode==='high'?6:1;
+    for(let i=0;i<np;i++){
+      const x=IMPACT_X-30+ (i%3)*12, y=118+Math.floor(i/3)*28+18;
+      gPhotons.appendChild(mk('line',{x1:x,y1:y,x2:x+4,y2:y-11,stroke:'#d89000','stroke-width':'2.5','stroke-linecap':'round'}));
+    }
+    intensFill.setAttribute('width', mode==='high'?115:26);
+  }
+
+  syncButtons();
+  btns[mode].classList.add('active');
+  if(reduced){ drawStatic(); }
+  else { raf=requestAnimationFrame(step); }
+
+  return function cleanup(){
+    if(raf) cancelAnimationFrame(raf);
+  };
+}
+
+/* =============================================================
    CARD DATA — edit here
    cat     → category shown in the front eyebrow
    term    → big term on the front of the card
@@ -215,11 +407,14 @@ button{font-family:inherit;cursor:pointer}
    text    → full answer on the back
    callout → one-line memory hook
    stats   → optional pair of quick-fact boxes [{val,lbl},...]
+   anim    → optional interactive animation on the back
+             (replaces the stats boxes to save space)
 ============================================================= */
 const CARDS = [
   { cat:'Beam Properties', term:'X-ray Quantity',
     q:'What is X-ray quantity, and which machine setting controls it?',
     stats:[{val:'mA',lbl:'Controls it'},{val:'Intensity',lbl:'Same thing as'}],
+    anim: buildQuantityAnim,
     text:'X-ray quantity is the NUMBER of X-ray photons in the beam — in other words, the beam INTENSITY. It is controlled by the tube current (mA) and exposure time: more mA means more electrons striking the target, which means more X-rays produced. Changing quantity does NOT change how penetrating the beam is.',
     callout:'Quantity = Intensity = how MANY X-rays → controlled by mA' },
 
@@ -341,6 +536,7 @@ const CARDS = [
 let curIdx = 0;
 let isFlipped = false;
 let cardStatus = new Array(CARDS.length).fill(null); // null | 'know' | 'review'
+let animCleanup = null;
 
 function renderCard(){
   const C = CARDS[curIdx];
@@ -351,9 +547,16 @@ function renderCard(){
   document.getElementById('backText').textContent = C.text;
   document.getElementById('backCallout').textContent = '→ ' + C.callout;
 
+  // animation panel — tear down the previous card's, mount this card's
+  if(animCleanup){ animCleanup(); animCleanup=null; }
+  const animEl = document.getElementById('backAnim');
+  animEl.innerHTML = '';
+  animEl.style.display = C.anim ? 'block' : 'none';
+  if(C.anim) animCleanup = C.anim(animEl);
+
   const statsEl = document.getElementById('backStats');
   statsEl.innerHTML = '';
-  if(C.stats){
+  if(C.stats && !C.anim){
     C.stats.forEach(s=>{
       const d=document.createElement('div');
       d.className='back-stat';
