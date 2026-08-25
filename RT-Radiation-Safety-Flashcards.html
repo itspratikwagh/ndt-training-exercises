@@ -399,6 +399,530 @@ function buildQuantityAnim(container){
   };
 }
 
+/* --- shared animation helpers ------------------------------ */
+const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function animShell(container, btnDefs, onSelect){
+  const panel=document.createElement('div');
+  panel.className='anim-panel';
+  panel.onclick=e=>e.stopPropagation();
+  const btns={};
+  if(btnDefs.length){
+    const ctr=document.createElement('div'); ctr.className='anim-controls';
+    btnDefs.forEach(d=>{
+      const b=document.createElement('button');
+      b.className='anim-btn'; b.textContent=d.label;
+      b.onclick=()=>onSelect(d.key);
+      ctr.appendChild(b); btns[d.key]=b;
+    });
+    panel.appendChild(ctr);
+  }
+  const svg=mk('svg',{viewBox:'0 0 440 210'});
+  panel.appendChild(svg);
+  const caption=document.createElement('div');
+  caption.className='anim-caption';
+  panel.appendChild(caption);
+  container.appendChild(panel);
+  return {svg, caption, btns, setActive(key){ for(const k in btns) btns[k].classList.toggle('active', k===key); }};
+}
+// zigzag "photon" path extending along +y from the origin (rotate the <g> to aim it)
+function zigPath(len,amp,per){
+  let d='M0,0', y=0, side=1;
+  while(y<len){ y+=per/2; d+=' L'+(side*amp)+','+y.toFixed(1); side=-side; }
+  return d;
+}
+// rotation (deg) that aims a zigPath <g> along unit direction (dx,dy)
+function aimDeg(dx,dy){ return Math.atan2(-dx,dy)*180/Math.PI; }
+function arrowLine(svg,x1,y1,x2,y2,color,w){
+  svg.appendChild(mk('line',{x1,y1,x2,y2,stroke:color,'stroke-width':w||2,'stroke-linecap':'round'}));
+  const ang=Math.atan2(y2-y1,x2-x1), s=7;
+  svg.appendChild(mk('polygon',{points:`${x2},${y2} ${x2-Math.cos(ang-.4)*s},${y2-Math.sin(ang-.4)*s} ${x2-Math.cos(ang+.4)*s},${y2-Math.sin(ang+.4)*s}`,fill:color}));
+}
+function nucleusIcon(svg,cx,cy,copCap){
+  [[0,-4,'#c05050'],[-4,2,'#8a98a8'],[4,2,'#c05050'],[0,6,'#8a98a8'],[-6,-3,'#8a98a8'],[6,-3,'#c05050']]
+    .forEach(o=>svg.appendChild(mk('circle',{cx:cx+o[0],cy:cy+o[1],r:4.5,fill:o[2],stroke:'#3a3a3a','stroke-width':.6})));
+  if(copCap){
+    svg.appendChild(mk('path',{d:`M${cx-11},${cy-9} Q${cx},${cy-24} ${cx+11},${cy-9} Z`,fill:'#223a66',stroke:'#101f3a','stroke-width':1}));
+    svg.appendChild(mk('rect',{x:cx-14,y:cy-10,width:28,height:3.5,rx:1.5,fill:'#101f3a'}));
+    svg.appendChild(mk('circle',{cx,cy:cy-15,r:2.2,fill:'#f6c830'}));
+  }
+}
+function lerp(a,b,t){ return a+(b-a)*Math.min(1,Math.max(0,t)); }
+function clamp01(t){ return Math.min(1,Math.max(0,t)); }
+function qbez(p0,p1,p2,t){
+  const a=1-t;
+  return [a*a*p0[0]+2*a*t*p1[0]+t*t*p2[0], a*a*p0[1]+2*a*t*p1[1]+t*t*p2[1]];
+}
+
+/* --- X-RAY QUALITY: low kV absorbed, high kV penetrates ---- */
+function buildQualityAnim(container){
+  const MODES={
+    low:{ label:'Low kV', kv:'60 kV', eSpeed:130, pSpeed:85, amp:4.5, per:16,
+          caption:'LOW kV → slower electrons → long-wavelength "SOFT" X-rays → absorbed inside the part. Nothing reaches the film — no image.' },
+    high:{ label:'High kV', kv:'220 kV', eSpeed:300, pSpeed:200, amp:3, per:7,
+          caption:'HIGH kV → faster electrons → short-wavelength "HARD" X-rays → penetrate the part and expose the film. Same NUMBER of X-rays each second — only their ENERGY changed.' }
+  };
+  let mode='low';
+  const ui=animShell(container,[{key:'low',label:'Low kV'},{key:'high',label:'High kV'}],k=>{ mode=k; sync(); });
+  const svg=ui.svg;
+
+  // mini tube
+  svg.appendChild(mk('rect',{x:20,y:16,width:400,height:54,rx:27,fill:'#eef4fa',stroke:'#8aa0b8','stroke-width':'2'}));
+  svg.appendChild(mk('rect',{x:322,y:64,width:44,height:8,fill:'#fff'}));
+  svg.appendChild(mk('line',{x1:322,y1:68,x2:366,y2:68,stroke:'#8aa0b8','stroke-width':'1','stroke-dasharray':'4,3'}));
+  svg.appendChild(mk('polygon',{points:'336,20 390,20 390,66 352,66',fill:'#c07840',stroke:'#8a4a20','stroke-width':'1.5'}));
+  svg.appendChild(mk('polygon',{points:'336,20 344,20 360,66 352,66',fill:'#9aa4ae',stroke:'#5a646e','stroke-width':'1.5'}));
+  svg.appendChild(mk('path',{d:'M42,28 L60,34 L60,52 L42,58',fill:'#c8d2dc',stroke:'#5a646e','stroke-width':'1.5'}));
+  svg.appendChild(mk('circle',{cx:56,cy:43,r:9,fill:'rgba(255,140,0,.25)'}));
+  svg.appendChild(mk('path',{d:'M52,37 l7,3 l-7,3 l7,3 l-7,3',fill:'none',stroke:'#e8a000','stroke-width':'2.2','stroke-linecap':'round'}));
+  svgLabel(svg,52,84,'CATHODE (−)','#5a646e',8,'middle','700');
+  svgLabel(svg,384,84,'ANODE (+)','#8a4a20',8,'middle','700');
+  const kvText=mk('text',{x:180,y:12,'text-anchor':'middle','font-family':'Courier New,monospace','font-size':'11','font-weight':'700',fill:'#a82020'});
+  svg.appendChild(kvText);
+  // steel part + film
+  svg.appendChild(mk('rect',{x:272,y:100,width:124,height:40,fill:'#9aa4ae',stroke:'#5a646e','stroke-width':'1.5'}));
+  svgLabel(svg,264,123,'STEEL PART','#5a646e',9,'end','700');
+  svg.appendChild(mk('rect',{x:272,y:172,width:124,height:10,rx:2,fill:'#7a6e10',stroke:'#4a4008','stroke-width':'1'}));
+  svgLabel(svg,264,181,'FILM','#4a4008',9,'end','700');
+  const overlay=mk('rect',{x:272,y:172,width:124,height:10,rx:2,fill:'#181818',opacity:0});
+  svg.appendChild(overlay);
+  const noImg=mk('text',{x:264,y:160,'text-anchor':'end','font-family':'Courier New,monospace','font-size':'10','font-weight':'700',fill:'#b82028',opacity:0});
+  noImg.textContent='NO IMAGE ✗'; svg.appendChild(noImg);
+  const yesImg=mk('text',{x:264,y:160,'text-anchor':'end','font-family':'Courier New,monospace','font-size':'10','font-weight':'700',fill:'#1a6e38',opacity:0});
+  yesImg.textContent='IMAGE ✓'; svg.appendChild(yesImg);
+  const gP=mk('g',{}); svg.appendChild(gP);
+  const gE=mk('g',{}); svg.appendChild(gE);
+  const gFx=mk('g',{}); svg.appendChild(gFx);
+
+  const electrons=[], photons=[], fx=[];
+  let spawnAcc=0, lastT=null, raf=null, exposure=0, absorbed=0, exposedCt=0;
+
+  function sync(){
+    ui.setActive(mode);
+    ui.caption.textContent=MODES[mode].caption;
+    kvText.textContent='Tube voltage: '+MODES[mode].kv;
+    electrons.forEach(e=>e.el.remove()); electrons.length=0;
+    photons.forEach(p=>p.el.remove()); photons.length=0;
+    fx.forEach(f=>f.el.remove()); fx.length=0;
+    exposure=0; absorbed=0; exposedCt=0;
+    overlay.setAttribute('opacity',0);
+    noImg.setAttribute('opacity',0); yesImg.setAttribute('opacity',0);
+    if(REDUCED) drawStatic();
+  }
+  function drawStatic(){
+    gE.innerHTML=''; gP.innerHTML=''; gFx.innerHTML='';
+    for(let i=0;i<3;i++) gE.appendChild(mk('circle',{cx:100+i*80,cy:43,r:3,fill:'#1560c0'}));
+    const M=MODES[mode];
+    if(mode==='low'){
+      [330,350].forEach(x=>{
+        const g=mk('g',{transform:`translate(${x},76)`});
+        g.appendChild(mk('path',{d:zigPath(38,M.amp,M.per),fill:'none',stroke:'#e0a020','stroke-width':'2'}));
+        gP.appendChild(g);
+        gFx.appendChild(mk('circle',{cx:x,cy:122,r:7,fill:'rgba(90,100,110,.5)'}));
+      });
+      noImg.setAttribute('opacity',1);
+    } else {
+      [330,350].forEach(x=>{
+        const g=mk('g',{transform:`translate(${x},76)`});
+        g.appendChild(mk('path',{d:zigPath(94,M.amp,M.per),fill:'none',stroke:'#c03010','stroke-width':'2'}));
+        gP.appendChild(g);
+      });
+      overlay.setAttribute('opacity',0.6);
+      yesImg.setAttribute('opacity',1);
+    }
+  }
+
+  function step(ts){
+    if(lastT===null) lastT=ts;
+    const dt=Math.min(0.05,(ts-lastT)/1000); lastT=ts;
+    const M=MODES[mode];
+    spawnAcc+=dt*1000;
+    while(spawnAcc>550){
+      spawnAcc-=550;
+      const c=mk('circle',{r:3,fill:'#1560c0'});
+      gE.appendChild(c);
+      electrons.push({x:70,y:43+((electrons.length*5)%9)-4,el:c});
+    }
+    for(let i=electrons.length-1;i>=0;i--){
+      const e=electrons[i]; e.x+=M.eSpeed*dt;
+      if(e.x>=338){
+        e.el.remove(); electrons.splice(i,1);
+        const px=326+Math.random()*26;
+        const g=mk('g',{transform:`translate(${px},64)`});
+        g.appendChild(mk('path',{d:zigPath(26,M.amp,M.per),fill:'none',stroke:mode==='low'?'#e0a020':'#c03010','stroke-width':'2.2','stroke-linecap':'round'}));
+        gP.appendChild(g);
+        photons.push({x:px,y:64,el:g,mode,dieY:mode==='low'?104+Math.random()*28:172});
+      } else { e.el.setAttribute('cx',e.x); e.el.setAttribute('cy',e.y); }
+    }
+    for(let i=photons.length-1;i>=0;i--){
+      const p=photons[i]; p.y+=MODES[p.mode].pSpeed*dt;
+      if(p.y>=p.dieY){
+        p.el.remove(); photons.splice(i,1);
+        if(p.mode==='low'){
+          const f=mk('circle',{cx:p.x,cy:p.dieY,r:4,fill:'rgba(90,100,110,.6)'});
+          gFx.appendChild(f); fx.push({t:0,el:f,kind:'puff'});
+          absorbed++; if(absorbed>=2 && mode==='low') noImg.setAttribute('opacity',1);
+        } else {
+          const f=mk('circle',{cx:p.x,cy:174,r:4,fill:'rgba(246,200,48,.9)'});
+          gFx.appendChild(f); fx.push({t:0,el:f,kind:'flash'});
+          exposure++; overlay.setAttribute('opacity',Math.min(.8,exposure*.08));
+          exposedCt++; if(exposedCt>=2 && mode==='high') yesImg.setAttribute('opacity',1);
+        }
+      } else p.el.setAttribute('transform',`translate(${p.x},${p.y})`);
+    }
+    for(let i=fx.length-1;i>=0;i--){
+      const f=fx[i]; f.t+=dt;
+      if(f.t>0.35){ f.el.remove(); fx.splice(i,1); }
+      else { f.el.setAttribute('r',4+f.t*22); f.el.setAttribute('opacity',1-f.t/0.35); }
+    }
+    raf=requestAnimationFrame(step);
+  }
+
+  sync();
+  if(!REDUCED) raf=requestAnimationFrame(step);
+  return function cleanup(){ if(raf) cancelAnimationFrame(raf); };
+}
+
+/* --- CHARACTERISTIC vs BREMSSTRAHLUNG ---------------------- */
+function buildProductionAnim(container, initial){
+  let mode=initial||'char';
+  const CAPS={
+    char:'An incoming electron KNOCKS OUT an inner K-shell electron. An outer-shell electron drops into the hole, and the energy difference leaves as an X-ray of ONE fixed, DISCRETE energy — "characteristic" of the target metal.',
+    brems:'The "speeding car" electron hits the brakes and swerves as it passes the "cop" nucleus. The energy it loses leaves as an X-ray. Every electron brakes by a different amount → a CONTINUOUS range of energies — most of the beam.'
+  };
+  const ui=animShell(container,[{key:'char',label:'Characteristic'},{key:'brems',label:'Bremsstrahlung'}],k=>{ mode=k; scene(); });
+  const svg=ui.svg;
+  let S={}, t0=null, raf=null;
+
+  function scene(){
+    ui.setActive(mode);
+    ui.caption.textContent=CAPS[mode];
+    svg.innerHTML=''; S={}; t0=null;
+    if(mode==='char') sceneChar(); else sceneBrems();
+    if(REDUCED) drawStatic();
+  }
+
+  function sceneChar(){
+    const cx=252, cy=98;
+    S.cx=cx; S.cy=cy;
+    svg.appendChild(mk('circle',{cx,cy,r:36,fill:'none',stroke:'#8aa0b8','stroke-width':'1','stroke-dasharray':'4,4'}));
+    svg.appendChild(mk('circle',{cx,cy,r:66,fill:'none',stroke:'#8aa0b8','stroke-width':'1','stroke-dasharray':'4,4'}));
+    svgLabel(svg,cx+44,cy+3,'K','#566878',10,'middle','700');
+    svgLabel(svg,cx+74,cy+3,'L','#566878',10,'middle','700');
+    nucleusIcon(svg,cx,cy,false);
+    svg.appendChild(mk('circle',{cx:cx+36,cy,r:3.5,fill:'#1560c0'}));
+    [0.5,3.6,5.1].forEach(a=>svg.appendChild(mk('circle',{cx:cx+66*Math.cos(a),cy:cy-66*Math.sin(a),r:3.5,fill:'#1560c0'})));
+    svgLabel(svg,60,196,'characteristic X-ray','#c47a08',9,'start','700');
+    svgLabel(svg,60,206,'(one discrete energy)','#566878',8,'start');
+    // dynamic pieces
+    S.inc=mk('g',{});
+    S.inc.appendChild(mk('line',{x1:-14,y1:-2,x2:-6,y2:-1,stroke:'#9ec0e8','stroke-width':'2','stroke-linecap':'round'}));
+    S.inc.appendChild(mk('line',{x1:-14,y1:3,x2:-6,y2:2,stroke:'#9ec0e8','stroke-width':'2','stroke-linecap':'round'}));
+    S.inc.appendChild(mk('circle',{r:3.5,fill:'#1560c0'}));
+    svg.appendChild(S.inc);
+    S.eject=mk('circle',{r:3.5,fill:'#1560c0',opacity:0}); svg.appendChild(S.eject);
+    S.vac=mk('circle',{cx:cx-36,cy,r:4.5,fill:'none',stroke:'#b82028','stroke-width':'1.5','stroke-dasharray':'3,2',opacity:0}); svg.appendChild(S.vac);
+    S.drop=mk('circle',{r:3.5,fill:'#1560c0'}); svg.appendChild(S.drop);
+    S.dropStart=[cx+66*Math.cos(1.95), cy-66*Math.sin(1.95)];
+    S.flash=mk('circle',{cx:cx-36,cy,r:6,fill:'rgba(246,200,48,.9)',opacity:0}); svg.appendChild(S.flash);
+    const dir=[-0.71,0.70];
+    S.photon=mk('g',{opacity:0});
+    S.photon.appendChild(mk('path',{d:zigPath(30,3.5,9),fill:'none',stroke:'#d89000','stroke-width':'2.4','stroke-linecap':'round'}));
+    S.pEmit=[cx-40,cy+4]; S.pDir=dir; S.pRot=aimDeg(dir[0],dir[1]);
+    svg.appendChild(S.photon);
+  }
+
+  function sceneBrems(){
+    S.P0=[8,48]; S.P1=[260,64]; S.P2=[428,182];
+    svg.appendChild(mk('path',{d:`M${S.P0} Q${S.P1} ${S.P2}`,fill:'none',stroke:'#c8d4de','stroke-width':'1.2','stroke-dasharray':'5,5'}));
+    nucleusIcon(svg,262,96,true);
+    svgLabel(svg,262,134,"NUCLEUS — 'the cop'",'#223a66',9,'middle','700');
+    svgLabel(svg,84,16,'high-speed electron','#1560c0',9,'middle','700');
+    svgLabel(svg,84,27,"('the speeding car')",'#566878',8,'middle');
+    svgLabel(svg,352,14,'X-ray released','#c47a08',9,'middle','700');
+    svgLabel(svg,352,25,'(continuous energies)','#566878',8,'middle');
+    svgLabel(svg,354,200,'exits slower — energy lost','#566878',8,'middle');
+    S.e=mk('g',{});
+    S.streak1=mk('line',{x1:-16,y1:-3,x2:-6,y2:-2,stroke:'#9ec0e8','stroke-width':'2.2','stroke-linecap':'round'});
+    S.streak2=mk('line',{x1:-16,y1:3,x2:-6,y2:2,stroke:'#9ec0e8','stroke-width':'2.2','stroke-linecap':'round'});
+    S.e.appendChild(S.streak1); S.e.appendChild(S.streak2);
+    S.e.appendChild(mk('circle',{r:4,fill:'#1560c0'}));
+    svg.appendChild(S.e);
+    S.brakes=mk('text',{x:186,y:56,'text-anchor':'middle','font-family':'Courier New,monospace','font-size':'11','font-weight':'700',fill:'#b82028',opacity:0});
+    S.brakes.textContent='BRAKES!'; svg.appendChild(S.brakes);
+    S.photon=mk('g',{opacity:0}); svg.appendChild(S.photon);
+    S.pEmit=[215,83]; S.pDir=[0.92,-0.39]; S.pRot=aimDeg(0.92,-0.39);
+    S.lastCycle=-1;
+  }
+
+  const T_CHAR=4.6, T_BREMS=3.8;
+
+  function stepChar(t){
+    const cx=S.cx, cy=S.cy;
+    // incoming electron
+    if(t<1.1){
+      const p=t/1.1;
+      S.inc.setAttribute('transform',`translate(${lerp(12,212,p)},${lerp(30,95,p)}) rotate(${Math.atan2(65,200)*180/Math.PI})`);
+      S.inc.setAttribute('opacity',1);
+    } else {
+      const p=clamp01((t-1.1)/1.2);
+      S.inc.setAttribute('transform',`translate(${lerp(212,60,p)},${lerp(95,16,p)}) rotate(${Math.atan2(-79,-152)*180/Math.PI})`);
+      S.inc.setAttribute('opacity',clamp01(1-(t-2.1)/0.3));
+    }
+    // ejected K electron
+    if(t<1.1) S.eject.setAttribute('opacity',0);
+    else {
+      const p=clamp01((t-1.1)/1.2);
+      S.eject.setAttribute('cx',lerp(cx-36,70,p)); S.eject.setAttribute('cy',lerp(cy,192,p));
+      S.eject.setAttribute('opacity',clamp01(1-(t-2.1)/0.3));
+    }
+    // vacancy marker
+    S.vac.setAttribute('opacity',(t>1.1 && t<2.55)?1:0);
+    // impact flash
+    S.flash.setAttribute('opacity',(t>1.1 && t<1.4)?(1-(t-1.1)/0.3):0);
+    // L electron dropping in
+    if(t<1.45){ S.drop.setAttribute('cx',S.dropStart[0]); S.drop.setAttribute('cy',S.dropStart[1]); }
+    else {
+      const u=clamp01((t-1.45)/1.1), p=u*u*(3-2*u);
+      S.drop.setAttribute('cx',lerp(S.dropStart[0],cx-36,p));
+      S.drop.setAttribute('cy',lerp(S.dropStart[1],cy,p));
+    }
+    // discrete photon
+    if(t>2.55 && t<4.2){
+      const d=(t-2.55)*115;
+      S.photon.setAttribute('transform',`translate(${S.pEmit[0]+S.pDir[0]*d},${S.pEmit[1]+S.pDir[1]*d}) rotate(${S.pRot})`);
+      S.photon.setAttribute('opacity',clamp01(1-(t-3.8)/0.4));
+    } else S.photon.setAttribute('opacity',0);
+  }
+
+  function stepBrems(t,cycle){
+    const tt=clamp01(t/2.9);
+    const p=Math.sin(tt*1.25)/Math.sin(1.25);
+    const pos=qbez(S.P0,S.P1,S.P2,p);
+    const ahead=qbez(S.P0,S.P1,S.P2,Math.min(1,p+0.01));
+    const ang=Math.atan2(ahead[1]-pos[1],ahead[0]-pos[0])*180/Math.PI;
+    S.e.setAttribute('transform',`translate(${pos[0]},${pos[1]}) rotate(${ang})`);
+    S.e.setAttribute('opacity',clamp01(1-(t-3.4)/0.4));
+    const so=Math.max(0,1-p*1.6);
+    S.streak1.setAttribute('opacity',so); S.streak2.setAttribute('opacity',so);
+    S.brakes.setAttribute('opacity',(t>0.9 && t<1.5)?1:0);
+    // rebuild the photon zigzag once per cycle with a different wavelength
+    if(cycle!==S.lastCycle){
+      S.lastCycle=cycle;
+      S.photon.innerHTML='';
+      const per=[6,10,14][cycle%3];
+      S.photon.appendChild(mk('path',{d:zigPath(30,3.5,per),fill:'none',stroke:'#d89000','stroke-width':'2.4','stroke-linecap':'round'}));
+    }
+    if(t>1.05 && t<2.9){
+      const d=(t-1.05)*110;
+      S.photon.setAttribute('transform',`translate(${S.pEmit[0]+S.pDir[0]*d},${S.pEmit[1]+S.pDir[1]*d}) rotate(${S.pRot})`);
+      S.photon.setAttribute('opacity',clamp01(1-(t-2.5)/0.4));
+    } else S.photon.setAttribute('opacity',0);
+  }
+
+  function step(ts){
+    if(t0===null) t0=ts;
+    const el=(ts-t0)/1000;
+    if(mode==='char') stepChar(el % T_CHAR);
+    else stepBrems(el % T_BREMS, Math.floor(el/T_BREMS));
+    raf=requestAnimationFrame(step);
+  }
+
+  function drawStatic(){
+    if(mode==='char'){
+      const cx=S.cx, cy=S.cy;
+      arrowLine(svg,20,34,cx-44,cy-6,'#1560c0',2);
+      arrowLine(svg,cx-40,cy+6,80,186,'#1560c0',2);
+      arrowLine(svg,S.dropStart[0],S.dropStart[1]+8,cx-38,cy-6,'#1a6e38',2);
+      S.vac.setAttribute('opacity',1);
+      S.photon.setAttribute('transform',`translate(${S.pEmit[0]-40},${S.pEmit[1]+40}) rotate(${S.pRot})`);
+      S.photon.setAttribute('opacity',1);
+      S.inc.setAttribute('opacity',0); S.drop.setAttribute('opacity',1);
+      S.drop.setAttribute('cx',S.dropStart[0]); S.drop.setAttribute('cy',S.dropStart[1]);
+    } else {
+      S.e.setAttribute('transform','translate(215,83)');
+      S.streak1.setAttribute('opacity',0); S.streak2.setAttribute('opacity',0);
+      S.photon.innerHTML='';
+      S.photon.appendChild(mk('path',{d:zigPath(30,3.5,10),fill:'none',stroke:'#d89000','stroke-width':'2.4','stroke-linecap':'round'}));
+      S.photon.setAttribute('transform',`translate(${S.pEmit[0]+55},${S.pEmit[1]-24}) rotate(${S.pRot})`);
+      S.photon.setAttribute('opacity',1);
+    }
+  }
+
+  scene();
+  if(!REDUCED) raf=requestAnimationFrame(step);
+  return function cleanup(){ if(raf) cancelAnimationFrame(raf); };
+}
+
+/* --- ALPHA / BETA / GAMMA stopping race -------------------- */
+function buildABGAnim(container){
+  const ui=animShell(container,[],null);
+  const svg=ui.svg;
+  ui.caption.textContent='α — heavy, +2 charge → stopped by paper (or skin), but dangerous INSIDE the body · β — light, −1 → stopped by thin aluminum · γ — no mass, no charge → only REDUCED by dense lead, steel, or concrete.';
+
+  const LANES=[
+    {y:52, sym:'α', color:'#b82028', note:'+2 · heavy', speed:60, stopX:155, kind:'alpha'},
+    {y:104, sym:'β', color:'#1560c0', note:'−1 · light', speed:150, stopX:245, kind:'beta'},
+    {y:156, sym:'γ', color:'#c47a08', note:'0 · no mass', speed:230, stopX:348, kind:'gamma'}
+  ];
+  // sources
+  LANES.forEach(L=>{
+    svg.appendChild(mk('rect',{x:18,y:L.y-16,width:44,height:32,rx:6,fill:'#edf1f5',stroke:'#aebccc','stroke-width':'1.5'}));
+    svgLabel(svg,40,L.y+5,L.sym,L.color,16,'middle','700');
+    svgLabel(svg,40,L.y+28,L.note,'#788898',7.5,'middle');
+  });
+  // barriers
+  svg.appendChild(mk('rect',{x:158,y:26,width:5,height:158,fill:'#e8dcae',stroke:'#b0985a','stroke-width':'1'}));
+  svgLabel(svg,160,18,'PAPER','#8a7838',8,'middle','700');
+  svg.appendChild(mk('rect',{x:248,y:26,width:10,height:158,fill:'#c4ccd4',stroke:'#8a98a8','stroke-width':'1'}));
+  svgLabel(svg,253,18,'ALUMINUM','#5a646e',8,'middle','700');
+  svg.appendChild(mk('rect',{x:338,y:26,width:20,height:158,fill:'#39424e',stroke:'#20262e','stroke-width':'1'}));
+  svgLabel(svg,348,18,'LEAD','#39424e',8,'middle','700');
+  svgLabel(svg,225,202,'α → β → γ : increasing penetrating power','#566878',9,'middle','700');
+  const gPart=mk('g',{}); svg.appendChild(gPart);
+  const gFx=mk('g',{}); svg.appendChild(gFx);
+
+  const parts=[], fx=[];
+  const accs=[900,400,0]; // stagger the three lanes
+  let lastT=null, raf=null;
+
+  function makeParticle(L){
+    let el;
+    if(L.kind==='alpha'){
+      el=mk('g',{});
+      [[-3,-3,'#c05050'],[3,-3,'#8a98a8'],[-3,3,'#8a98a8'],[3,3,'#c05050']]
+        .forEach(o=>el.appendChild(mk('circle',{cx:o[0],cy:o[1],r:3,fill:o[2],stroke:'#3a3a3a','stroke-width':.5})));
+    } else if(L.kind==='beta'){
+      el=mk('circle',{r:3,fill:L.color});
+    } else {
+      el=mk('g',{});
+      el.appendChild(mk('g',{transform:'rotate(-90)'})).appendChild(mk('path',{d:zigPath(24,3,7),fill:'none',stroke:L.color,'stroke-width':'2.2','stroke-linecap':'round'}));
+    }
+    gPart.appendChild(el);
+    parts.push({x:66,L,el});
+  }
+
+  function step(ts){
+    if(lastT===null) lastT=ts;
+    const dt=Math.min(0.05,(ts-lastT)/1000); lastT=ts;
+    LANES.forEach((L,i)=>{
+      accs[i]+=dt*1000;
+      if(accs[i]>1500){ accs[i]-=1500; makeParticle(L); }
+    });
+    for(let i=parts.length-1;i>=0;i--){
+      const p=parts[i]; p.x+=p.L.speed*dt;
+      if(p.x>=p.L.stopX){
+        p.el.remove(); parts.splice(i,1);
+        const f=mk('circle',{cx:p.L.stopX,cy:p.L.y,r:3,fill:p.L.color,opacity:.8});
+        gFx.appendChild(f); fx.push({t:0,el:f});
+      } else {
+        const wob=p.L.kind==='beta'?3*Math.sin(p.x/12):0;
+        if(p.L.kind==='beta'){ p.el.setAttribute('cx',p.x); p.el.setAttribute('cy',p.L.y+wob); }
+        else p.el.setAttribute('transform',`translate(${p.x},${p.L.y})`);
+      }
+    }
+    for(let i=fx.length-1;i>=0;i--){
+      const f=fx[i]; f.t+=dt;
+      if(f.t>0.4){ f.el.remove(); fx.splice(i,1); }
+      else { f.el.setAttribute('r',3+f.t*24); f.el.setAttribute('opacity',.8*(1-f.t/0.4)); }
+    }
+    raf=requestAnimationFrame(step);
+  }
+
+  if(REDUCED){
+    LANES.forEach(L=>{
+      svg.appendChild(mk('line',{x1:66,y1:L.y,x2:L.stopX-8,y2:L.y,stroke:L.color,'stroke-width':'1.2','stroke-dasharray':'4,4'}));
+      gFx.appendChild(mk('circle',{cx:L.stopX,cy:L.y,r:8,fill:L.color,opacity:.45}));
+    });
+  } else raf=requestAnimationFrame(step);
+  return function cleanup(){ if(raf) cancelAnimationFrame(raf); };
+}
+
+/* --- DIRECTIONAL vs PANORAMIC machines --------------------- */
+function buildMachineAnim(container){
+  const CAPS={
+    dir:'DIRECTIONAL — the beam leaves through ONE window as a cone, aimed at the part like a flashlight. Shoot, move, re-aim, shoot again.',
+    pan:'PANORAMIC (rod-anode / 360° tube) — the target sits on a rod at the pipe CENTERLINE; the beam radiates in a full circle and exposes the entire circumferential weld in ONE shot.'
+  };
+  let mode='dir';
+  const ui=animShell(container,[{key:'dir',label:'Directional'},{key:'pan',label:'Panoramic'}],k=>{ mode=k; scene(); });
+  const svg=ui.svg;
+  let pulses=[], spawnAcc=600, lastT=null, raf=null, geo={};
+
+  function arcPath(cx,cy,r,a0,a1){
+    const x0=cx+r*Math.cos(a0), y0=cy+r*Math.sin(a0), x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
+    return `M${x0},${y0} A${r},${r} 0 0,1 ${x1},${y1}`;
+  }
+
+  function scene(){
+    ui.setActive(mode);
+    ui.caption.textContent=CAPS[mode];
+    svg.innerHTML=''; pulses=[]; spawnAcc=600;
+    if(mode==='dir'){
+      geo={apex:[134,104], maxR:254};
+      svg.appendChild(mk('rect',{x:42,y:74,width:92,height:60,rx:8,fill:'#eef4fa',stroke:'#8aa0b8','stroke-width':'2'}));
+      svg.appendChild(mk('rect',{x:128,y:96,width:9,height:16,fill:'#fff',stroke:'#8aa0b8','stroke-width':'1'}));
+      svgLabel(svg,88,152,'X-RAY TUBE','#5a646e',9,'middle','700');
+      svgLabel(svg,88,164,'one window','#788898',8,'middle');
+      [[-0.36],[0.36]].forEach(([a])=>{
+        svg.appendChild(mk('line',{x1:134,y1:104,x2:134+260*Math.cos(a),y2:104+260*Math.sin(a),stroke:'#c47a08','stroke-width':'1.2','stroke-dasharray':'5,4'}));
+      });
+      svg.appendChild(mk('rect',{x:396,y:14,width:14,height:180,fill:'#9aa4ae',stroke:'#5a646e','stroke-width':'1.5'}));
+      svgLabel(svg,403,10,'PART','#5a646e',8,'middle','700');
+      const gp=mk('g',{}); svg.appendChild(gp); geo.g=gp;
+    } else {
+      geo={c:[228,106], maxR:82};
+      svg.appendChild(mk('circle',{cx:228,cy:106,r:84,fill:'none',stroke:'#7a6e10','stroke-width':'2.5','stroke-dasharray':'7,5'}));
+      svgLabel(svg,228,10,'FILM — wrapped 360° around the pipe','#4a4008',8.5,'middle','700');
+      svg.appendChild(mk('circle',{cx:228,cy:106,r:64,fill:'none',stroke:'#9aa4ae','stroke-width':'11'}));
+      svg.appendChild(mk('circle',{cx:228,cy:106,r:69.5,fill:'none',stroke:'#5a646e','stroke-width':'1'}));
+      svg.appendChild(mk('circle',{cx:228,cy:106,r:58.5,fill:'none',stroke:'#5a646e','stroke-width':'1'}));
+      svg.appendChild(mk('rect',{x:6,y:102,width:222,height:8,rx:3,fill:'#8a98a8',stroke:'#5a646e','stroke-width':'1'}));
+      svgLabel(svg,60,96,'rod anode','#5a646e',8.5,'middle','700');
+      const gp=mk('g',{}); svg.appendChild(gp); geo.g=gp;
+      svg.appendChild(mk('circle',{cx:228,cy:106,r:6,fill:'#c07840',stroke:'#8a4a20','stroke-width':'1.5'}));
+      svgLabel(svg,228,204,'PIPE — top view · target at the centerline','#5a646e',8.5,'middle','700');
+    }
+    if(REDUCED){
+      const radii = mode==='dir' ? [70,140,210] : [25,48,72];
+      radii.forEach((r,i)=>{
+        const op=.9-.3*i;
+        if(mode==='dir') geo.g.appendChild(mk('path',{d:arcPath(134,104,r,-0.36,0.36),fill:'none',stroke:'#d89000','stroke-width':'2.5',opacity:op}));
+        else geo.g.appendChild(mk('circle',{cx:228,cy:106,r,fill:'none',stroke:'#d89000','stroke-width':'2.5',opacity:op}));
+      });
+    }
+  }
+
+  function step(ts){
+    if(lastT===null) lastT=ts;
+    const dt=Math.min(0.05,(ts-lastT)/1000); lastT=ts;
+    spawnAcc+=dt*1000;
+    if(spawnAcc>620){
+      spawnAcc-=620;
+      let el;
+      if(mode==='dir') el=mk('path',{fill:'none',stroke:'#d89000','stroke-width':'2.5'});
+      else el=mk('circle',{cx:geo.c[0],cy:geo.c[1],fill:'none',stroke:'#d89000','stroke-width':'2.5'});
+      geo.g.appendChild(el);
+      pulses.push({r:6,el});
+    }
+    const speed = mode==='dir'?140:95;
+    for(let i=pulses.length-1;i>=0;i--){
+      const p=pulses[i]; p.r+=speed*dt;
+      if(p.r>geo.maxR){ p.el.remove(); pulses.splice(i,1); }
+      else {
+        p.el.setAttribute('opacity',1-p.r/geo.maxR);
+        if(mode==='dir') p.el.setAttribute('d',arcPath(134,104,p.r,-0.36,0.36));
+        else p.el.setAttribute('r',p.r);
+      }
+    }
+    raf=requestAnimationFrame(step);
+  }
+
+  scene();
+  if(!REDUCED) raf=requestAnimationFrame(step);
+  return function cleanup(){ if(raf) cancelAnimationFrame(raf); };
+}
+
 /* =============================================================
    CARD DATA — edit here
    cat     → category shown in the front eyebrow
@@ -426,11 +950,13 @@ const CARDS = [
 
   { cat:'X-ray Production', term:'Characteristic Radiation',
     q:'How is characteristic radiation produced at the target?',
+    anim: c=>buildProductionAnim(c,'char'),
     text:'A high-speed electron from the cathode knocks an INNER-shell (K-shell) electron out of a target atom. An electron from an outer shell immediately drops in to fill the vacancy, and the energy difference is given off as an X-ray photon. These photons come out at discrete, fixed energies that are "characteristic" of the target material (tungsten).',
     callout:'Inner-shell electron knocked out → outer electron fills the hole → discrete-energy X-ray' },
 
   { cat:'X-ray Production', term:'Bremsstrahlung Radiation',
     q:'What is Bremsstrahlung radiation, and what kind of spectrum does it produce?',
+    anim: c=>buildProductionAnim(c,'brems'),
     text:'German for "BRAKING radiation." A high-speed electron passes close to the NUCLEUS of a target atom, is slowed down and deflected, and the kinetic energy it loses is emitted as an X-ray photon. Because each electron loses a different amount of energy, this produces a CONTINUOUS spectrum of wavelengths — and it makes up the majority of the X-rays from an industrial X-ray tube.',
     callout:'"Braking" radiation — electron slowed by the nucleus → continuous spectrum → most of the beam' },
 
@@ -443,6 +969,7 @@ const CARDS = [
   { cat:'Machine Controls', term:'kV — Kilovoltage',
     q:'What is kilovoltage, and what does turning up the kV do to the beam?',
     stats:[{val:'kV ↑',lbl:'= harder beam'},{val:'Quality',lbl:'What it controls'}],
+    anim: buildQualityAnim,
     text:'Kilovoltage is the electrical potential (voltage) applied across the tube from cathode to anode. It sets how hard the electrons are accelerated into the target, and therefore the ENERGY of the X-rays produced. Higher kV → shorter wavelength → a harder, more penetrating beam. kV controls QUALITY (it also raises quantity somewhat).',
     callout:'kV = accelerating voltage → controls QUALITY / penetrating power' },
 
@@ -466,6 +993,7 @@ const CARDS = [
   { cat:'X-ray Equipment', term:'Two Types of X-ray Machines',
     q:'What are the two types of X-ray machines, and how does each emit its beam?',
     stats:[{val:'Cone',lbl:'Directional'},{val:'360°',lbl:'Panoramic'}],
+    anim: buildMachineAnim,
     text:'DIRECTIONAL — radiation exits through a single window as a cone aimed in one direction, like a flashlight pointed at the part. PANORAMIC — radiation is emitted in a full 360° circle around the tube, exposing everything around it at once; ideal for shooting a complete pipe circumference in a single exposure.',
     callout:'Directional = one cone · Panoramic = full 360° circle' },
 
@@ -477,6 +1005,7 @@ const CARDS = [
   { cat:'Types of Radiation', term:'Alpha, Beta & Gamma',
     q:'What is each particle/ray made of, and what does it take to stop each one?',
     stats:[{val:'α β γ',lbl:'Least → most penetrating'},{val:'+2 −1 0',lbl:'Charges'}],
+    anim: buildABGAnim,
     text:'ALPHA (α): 2 protons + 2 neutrons (a helium nucleus), charge +2, heavy and slow — stopped by a sheet of paper or your skin, but very hazardous if inhaled or ingested. BETA (β): a high-speed electron, charge −1 — stopped by thin aluminum or plastic. GAMMA (γ): electromagnetic radiation from the nucleus — no mass, no charge, highly penetrating — requires dense shielding such as lead, steel, or concrete.',
     callout:'Stopped by: α → paper · β → aluminum · γ → lead' },
 
