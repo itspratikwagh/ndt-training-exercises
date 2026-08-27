@@ -236,6 +236,88 @@
   }
   .btn-primary:hover { transform: translateY(-2px); filter: brightness(1.08); }
   .btn-primary:active { transform: translateY(0); }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--rule);
+    color: var(--ink-soft);
+    font-family: 'Manrope', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    padding: 16px 28px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .btn-ghost:hover { border-color: var(--amber); color: var(--ink); }
+
+  /* ---------- Set picker ---------- */
+  .set-picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  .set-card {
+    text-align: left;
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+    padding: 20px;
+    cursor: pointer;
+    color: var(--ink);
+    font-family: 'Manrope', sans-serif;
+    transition: border-color 0.15s, transform 0.15s, background 0.15s;
+  }
+  .set-card:hover {
+    border-color: var(--amber);
+    background: var(--card-raised);
+    transform: translateY(-2px);
+  }
+  .set-card .set-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .set-card .set-name {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 19px;
+    margin-bottom: 4px;
+  }
+  .set-card .set-desc { font-size: 13px; color: var(--ink-soft); margin-bottom: 10px; }
+  .set-card .set-max {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gold);
+  }
+
+  /* ---------- Difficulty badge ---------- */
+  .diff-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 6px;
+    margin-left: 8px;
+    vertical-align: 1px;
+  }
+  .diff-badge.d-e { color: var(--ink-faded); border: 1px solid var(--rule); }
+  .diff-badge.d-m { color: var(--blue); border: 1px solid rgba(127, 179, 216, 0.4); }
+  .diff-badge.d-h { color: var(--amber); border: 1px solid rgba(232, 147, 92, 0.45); }
+  .diff-badge.d-b {
+    color: var(--bg-deep);
+    background: linear-gradient(135deg, var(--gold), var(--amber));
+    border: 1px solid var(--gold);
+    box-shadow: 0 0 14px rgba(240, 194, 100, 0.35);
+  }
 
   /* ---------- Question ---------- */
   .q-meta {
@@ -522,14 +604,14 @@
   <!-- Intro -->
   <div class="screen intro active" id="introScreen">
     <div class="big-title">Answer right,<br><em>get paid.</em></div>
-    <p>25 radiation safety questions. Every correct answer drops cash into your pot — and the questions get more valuable as you go.</p>
+    <p>Every correct answer drops cash into your pot — and the harder the question, the bigger the payout.</p>
     <div class="rules">
-      <div class="rule-card"><div class="tag win">✓ Correct</div><p>Full question value goes <b>into your pot</b>. Values climb from $100 to $500.</p></div>
-      <div class="rule-card"><div class="tag hint">? Hint</div><p>Costs a <b>small slice</b> of the question value — answer right after a hint and you still come out way ahead.</p></div>
+      <div class="rule-card"><div class="tag win">✓ Correct</div><p>Full question value goes <b>into your pot</b>: Easy $100 · Medium $300 · Hard $600 · Boss <b>$1,200</b>.</p></div>
+      <div class="rule-card"><div class="tag hint">? Hint</div><p>Costs a <b>small slice</b> (20%) of the question value — answer right after a hint and you still come out way ahead.</p></div>
       <div class="rule-card"><div class="tag teach">📖 Explain it</div><p>Get the full explanation up front, but the question pays <b>$0</b>.</p></div>
       <div class="rule-card"><div class="tag miss">✗ Wrong</div><p>No money this round — but you'll see the <b>full explanation</b> for free.</p></div>
     </div>
-    <div><button class="btn-primary" id="startBtn">Start Earning →</button></div>
+    <div class="set-picker" id="setPicker"></div>
   </div>
 
   <!-- Question -->
@@ -572,7 +654,10 @@
       <div class="stat s-hint"><div class="num" id="statHints">0</div><div class="cap">Hints Used</div></div>
       <div class="stat s-teach"><div class="num" id="statTeach">0</div><div class="cap">Explained</div></div>
     </div>
-    <div><button class="btn-primary" id="restartBtn">Play Again ↻</button></div>
+    <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+      <button class="btn-primary" id="restartBtn">Play Again ↻</button>
+      <button class="btn-ghost" id="chooseSetBtn">Choose a Set</button>
+    </div>
   </div>
 
 </div>
@@ -581,9 +666,10 @@
 'use strict';
 
 /* ============================================================
-   Question bank — ASNT / 10 CFR 34 radiation safety, set 1
+   Question bank — ASNT / 10 CFR 34 radiation safety
+   Set 1: units & fundamentals
    ============================================================ */
-const QUESTIONS = [
+const SET1 = [
   {
     q: "The symbol R means:",
     options: ["rem", "rad", "roentgen", "radiation"],
@@ -776,9 +862,223 @@ const QUESTIONS = [
   }
 ];
 
-/* Values climb in tiers: Q1–5 $100 · Q6–10 $200 · Q11–15 $300 · Q16–20 $400 · Q21–25 $500 */
-const valueFor = i => (Math.floor(i / 5) + 1) * 100;
-const hintCostFor = i => Math.round(valueFor(i) * 0.2);
+/* ============================================================
+   Set 2: instruments, decay & field calculations
+   ============================================================ */
+const SET2 = [
+  {
+    q: "Pocket ion chambers must be capable of reading:",
+    options: ["100 mR (1 mSv)", "500 mR (5 mSv)", "200 mR (2 mSv)", "999 mR (9.99)"],
+    correct: 2,
+    hint: "Same spec as the direct-reading dosimeter requirement in 10 CFR 34.47 — zero to two hundred.",
+    explain: "A pocket ion chamber <i>is</i> a direct-reading pocket dosimeter, so 10 CFR 34.47 applies: it must read from <b>zero to 200 mR (0–2 mSv)</b>. Same number as the dosimeter-range question in Set 1 — the regulation only specifies one range."
+  },
+  {
+    q: "An exposure rate is measured by:",
+    options: ["survey meter", "a dosimeter", "rate alarm", "TLD/film badge"],
+    correct: 0,
+    hint: "Which instrument has a needle or display in mR/h — dose per unit time — that you carry to survey an area?",
+    explain: "A <b>survey meter</b> reads exposure <i>rate</i> — mR/h, right now, at this spot. Dosimeters and film badges/TLDs accumulate total dose over time, and a rate alarm only screams past a set point; it doesn't give you a measurement to read."
+  },
+  {
+    q: "What dosimeters (dosimetric devices) are least affected by moisture?",
+    options: ["digital dosimeters", "film badges", "TLDs", "ion chambers"],
+    correct: 2,
+    hint: "It's a crystal that stores energy and releases it as light when heated — nothing in it for humidity to ruin.",
+    explain: "<b>TLDs</b> (thermoluminescent dosimeters) use a crystal (like lithium fluoride) that stores absorbed energy and releases it as light when heated. Crystals shrug off humidity, while <b>film</b> is notoriously fogged by moisture and heat, and ion chambers can leak charge when damp."
+  },
+  {
+    q: "Full deflection of a survey meter while on battery check means:",
+    options: [
+      "meter is working properly and has good batteries",
+      "meter may or may not be working properly",
+      "meter is working properly and battery strength is not an issue",
+      "meter is unusable"
+    ],
+    correct: 1,
+    hint: "The battery check tests exactly one thing — and it isn't the detector.",
+    explain: "Battery check only confirms <b>the batteries can drive the circuit</b> — it says nothing about whether the detector actually responds to radiation. So the meter <b>may or may not be working</b>; you still need a response check against a check source before trusting it. Two answers claim \"working properly\" — that's the trap."
+  },
+  {
+    q: "Dosimeters must be calibrated at intervals not to exceed:",
+    options: ["three months", "six months", "biannually", "annually"],
+    correct: 3,
+    hint: "Longer than the survey meter's six months — once every 12 months.",
+    explain: "10 CFR 34.47 requires pocket dosimeters to be checked for correct response at periods <b>not to exceed 12 months — annually</b>. Don't cross-wire this with the <i>survey meter's</i> six-month calibration; the exam loves swapping those two numbers."
+  },
+  {
+    q: "Rate alarms must be calibrated at intervals not to exceed:",
+    options: ["yearly", "quarterly", "monthly", "biannually"],
+    correct: 0,
+    hint: "Same interval as the dosimeter — every 12 months.",
+    explain: "Alarm ratemeters must be calibrated at periods <b>not to exceed 12 months</b> per 10 CFR 34.47 — the same annual interval as dosimeters. The instrument calibration table to memorize: survey meter <b>6 months</b>, dosimeter <b>annual</b>, rate alarm <b>annual</b>."
+  },
+  {
+    q: "A film badge/TLD records what?",
+    options: ["dose rate", "exposure rate", "total dose history for the period worn", "daily dose"],
+    correct: 2,
+    hint: "It's processed after weeks on your chest — what could it possibly report except everything it soaked up?",
+    explain: "A film badge or TLD is a passive integrating device: it silently accumulates everything it receives and, once processed, reports the <b>total dose for the whole period it was worn</b> — your dose of record. It can't show a rate or a per-day breakdown; it has no clock and no display."
+  },
+  {
+    q: "When performing radiography in a permanent radiographic installation equipped with an area monitor, the technician is not required to:",
+    options: ["use a survey meter", "wear a film badge or TLD", "wear a rate alarm", "wear a dosimeter"],
+    correct: 2,
+    hint: "The installation's own alarming area monitor already does one of these four jobs for you.",
+    explain: "10 CFR 34.47 requires radiographers to wear a dosimeter, a film badge/TLD, <i>and</i> an alarm ratemeter — <b>except</b> in a permanent radiographic installation where the facility's own alarming area monitor is in routine use. The fixed monitor replaces the <b>personal rate alarm</b>; the dose-of-record devices and your survey meter are never excused."
+  },
+  {
+    q: "A direct reading ionization chamber, such as a dosimeter, has the advantage of providing an:",
+    options: [
+      "accurate dose history for the month",
+      "immediate dose history since last time charged",
+      "accurate dose rate",
+      "immediate dose rate"
+    ],
+    correct: 1,
+    hint: "You zero it, wear it, and glance at it any time — what exactly are you glancing at?",
+    explain: "The pocket dosimeter's whole advantage is the <b>immediate readout of accumulated dose since it was last charged (zeroed)</b> — no lab processing like a film badge. It reads total dose, not a rate, and only since the last zeroing, so \"for the month\" and both \"rate\" options are out."
+  },
+  {
+    q: "A radiographer's survey meter is showing 0 near the source; it can safely be assumed that:",
+    options: [
+      "there is no radiation present",
+      "the meter is inoperable and should be repaired when the shift is over",
+      "the meter may be inoperable and a replacement should be used immediately",
+      "the meter is in an inoperable state; the radiographer should retreat from the source until an operational meter has replaced the suspect meter"
+    ],
+    correct: 3,
+    hint: "Near a source, zero is impossible — and you can't take another step without a working meter.",
+    explain: "Near a source there is <i>always</i> a reading, so zero means <b>the meter has failed</b> — and without a working meter you are blind. The only safe move is to <b>retreat immediately and stay out until an operational meter replaces it</b>. \"Fix it after the shift\" means working blind all day; option C admits the failure but doesn't get you away from the source."
+  },
+  {
+    q: "A radiographer reads 7.5 on the 10x scale of the survey meter. What is the current dose rate at that position?",
+    options: ["7.5 mR/h", "75 mR/h", "750 mR/h", "7.5 R/h"],
+    correct: 1,
+    hint: "Needle reading × scale multiplier.",
+    explain: "On a multi-scale analog meter the true reading is <b>needle × scale multiplier</b>: 7.5 × 10 = <b>75 mR/h</b>. Reading the needle raw (7.5) or grabbing the wrong multiplier (×100 → 750) are the classic field mistakes — always check the range switch before you trust the needle."
+  },
+  {
+    q: "After 6 half-value layers, what percentage of radiation would be received?",
+    options: ["50%", "25%", "8%", "1.6%"],
+    correct: 3,
+    hint: "Halve it six times: 100 → 50 → 25 → 12.5 → …",
+    explain: "Each HVL cuts intensity in half, so 6 HVLs leave (½)⁶ = 1/64 of the original — about <b>1.6%</b>. Halve it out loud: 100 → 50 → 25 → 12.5 → 6.25 → 3.1 → <b>1.6</b>. The wrong answers are where you land if you stop halving too early."
+  },
+  {
+    q: "Assuming a source has a half-life of 20 years, how old would the source be in 3 half-lives?",
+    options: ["20 years", "40 years", "60 years", "120 years"],
+    correct: 2,
+    hint: "Three periods of 20 years each — just multiply.",
+    explain: "Elapsed time = number of half-lives × length of one half-life: 3 × 20 = <b>60 years</b>. Don't overthink it into doubling (which gives 120) — half-<i>life</i> is a time period; the halving applies to <i>activity</i>, not to the clock."
+  },
+  {
+    q: "If a radiographer has 60 mR (0.6 mSv) at the surface of the exposure device, what would the reading be after 2 half-lives?",
+    options: ["15 mR (0.15 mSv)", "40 mR (0.4 mSv)", "80 mR (0.8 mSv)", "10 mR (0.1 mSv)"],
+    correct: 0,
+    hint: "The surface reading decays right along with the source: halve 60 twice.",
+    explain: "Dose rate is proportional to source activity, so the surface reading halves with every half-life: 60 → 30 → <b>15 mR</b> after two. Answers like 80 mR play on the idea readings could grow — decay only ever goes down."
+  },
+  {
+    q: "The use of 4 half-value layers will reduce the exposure by a factor of:",
+    options: ["4 times", "8 times", "16 times", "32 times"],
+    correct: 2,
+    hint: "The factor is 2 raised to the number of HVLs.",
+    explain: "Reduction factor = 2ⁿ, so 4 HVLs give 2⁴ = <b>16 times</b>. The trap is answering \"4\" because you saw the number 4 in the question — HVLs multiply (2·2·2·2), they don't add. Note this pairs with the 6-HVL question: same rule, different exponent."
+  },
+  {
+    q: "If a radiographer has 98 Ci of Ir-192, after 148 days how many curies would be left?",
+    options: ["49 Ci (1813 GBq)", "22 Ci (814 GBq)", "12 Ci (444 GBq)", "24.5 Ci (906.5 GBq)"],
+    correct: 3,
+    hint: "Iridium-192's half-life is about 74 days — how many of those fit in 148?",
+    explain: "You must know Ir-192's half-life: <b>~74 days</b>. 148 ÷ 74 = exactly 2 half-lives, so 98 → 49 → <b>24.5 Ci</b>. The 49 Ci answer catches anyone who stops after one halving; 22 Ci baits people who try an exponential formula and round loosely. Memorize the working half-lives: Ir-192 ≈ 74 d, Co-60 ≈ 5.3 yr, Se-75 ≈ 120 d."
+  },
+  {
+    q: "A sealed source emits what?",
+    options: ["alpha particles", "beta particles", "X-rays", "gamma rays"],
+    correct: 3,
+    hint: "Two of these can't get out of the capsule, and one is machine-made only.",
+    explain: "The steel capsule stops <b>alpha</b> (stopped by paper) and <b>beta</b> (stopped by thin metal) entirely — only <b>gamma rays</b> penetrate out and do the radiography. <b>X-rays</b> are the machine-generated cousin: same nature, but they come from a tube, never from an isotope source."
+  },
+  {
+    q: "A cobalt source has decayed from its original activity after 3 half-lives. Originally it was 88 Ci (3256 GBq). Its current activity is:",
+    options: ["44 Ci (1628 GBq)", "22 Ci (814 GBq)", "11 Ci (407 GBq)", "8 Ci (296 GBq)"],
+    correct: 2,
+    hint: "Halve 88 three times.",
+    explain: "Three half-lives = divide by 2³ = 8: 88 → 44 → 22 → <b>11 Ci</b>. The distractors are literally the stops along the way — 44 after one halving, 22 after two — so the exam is checking you counted all three."
+  },
+  {
+    q: "A cobalt source of 73 Ci is exposed for a full 60 min. Assume a 14.0 R/h/Ci factor, shooting through a 3 half-value collimator. What would the restricted area be on the cold or collimated side of the collimator?",
+    options: ["149 ft (45.42 m)", "162 ft (49.38 m)", "211 ft (64.31 m)", "253 ft (77.44 m)"],
+    correct: 3,
+    hint: "Chain it: 73 × 14 R/h at 1 ft → ÷8 for the collimator → inverse-square out to 2 mR/h.",
+    explain: "Three steps: <b>(1)</b> Output at 1 ft: 73 Ci × 14.0 R/h/Ci = 1,022 R/h. <b>(2)</b> The 3-HVL collimator cuts it by 2³ = 8 → 127.75 R/h (127,750 mR/h). <b>(3)</b> The restricted-area boundary for a full-hour exposure is 2 mR/h, so by the inverse square law d = √(127,750 ÷ 2) ≈ <b>253 ft (77 m)</b>. Every other answer comes from skipping or fumbling one of the three steps."
+  },
+  {
+    q: "The ball on a source assembly that prevents the source from exiting through the back of the camera is called:",
+    options: ["stop ball", "pigtail ball", "safety stop ball", "retraction inhibitor ball"],
+    correct: 0,
+    hint: "The plainest name on the list is the right one.",
+    explain: "It's simply the <b>stop ball</b> — a ball swaged onto the source assembly (pigtail) that physically cannot pass through the rear of the exposure device, so over-cranking on retract can't pull the source out the back. The other three are invented, official-sounding decoys."
+  },
+  {
+    q: "Emission of gamma rays, alpha rays and beta rays is considered what?",
+    options: ["characteristics of source decay", "material is stable", "material is unbalanced", "leaking source"],
+    correct: 0,
+    hint: "Alpha, beta, gamma — that's just what radioactive decay looks like.",
+    explain: "Alpha, beta, and gamma emission are the <b>characteristic ways unstable atoms shed excess energy — the signatures of radioactive decay</b>. A stable material emits nothing; \"unbalanced\" isn't the technical term; and a <i>leaking</i> source means contamination escaping the capsule, not radiation being emitted — every source emits."
+  },
+  {
+    q: "To penetrate a thicker or denser material, you would need a source with:",
+    options: ["more curies", "more activity", "more energy (shorter wavelength)", "less energy (longer wavelength)"],
+    correct: 2,
+    hint: "Curies control how fast you expose; something else controls how deep you punch.",
+    explain: "Penetrating power comes from <b>photon energy — shorter wavelength</b>, which is set by the isotope (Co-60 penetrates more than Ir-192), not by how many curies you have. More activity just means more photons of the <i>same</i> energy: faster exposures, zero extra penetration. That's why the first two options are the same wrong answer twice."
+  },
+  {
+    q: "An element's weight is the:",
+    options: ["A number", "Z number", "atomic number", "number of neutrons"],
+    correct: 0,
+    hint: "A for atomic mass — protons plus neutrons.",
+    explain: "The <b>A number (mass number)</b> = protons + neutrons — essentially the atom's weight. The <b>Z number</b> and \"atomic number\" are the same thing (proton count) listed twice, which is your clue neither is the answer: an exam can't have two correct choices. That's the 192 in Ir-192."
+  },
+  {
+    q: "An element is identified by the number of _________ in its nucleus.",
+    options: ["electrons", "protons", "neutrons", "photons"],
+    correct: 1,
+    hint: "Change this count and you literally have a different element.",
+    explain: "The <b>proton</b> count (atomic number Z) defines the element — 77 protons is iridium, no matter what. Electrons come and go with ionization, changing neutrons only changes the <i>isotope</i>, and photons don't live in nuclei at all."
+  },
+  {
+    q: "The first indication of an extremity radiation overexposure is:",
+    options: ["reddening of the skin", "hair loss", "nausea", "blisters"],
+    correct: 0,
+    hint: "Think sunburn — the earliest, mildest visible sign on the skin.",
+    explain: "A local extremity overexposure (like a hand near an unshielded source) shows up first as <b>erythema — reddening of the skin</b>, like a sunburn. Blisters and hair loss are later, higher-dose local effects, and nausea is a <i>whole-body</i> acute-syndrome symptom, not an extremity sign — that's the discriminator the question is testing."
+  }
+];
+
+/* ============================================================
+   Difficulty & payouts — harder questions pay more
+   e = Easy $100 · m = Medium $300 · h = Hard $600 · b = Boss $1,200
+   Hints always cost 20% of the question's value.
+   ============================================================ */
+const DIFF1 = ['e','e','m','e','e','e','e','m','m','e','m','e','e','e','e','e','m','h','h','h','m','h','e','e','h'];
+const DIFF2 = ['m','e','m','h','m','m','e','h','m','m','m','h','e','m','m','h','e','m','b','m','e','e','m','e','m'];
+SET1.forEach((q, i) => q.d = DIFF1[i]);
+SET2.forEach((q, i) => q.d = DIFF2[i]);
+
+const VALUES = { e: 100, m: 300, h: 600, b: 1200 };
+const DIFF_LABEL = { e: 'Easy', m: 'Medium', h: 'Hard', b: 'Boss' };
+
+const SETS = [
+  { name: 'Set 1 — Units & Fundamentals', short: 'Set 1', desc: 'R, rad, rem, quality factors, atomic structure, and the core 10 CFR 34 specs.', questions: SET1 },
+  { name: 'Set 2 — Instruments, Decay & Field Calcs', short: 'Set 2', desc: 'Dosimetry devices, half-life and HVL math, and one boss-level boundary calculation.', questions: SET2 }
+];
+const setMax = s => s.questions.reduce((sum, q) => sum + VALUES[q.d], 0);
+
+const qValue = q => VALUES[q.d];
+const qHintCost = q => Math.round(VALUES[q.d] * 0.2);
 
 /* ============================================================
    Sound engine — Web Audio, no external files
@@ -845,6 +1145,8 @@ const Sound = {
    Game state
    ============================================================ */
 const state = {
+  setIndex: 0,     // which question set is in play
+  qs: [],          // questions of the active set
   order: [],       // question indices in play order
   current: 0,      // position in order
   pot: 0,
@@ -916,14 +1218,15 @@ function showScreen(id) {
 /* ---------- Render question ---------- */
 function renderQuestion() {
   const qi = state.order[state.current];
-  const q = QUESTIONS[qi];
-  const value = valueFor(state.current);
-  const hintCost = hintCostFor(state.current);
+  const q = state.qs[qi];
+  const value = qValue(q);
+  const hintCost = qHintCost(q);
   state.hintUsed = false;
   state.answered = false;
 
-  $('qNumber').textContent = 'Question ' + (state.current + 1) + ' of ' + state.order.length;
-  $('qValue').textContent = 'Worth ' + fmt(value);
+  $('qNumber').textContent = SETS[state.setIndex].short + ' · Question ' + (state.current + 1) + ' of ' + state.order.length;
+  $('qValue').innerHTML = 'Worth ' + fmt(value) +
+    '<span class="diff-badge d-' + q.d + '">' + DIFF_LABEL[q.d] + '</span>';
   $('qText').textContent = q.q;
   $('hintBox').classList.remove('visible');
   $('hintText').textContent = '';
@@ -976,8 +1279,8 @@ function answer(btn, pickedIdx) {
   if (state.answered) return;
   state.answered = true;
   const qi = state.order[state.current];
-  const q = QUESTIONS[qi];
-  const value = valueFor(state.current);
+  const q = state.qs[qi];
+  const value = qValue(q);
   lockOptions(q.correct, pickedIdx === q.correct ? null : btn);
   $('lifelines').style.display = 'none';
 
@@ -1011,12 +1314,12 @@ function useHint() {
   if (state.answered || state.hintUsed) return;
   state.hintUsed = true;
   state.hints++;
-  const cost = hintCostFor(state.current);
+  const qi = state.order[state.current];
+  const cost = qHintCost(state.qs[qi]);
   Sound.hint();
   setPot(state.pot - cost, 'down');
   flyCoin('−' + fmt(cost), true);
-  const qi = state.order[state.current];
-  $('hintText').textContent = QUESTIONS[qi].hint;
+  $('hintText').textContent = state.qs[qi].hint;
   $('hintBox').classList.add('visible');
   $('hintBtn').disabled = true;
 }
@@ -1028,7 +1331,7 @@ function useTeach() {
   state.streak = 0;
   Sound.teach();
   const qi = state.order[state.current];
-  const q = QUESTIONS[qi];
+  const q = state.qs[qi];
   lockOptions(q.correct, null);
   $('lifelines').style.display = 'none';
   const banner = $('verdictBanner');
@@ -1090,10 +1393,12 @@ function confettiBurst() {
 }
 
 /* ---------- Start / restart ---------- */
-function start() {
+function start(setIdx) {
   Sound.ensure();
   Sound.click();
-  state.order = QUESTIONS.map((_, i) => i); // fixed teaching order; shuffle(…) for random
+  state.setIndex = setIdx;
+  state.qs = SETS[setIdx].questions;
+  state.order = state.qs.map((_, i) => i); // fixed teaching order; shuffle(…) for random
   state.current = 0;
   state.pot = 0;
   state.displayedPot = 0;
@@ -1140,8 +1445,25 @@ $('fsBtn').addEventListener('click', () => {
 });
 document.addEventListener('fullscreenchange', refreshFsIcon);
 
-$('startBtn').addEventListener('click', start);
-$('restartBtn').addEventListener('click', start);
+/* Build the set picker */
+SETS.forEach((s, i) => {
+  const card = document.createElement('button');
+  card.className = 'set-card';
+  card.innerHTML =
+    '<div class="set-tag">25 questions</div>' +
+    '<div class="set-name">' + s.name + '</div>' +
+    '<div class="set-desc">' + s.desc + '</div>' +
+    '<div class="set-max">Earn up to ' + fmt(setMax(s)) + ' →</div>';
+  card.addEventListener('click', () => start(i));
+  $('setPicker').appendChild(card);
+});
+
+$('restartBtn').addEventListener('click', () => start(state.setIndex));
+$('chooseSetBtn').addEventListener('click', () => {
+  Sound.click();
+  $('progressRow').style.visibility = 'hidden';
+  showScreen('introScreen');
+});
 $('nextBtn').addEventListener('click', next);
 $('hintBtn').addEventListener('click', useHint);
 $('teachBtn').addEventListener('click', useTeach);
