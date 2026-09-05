@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PT — Capillary Action &amp; Dwell Time</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #faf7f2;
+    --paper-deep: #f1ece2;
+    --ink: #1a1a1a;
+    --ink-soft: #4a4a47;
+    --ink-faded: #8a8a85;
+    --rule: #d9d2c4;
+    --amber: #b54515;
+    --amber-soft: #e8a87c;
+    --amber-tint: #fdf2e6;
+    --pen-red: #c8102e;
+    --good: #2e7d4f;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px -12px rgba(60,40,20,0.12);
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'Manrope', -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--paper); }
+  body {
+    font-family: var(--sans);
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.55;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(181, 69, 21, 0.04), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(200, 16, 46, 0.03), transparent 50%);
+  }
+  .container { max-width: 1000px; margin: 0 auto; padding: 36px 28px 72px; }
+
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--amber); margin-bottom: 8px; font-weight: 500;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 600;
+    font-size: clamp(26px, 4vw, 38px); line-height: 1.05; letter-spacing: -0.02em;
+    font-variation-settings: 'opsz' 144;
+  }
+  h1 em { font-style: italic; color: var(--amber); font-weight: 500; }
+  a.back {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-faded); text-decoration: none; padding-bottom: 6px;
+  }
+  a.back:hover { color: var(--amber); }
+
+  /* instruction card */
+  .instr {
+    background: var(--ink); color: var(--paper); border-radius: 2px;
+    padding: 18px 22px; margin-bottom: 14px; box-shadow: var(--shadow);
+    display: grid; grid-template-columns: 1fr auto; gap: 8px 24px; align-items: center;
+    min-height: 86px; position: relative;
+  }
+  .instr::before {
+    content: ''; position: absolute; inset: 4px;
+    border: 1px solid rgba(232,168,124,0.18); border-radius: 2px; pointer-events: none;
+  }
+  .instr .step-tag {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--amber-soft); margin-bottom: 5px;
+  }
+  .instr .text { font-size: 16px; font-weight: 500; max-width: 600px; }
+  .instr .text b { color: var(--amber-soft); }
+  .instr .widget { justify-self: end; min-width: 200px; text-align: right; }
+  @media (max-width: 700px) {
+    .instr { grid-template-columns: 1fr; }
+    .instr .widget { justify-self: start; text-align: left; }
+  }
+  .covbox .covlabel { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #b9b4aa; margin-bottom: 6px; }
+  .covbar { width: 200px; height: 10px; background: rgba(255,255,255,.12); border-radius: 99px; overflow: hidden; display: inline-block; }
+  .covbar i { display: block; height: 100%; width: 0%; background: var(--amber-soft); border-radius: 99px; transition: width .12s linear; }
+  .covbar.full i { background: #6fce9a; }
+
+  .dwellbox { display: flex; align-items: center; gap: 16px; }
+  .dwellbox .digits {
+    font-family: var(--mono); font-size: 34px; font-weight: 600;
+    font-variant-numeric: tabular-nums; color: var(--amber-soft); line-height: 1;
+  }
+  .dwellbox .sub { font-family: var(--mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: #b9b4aa; margin-top: 4px; }
+  .dwellbox button {
+    font-family: var(--sans); font-weight: 700; font-size: 13.5px;
+    background: var(--amber); color: #fff; border: none; border-radius: 2px;
+    padding: 12px 18px; cursor: pointer; white-space: nowrap;
+  }
+  .dwellbox button:hover { background: #9a3a12; }
+
+  /* stage — textbook diagram look */
+  .stage {
+    position: relative; border-radius: 2px; overflow: hidden;
+    box-shadow: var(--shadow); border: 1px solid var(--rule);
+    touch-action: none; user-select: none; -webkit-user-select: none;
+    background: #f6f3ec;
+  }
+  .stage canvas { display: block; width: 100%; height: auto; }
+  .stage.spraymode { cursor: none; }
+  .caption {
+    font-family: var(--mono); font-size: 11.5px; color: var(--ink-faded);
+    border-left: 2px solid var(--amber-soft); padding-left: 12px; margin-top: 12px; line-height: 1.6;
+  }
+
+  #ghost {
+    position: fixed; left: 0; top: 0; pointer-events: none; z-index: 50;
+    display: none; will-change: transform; filter: drop-shadow(0 4px 6px rgba(0,0,0,.25));
+  }
+  #ghost.spraying svg { transform: rotate(-14deg); }
+  #ghost svg { transition: transform .12s; }
+
+  /* result + history */
+  .panel {
+    background: var(--paper-deep); border: 1px solid var(--rule); border-radius: 2px;
+    padding: 16px 18px; margin-top: 12px; display: none;
+  }
+  .panel.show { display: block; }
+  .panel h4 { font-family: var(--serif); font-size: 17px; font-weight: 600; margin-bottom: 10px; }
+  .verdicts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  @media (max-width: 640px){ .verdicts { grid-template-columns: 1fr; } }
+  .vcard { border-radius: 2px; padding: 10px 14px; font-size: 13.5px; border: 1px solid; }
+  .vcard b { display: block; font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 3px; }
+  .vcard.found  { background: #e4efdd; border-color: #c4dbb4; color: #2e5a1e; }
+  .vcard.faint  { background: #f9ecd2; border-color: #eccf94; color: #7a5a10; }
+  .vcard.missed { background: #f6dede; border-color: #eab8b8; color: #7c1420; }
+  .lesson { font-size: 14px; color: var(--ink-soft); margin-bottom: 12px; }
+  .lesson b { color: var(--amber); }
+  .panel button.primary {
+    font-family: var(--sans); font-weight: 700; font-size: 14px;
+    background: var(--amber); color: #fff; border: none; border-radius: 2px;
+    padding: 11px 22px; cursor: pointer;
+  }
+  .panel button.primary:hover { background: #9a3a12; }
+
+  table.history { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px; }
+  table.history th {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-faded); text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--rule);
+  }
+  table.history td { padding: 6px 8px; border-bottom: 1px solid rgba(0,0,0,.05); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  table.history td.ok { color: var(--good); font-weight: 700; }
+  table.history td.warn { color: #a97b12; font-weight: 700; }
+  table.history td.bad { color: var(--pen-red); font-weight: 700; }
+
+  /* intro */
+  .veil {
+    position: fixed; inset: 0; background: rgba(26,24,20,.55); backdrop-filter: blur(2px);
+    display: flex; align-items: flex-start; justify-content: center; z-index: 100;
+    padding: 28px 24px; overflow-y: auto;
+  }
+  .veil.hidden { display: none; }
+  .card {
+    background: var(--paper); border-radius: 3px; box-shadow: 0 24px 80px -20px rgba(0,0,0,.5);
+    max-width: 600px; width: 100%; padding: 32px 38px;
+  }
+  .card h2 { font-family: var(--serif); font-weight: 600; font-size: 27px; margin-bottom: 12px; }
+  .card h2 em { font-style: italic; color: var(--amber); }
+  .card p { font-size: 14.5px; color: var(--ink-soft); margin-bottom: 12px; }
+  .card ul { margin: 0 0 14px 18px; font-size: 14px; color: var(--ink-soft); }
+  .card ul li { margin-bottom: 5px; }
+  .card button.primary {
+    font-family: var(--sans); font-weight: 700; font-size: 15px;
+    background: var(--amber); color: #fff; border: none; border-radius: 2px;
+    padding: 13px 28px; cursor: pointer; margin-top: 4px;
+  }
+  .card button.primary:hover { background: #9a3a12; }
+
+  footer {
+    margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--rule);
+    font-size: 12px; color: var(--ink-faded); font-family: var(--mono);
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <div class="eyebrow">Penetrant Testing · How It Works</div>
+      <h1>Capillary Action <em>&amp; Dwell Time</em></h1>
+    </div>
+    <a class="back" href="index.html" target="_top">← Exercise Hub</a>
+  </header>
+
+  <div class="instr">
+    <div>
+      <div class="step-tag" id="stepTag">Step 1 of 3 · Apply penetrant</div>
+      <div class="text" id="stepText">…</div>
+    </div>
+    <div class="widget" id="widget"></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="cv" width="940" height="430"></canvas>
+  </div>
+  <div class="caption" id="caption">Cross-section view. Two discontinuities break the surface: a shallow crack and a deep, tight crack.</div>
+
+  <div class="panel" id="resultPanel">
+    <h4>Result</h4>
+    <div class="verdicts">
+      <div class="vcard" id="vShallow"></div>
+      <div class="vcard" id="vDeep"></div>
+    </div>
+    <div class="lesson" id="lesson"></div>
+    <button class="primary" id="againBtn" type="button">Run it again →</button>
+  </div>
+
+  <div class="panel" id="historyPanel">
+    <h4>Your runs</h4>
+    <table class="history">
+      <thead><tr><th>Run</th><th>Dwell used</th><th>Shallow crack fill</th><th>Deep crack fill</th><th>Shallow</th><th>Deep</th></tr></thead>
+      <tbody id="histRows"></tbody>
+    </table>
+  </div>
+
+  <footer>PT Theory · Capillary action demo · Dwell clock accelerated ×20</footer>
+</div>
+
+<div id="ghost"></div>
+
+<div class="veil" id="intro">
+  <div class="card">
+    <div class="eyebrow">Penetrant Testing · Theory</div>
+    <h2>Why does penetrant need <em>dwell time</em>?</h2>
+    <p>Nothing pushes penetrant into a crack. The liquid <b>wets the crack walls and pulls itself in</b> — that's capillary action, and it takes time.</p>
+    <ul>
+      <li>Spray the penetrant across the part, then <b>watch it wick into the two cracks</b>.</li>
+      <li>The shallow crack fills quickly. The deep, tight one keeps drawing penetrant for minutes.</li>
+      <li><b>You decide when to wipe off the excess.</b> The procedure calls for a 10-minute dwell — see what happens if you cut it short.</li>
+    </ul>
+    <button class="primary" id="beginBtn">Start →</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+const W = 940, H = 430;
+const SURF_Y = 150;                       // top surface of the part
+const SURF_X0 = 70, SURF_X1 = 870;        // sprayable span
+const DWELL_RATE = 20;                    // sim seconds per real second
+const RECOMMENDED = 600;                  // 10 min sim
+
+const $ = id => document.getElementById(id);
+const stage = $('stage'), cv = $('cv'), ctx = cv.getContext('2d');
+const ghost = $('ghost'), widget = $('widget'),
+      stepTag = $('stepTag'), stepText = $('stepText'), caption = $('caption');
+
+/* ---------------- cracks ---------------- */
+function buildCrack(pts, width){
+  let len = 0;
+  for (let i = 1; i < pts.length; i++)
+    len += Math.hypot(pts[i].x - pts[i-1].x, pts[i].y - pts[i-1].y);
+  return { pts, w: width, len };
+}
+const SHALLOW = buildCrack([
+  {x:300, y:SURF_Y}, {x:304, y:172}, {x:298, y:192}, {x:302, y:210}
+], 7);
+const DEEP = buildCrack([
+  {x:600, y:SURF_Y}, {x:595, y:185}, {x:604, y:215}, {x:596, y:248},
+  {x:605, y:272}, {x:600, y:290}, {x:612, y:300}, {x:624, y:306}, {x:621, y:318}
+], 5);
+/* Washburn-style fill: depth ∝ √time. Full-fill sim times: */
+const SHALLOW_T = 90;      // fills in 1.5 min
+const DEEP_T = 570;        // needs ~9.5 min — the full recommended dwell
+
+/* ---------------- state ---------------- */
+const COLS = Math.ceil((SURF_X1 - SURF_X0) / 8);
+let cover = new Float32Array(COLS);
+const state = {
+  phase: 'intro',        // spray | dwell | wiping | develop | result
+  spraying: false,
+  px: 0, py: 0, clientX: 0, clientY: 0,
+  dwell: 0,              // sim seconds
+  fillS: 0, fillD: 0,    // effective capillary time per crack (sim s)
+  wipeX: -100,           // rag position during the wipe animation
+  devT: 0,               // develop animation progress 0..1
+  runs: [],
+  advanceLock: false
+};
+function coverageAt(x){
+  const i = Math.floor((x - SURF_X0) / 8);
+  if (i < 0 || i >= COLS) return 0;
+  return cover[i];
+}
+function coverage(){ let n = 0; for (const v of cover) if (v >= 0.5) n++; return n / COLS; }
+function fillFrac(t, T){ return Math.min(1, Math.sqrt(Math.max(0, t) / T)); }
+
+/* ---------------- phases ---------------- */
+function setPhase(p){
+  state.phase = p;
+  stage.classList.toggle('spraymode', p === 'spray');
+  if (p === 'spray'){
+    stepTag.textContent = 'Step 1 of 3 · Apply penetrant';
+    stepText.innerHTML = 'Press and sweep to <b>spray penetrant</b> across the whole surface — cover both cracks.';
+    widget.innerHTML = `<div class="covbox"><div class="covlabel">Surface covered · <span id="covpct">0%</span></div>
+      <div class="covbar" id="covbar"><i id="covfill"></i></div></div>`;
+    caption.textContent = 'Cross-section view. Two discontinuities break the surface: a shallow crack and a deep, tight crack.';
+  } else if (p === 'dwell'){
+    stepTag.textContent = 'Step 2 of 3 · Dwell — capillary action at work';
+    stepText.innerHTML = 'Watch the penetrant <b>wick into the cracks</b> — no pressure, just wetting. The procedure calls for <b>10:00</b>. Wipe whenever you think it’s ready.';
+    widget.innerHTML = `<div class="dwellbox">
+      <div><div class="digits" id="dwellDig">0:00</div><div class="sub">of 10:00 · sim ×${DWELL_RATE}</div></div>
+      <button id="wipeBtn" type="button">Wipe off the excess</button></div>`;
+    $('wipeBtn').addEventListener('click', () => { if (state.phase === 'dwell') setPhase('wiping'); });
+    caption.textContent = 'Depth filled grows with the SQUARE ROOT of time — the first half fills fast, the last half takes about 4× longer. Deep, tight cracks need the full dwell.';
+  } else if (p === 'wiping'){
+    stepTag.textContent = 'Step 3 of 3 · Remove & develop';
+    stepText.innerHTML = 'Wiping off the excess… whatever made it <b>into</b> the cracks stays there.';
+    widget.innerHTML = '';
+    state.wipeX = SURF_X0 - 60;
+  } else if (p === 'develop'){
+    stepText.innerHTML = 'Developer on — it draws the trapped penetrant <b>back out</b> to the surface.';
+    state.devT = 0;
+  } else if (p === 'result'){
+    finishRun();
+  }
+}
+
+/* ---------------- results ---------------- */
+function verdictFor(fill){
+  if (fill >= 0.75) return ['found', 'FOUND — clear indication'];
+  if (fill >= 0.45) return ['faint', 'FAINT — easy to miss'];
+  return ['missed', 'MISSED — not enough penetrant in the crack'];
+}
+function fmt(t){ return Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0'); }
+function finishRun(){
+  const fS = fillFrac(state.fillS, SHALLOW_T), fD = fillFrac(state.fillD, DEEP_T);
+  const [clsS, txtS] = verdictFor(fS), [clsD, txtD] = verdictFor(fD);
+  const vs = $('vShallow'), vd = $('vDeep');
+  vs.className = 'vcard ' + clsS;
+  vs.innerHTML = `<b>Shallow crack · ${Math.round(fS*100)}% filled</b>${txtS}`;
+  vd.className = 'vcard ' + clsD;
+  vd.innerHTML = `<b>Deep, tight crack · ${Math.round(fD*100)}% filled</b>${txtD}`;
+  const lesson = $('lesson');
+  if (clsD === 'found'){
+    lesson.innerHTML = `You dwelled <b>${fmt(state.dwell)}</b> — long enough for capillary action to fill even the deep crack. ${state.runs.some(r => r.clsD !== 'found') ? 'Compare with your earlier run below.' : 'Now run it again and wipe early — see what happens to the deep crack.'}`;
+  } else {
+    lesson.innerHTML = `You wiped at <b>${fmt(state.dwell)}</b>. The shallow crack had time to fill — the deep one didn’t. <b>An under-filled crack bleeds out weakly or not at all: the defect is still there, you just can’t see it.</b> Run it again with the full 10:00 dwell.`;
+  }
+  state.runs.push({ dwell: state.dwell, fS, fD, clsS, clsD });
+  const row = document.createElement('tr');
+  const cls2txt = c => c === 'found' ? '✓ found' : c === 'faint' ? '△ faint' : '✗ missed';
+  const cls2cls = c => c === 'found' ? 'ok' : c === 'faint' ? 'warn' : 'bad';
+  row.innerHTML = `<td>#${state.runs.length}</td><td>${fmt(state.dwell)}</td>
+    <td>${Math.round(fS*100)}%</td><td>${Math.round(fD*100)}%</td>
+    <td class="${cls2cls(clsS)}">${cls2txt(clsS)}</td><td class="${cls2cls(clsD)}">${cls2txt(clsD)}</td>`;
+  $('histRows').appendChild(row);
+  $('resultPanel').classList.add('show');
+  $('historyPanel').classList.add('show');
+  stepTag.textContent = 'Result';
+  stepText.innerHTML = clsD === 'found'
+    ? 'Both cracks found. <b>Dwell time is what fills the deep ones.</b>'
+    : 'The deep crack was under-filled. <b>Same part, same penetrant — the only thing missing was time.</b>';
+}
+$('againBtn').addEventListener('click', () => {
+  cover = new Float32Array(COLS);
+  state.dwell = 0; state.fillS = 0; state.fillD = 0; state.devT = 0;
+  state.fullToasted = false;
+  $('resultPanel').classList.remove('show');
+  setPhase('spray');
+});
+
+/* ---------------- spraying ---------------- */
+function canSVG(h){
+  h = h || 68;
+  return `<svg width="${h*0.62}" height="${h}" viewBox="0 0 36 58">
+    <rect x="7" y="14" width="22" height="42" rx="3" fill="#dedbd2" stroke="#a8a49a" stroke-width="1"/>
+    <rect x="7" y="23" width="22" height="20" fill="#c8102e"/>
+    <rect x="12" y="8.5" width="12" height="6.5" rx="1.5" fill="#b3afa6" stroke="#8d897f" stroke-width="0.8"/>
+    <rect x="15.4" y="3.5" width="5.2" height="5.5" rx="1" fill="#6f6c66"/>
+    <circle cx="18" cy="5.4" r="1.1" fill="#2c2a27"/>
+  </svg>`;
+}
+const parts = [];
+function stagePos(e){
+  const r = cv.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
+}
+stage.addEventListener('pointerdown', e => {
+  if (state.phase !== 'spray') return;
+  e.preventDefault();
+  state.spraying = true;
+  const p = stagePos(e); state.px = p.x; state.py = p.y;
+  stage.setPointerCapture(e.pointerId);
+  moveGhost();
+});
+window.addEventListener('pointermove', e => {
+  state.clientX = e.clientX; state.clientY = e.clientY;
+  const p = stagePos(e); state.px = p.x; state.py = p.y;
+  moveGhost();
+});
+window.addEventListener('pointerup', () => { state.spraying = false; moveGhost(); });
+function moveGhost(){
+  if (state.phase !== 'spray'){ ghost.style.display = 'none'; return; }
+  const r = stage.getBoundingClientRect();
+  const inside = state.clientX >= r.left && state.clientX <= r.right && state.clientY >= r.top && state.clientY <= r.bottom;
+  if (!inside){ ghost.style.display = 'none'; return; }
+  if (!ghost.innerHTML) ghost.innerHTML = canSVG();
+  ghost.style.display = 'block';
+  ghost.style.transform = `translate(${state.clientX - 6}px, ${state.clientY + 2}px)`;
+  ghost.classList.toggle('spraying', state.spraying);
+}
+function applySpray(dt){
+  const x = state.px;
+  const c0 = Math.max(0, Math.floor((x - 34 - SURF_X0) / 8)),
+        c1 = Math.min(COLS - 1, Math.floor((x + 34 - SURF_X0) / 8));
+  for (let i = c0; i <= c1; i++){
+    const cx = SURF_X0 + i * 8 + 4;
+    const d = Math.abs(cx - x);
+    cover[i] = Math.min(1, cover[i] + 0.09 * (1 - d / 40));
+  }
+  for (let i = 0; i < 6; i++){
+    const ang = Math.PI * (0.3 + Math.random() * 0.4);
+    parts.push({ x: state.px + (Math.random()*10-5), y: Math.min(state.py, SURF_Y - 8),
+      vx: Math.cos(ang) * (Math.random()*60-30), vy: 60 + Math.random()*80,
+      life: 0.3 + Math.random()*0.2, t: 0, r: 1.2 + Math.random()*2 });
+  }
+  const c = coverage();
+  const f = $('covfill'), pc = $('covpct');
+  if (f) f.style.width = Math.round(c * 100) + '%';
+  if (pc) pc.textContent = Math.floor(c * 100) + '%';
+  if (c >= 0.95 && !state.advanceLock){
+    state.advanceLock = true;
+    const b = $('covbar'); if (b) b.classList.add('full');
+    setTimeout(() => { state.advanceLock = false; setPhase('dwell'); }, 600);
+  }
+}
+
+/* ---------------- drawing ---------------- */
+function partOutline(g){
+  g.beginPath();
+  g.moveTo(60, SURF_Y);
+  g.lineTo(880, SURF_Y);
+  g.lineTo(880, 210);
+  g.bezierCurveTo(870, 300, 790, 285, 730, 330);
+  g.bezierCurveTo(660, 380, 560, 330, 470, 358);
+  g.bezierCurveTo(380, 382, 300, 330, 225, 342);
+  g.bezierCurveTo(150, 352, 78, 300, 60, 210);
+  g.closePath();
+}
+function drawPartialCrack(g, crack, frac, color, width){
+  if (frac <= 0) return null;
+  const pts = crack.pts;
+  let target = frac * crack.len, acc = 0, tip = null;
+  g.beginPath();
+  g.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++){
+    const seg = Math.hypot(pts[i].x - pts[i-1].x, pts[i].y - pts[i-1].y);
+    if (acc + seg >= target){
+      const t = (target - acc) / seg;
+      tip = { x: pts[i-1].x + (pts[i].x - pts[i-1].x) * t,
+              y: pts[i-1].y + (pts[i].y - pts[i-1].y) * t };
+      g.lineTo(tip.x, tip.y);
+      break;
+    }
+    g.lineTo(pts[i].x, pts[i].y);
+    acc += seg;
+    if (i === pts.length - 1) tip = pts[i];
+  }
+  g.strokeStyle = color; g.lineWidth = width; g.lineCap = 'butt'; g.lineJoin = 'round';
+  g.stroke();
+  return tip;
+}
+function drawCrackOutline(g, crack){
+  g.beginPath();
+  g.moveTo(crack.pts[0].x, crack.pts[0].y);
+  for (let i = 1; i < crack.pts.length; i++) g.lineTo(crack.pts[i].x, crack.pts[i].y);
+  g.strokeStyle = '#2c2a27'; g.lineWidth = crack.w + 2.4; g.lineCap = 'round'; g.lineJoin = 'round';
+  g.stroke();
+  g.beginPath();
+  g.moveTo(crack.pts[0].x, crack.pts[0].y);
+  for (let i = 1; i < crack.pts.length; i++) g.lineTo(crack.pts[i].x, crack.pts[i].y);
+  g.strokeStyle = '#ffffff'; g.lineWidth = crack.w; g.stroke();
+}
+function label(g, x, y, text, alignRight){
+  g.font = '600 11px "JetBrains Mono", monospace';
+  g.fillStyle = '#8a8a85';
+  g.textAlign = alignRight ? 'right' : 'left';
+  g.fillText(text, x, y);
+}
+function fillLabel(g, x, y, frac){
+  g.font = '700 13px "JetBrains Mono", monospace';
+  g.fillStyle = frac >= 0.75 ? '#2e7d4f' : frac >= 0.45 ? '#a97b12' : '#c8102e';
+  g.textAlign = 'left';
+  g.fillText(Math.round(frac * 100) + '%', x, y);
+}
+
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+
+  /* ---- update ---- */
+  if (state.phase === 'spray' && state.spraying) applySpray(dt);
+  if (state.phase === 'dwell'){
+    state.dwell += dt * DWELL_RATE;
+    if (coverageAt(SHALLOW.pts[0].x) >= 0.5) state.fillS += dt * DWELL_RATE;
+    if (coverageAt(DEEP.pts[0].x) >= 0.5) state.fillD += dt * DWELL_RATE;
+    const d = $('dwellDig');
+    if (d){
+      d.textContent = fmt(state.dwell);
+      if (state.dwell >= RECOMMENDED) d.style.color = '#6fce9a';
+    }
+    if (state.dwell >= RECOMMENDED && !state.fullToasted){
+      state.fullToasted = true;
+      const btn = $('wipeBtn');
+      if (btn) btn.textContent = '✓ Full dwell — wipe off now';
+    }
+  }
+  if (state.phase === 'wiping'){
+    state.wipeX += dt * 900;
+    const c1 = Math.min(COLS, Math.floor((state.wipeX - SURF_X0) / 8));
+    for (let i = 0; i < c1; i++) cover[i] = 0;
+    if (state.wipeX > SURF_X1 + 80) setPhase('develop');
+  }
+  if (state.phase === 'develop'){
+    state.devT = Math.min(1, state.devT + dt / 2.2);
+    if (state.devT >= 1 && !state.advanceLock){
+      state.advanceLock = true;
+      setTimeout(() => { state.advanceLock = false; setPhase('result'); }, 400);
+    }
+  }
+  for (let i = parts.length - 1; i >= 0; i--){
+    const p = parts[i]; p.t += dt;
+    if (p.t > p.life || p.y > SURF_Y){ parts.splice(i, 1); continue; }
+    p.x += p.vx * dt; p.y += p.vy * dt;
+  }
+
+  /* ---- draw ---- */
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#f6f3ec'; ctx.fillRect(0, 0, W, H);
+
+  /* part body */
+  partOutline(ctx);
+  ctx.fillStyle = '#ffffff'; ctx.fill();
+  ctx.strokeStyle = '#2c2a27'; ctx.lineWidth = 2.5; ctx.stroke();
+
+  /* crack outlines (hollow) */
+  drawCrackOutline(ctx, SHALLOW);
+  drawCrackOutline(ctx, DEEP);
+
+  /* capillary fill inside cracks */
+  const showFill = state.phase !== 'spray' || state.fillS > 0;
+  const fS = fillFrac(state.fillS, SHALLOW_T), fD = fillFrac(state.fillD, DEEP_T);
+  const post = state.phase === 'wiping' || state.phase === 'develop' || state.phase === 'result';
+  if (showFill){
+    const tipS = drawPartialCrack(ctx, SHALLOW, fS, '#c8102e', SHALLOW.w);
+    const tipD = drawPartialCrack(ctx, DEEP, fD, '#c8102e', DEEP.w);
+    /* meniscus at the advancing front */
+    for (const [tip, crack, frac] of [[tipS, SHALLOW, fS], [tipD, DEEP, fD]]){
+      if (tip && frac > 0.02 && frac < 0.99 && !post){
+        ctx.beginPath();
+        ctx.arc(tip.x, tip.y, crack.w * 0.55, 0, Math.PI, false);
+        ctx.fillStyle = '#c8102e'; ctx.fill();
+      }
+    }
+  }
+
+  /* surface penetrant layer (columns) */
+  if (!post){
+    ctx.fillStyle = '#c8102e';
+    for (let i = 0; i < COLS; i++){
+      if (cover[i] >= 0.15){
+        const x = SURF_X0 + i * 8;
+        const hgt = 6 + 10 * Math.min(1, cover[i]);
+        ctx.globalAlpha = Math.min(1, cover[i] + 0.25);
+        ctx.fillRect(x, SURF_Y - hgt, 8.5, hgt);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /* wiping rag */
+  if (state.phase === 'wiping'){
+    ctx.fillStyle = '#c8102e';
+    for (let i = Math.max(0, Math.floor((state.wipeX - SURF_X0) / 8)); i < COLS; i++){
+      if (cover[i] >= 0.15){
+        const x = SURF_X0 + i * 8;
+        const hgt = 6 + 10 * Math.min(1, cover[i]);
+        ctx.globalAlpha = Math.min(1, cover[i] + 0.25);
+        ctx.fillRect(x, SURF_Y - hgt, 8.5, hgt);
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.save();
+    ctx.translate(state.wipeX, SURF_Y - 20);
+    ctx.rotate(-0.08);
+    ctx.fillStyle = '#efece4';
+    ctx.strokeStyle = '#b9b4a6'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 34, 18, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+
+  /* developer + bleedout */
+  if (state.phase === 'develop' || state.phase === 'result'){
+    /* thin developer film */
+    ctx.fillStyle = 'rgba(228,226,218,.95)';
+    ctx.fillRect(SURF_X0 - 8, SURF_Y - 7, SURF_X1 - SURF_X0 + 16, 7);
+    ctx.strokeStyle = 'rgba(150,146,136,.6)'; ctx.lineWidth = 1;
+    ctx.strokeRect(SURF_X0 - 8, SURF_Y - 7, SURF_X1 - SURF_X0 + 16, 7);
+    /* bleedout blots sized by fill */
+    const t = state.devT;
+    for (const [crack, frac] of [[SHALLOW, fS], [DEEP, fD]]){
+      const vis = frac >= 0.75 ? 1 : frac >= 0.45 ? 0.45 : frac * 0.35;
+      if (vis <= 0.02) continue;
+      const mx = crack.pts[0].x;
+      const rx = (8 + 30 * frac) * t;
+      ctx.globalAlpha = Math.min(1, vis) * t;
+      const grd = ctx.createRadialGradient(mx, SURF_Y - 4, 0, mx, SURF_Y - 4, rx);
+      grd.addColorStop(0, '#c8102e');
+      grd.addColorStop(0.6, 'rgba(200,16,46,.8)');
+      grd.addColorStop(1, 'rgba(200,16,46,0)');
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.ellipse(mx, SURF_Y - 4, rx, 5.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  /* spray particles */
+  ctx.fillStyle = 'rgba(200,16,46,.5)';
+  for (const p of parts){
+    ctx.globalAlpha = Math.max(0, 1 - p.t / p.life) * 0.55;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  /* labels */
+  label(ctx, SHALLOW.pts[0].x - 14, 415, 'SHALLOW CRACK', true);
+  ctx.strokeStyle = '#c9c2b2'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(SHALLOW.pts[0].x - 10, 408); ctx.lineTo(301, 224); ctx.stroke();
+  label(ctx, DEEP.pts[0].x + 44, 415, 'DEEP, TIGHT CRACK');
+  ctx.beginPath(); ctx.moveTo(DEEP.pts[0].x + 40, 408); ctx.lineTo(624, 330); ctx.stroke();
+  if (state.phase === 'dwell' || post){
+    fillLabel(ctx, SHALLOW.pts[0].x + 16, 200, fS);
+    fillLabel(ctx, DEEP.pts[0].x + 22, 250, fD);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+$('beginBtn').addEventListener('click', () => {
+  $('intro').classList.add('hidden');
+  setPhase('spray');
+});
+
+})();
+</script>
+</body>
+</html>
