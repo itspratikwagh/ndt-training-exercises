@@ -166,42 +166,79 @@
   .panel.show { display: block; }
   .panel h4 { font-family: var(--serif); font-size: 17px; font-weight: 600; margin-bottom: 10px; }
 
-  .wash .wrows { display: grid; gap: 8px; }
+  .wash .wrows { display: grid; gap: 6px; }
   .wash .wrow {
-    display: grid; grid-template-columns: 132px 1fr 86px 20px; gap: 12px; align-items: center;
+    display: grid; grid-template-columns: 128px 1fr 80px 62px 20px; gap: 12px; align-items: center;
     font-size: 13px; color: var(--ink-soft);
+    padding: 6px 10px; border-radius: 3px; border: 1px solid transparent;
+    transition: opacity .2s, border-color .2s, background .2s;
   }
   .wash .wrow label { font-weight: 700; color: var(--ink); }
   .wash .wrow input[type=range] { width: 100%; accent-color: var(--amber); }
+  .wash .wrow.locked { opacity: 0.4; pointer-events: none; }
+  .wash .wrow.active { background: var(--amber-tint); border-color: var(--amber-soft); }
+  .wash .wrow.done { opacity: 0.75; }
   .wash .wval { font-family: var(--mono); font-size: 12.5px; text-align: right; font-variant-numeric: tabular-nums; }
   .wash .wmark { font-size: 14px; text-align: center; }
   .wash .wmark.ok { color: var(--good); }
   .wash .wmark.bad { color: var(--pen-red); }
+  .wash .setbtn {
+    font-family: var(--sans); font-weight: 700; font-size: 12px;
+    background: var(--amber); color: #fff; border: none; border-radius: 2px;
+    padding: 6px 0; cursor: pointer; width: 100%;
+  }
+  .wash .setbtn:hover { background: #9a3a12; }
+  .wash .setbtn:disabled { background: #b8b2a4; cursor: default; }
+  .wash .wrow.done .setbtn { background: var(--good); }
+  .wash .gostate {
+    margin-top: 10px; font-size: 13px; font-weight: 700; color: var(--ink-soft);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .wash .gostate.ready { color: var(--good); }
   .wash .spec {
     margin-top: 10px; font-family: var(--mono); font-size: 11px; color: var(--ink-faded);
     border-left: 2px solid var(--amber-soft); padding-left: 10px; line-height: 1.6;
   }
 
-  /* dryer */
-  .dryer .drow { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  /* dryer oven */
+  .dryer .drow { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .dryer .orow {
+    display: grid; grid-template-columns: 110px 170px 70px 20px; gap: 10px; align-items: center;
+    font-size: 13px; padding: 6px 10px; border-radius: 3px;
+    background: var(--amber-tint); border: 1px solid var(--amber-soft);
+  }
+  .dryer .orow.done { background: none; border-color: transparent; opacity: .8; }
+  .dryer .orow label { font-weight: 700; color: var(--ink); }
+  .dryer .orow input[type=range] { width: 100%; accent-color: var(--amber); }
+  .dryer .oval { font-family: var(--mono); font-size: 12.5px; text-align: right; font-variant-numeric: tabular-nums; }
+  .dryer .omark { font-size: 14px; text-align: center; }
+  .dryer .omark.ok { color: var(--good); }
+  .dryer .omark.bad { color: var(--pen-red); }
   .dryer button {
-    font-family: var(--sans); font-weight: 700; font-size: 14px;
+    font-family: var(--sans); font-weight: 700; font-size: 13.5px;
     background: var(--amber); color: #fff; border: none; border-radius: 2px;
-    padding: 14px 24px; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none;
+    padding: 12px 20px; cursor: pointer;
   }
   .dryer button:hover { background: #9a3a12; }
-  .dryer button:disabled { background: #8b8677; cursor: default; }
-  .dryer .gauge { flex: 1 1 190px; min-width: 170px; }
-  .dryer .glabel { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faded); margin-bottom: 4px; }
-  .dryer .glabel b { color: var(--ink); font-variant-numeric: tabular-nums; }
-  .dryer .gbar { height: 12px; background: #e0dacb; border-radius: 99px; overflow: hidden; position: relative; }
-  .dryer .gbar i { display: block; height: 100%; width: 0%; border-radius: 99px; }
-  .dryer .gbar.moist i { background: var(--clean-blue); }
-  .dryer .gbar.temp i { background: var(--good); }
-  .dryer .gbar.temp.hot i { background: var(--pen-red); }
-  .dryer .gbar .lim { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--pen-red); }
-  .dryer .fb { font-size: 12.5px; color: var(--ink-faded); flex-basis: 100%; }
-  .dryer .fb.bad { color: var(--pen-red); font-weight: 600; }
+  .dryer button:disabled { background: #b8b2a4; cursor: default; }
+  .dryer .digits {
+    font-family: var(--mono); font-size: 26px; font-weight: 600;
+    font-variant-numeric: tabular-nums; color: var(--ink); min-width: 74px;
+  }
+  .dryer .digits.running { color: var(--amber); }
+  .dryer .digits.done { color: var(--good); }
+  .dryer .spec {
+    margin-top: 10px; font-family: var(--mono); font-size: 11px; color: var(--ink-faded);
+    border-left: 2px solid var(--amber-soft); padding-left: 10px; line-height: 1.6;
+  }
+
+  /* over-dwell chip */
+  .overchip {
+    font-family: var(--mono); font-size: 12.5px; font-weight: 600; letter-spacing: .04em;
+    background: rgba(200,16,46,.14); border: 1px solid rgba(200,16,46,.5);
+    color: #ffb3be; padding: 8px 14px; border-radius: 3px; white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
 
   /* measurement */
   .measure .rows { display: grid; gap: 8px; }
@@ -373,47 +410,56 @@
 
   <!-- wash station params (rinse step) -->
   <div class="panel wash" id="washPanel">
-    <h4>Rinse station setup</h4>
+    <h4>Rinse station setup — confirm each setting, in order</h4>
     <div class="wrows">
-      <div class="wrow">
-        <label>Water pressure</label>
+      <div class="wrow" id="rowPsi">
+        <label>1 · Water pressure</label>
         <input type="range" id="wPsi" min="10" max="60" value="55" step="1">
-        <span class="wval" id="wPsiV">55 PSI</span><span class="wmark" id="wPsiM"></span>
+        <span class="wval" id="wPsiV">55 PSI</span>
+        <button class="setbtn" id="setPsi" type="button">Set</button>
+        <span class="wmark" id="wPsiM"></span>
       </div>
-      <div class="wrow">
-        <label>Water temperature</label>
+      <div class="wrow" id="rowTemp">
+        <label>2 · Water temperature</label>
         <input type="range" id="wTemp" min="40" max="130" value="115" step="1">
-        <span class="wval" id="wTempV">115 °F</span><span class="wmark" id="wTempM"></span>
+        <span class="wval" id="wTempV">115 °F</span>
+        <button class="setbtn" id="setTemp" type="button">Set</button>
+        <span class="wmark" id="wTempM"></span>
       </div>
-      <div class="wrow">
-        <label>Nozzle distance</label>
+      <div class="wrow" id="rowDist">
+        <label>3 · Nozzle distance</label>
         <input type="range" id="wDist" min="4" max="24" value="6" step="1">
-        <span class="wval" id="wDistV">6 in</span><span class="wmark" id="wDistM"></span>
+        <span class="wval" id="wDistV">6 in</span>
+        <button class="setbtn" id="setDist" type="button">Set</button>
+        <span class="wmark" id="wDistM"></span>
       </div>
-      <div class="wrow">
-        <label>Spray angle</label>
+      <div class="wrow" id="rowAng">
+        <label>4 · Spray angle</label>
         <input type="range" id="wAng" min="15" max="90" value="90" step="5">
-        <span class="wval" id="wAngV">90°</span><span class="wmark" id="wAngM"></span>
+        <span class="wval" id="wAngV">90°</span>
+        <button class="setbtn" id="setAng" type="button">Set</button>
+        <span class="wmark" id="wAngM"></span>
       </div>
     </div>
+    <div class="gostate" id="washGo">🔒 Water is off until all four settings are confirmed.</div>
     <div class="spec">Procedure: coarse spray · 38 PSI (40 max) · water 60–100 °F · nozzle ≈ 12 in from part · ≈ 45° to the surface, never perpendicular.</div>
   </div>
 
   <!-- dryer -->
   <div class="panel dryer" id="dryerPanel">
-    <h4>Forced-air dryer</h4>
+    <h4>Forced-air dryer oven</h4>
     <div class="drow">
-      <button id="blowBtn" type="button">Hold to blow warm air</button>
-      <div class="gauge">
-        <div class="glabel"><span>Surface moisture</span><b id="gMoistV">100%</b></div>
-        <div class="gbar moist"><i id="gMoist" style="width:100%"></i></div>
+      <div class="orow" id="ovenRow">
+        <label>Oven setting</label>
+        <input type="range" id="ovenT" min="100" max="200" value="180" step="5">
+        <span class="oval" id="ovenTV">180 °F</span>
+        <span class="omark" id="ovenTM"></span>
       </div>
-      <div class="gauge">
-        <div class="glabel"><span>Part temperature</span><b id="gTempV">75 °F</b></div>
-        <div class="gbar temp" id="gTempBar"><i id="gTemp"></i><span class="lim" style="left:81%"></span></div>
-      </div>
-      <span class="fb" id="dryFb">Dry the developer coat — but keep the part under <b>140 °F</b> or the penetrant in the flaws bakes off. Pulse the air and let it cool.</span>
+      <button id="dryStart" type="button" disabled>Start dryer · 5 min</button>
+      <span class="digits" id="dryDig">5:00</span>
+      <button id="gunBtn" type="button" disabled>🌡 Thermal gun — check the part</button>
     </div>
+    <div class="spec">Procedure: oven at 140 °F · dry 5 minutes · verify the part reads below 150 °F before the dust chamber.</div>
   </div>
 
   <!-- measurements -->
@@ -456,8 +502,9 @@
     <p><b>How it works:</b> the part hangs from an overhead carrier. <b>Drag it along the rail</b> to move between stations, and <b>drag it down</b> to lower it into a tank — you'll see it go under and come back out.</p>
     <ul>
       <li>Stations, in order: water pre-wash · penetrant tank · drain rack (dwell) · <b>rinse under UV-A</b> · wet developer tank · forced-air dryer · dry-powder dust chamber · development rack · inspection booth.</li>
-      <li>The rinse station must be set per procedure — and <b>over-washing pulls penetrant back out of flaws</b>.</li>
-      <li>In the dryer, watch the part temperature: too hot and the penetrant in the flaws dries up.</li>
+      <li>The rinse water stays <b>off</b> until you've set the station per procedure, one setting at a time — and <b>over-washing pulls penetrant back out of flaws</b>.</li>
+      <li>Dwell times matter both ways: once a timer finishes, a red clock starts — <b>don't let the part sit</b>.</li>
+      <li>In the dryer: set the oven per procedure, run the cycle, then verify the part with the thermal gun.</li>
     </ul>
     <div class="note">Dwell timers are accelerated: 10 min runs in ~45 s. In the real shop you wait the full time.</div>
     <button class="primary" id="beginBtn">Begin — part on the hook →</button>
@@ -508,7 +555,8 @@ const WASH = {
   dist: { lo: 10, hi: 16, tooClose: 8 },
   ang:  { lo: 30, hi: 60, perp: 75 }
 };
-const DRY = { limit: 140, ambient: 75, scaleMax: 155 };
+const DRY = { oven: 140, ovenTol: 5, partMax: 150, sim: 300, real: 25 };
+const OVERDWELL = { warnSim: 120, badSim: 300 };   // seconds of sim time past a finished dwell
 
 /* ================= line view geometry ================= */
 const RAIL_Y = 46;
@@ -577,7 +625,10 @@ const state = {
   penA: 0, dirtA: 1,
   devState: 0,               // 0 none, 1 wet, 2 dried
   dustA: 0,
-  moisture: 0, partTemp: DRY.ambient, blowing: false, overheat: 0, overheatWarned: false,
+  dryT: null,                // dryer cycle timer {left, rate, running, done}
+  gunActive: false, gunChip: null,
+  overClock: null,           // {label, sim, warned, penalized} — time past a finished dwell
+  overDmg: 0,
   bleed: 0, bleedFade: 1, devFade: 0,
   uvT: 0, uvTarget: 0,
   washDamage: 0, washIssues: {},
@@ -600,18 +651,18 @@ const FLOW = [
  { step:2, name:'Penetrant',  id:'p3', type:'rack', station:'dwell', sim:600, real:45,
    text:'Hang the part on the <b>drain rack</b> — penetrant dwell, <b>10 minutes</b>.' },
  { step:3, name:'Rinse',      id:'p4', type:'zoomwash', station:'rinse', light:1, need:0.97, params:true,
-   text:'Carry the part to the <b>rinse station</b>. The booth runs UV-A so you can see the wash.',
-   ztext:'Set the station per procedure below, then rinse until the glowing background is gone. <b>Don’t over-wash.</b>', covLabel:'Background removed' },
+   text:'Carry the part to the <b>rinse station</b> — don’t let it sit, the penetrant is drying.',
+   ztext:'<b>Water is off.</b> Confirm the four station settings below, one at a time — then rinse until the glowing background is gone. <b>Don’t over-wash.</b>', covLabel:'Background removed' },
  { step:4, name:'Developer',  id:'p5', type:'dip', station:'dev',
    text:'Straight to the <b>developer tank</b> while the part is wet — lower it in, hold, pull it out.' },
  { step:5, name:'Dry & dust', id:'p6', type:'dryer', station:'dryer',
-   text:'Into the <b>forced-air dryer</b>. Dry the coat — but don’t let the part get hot enough to bake the penetrant.' },
+   text:'Into the <b>forced-air dryer</b>. Set the oven per procedure, run the 5-minute cycle, then verify the part with the thermal gun.' },
  { step:5, name:'Dry & dust', id:'p7', type:'dip', station:'dust',
    text:'Lower the part into the <b>dust chamber</b> — dry powder is circulating. Hold it in the cloud, then pull it out.' },
  { step:6, name:'Develop',    id:'p8', type:'rack', station:'devrack', sim:600, real:45,
    text:'Onto the <b>development rack</b> — developer dwell, <b>10 minutes</b>, while the indications bleed out.' },
  { step:7, name:'Inspect',    id:'p9', type:'inspect', station:'inspect', light:1,
-   text:'Carry the part into the <b>inspection booth</b> for evaluation under UV-A.',
+   text:'Development is done — get the part into the <b>inspection booth</b> before it over-develops.',
    ztext:'Drag the <b>ruler</b> to each glowing indication, measure tip-to-tip, and enter your readings below.' },
  { step:8, name:'Post-clean', id:'p10', type:'zoomwash', station:'prewash', light:0, need:0.9,
    text:'Good work. Back to the <b>pre-wash booth</b> for post-cleaning.',
@@ -769,7 +820,7 @@ function crackPts(c){
   c.pts = pts; return pts;
 }
 function indicationBrightness(){
-  return Math.max(0.3, 1 - 0.7 * Math.min(1, state.washDamage + state.overheat));
+  return Math.max(0.3, 1 - 0.7 * Math.min(1, state.washDamage) - 0.5 * state.overDmg);
 }
 function drawBleed(g){
   const bp = state.bleed * state.bleedFade;
@@ -933,6 +984,8 @@ function advance(){
     state.timer = null;
     const leaving = cur();
     if (leaving && leaving.id === 'p10'){ finish(); return; }
+    if (leaving && leaving.id === 'p3') startOverClock('penetrant dwell');
+    if (leaving && leaving.id === 'p8') startOverClock('development time');
     state.idx++;
     grid = makeGrid();
     state.gapHintShown = false;
@@ -965,18 +1018,22 @@ function enterStep(){
 function onArrive(stationId){
   const s = cur(); if (!s || state.mode !== 'line') return;
   if (stationId !== s.station) return;
+  stopOverClock();
   if (s.type === 'zoomwash'){
     enterZoom(s.id === 'p10' ? 'postclean' : s.station, s.light);
     stepText.innerHTML = s.ztext;
-    if (s.params) $('washPanel').classList.add('show');
+    if (s.params){ resetWashSetup(); $('washPanel').classList.add('show'); }
     renderWidget();
   } else if (s.type === 'rack'){
     renderWidget();
     toast('On the rack — start the dwell timer.', 'good');
   } else if (s.type === 'dryer'){
-    state.moisture = 1; state.partTemp = DRY.ambient;
+    state.dryT = null; state.gunActive = false;
+    $('dryDig').textContent = '5:00'; $('dryDig').className = 'digits';
+    $('gunBtn').disabled = true;
+    $('dryStart').disabled = !ovenOk(); $('dryStart').textContent = 'Start dryer · 5 min';
     $('dryerPanel').classList.add('show');
-    toast('Part in the dryer — pulse the warm air.', 'good');
+    toast('Set the oven to the procedure temperature first.', 'good');
   } else if (s.type === 'inspect'){
     enterZoom('inspect', 1);
     stepText.innerHTML = s.ztext;
@@ -1014,19 +1071,15 @@ function checkCoverage(){
   }
 }
 
-/* ================= wash controls ================= */
+/* ================= wash controls — confirmed one at a time ================= */
 const washCtl = { psi: 55, temp: 115, dist: 6, ang: 90 };
-function bindWash(id, key, unit){
-  const inp = $(id), val = $(id + 'V'), mark = $(id + 'M');
-  const upd = () => {
-    washCtl[key] = +inp.value;
-    val.textContent = inp.value + unit;
-    const ok = washSettingOk(key);
-    mark.textContent = ok ? '✓' : '✗';
-    mark.className = 'wmark ' + (ok ? 'ok' : 'bad');
-  };
-  inp.addEventListener('input', upd); upd();
-}
+const WSEQ = [
+  { key:'psi',  slider:'wPsi',  row:'rowPsi',  btn:'setPsi',  name:'water pressure' },
+  { key:'temp', slider:'wTemp', row:'rowTemp', btn:'setTemp', name:'water temperature' },
+  { key:'dist', slider:'wDist', row:'rowDist', btn:'setDist', name:'nozzle distance' },
+  { key:'ang',  slider:'wAng',  row:'rowAng',  btn:'setAng',  name:'spray angle' }
+];
+const washSetup = { idx: 0, confirmed: false };
 function washSettingOk(key){
   const v = washCtl[key];
   if (key === 'psi')  return v >= WASH.psi.min && v <= WASH.psi.max;
@@ -1035,10 +1088,53 @@ function washSettingOk(key){
   if (key === 'ang')  return v >= WASH.ang.lo && v <= WASH.ang.hi;
   return true;
 }
-bindWash('wPsi', 'psi', ' PSI');
-bindWash('wTemp', 'temp', ' °F');
-bindWash('wDist', 'dist', ' in');
-bindWash('wAng', 'ang', '°');
+function bindWash(cfg, unit){
+  const inp = $(cfg.slider), val = $(cfg.slider + 'V'), mark = $(cfg.slider + 'M');
+  const upd = () => {
+    washCtl[cfg.key] = +inp.value;
+    val.textContent = inp.value + unit;
+    const ok = washSettingOk(cfg.key);
+    mark.textContent = ok ? '✓' : '✗';
+    mark.className = 'wmark ' + (ok ? 'ok' : 'bad');
+    const btn = $(cfg.btn);
+    if (btn && !washSetup.confirmed) btn.disabled = !ok || WSEQ[washSetup.idx] !== cfg;
+  };
+  inp.addEventListener('input', upd); upd();
+  $(cfg.btn).addEventListener('click', () => {
+    if (washSetup.confirmed || WSEQ[washSetup.idx] !== cfg || !washSettingOk(cfg.key)) return;
+    washSetup.idx++;
+    if (washSetup.idx >= WSEQ.length){
+      washSetup.confirmed = true;
+      toast('✓ Station set — water is on. Rinse the whole part.', 'good');
+    } else {
+      toast(`✓ ${cfg.name[0].toUpperCase() + cfg.name.slice(1)} set — next: ${WSEQ[washSetup.idx].name}.`, 'good');
+    }
+    updateWashRows();
+  });
+}
+bindWash(WSEQ[0], ' PSI');
+bindWash(WSEQ[1], ' °F');
+bindWash(WSEQ[2], ' in');
+bindWash(WSEQ[3], '°');
+function updateWashRows(){
+  WSEQ.forEach((cfg, i) => {
+    const row = $(cfg.row), btn = $(cfg.btn);
+    row.classList.toggle('done', washSetup.confirmed || i < washSetup.idx);
+    row.classList.toggle('active', !washSetup.confirmed && i === washSetup.idx);
+    row.classList.toggle('locked', !washSetup.confirmed && i > washSetup.idx);
+    btn.textContent = (washSetup.confirmed || i < washSetup.idx) ? '✓ Set' : 'Set';
+    btn.disabled = washSetup.confirmed || i !== washSetup.idx || !washSettingOk(cfg.key);
+  });
+  const go = $('washGo');
+  go.className = 'gostate' + (washSetup.confirmed ? ' ready' : '');
+  go.textContent = washSetup.confirmed
+    ? '💧 Water is ON — press and sweep across the part.'
+    : `🔒 Water is off — setting ${washSetup.idx + 1} of 4: adjust the ${WSEQ[washSetup.idx].name} to the procedure value, then press Set.`;
+}
+function resetWashSetup(){
+  washSetup.idx = 0; washSetup.confirmed = false;
+  updateWashRows();
+}
 function washIssue(key, msg, damaging){
   if (!state.washIssues[key]){
     state.washIssues[key] = true;
@@ -1061,6 +1157,11 @@ stage.addEventListener('pointerdown', e => {
   const p = stagePos(e);
   state.px = p.x; state.py = p.y;
   if (state.mode === 'line'){
+    if (state.gunActive){
+      if (overPart(p)) gunRead();
+      else toast('Aim the thermal gun at the part and click it.');
+      return;
+    }
     if (overPart(p) && !isPartLocked()){
       e.preventDefault();
       state.part.grabbed = true;
@@ -1075,6 +1176,10 @@ stage.addEventListener('pointerdown', e => {
     const s = cur();
     if (s && s.type === 'zoomwash'){
       e.preventDefault();
+      if (s.params && !washSetup.confirmed){
+        toast('🔒 Water is off — confirm the four station settings below first, one at a time.');
+        return;
+      }
       state.washing = true;
       stage.setPointerCapture(e.pointerId);
     }
@@ -1191,53 +1296,89 @@ function stepDip(dt){
   }
 }
 
-/* ================= dryer ================= */
-const blowBtn = $('blowBtn');
-blowBtn.addEventListener('pointerdown', e => {
-  e.preventDefault();
-  const s = cur(); if (!s || s.type !== 'dryer') return;
-  state.blowing = true;
-  blowBtn.setPointerCapture(e.pointerId);
+/* ================= dryer oven + thermal gun ================= */
+function ovenOk(){ return Math.abs(+$('ovenT').value - DRY.oven) <= DRY.ovenTol; }
+(function bindOven(){
+  const inp = $('ovenT'), val = $('ovenTV'), mark = $('ovenTM');
+  const upd = () => {
+    val.textContent = inp.value + ' °F';
+    const ok = ovenOk();
+    mark.textContent = ok ? '✓' : '✗';
+    mark.className = 'omark ' + (ok ? 'ok' : 'bad');
+    if (!state.dryT) $('dryStart').disabled = !ok;
+    $('ovenRow').classList.toggle('done', ok);
+  };
+  inp.addEventListener('input', upd); upd();
+})();
+$('dryStart').addEventListener('click', () => {
+  const s = cur(); if (!s || s.type !== 'dryer' || state.dryT) return;
+  if (!ovenOk()){ toast(`Set the oven to ${DRY.oven} °F per procedure first.`); return; }
+  state.dryT = { left: DRY.sim, rate: DRY.sim / DRY.real, running: true };
+  $('dryStart').disabled = true; $('dryStart').textContent = 'Drying…';
+  $('ovenT').disabled = true;
+  $('dryDig').className = 'digits running';
 });
-['pointerup','pointercancel'].forEach(ev => blowBtn.addEventListener(ev, () => { state.blowing = false; }));
 function stepDryer(dt){
-  const s = cur(); if (!s || s.type !== 'dryer' || state.part.station !== 'dryer' || state.devState === 2) return;
-  if (state.blowing){
-    state.moisture = Math.max(0, state.moisture - dt * 0.12);
-    state.partTemp = Math.min(DRY.scaleMax, state.partTemp + dt * 9);
-  } else {
-    state.partTemp = Math.max(DRY.ambient, state.partTemp - dt * 6);
-  }
-  if (state.partTemp > DRY.limit){
-    state.overheat = Math.min(1, state.overheat + dt * 0.12);
-    if (!state.overheatWarned){
-      state.overheatWarned = true;
-      mistake(`Part temperature passed ${DRY.limit} °F — hot enough to dry the penetrant in the flaws. Let it cool between blasts.`);
-    }
-    $('dryFb').textContent = `⚠ TOO HOT — release and let the part cool below ${DRY.limit} °F.`;
-    $('dryFb').className = 'fb bad';
-  } else if (state.overheatWarned && state.partTemp < DRY.limit - 5){
-    $('dryFb').textContent = 'Better — keep pulsing the air, watch the temperature.';
-    $('dryFb').className = 'fb';
-  }
-  $('gMoist').style.width = Math.round(state.moisture * 100) + '%';
-  $('gMoistV').textContent = Math.round(state.moisture * 100) + '%';
-  const tFrac = (state.partTemp - DRY.ambient) / (DRY.scaleMax - DRY.ambient);
-  $('gTemp').style.width = Math.round(tFrac * 100) + '%';
-  $('gTempV').textContent = Math.round(state.partTemp) + ' °F';
-  $('gTempBar').classList.toggle('hot', state.partTemp > DRY.limit);
-  if (state.moisture <= 0){
+  const t = state.dryT; if (!t || !t.running) return;
+  t.left = Math.max(0, t.left - dt * t.rate);
+  const mm = Math.floor(t.left / 60), ss = Math.floor(t.left % 60);
+  $('dryDig').textContent = `${mm}:${String(ss).padStart(2, '0')}`;
+  if (t.left <= 0){
+    t.running = false; t.done = true;
     state.devState = 2;
-    state.blowing = false;
-    toast('✓ Coat is dry — on to the dust chamber.', 'good');
-    $('dryerPanel').classList.remove('show');
-    advance();
+    $('dryDig').className = 'digits done';
+    $('gunBtn').disabled = false;
+    $('ovenT').disabled = false;
+    toast('✓ Cycle done — check the part temperature with the thermal gun.', 'good');
+  }
+}
+$('gunBtn').addEventListener('click', () => {
+  const s = cur(); if (!s || s.type !== 'dryer' || !state.dryT || !state.dryT.done) return;
+  state.gunActive = true;
+  toast('Point the gun — click on the part to read its temperature.');
+  moveGhost();
+});
+function gunRead(){
+  /* oven at 140 → part comes out a little cooler; always below the 150 max */
+  const temp = Math.round(+$('ovenT').value - 10 - Math.random() * 6);
+  state.gunActive = false;
+  state.gunChip = { temp, at: performance.now() };
+  toast(`✓ Part reads ${temp} °F — below the ${DRY.partMax} °F limit. On to the dust chamber.`, 'good');
+  $('dryerPanel').classList.remove('show');
+  setTimeout(advance, 400);
+}
+
+/* ================= over-dwell clock ================= */
+function startOverClock(label){
+  state.overClock = { label, sim: 0, warned: false, penalized: false, rate: 600 / 45 };
+}
+function stopOverClock(){ state.overClock = null; }
+function stepOverClock(dt){
+  const oc = state.overClock; if (!oc || state.done) return;
+  oc.sim += dt * oc.rate;
+  if (oc.sim > OVERDWELL.warnSim && !oc.warned){
+    oc.warned = true;
+    toast(`⚠ The part is sitting past its ${oc.label} — keep it moving.`, 'warn');
+  }
+  if (oc.sim > OVERDWELL.badSim && !oc.penalized){
+    oc.penalized = true;
+    mistake(`Part sat ${Math.round(OVERDWELL.badSim / 60)}+ minutes past its ${oc.label} — ${oc.label === 'penetrant dwell' ? 'the penetrant is drying on the surface and in the flaws' : 'the indications are over-developing and losing definition'}.`);
+  }
+  if (oc.penalized) state.overDmg = Math.min(0.5, state.overDmg + dt * 0.01);
+  /* red running clock in the widget slot while on the line */
+  if (state.mode === 'line'){
+    const mm = Math.floor(oc.sim / 60), ss = Math.floor(oc.sim % 60);
+    const w = widget.querySelector('.overchip');
+    const txt = `⚠ +${mm}:${String(ss).padStart(2, '0')} past ${oc.label}`;
+    if (w) w.textContent = txt;
+    else widget.innerHTML = `<div class="overchip">${txt}</div>`;
   }
 }
 
 /* ================= zoom washing ================= */
 function applyWash(dt){
   const s = cur(); if (!s || s.type !== 'zoomwash' || state.mode !== 'zoom') return;
+  if (s.params && !washSetup.confirmed) return;
   state.lastApplyAt = performance.now();
   const x = Math.max(PLATE.x0, Math.min(PLATE.x1, state.px));
   const y = Math.max(PLATE.y0, Math.min(PLATE.y1, state.py));
@@ -1312,16 +1453,16 @@ function finish(){
     <tr><td>Weld face</td><td>Rounded — porosity</td><td>${r.por} indications</td><td class="ok">✓</td></tr>`;
   $('verdictBox').textContent = 'Disposition: REJECT — cracks (linear indications) are not acceptable in any amount. The weld requires repair and re-inspection.';
   const wg = $('washGrade');
-  const d = state.washDamage, o = state.overheat;
+  const d = state.washDamage, o = state.overDmg;
   const notes = [];
-  if (d < 0.15 && o < 0.1){ wg.className = 'washgrade'; wg.textContent = 'Process control: GOOD — rinse per procedure, part never overheated. Indications developed at full strength.'; }
+  if (d < 0.15 && o < 0.05){ wg.className = 'washgrade'; wg.textContent = 'Process control: GOOD — rinse per procedure, dwells on time, dryer per procedure. Indications developed at full strength.'; }
   else {
     if (d >= 0.15) notes.push(`over-washed ${Math.round(d*100)}% (penetrant flushed from flaws)`);
-    if (o >= 0.1) notes.push(`overheated in the dryer ${Math.round(o*100)}% (penetrant dried in the flaws)`);
+    if (o >= 0.05) notes.push('part left sitting past its dwell/development time');
     const sev = (d + o) < 0.5 ? 'warn' : 'bad';
     wg.className = 'washgrade ' + sev;
     wg.textContent = 'Process control: ' + notes.join(' · ') + ' — the indications came up dimmer than they should. ' +
-      (sev === 'bad' ? 'In the field these could have been missed entirely — reprocess from pre-clean.' : 'Watch the rinse parameters and the dryer temperature.');
+      (sev === 'bad' ? 'In the field these could have been missed entirely — reprocess from pre-clean.' : 'Keep the part moving and watch the rinse parameters.');
   }
   const n = state.mistakes.length;
   $('repMistakes').textContent = n === 0
@@ -1414,31 +1555,45 @@ function drawStation(g, st, isTarget, now){
     g.fillStyle = '#555b62';
     g.fillRect(x0 - 3, 252, w + 6, 8);
   } else if (st.type === 'booth'){
-    g.fillStyle = '#34383d';
-    g.fillRect(x0 - 2, 150, w + 4, FLOOR_Y - 150);
-    g.fillStyle = '#26292d';
-    g.fillRect(x0 + 4, 158, w - 8, FLOOR_Y - 166);
-    if (st.uv){
-      g.fillStyle = 'rgba(90,60,220,.35)';
-      g.fillRect(x0 + 4, 158, w - 8, FLOOR_Y - 166);
-      g.fillStyle = '#8a6cff';
-      g.fillRect(x0 + 10, 162, w - 20, 4);
-      g.shadowColor = '#8a6cff'; g.shadowBlur = 12;
-      g.fillRect(x0 + 10, 162, w - 20, 4);
-      g.shadowBlur = 0;
-    } else {
-      /* water jets marks */
-      g.strokeStyle = 'rgba(150,190,230,.4)'; g.lineWidth = 1.5;
-      for (let i = 0; i < 4; i++){
-        g.beginPath();
-        g.moveTo(x0 + 14 + i * 20, 166);
-        g.lineTo(x0 + 10 + i * 20, 200);
-        g.stroke();
-      }
+    /* open spray booth: side posts, overhead spray header with nozzles, drain grate —
+       deliberately nothing like a tank (no walls, no liquid) */
+    g.fillStyle = '#555b62';
+    g.fillRect(x0 + 2, 152, 6, FLOOR_Y - 152);
+    g.fillRect(x0 + w - 8, 152, 6, FLOOR_Y - 152);
+    /* header pipe */
+    g.fillStyle = '#666c74';
+    g.fillRect(x0 + 2, 152, w - 4, 10);
+    /* nozzles + falling spray */
+    for (let i = 0; i < 3; i++){
+      const nx = x0 + 18 + i * ((w - 36) / 2);
+      g.fillStyle = '#8a9099';
+      g.beginPath(); g.moveTo(nx - 4, 162); g.lineTo(nx + 4, 162); g.lineTo(nx, 170); g.closePath(); g.fill();
+      const sway = Math.sin(now / 300 + i * 2) * 2;
+      const spray = g.createLinearGradient(0, 170, 0, 320);
+      spray.addColorStop(0, st.uv ? 'rgba(160,150,255,.4)' : 'rgba(160,200,235,.42)');
+      spray.addColorStop(1, 'rgba(160,200,235,0)');
+      g.fillStyle = spray;
+      g.beginPath();
+      g.moveTo(nx - 2, 170);
+      g.lineTo(nx + 2, 170);
+      g.lineTo(nx + 13 + sway, 320);
+      g.lineTo(nx - 13 + sway, 320);
+      g.closePath(); g.fill();
     }
-    /* drain grate */
+    if (st.uv){
+      /* UV tube under the header */
+      g.fillStyle = '#8a6cff';
+      g.shadowColor = '#8a6cff'; g.shadowBlur = 14;
+      g.fillRect(x0 + 12, 164, w - 24, 4);
+      g.shadowBlur = 0;
+      g.fillStyle = 'rgba(110,80,255,.10)';
+      g.fillRect(x0 + 8, 168, w - 16, 190);
+    }
+    /* splash drain grate */
+    g.fillStyle = '#33373c';
+    g.fillRect(x0 - 2, FLOOR_Y - 12, w + 4, 12);
     g.fillStyle = '#1d2023';
-    g.fillRect(x0 + 4, FLOOR_Y - 14, w - 8, 8);
+    for (let gx = x0 + 2; gx < x0 + w - 4; gx += 8) g.fillRect(gx, FLOOR_Y - 10, 4, 8);
   } else if (st.type === 'rack'){
     g.strokeStyle = '#5c6167'; g.lineWidth = 4;
     g.beginPath(); g.moveTo(x0 + 8, FLOOR_Y); g.lineTo(x0 + 8, 200); g.lineTo(x0 + w - 8, 200); g.lineTo(x0 + w - 8, FLOOR_Y); g.stroke();
@@ -1450,22 +1605,26 @@ function drawStation(g, st, isTarget, now){
     g.fillStyle = '#3a3f45';
     g.fillRect(x0 + 4, FLOOR_Y - 10, w - 8, 10);
   } else if (st.type === 'dryer'){
+    const running = state.dryT && state.dryT.running;
     g.fillStyle = '#454a51';
     g.fillRect(x0 - 2, 170, w + 4, FLOOR_Y - 170);
     g.fillStyle = '#33373c';
     g.fillRect(x0 + 6, 182, w - 12, FLOOR_Y - 192);
+    /* oven setpoint readout on the box */
+    g.fillStyle = running ? '#ffb060' : '#9aa1a9';
+    g.font = '600 10px "JetBrains Mono", monospace';
+    g.textAlign = 'center';
+    g.fillText(($('ovenT') ? $('ovenT').value : '—') + '°F', st.x, 178);
     /* fan */
     g.save();
-    g.translate(st.x, 200);
-    const spin = (state.blowing ? now / 60 : now / 800);
-    g.rotate(spin);
+    g.translate(st.x, 204);
+    g.rotate(running ? now / 60 : now / 800);
     g.fillStyle = '#7d848c';
     for (let i = 0; i < 4; i++){ g.rotate(Math.PI / 2); g.fillRect(-2, 0, 4, 12); }
     g.restore();
     g.strokeStyle = '#7d848c'; g.lineWidth = 1.5;
-    g.beginPath(); g.arc(st.x, 200, 14, 0, Math.PI * 2); g.stroke();
-    /* heat glow when blowing */
-    if (state.blowing){
+    g.beginPath(); g.arc(st.x, 204, 14, 0, Math.PI * 2); g.stroke();
+    if (running){
       g.fillStyle = 'rgba(255,150,60,.15)';
       g.fillRect(x0 + 6, 182, w - 12, FLOOR_Y - 192);
     }
@@ -1552,6 +1711,30 @@ function renderLine(now, dt){
     if (state.devState === 1 && pt.station !== 'dev' && Math.random() < 0.12)
       spawn(pt.x + (Math.random()*30 - 15), pt.y + PART_H, '235,237,232', 1, { vy: 90, sy: 30, jx: 4, r: 1.4 });
   }
+  /* thermal-gun reading chip floating by the part */
+  if (state.gunChip && now - state.gunChip.at < 3500){
+    const a = Math.min(1, (3500 - (now - state.gunChip.at)) / 800);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = 'rgba(20,18,16,.92)';
+    const chipW = 96;
+    ctx.fillRect(pt.x + PART_W/2 + 10, pt.y + 8, chipW, 34);
+    ctx.strokeStyle = '#6fce9a'; ctx.lineWidth = 2;
+    ctx.strokeRect(pt.x + PART_W/2 + 10, pt.y + 8, chipW, 34);
+    ctx.fillStyle = '#6fce9a';
+    ctx.font = '600 16px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(state.gunChip.temp + ' °F', pt.x + PART_W/2 + 10 + chipW/2, 26 + pt.y);
+    ctx.font = '600 8px "JetBrains Mono", monospace';
+    ctx.fillText('< ' + DRY.partMax + ' °F MAX ✓', pt.x + PART_W/2 + 10 + chipW/2, 37 + pt.y);
+    ctx.globalAlpha = 1;
+  }
+  /* gun laser dot while aiming */
+  if (state.gunActive){
+    ctx.strokeStyle = 'rgba(255,60,60,.55)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(state.px + 14, state.py + 10); ctx.lineTo(state.px, state.py); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,60,60,.95)';
+    ctx.beginPath(); ctx.arc(state.px, state.py, 2.4, 0, Math.PI * 2); ctx.fill();
+  }
   /* particles */
   for (const p of parts){
     ctx.globalAlpha = Math.max(0, 1 - p.t / p.life) * 0.6;
@@ -1587,6 +1770,38 @@ function renderZoom(now){
       ctx.restore();
     }
     ctx.save(); ctx.globalAlpha = uv; drawBleed(ctx); ctx.restore();
+  }
+  /* big coverage readout pinned right above the part — hard to miss */
+  const csHud = cur();
+  if (csHud && csHud.type === 'zoomwash' && !state.done){
+    const c = coverage(grid);
+    const locked = csHud.params && !washSetup.confirmed;
+    const hx = PLATE.x0, hy = 34, hw = locked ? 430 : 380, hh = 40;
+    ctx.fillStyle = uv > 0.5 ? 'rgba(18,14,48,.88)' : 'rgba(250,247,242,.94)';
+    ctx.fillRect(hx, hy, hw, hh);
+    ctx.strokeStyle = locked ? 'rgba(200,16,46,.8)' : (c >= csHud.need ? '#2e7d4f' : '#e8a87c');
+    ctx.lineWidth = 2;
+    ctx.strokeRect(hx, hy, hw, hh);
+    ctx.textAlign = 'left';
+    if (locked){
+      ctx.fillStyle = uv > 0.5 ? '#ffb3be' : '#c8102e';
+      ctx.font = '600 15px "JetBrains Mono", monospace';
+      ctx.fillText('🔒 WATER OFF — SET THE STATION BELOW', hx + 14, hy + 26);
+    } else {
+      ctx.fillStyle = uv > 0.5 ? '#cfc8b8' : '#4a4a47';
+      ctx.font = '600 12px "JetBrains Mono", monospace';
+      ctx.fillText(csHud.covLabel.toUpperCase(), hx + 14, hy + 25);
+      ctx.font = '700 24px "JetBrains Mono", monospace';
+      ctx.fillStyle = c >= csHud.need ? '#4fc084' : (uv > 0.5 ? '#e8a87c' : '#b54515');
+      ctx.textAlign = 'right';
+      ctx.fillText(Math.floor(c * 100) + '%', hx + hw - 130, hy + 30);
+      /* mini bar */
+      ctx.fillStyle = uv > 0.5 ? 'rgba(255,255,255,.15)' : 'rgba(0,0,0,.12)';
+      ctx.fillRect(hx + hw - 118, hy + 14, 104, 12);
+      ctx.fillStyle = c >= csHud.need ? '#4fc084' : '#e8a87c';
+      ctx.fillRect(hx + hw - 118, hy + 14, Math.round(104 * Math.min(1, c)), 12);
+      ctx.textAlign = 'left';
+    }
   }
   const cs = cur();
   if (cs && cs.type === 'zoomwash' && !state.done && !state.washing){
@@ -1624,9 +1839,28 @@ function nozzleSVG(h){
     <path d="M43 42 Q52 44 56 50" fill="none" stroke="#2c333a" stroke-width="3.4" stroke-linecap="round"/>
   </svg>`;
 }
+function gunSVG(h){
+  h = h || 56;
+  return `<svg width="${h}" height="${h*0.85}" viewBox="0 0 56 48">
+    <rect x="6" y="12" width="34" height="14" rx="4" fill="#f2b632" stroke="#8a6a12" stroke-width="1.4"/>
+    <rect x="40" y="14" width="8" height="10" rx="2" fill="#3a3f45"/>
+    <rect x="14" y="26" width="11" height="16" rx="3" fill="#3a3f45"/>
+    <rect x="9" y="15" width="10" height="8" rx="1.5" fill="#1d2023"/>
+    <text x="14" y="21.5" font-size="5.5" fill="#6fce9a" font-family="monospace">°F</text>
+  </svg>`;
+}
 function moveGhost(){
   const s = cur();
-  const showNozzle = state.mode === 'zoom' && s && s.type === 'zoomwash';
+  if (state.mode === 'line' && state.gunActive){
+    const r = stage.getBoundingClientRect();
+    const inside = state.clientX >= r.left && state.clientX <= r.right && state.clientY >= r.top && state.clientY <= r.bottom;
+    if (!inside){ ghost.style.display = 'none'; return; }
+    if (ghost.dataset.kind !== 'gun'){ ghost.innerHTML = gunSVG(56); ghost.dataset.kind = 'gun'; }
+    ghost.style.display = 'block';
+    ghost.style.transform = `translate(${state.clientX + 10}px, ${state.clientY + 8}px)`;
+    return;
+  }
+  const showNozzle = state.mode === 'zoom' && s && s.type === 'zoomwash' && (!s.params || washSetup.confirmed);
   if (!showNozzle){ ghost.style.display = 'none'; stage.classList.remove('washing-cursor'); return; }
   const r = stage.getBoundingClientRect();
   const inside = state.clientX >= r.left && state.clientX <= r.right && state.clientY >= r.top && state.clientY <= r.bottom;
@@ -1649,6 +1883,7 @@ function frame(now){
     stepTimer(dt);
     stepDip(dt);
     stepDryer(dt);
+    stepOverClock(dt);
   }
   stepParts(dt);
   const dtv = dt * 2.2;
