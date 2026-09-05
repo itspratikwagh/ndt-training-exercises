@@ -239,6 +239,7 @@
       <li>Spray the penetrant across the part, then <b>watch it wick into the two cracks</b>.</li>
       <li>The shallow crack fills quickly. The deep, tight one keeps drawing penetrant for minutes.</li>
       <li><b>You decide when to wipe off the excess.</b> The procedure calls for a 10-minute dwell — see what happens if you cut it short.</li>
+      <li>Then spray the <b>developer</b> and watch what's trapped in each crack bleed back out.</li>
     </ul>
     <button class="primary" id="beginBtn">Start →</button>
   </div>
@@ -280,6 +281,7 @@ const DEEP_T = 570;        // needs ~9.5 min — the full recommended dwell
 /* ---------------- state ---------------- */
 const COLS = Math.ceil((SURF_X1 - SURF_X0) / 8);
 let cover = new Float32Array(COLS);
+let devCover = new Float32Array(COLS);
 const state = {
   phase: 'intro',        // spray | dwell | wiping | develop | result
   spraying: false,
@@ -302,15 +304,15 @@ function fillFrac(t, T){ return Math.min(1, Math.sqrt(Math.max(0, t) / T)); }
 /* ---------------- phases ---------------- */
 function setPhase(p){
   state.phase = p;
-  stage.classList.toggle('spraymode', p === 'spray');
+  stage.classList.toggle('spraymode', p === 'spray' || p === 'devspray');
   if (p === 'spray'){
-    stepTag.textContent = 'Step 1 of 3 · Apply penetrant';
+    stepTag.textContent = 'Step 1 of 4 · Apply penetrant';
     stepText.innerHTML = 'Press and sweep to <b>spray penetrant</b> across the whole surface — cover both cracks.';
     widget.innerHTML = `<div class="covbox"><div class="covlabel">Surface covered · <span id="covpct">0%</span></div>
       <div class="covbar" id="covbar"><i id="covfill"></i></div></div>`;
     caption.textContent = 'Cross-section view. Two discontinuities break the surface: a shallow crack and a deep, tight crack.';
   } else if (p === 'dwell'){
-    stepTag.textContent = 'Step 2 of 3 · Dwell — capillary action at work';
+    stepTag.textContent = 'Step 2 of 4 · Dwell — capillary action at work';
     stepText.innerHTML = 'Watch the penetrant <b>wick into the cracks</b> — no pressure, just wetting. The procedure calls for <b>10:00</b>. Wipe whenever you think it’s ready.';
     widget.innerHTML = `<div class="dwellbox">
       <div><div class="digits" id="dwellDig">0:00</div><div class="sub">of 10:00 · sim ×${DWELL_RATE}</div></div>
@@ -318,12 +320,19 @@ function setPhase(p){
     $('wipeBtn').addEventListener('click', () => { if (state.phase === 'dwell') setPhase('wiping'); });
     caption.textContent = 'Depth filled grows with the SQUARE ROOT of time — the first half fills fast, the last half takes about 4× longer. Deep, tight cracks need the full dwell.';
   } else if (p === 'wiping'){
-    stepTag.textContent = 'Step 3 of 3 · Remove & develop';
+    stepTag.textContent = 'Step 3 of 4 · Remove the excess';
     stepText.innerHTML = 'Wiping off the excess… whatever made it <b>into</b> the cracks stays there.';
     widget.innerHTML = '';
     state.wipeX = SURF_X0 - 60;
+  } else if (p === 'devspray'){
+    stepTag.textContent = 'Step 4 of 4 · Apply developer';
+    stepText.innerHTML = 'Now spray a thin, even coat of <b>developer</b> across the surface — it acts like a blotter.';
+    widget.innerHTML = `<div class="covbox"><div class="covlabel">Developer coverage · <span id="covpct">0%</span></div>
+      <div class="covbar" id="covbar"><i id="covfill"></i></div></div>`;
+    caption.textContent = 'The developer wicks trapped penetrant back OUT of the crack — capillary action in reverse — spreading it wide enough to see.';
   } else if (p === 'develop'){
-    stepText.innerHTML = 'Developer on — it draws the trapped penetrant <b>back out</b> to the surface.';
+    stepText.innerHTML = 'Developer working — it draws the trapped penetrant <b>back out</b> to the surface.';
+    widget.innerHTML = '';
     state.devT = 0;
   } else if (p === 'result'){
     finishRun();
@@ -368,6 +377,7 @@ function finishRun(){
 }
 $('againBtn').addEventListener('click', () => {
   cover = new Float32Array(COLS);
+  devCover = new Float32Array(COLS);
   state.dwell = 0; state.fillS = 0; state.fillD = 0; state.devT = 0;
   state.fullToasted = false;
   $('resultPanel').classList.remove('show');
@@ -375,11 +385,11 @@ $('againBtn').addEventListener('click', () => {
 });
 
 /* ---------------- spraying ---------------- */
-function canSVG(h){
+function canSVG(color, h){
   h = h || 68;
   return `<svg width="${h*0.62}" height="${h}" viewBox="0 0 36 58">
     <rect x="7" y="14" width="22" height="42" rx="3" fill="#dedbd2" stroke="#a8a49a" stroke-width="1"/>
-    <rect x="7" y="23" width="22" height="20" fill="#c8102e"/>
+    <rect x="7" y="23" width="22" height="20" fill="${color}"/>
     <rect x="12" y="8.5" width="12" height="6.5" rx="1.5" fill="#b3afa6" stroke="#8d897f" stroke-width="0.8"/>
     <rect x="15.4" y="3.5" width="5.2" height="5.5" rx="1" fill="#6f6c66"/>
     <circle cx="18" cy="5.4" r="1.1" fill="#2c2a27"/>
@@ -391,7 +401,7 @@ function stagePos(e){
   return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
 }
 stage.addEventListener('pointerdown', e => {
-  if (state.phase !== 'spray') return;
+  if (state.phase !== 'spray' && state.phase !== 'devspray') return;
   e.preventDefault();
   state.spraying = true;
   const p = stagePos(e); state.px = p.x; state.py = p.y;
@@ -405,38 +415,45 @@ window.addEventListener('pointermove', e => {
 });
 window.addEventListener('pointerup', () => { state.spraying = false; moveGhost(); });
 function moveGhost(){
-  if (state.phase !== 'spray'){ ghost.style.display = 'none'; return; }
+  const spraying = state.phase === 'spray' || state.phase === 'devspray';
+  if (!spraying){ ghost.style.display = 'none'; return; }
   const r = stage.getBoundingClientRect();
   const inside = state.clientX >= r.left && state.clientX <= r.right && state.clientY >= r.top && state.clientY <= r.bottom;
   if (!inside){ ghost.style.display = 'none'; return; }
-  if (!ghost.innerHTML) ghost.innerHTML = canSVG();
+  const kind = state.phase === 'spray' ? 'pen' : 'dev';
+  if (ghost.dataset.kind !== kind){
+    ghost.innerHTML = canSVG(kind === 'pen' ? '#c8102e' : '#8a8f96');
+    ghost.dataset.kind = kind;
+  }
   ghost.style.display = 'block';
   ghost.style.transform = `translate(${state.clientX - 6}px, ${state.clientY + 2}px)`;
   ghost.classList.toggle('spraying', state.spraying);
 }
 function applySpray(dt){
+  const dev = state.phase === 'devspray';
+  const layer = dev ? devCover : cover;
   const x = state.px;
   const c0 = Math.max(0, Math.floor((x - 34 - SURF_X0) / 8)),
         c1 = Math.min(COLS - 1, Math.floor((x + 34 - SURF_X0) / 8));
   for (let i = c0; i <= c1; i++){
     const cx = SURF_X0 + i * 8 + 4;
     const d = Math.abs(cx - x);
-    cover[i] = Math.min(1, cover[i] + 0.09 * (1 - d / 40));
+    layer[i] = Math.min(1, layer[i] + 0.09 * (1 - d / 40));
   }
   for (let i = 0; i < 6; i++){
-    const ang = Math.PI * (0.3 + Math.random() * 0.4);
     parts.push({ x: state.px + (Math.random()*10-5), y: Math.min(state.py, SURF_Y - 8),
-      vx: Math.cos(ang) * (Math.random()*60-30), vy: 60 + Math.random()*80,
-      life: 0.3 + Math.random()*0.2, t: 0, r: 1.2 + Math.random()*2 });
+      vx: (Math.random()*60-30), vy: 60 + Math.random()*80,
+      life: 0.3 + Math.random()*0.2, t: 0, r: 1.2 + Math.random()*2, dev });
   }
-  const c = coverage();
+  let n = 0; for (const v of layer) if (v >= 0.5) n++;
+  const c = n / COLS;
   const f = $('covfill'), pc = $('covpct');
   if (f) f.style.width = Math.round(c * 100) + '%';
   if (pc) pc.textContent = Math.floor(c * 100) + '%';
   if (c >= 0.95 && !state.advanceLock){
     state.advanceLock = true;
     const b = $('covbar'); if (b) b.classList.add('full');
-    setTimeout(() => { state.advanceLock = false; setPhase('dwell'); }, 600);
+    setTimeout(() => { state.advanceLock = false; setPhase(dev ? 'develop' : 'dwell'); }, 600);
   }
 }
 
@@ -504,7 +521,7 @@ function frame(now){
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
 
   /* ---- update ---- */
-  if (state.phase === 'spray' && state.spraying) applySpray(dt);
+  if ((state.phase === 'spray' || state.phase === 'devspray') && state.spraying) applySpray(dt);
   if (state.phase === 'dwell'){
     state.dwell += dt * DWELL_RATE;
     if (coverageAt(SHALLOW.pts[0].x) >= 0.5) state.fillS += dt * DWELL_RATE;
@@ -524,7 +541,7 @@ function frame(now){
     state.wipeX += dt * 900;
     const c1 = Math.min(COLS, Math.floor((state.wipeX - SURF_X0) / 8));
     for (let i = 0; i < c1; i++) cover[i] = 0;
-    if (state.wipeX > SURF_X1 + 80) setPhase('develop');
+    if (state.wipeX > SURF_X1 + 80) setPhase('devspray');
   }
   if (state.phase === 'develop'){
     state.devT = Math.min(1, state.devT + dt / 2.2);
@@ -555,7 +572,7 @@ function frame(now){
   /* capillary fill inside cracks */
   const showFill = state.phase !== 'spray' || state.fillS > 0;
   const fS = fillFrac(state.fillS, SHALLOW_T), fD = fillFrac(state.fillD, DEEP_T);
-  const post = state.phase === 'wiping' || state.phase === 'develop' || state.phase === 'result';
+  const post = state.phase === 'wiping' || state.phase === 'devspray' || state.phase === 'develop' || state.phase === 'result';
   if (showFill){
     const tipS = drawPartialCrack(ctx, SHALLOW, fS, '#c8102e', SHALLOW.w);
     const tipD = drawPartialCrack(ctx, DEEP, fD, '#c8102e', DEEP.w);
@@ -606,13 +623,23 @@ function frame(now){
     ctx.restore();
   }
 
-  /* developer + bleedout */
+  /* developer film (sprayed by the student) + bleedout */
+  if (state.phase === 'devspray' || state.phase === 'develop' || state.phase === 'result'){
+    for (let i = 0; i < COLS; i++){
+      if (devCover[i] >= 0.15){
+        const x = SURF_X0 + i * 8;
+        ctx.globalAlpha = Math.min(1, devCover[i] + 0.2);
+        ctx.fillStyle = '#dcd7c4';
+        ctx.fillRect(x, SURF_Y - 8, 8.5, 8);
+        ctx.fillStyle = 'rgba(150,144,124,.5)';
+        ctx.fillRect(x, SURF_Y - 8, 8.5, 1.5);
+        ctx.globalAlpha = 1;
+      }
+    }
+    ctx.strokeStyle = 'rgba(150,146,136,.45)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(SURF_X0, SURF_Y); ctx.lineTo(SURF_X1, SURF_Y); ctx.stroke();
+  }
   if (state.phase === 'develop' || state.phase === 'result'){
-    /* thin developer film */
-    ctx.fillStyle = 'rgba(228,226,218,.95)';
-    ctx.fillRect(SURF_X0 - 8, SURF_Y - 7, SURF_X1 - SURF_X0 + 16, 7);
-    ctx.strokeStyle = 'rgba(150,146,136,.6)'; ctx.lineWidth = 1;
-    ctx.strokeRect(SURF_X0 - 8, SURF_Y - 7, SURF_X1 - SURF_X0 + 16, 7);
     /* bleedout blots sized by fill */
     const t = state.devT;
     for (const [crack, frac] of [[SHALLOW, fS], [DEEP, fD]]){
@@ -634,8 +661,8 @@ function frame(now){
   }
 
   /* spray particles */
-  ctx.fillStyle = 'rgba(200,16,46,.5)';
   for (const p of parts){
+    ctx.fillStyle = p.dev ? 'rgba(140,144,150,.6)' : 'rgba(200,16,46,.5)';
     ctx.globalAlpha = Math.max(0, 1 - p.t / p.life) * 0.55;
     ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
   }
