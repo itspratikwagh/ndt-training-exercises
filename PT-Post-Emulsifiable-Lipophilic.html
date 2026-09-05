@@ -383,15 +383,17 @@
   </header>
 
   <div class="steps" id="steps">
-    <div class="s" data-i="1"><span class="n">1</span><span class="l">Pre-wash</span></div>
-    <div class="s" data-i="2"><span class="n">2</span><span class="l">Penetrant</span></div>
-    <div class="s" data-i="3"><span class="n">3</span><span class="l">Emulsifier</span></div>
-    <div class="s" data-i="4"><span class="n">4</span><span class="l">Rinse</span></div>
-    <div class="s" data-i="5"><span class="n">5</span><span class="l">Dry</span></div>
-    <div class="s" data-i="6"><span class="n">6</span><span class="l">Dust dev</span></div>
-    <div class="s" data-i="7"><span class="n">7</span><span class="l">Develop</span></div>
-    <div class="s" data-i="8"><span class="n">8</span><span class="l">Inspect</span></div>
-    <div class="s" data-i="9"><span class="n">9</span><span class="l">Post-clean</span></div>
+    <div class="s" data-i="1"><span class="n">1</span><span class="l">Setup</span></div>
+    <div class="s" data-i="2"><span class="n">2</span><span class="l">Pre-wash</span></div>
+    <div class="s" data-i="3"><span class="n">3</span><span class="l">Penetrant</span></div>
+    <div class="s" data-i="4"><span class="n">4</span><span class="l">Emulsifier</span></div>
+    <div class="s" data-i="5"><span class="n">5</span><span class="l">Rinse</span></div>
+    <div class="s" data-i="6"><span class="n">6</span><span class="l">Dry</span></div>
+    <div class="s" data-i="7"><span class="n">7</span><span class="l">Dust dev</span></div>
+    <div class="s" data-i="8"><span class="n">8</span><span class="l">Develop</span></div>
+    <div class="s" data-i="9"><span class="n">9</span><span class="l">Inspect</span></div>
+    <div class="s" data-i="10"><span class="n">10</span><span class="l">Post-clean</span></div>
+  </div>
   </div>
 
   <div class="instr" id="instr">
@@ -505,7 +507,7 @@
       <li>Stations, in order: water pre-wash · penetrant tank · drain rack (dwell) · <b>lipophilic emulsifier tank</b> · rinse under UV-A · forced-air dryer · dry-powder dust chamber · development rack · inspection booth.</li>
       <li>The emulsifier is applied by <b>dipping only</b> and works by <b>diffusion — no agitation</b> in the tank.</li>
       <li><b>Emulsification time is critical</b>: after the dip, a 90-second clock runs and the wash must follow immediately.</li>
-      <li>The rinse water stays <b>off</b> until you've set the station per procedure, one setting at a time.</li>
+      <li>The stations are set up at <b>shift start</b>, so the wash can follow the emulsifier without delay.</li>
       <li>Dwell times matter both ways: once a timer finishes, a red clock starts — <b>don't let the part sit</b>.</li>
       <li>The part must be completely dry before the dust chamber — set the oven per procedure, run the cycle, then verify with the thermal gun.</li>
     </ul>
@@ -648,30 +650,32 @@ const state = {
 
 /* ================= procedure flow ================= */
 const FLOW = [
- { step:1, name:'Pre-wash',   id:'p1', type:'zoomwash', station:'prewash', light:0, need:0.95,
+ { step:1, name:'Setup', id:'s0', type:'setup',
+   text:'Shift start — set up the <b>rinse station</b> below before the part moves: confirm each setting, in order.' },
+ { step:2, name:'Pre-wash',   id:'p1', type:'zoomwash', station:'prewash', light:0, need:0.95,
    text:'Everything on this line runs on water — no solvents. Carry the part to the <b>pre-wash booth</b> and drop it in to clean it.',
    ztext:'Wash the grime off with the <b>water spray</b> — press and sweep across the whole part.', covLabel:'Surface cleaned' },
- { step:2, name:'Penetrant',  id:'p2', type:'dip', station:'pen',
+ { step:3, name:'Penetrant',  id:'p2', type:'dip', station:'pen',
    text:'Lower the part into the <b class="fl">penetrant tank</b> until it’s fully under, hold, then pull it out.' },
- { step:2, name:'Penetrant',  id:'p3', type:'rack', station:'dwell', sim:600, real:45,
+ { step:3, name:'Penetrant',  id:'p3', type:'rack', station:'dwell', sim:600, real:45,
    text:'Hang the part on the <b>drain rack</b> — penetrant dwell, <b>10 minutes</b>.' },
- { step:3, name:'Emulsifier', id:'e1', type:'dip', station:'emul',
+ { step:4, name:'Emulsifier', id:'e1', type:'dip', station:'emul',
    text:'Lower the part into the <b>lipophilic emulsifier</b> — dip and hold, <b>no agitation</b>. It works by diffusion alone.' },
- { step:3, name:'Emulsifier', id:'e2', type:'rack', station:'emul', sim:90, real:15, auto:true,
+ { step:4, name:'Emulsifier', id:'e2', type:'rack', station:'emul', sim:90, real:15, auto:true,
    text:'Let it hang and drain over the tank — <b>emulsification time is critical: 90 seconds</b>. Be ready to move.' },
- { step:4, name:'Rinse',      id:'p4', type:'zoomwash', station:'rinse', light:1, need:0.97, params:true,
+ { step:5, name:'Rinse',      id:'p4', type:'zoomwash', station:'rinse', light:1, need:0.97, params:true,
    text:'The wash <b>stops the emulsification</b> — get the part to the rinse station NOW.',
-   ztext:'<b>Water is off.</b> Confirm the four station settings below, one at a time — then rinse until the glowing background is gone. <b>Don’t over-wash.</b>', covLabel:'Background removed' },
- { step:5, name:'Dry', id:'p6', type:'dryer', station:'dryer',
+   ztext:'The station was set at shift start — rinse until the glowing background is gone. <b>Don’t over-wash.</b>', covLabel:'Background removed' },
+ { step:6, name:'Dry', id:'p6', type:'dryer', station:'dryer',
    text:'Into the <b>forced-air dryer</b> — dry powder developer needs a completely dry surface. Set the oven per procedure, run the cycle, then verify the part with the thermal gun.' },
- { step:6, name:'Dust dev', id:'p7', type:'dip', station:'dust',
+ { step:7, name:'Dust dev', id:'p7', type:'dip', station:'dust',
    text:'Lower the part into the <b>dust chamber</b> — dry powder developer is circulating. Hold it in the cloud, then pull it out.' },
- { step:7, name:'Develop',    id:'p8', type:'rack', station:'devrack', sim:600, real:45,
+ { step:8, name:'Develop',    id:'p8', type:'rack', station:'devrack', sim:600, real:45,
    text:'Onto the <b>development rack</b> — developer dwell, <b>10 minutes</b>, while the indications bleed out.' },
- { step:8, name:'Inspect',    id:'p9', type:'inspect', station:'inspect', light:1,
+ { step:9, name:'Inspect',    id:'p9', type:'inspect', station:'inspect', light:1,
    text:'Development is done — get the part into the <b>inspection booth</b> before it over-develops.',
    ztext:'Drag the <b>ruler</b> to each glowing indication, measure tip-to-tip, and enter your readings below.' },
- { step:9, name:'Post-clean', id:'p10', type:'zoomwash', station:'prewash', light:0, need:0.9,
+ { step:10, name:'Post-clean', id:'p10', type:'zoomwash', station:'prewash', light:0, need:0.9,
    text:'Good work. Back to the <b>pre-wash booth</b> for post-cleaning.',
    ztext:'Rinse the developer and residue off the part.', covLabel:'Cleaned' }
 ];
@@ -1005,7 +1009,7 @@ function advance(){
 }
 function enterStep(){
   const s = cur(); if (!s) return;
-  stepTag.textContent = `Step ${s.step} of 9 · ${s.name}`;
+  stepTag.textContent = `Step ${s.step} of 10 · ${s.name}`;
   stepText.innerHTML = s.text;
   state.uvTarget = 0;   // line view is white light; UV comes on inside zoom booths
   document.querySelectorAll('#steps .s').forEach(p => {
@@ -1013,8 +1017,9 @@ function enterStep(){
     p.classList.toggle('active', i === s.step);
     p.classList.toggle('done', i < s.step);
   });
-  $('washPanel').classList.remove('show');
+  $('washPanel').classList.toggle('show', s.type === 'setup');
   $('dryerPanel').classList.remove('show');
+  if (s.type === 'setup') resetWashSetup();
   $('measure').classList.remove('show');
   zoneG.setAttribute('visibility', 'hidden');
   rulerG.setAttribute('visibility', 'hidden');
@@ -1032,7 +1037,7 @@ function onArrive(stationId){
   if (s.type === 'zoomwash'){
     enterZoom(s.id === 'p10' ? 'postclean' : s.station, s.light);
     stepText.innerHTML = s.ztext;
-    if (s.params){ resetWashSetup(); $('washPanel').classList.add('show'); }
+    if (s.params) $('washPanel').classList.add('show');
     renderWidget();
   } else if (s.type === 'rack'){
     renderWidget();
@@ -1116,7 +1121,10 @@ function bindWash(cfg, unit){
     washSetup.idx++;
     if (washSetup.idx >= WSEQ.length){
       washSetup.confirmed = true;
-      toast('✓ Station set — water is on. Rinse the whole part.', 'good');
+      if (cur() && cur().type === 'setup'){
+        toast('✓ Rinse station is set for the shift.', 'good');
+        advance();
+      } else toast('✓ Station set — water is on. Rinse the whole part.', 'good');
     } else {
       toast(`✓ ${cfg.name[0].toUpperCase() + cfg.name.slice(1)} set — next: ${WSEQ[washSetup.idx].name}.`, 'good');
     }
