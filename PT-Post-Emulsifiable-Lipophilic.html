@@ -1,0 +1,1973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PT — Method B · Lipophilic Emulsifier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #faf7f2;
+    --paper-deep: #f1ece2;
+    --ink: #1a1a1a;
+    --ink-soft: #4a4a47;
+    --ink-faded: #8a8a85;
+    --rule: #d9d2c4;
+    --amber: #b54515;
+    --amber-soft: #e8a87c;
+    --amber-tint: #fdf2e6;
+    --fluor: #9adb2c;
+    --clean-blue: #1d6fa5;
+    --good: #2e7d4f;
+    --pen-red: #c8102e;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px -12px rgba(60,40,20,0.12);
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'Manrope', -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--paper); }
+  body {
+    font-family: var(--sans);
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.55;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(181, 69, 21, 0.04), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(154, 219, 44, 0.04), transparent 50%);
+  }
+  .container { max-width: 1080px; margin: 0 auto; padding: 36px 28px 72px; }
+
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--amber); margin-bottom: 8px; font-weight: 500;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 600;
+    font-size: clamp(26px, 4vw, 38px); line-height: 1.05; letter-spacing: -0.02em;
+    font-variation-settings: 'opsz' 144;
+  }
+  h1 em { font-style: italic; color: var(--amber); font-weight: 500; }
+  a.back {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-faded); text-decoration: none; padding-bottom: 6px;
+  }
+  a.back:hover { color: var(--amber); }
+  .hdr-actions { display: flex; align-items: center; gap: 18px; padding-bottom: 2px; }
+  .fsbtn {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    background: none; border: 1px solid var(--rule); border-radius: 2px;
+    color: var(--ink-soft); padding: 7px 13px; cursor: pointer; white-space: nowrap;
+  }
+  .fsbtn:hover { border-color: var(--amber); color: var(--amber); }
+  .fsbtn:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  .fsbtn.hidden { display: none; }
+
+  :fullscreen .container { padding: 14px 28px 16px; }
+  :fullscreen header { margin-bottom: 10px; padding-bottom: 14px; }
+  :fullscreen header .eyebrow { margin-bottom: 4px; font-size: 10px; }
+  :fullscreen h1 { font-size: clamp(20px, 2.4vw, 26px); }
+  :fullscreen .steps { margin-bottom: 10px; }
+  :fullscreen .steps .s { padding: 5px 9px; }
+  :fullscreen .instr { padding: 12px 18px; min-height: 0; margin-bottom: 10px; }
+  :fullscreen .instr .text { font-size: 15px; }
+  :fullscreen .panel { padding: 12px 16px; margin-top: 9px; }
+  :fullscreen .measure .rows { grid-template-columns: repeat(3, 1fr); gap: 8px 18px; }
+  :fullscreen .measure .row { grid-template-columns: 1fr 24px; align-items: center; gap: 4px 8px; }
+  :fullscreen .measure .row label { grid-column: 1 / -1; font-size: 12px; line-height: 1.35; }
+  :fullscreen .wash .wrows { grid-template-columns: repeat(2, 1fr); gap: 6px 26px; }
+  :fullscreen footer { display: none; }
+  @media (max-width: 780px) {
+    :fullscreen .measure .rows, :fullscreen .wash .wrows { grid-template-columns: 1fr; }
+  }
+  @media (max-height: 860px) {
+    :fullscreen header { padding-bottom: 8px; margin-bottom: 8px; }
+    :fullscreen header .eyebrow { display: none; }
+    :fullscreen h1 { font-size: 19px; }
+    :fullscreen .steps .s { padding: 4px 8px; }
+    :fullscreen .instr { padding: 10px 16px; }
+  }
+
+  /* ---------- step progress ---------- */
+  .steps { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+  .steps .s {
+    flex: 1 1 92px; display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; border: 1px solid var(--rule); border-radius: 2px;
+    background: var(--paper-deep); opacity: 0.55; transition: all .25s;
+  }
+  .steps .s .n {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    width: 20px; height: 20px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1.5px solid var(--ink-faded); color: var(--ink-faded); flex: none;
+  }
+  .steps .s .l { font-size: 12px; font-weight: 600; color: var(--ink-soft); white-space: nowrap; }
+  .steps .s.active { opacity: 1; border-color: var(--amber); background: var(--amber-tint); }
+  .steps .s.active .n { border-color: var(--amber); color: var(--amber); }
+  .steps .s.done { opacity: 1; }
+  .steps .s.done .n { background: var(--good); border-color: var(--good); color: #fff; }
+
+  /* ---------- instruction card ---------- */
+  .instr {
+    background: var(--ink); color: var(--paper); border-radius: 2px;
+    padding: 18px 22px; margin-bottom: 14px; box-shadow: var(--shadow);
+    display: grid; grid-template-columns: 1fr auto; gap: 8px 24px; align-items: center;
+    min-height: 86px; position: relative;
+  }
+  .instr::before {
+    content: ''; position: absolute; inset: 4px;
+    border: 1px solid rgba(154,219,44,0.15); border-radius: 2px; pointer-events: none;
+  }
+  .instr .step-tag {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--amber-soft); margin-bottom: 5px;
+  }
+  .instr .text { font-size: 16.5px; font-weight: 500; max-width: 620px; }
+  .instr .text b { color: var(--amber-soft); }
+  .instr .text b.fl { color: var(--fluor); }
+  .instr .widget { justify-self: end; min-width: 190px; }
+  @media (max-width: 720px) {
+    .instr { grid-template-columns: 1fr; }
+    .instr .widget { justify-self: start; }
+  }
+
+  .covbox { text-align: right; }
+  .covbox .covlabel { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #b9b4aa; margin-bottom: 6px; }
+  .covbar { width: 190px; height: 10px; background: rgba(255,255,255,.12); border-radius: 99px; overflow: hidden; }
+  .covbar i { display: block; height: 100%; width: 0%; background: var(--amber-soft); border-radius: 99px; transition: width .12s linear, background .3s; }
+  .covbar.full i { background: #6fce9a; }
+
+  .timerbox { display: flex; align-items: center; gap: 14px; }
+  .timerbox .digits {
+    font-family: var(--mono); font-size: 32px; font-weight: 600; letter-spacing: .04em;
+    font-variant-numeric: tabular-nums; color: var(--paper); line-height: 1;
+  }
+  .timerbox .sub { font-family: var(--mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: #b9b4aa; margin-top: 4px; }
+  .timerbox button {
+    font-family: var(--sans); font-weight: 700; font-size: 13px;
+    background: var(--amber); color: #fff; border: none; border-radius: 2px;
+    padding: 10px 18px; cursor: pointer; letter-spacing: .02em;
+  }
+  .timerbox button:hover { background: #9a3a12; }
+  .timerbox button:disabled { background: #565349; cursor: default; }
+  .timerbox.running .digits { color: var(--amber-soft); }
+  .timerbox.done .digits { color: #6fce9a; }
+
+  /* ---------- below-stage panels ---------- */
+  .panel {
+    background: var(--paper-deep); border: 1px solid var(--rule); border-radius: 2px;
+    padding: 16px 18px; margin-top: 12px; display: none;
+  }
+  .panel.show { display: block; }
+  .panel h4 { font-family: var(--serif); font-size: 17px; font-weight: 600; margin-bottom: 10px; }
+
+  .wash .wrows { display: grid; gap: 6px; }
+  .wash .wrow {
+    display: grid; grid-template-columns: 128px 1fr 80px 62px 20px; gap: 12px; align-items: center;
+    font-size: 13px; color: var(--ink-soft);
+    padding: 6px 10px; border-radius: 3px; border: 1px solid transparent;
+    transition: opacity .2s, border-color .2s, background .2s;
+  }
+  .wash .wrow label { font-weight: 700; color: var(--ink); }
+  .wash .wrow input[type=range] { width: 100%; accent-color: var(--amber); }
+  .wash .wrow.locked { opacity: 0.4; pointer-events: none; }
+  .wash .wrow.active { background: var(--amber-tint); border-color: var(--amber-soft); }
+  .wash .wrow.done { opacity: 0.75; }
+  .wash .wval { font-family: var(--mono); font-size: 12.5px; text-align: right; font-variant-numeric: tabular-nums; }
+  .wash .wmark { font-size: 14px; text-align: center; }
+  .wash .wmark.ok { color: var(--good); }
+  .wash .wmark.bad { color: var(--pen-red); }
+  .wash .setbtn {
+    font-family: var(--sans); font-weight: 700; font-size: 12px;
+    background: var(--amber); color: #fff; border: none; border-radius: 2px;
+    padding: 6px 0; cursor: pointer; width: 100%;
+  }
+  .wash .setbtn:hover { background: #9a3a12; }
+  .wash .setbtn:disabled { background: #b8b2a4; cursor: default; }
+  .wash .wrow.done .setbtn { background: var(--good); }
+  .wash .gostate {
+    margin-top: 10px; font-size: 13px; font-weight: 700; color: var(--ink-soft);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .wash .gostate.ready { color: var(--good); }
+  .wash .spec {
+    margin-top: 10px; font-family: var(--mono); font-size: 11px; color: var(--ink-faded);
+    border-left: 2px solid var(--amber-soft); padding-left: 10px; line-height: 1.6;
+  }
+
+  /* dryer oven */
+  .dryer .drow { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .dryer .orow {
+    display: grid; grid-template-columns: 110px 170px 70px 20px; gap: 10px; align-items: center;
+    font-size: 13px; padding: 6px 10px; border-radius: 3px;
+    background: var(--amber-tint); border: 1px solid var(--amber-soft);
+  }
+  .dryer .orow.done { background: none; border-color: transparent; opacity: .8; }
+  .dryer .orow label { font-weight: 700; color: var(--ink); }
+  .dryer .orow input[type=range] { width: 100%; accent-color: var(--amber); }
+  .dryer .oval { font-family: var(--mono); font-size: 12.5px; text-align: right; font-variant-numeric: tabular-nums; }
+  .dryer .omark { font-size: 14px; text-align: center; }
+  .dryer .omark.ok { color: var(--good); }
+  .dryer .omark.bad { color: var(--pen-red); }
+  .dryer button {
+    font-family: var(--sans); font-weight: 700; font-size: 13.5px;
+    background: var(--amber); color: #fff; border: none; border-radius: 2px;
+    padding: 12px 20px; cursor: pointer;
+  }
+  .dryer button:hover { background: #9a3a12; }
+  .dryer button:disabled { background: #b8b2a4; cursor: default; }
+  .dryer .digits {
+    font-family: var(--mono); font-size: 26px; font-weight: 600;
+    font-variant-numeric: tabular-nums; color: var(--ink); min-width: 74px;
+  }
+  .dryer .digits.running { color: var(--amber); }
+  .dryer .digits.done { color: var(--good); }
+  .dryer .spec {
+    margin-top: 10px; font-family: var(--mono); font-size: 11px; color: var(--ink-faded);
+    border-left: 2px solid var(--amber-soft); padding-left: 10px; line-height: 1.6;
+  }
+
+  /* over-dwell chip */
+  .overchip {
+    font-family: var(--mono); font-size: 12.5px; font-weight: 600; letter-spacing: .04em;
+    background: rgba(200,16,46,.14); border: 1px solid rgba(200,16,46,.5);
+    color: #ffb3be; padding: 8px 14px; border-radius: 3px; white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* measurement */
+  .measure .rows { display: grid; gap: 8px; }
+  .measure .row {
+    display: grid; grid-template-columns: 1fr 110px 26px; gap: 12px; align-items: center;
+    font-size: 13.5px; color: var(--ink-soft);
+  }
+  .measure .row label b { color: var(--ink); }
+  .measure input {
+    font-family: var(--mono); font-size: 14px; padding: 7px 10px;
+    border: 1px solid var(--rule); border-radius: 2px; background: #fff; color: var(--ink);
+    width: 100%; text-align: right;
+  }
+  .measure input:focus { outline: 2px solid var(--amber-soft); border-color: var(--amber); }
+  .measure .mark { font-size: 15px; text-align: center; }
+  .measure .mark.ok { color: var(--good); }
+  .measure .mark.bad { color: var(--pen-red); }
+  .measure .actions { margin-top: 12px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .measure .actions button {
+    font-family: var(--sans); font-weight: 700; font-size: 13px;
+    background: var(--amber); color: #fff; border: none; border-radius: 2px;
+    padding: 10px 20px; cursor: pointer;
+  }
+  .measure .actions button:hover { background: #9a3a12; }
+  .measure .fb { font-size: 12.5px; color: var(--ink-faded); }
+  .measure .fb.bad { color: var(--pen-red); }
+  .measure .fb.ok { color: var(--good); font-weight: 600; }
+
+  /* ---------- stage ---------- */
+  .stage {
+    position: relative; border-radius: 2px; overflow: hidden;
+    box-shadow: var(--shadow); border: 1px solid var(--rule);
+    touch-action: none; user-select: none; -webkit-user-select: none;
+    background: #262320;
+  }
+  .stage canvas { display: block; width: 100%; height: auto; }
+  .stage svg.overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .stage svg.overlay .ruler { pointer-events: auto; cursor: grab; }
+  .stage svg.overlay .ruler.grabbing { cursor: grabbing; }
+  .stage.grabbable { cursor: grab; }
+  .stage.grabbing { cursor: grabbing; }
+  .stage.washing-cursor { cursor: none; }
+  .lightchip {
+    position: absolute; top: 10px; right: 12px;
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 99px; pointer-events: none;
+    background: rgba(250,247,242,.85); color: var(--ink-soft); transition: all .4s;
+  }
+  .lightchip.uv { background: rgba(40,30,90,.85); color: #b9a5ff; box-shadow: 0 0 14px rgba(120,80,255,.5); }
+
+  .toast {
+    position: absolute; left: 50%; bottom: 14px; transform: translate(-50%, 8px);
+    background: rgba(20,18,16,.94); color: var(--paper);
+    font-size: 13.5px; font-weight: 500; line-height: 1.4;
+    padding: 10px 16px; border-radius: 3px; max-width: 500px;
+    opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s;
+    border-left: 3px solid var(--amber-soft);
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast.warn { border-left-color: var(--pen-red); background: rgba(60,12,16,.95); }
+  .toast.good { border-left-color: #6fce9a; }
+
+  #ghost {
+    position: fixed; left: 0; top: 0; pointer-events: none; z-index: 50;
+    display: none; will-change: transform; filter: drop-shadow(0 4px 6px rgba(0,0,0,.3));
+  }
+
+  /* ---------- overlays ---------- */
+  .veil {
+    position: fixed; inset: 0; background: rgba(26,24,20,.55); backdrop-filter: blur(2px);
+    display: flex; align-items: flex-start; justify-content: center; z-index: 100;
+    padding: 28px 24px; overflow-y: auto;
+  }
+  .veil.hidden { display: none; }
+  .card {
+    background: var(--paper); border-radius: 3px; box-shadow: 0 24px 80px -20px rgba(0,0,0,.5);
+    max-width: 620px; width: 100%; padding: 32px 38px; margin: 0; flex: none;
+  }
+  .card .eyebrow { margin-bottom: 10px; }
+  .card h2 { font-family: var(--serif); font-weight: 600; font-size: 28px; letter-spacing: -0.01em; margin-bottom: 12px; }
+  .card h2 em { font-style: italic; color: var(--amber); }
+  .card p { font-size: 14.5px; color: var(--ink-soft); margin-bottom: 12px; }
+  .card ul { margin: 0 0 14px 18px; font-size: 14px; color: var(--ink-soft); }
+  .card ul li { margin-bottom: 5px; }
+  .card .note {
+    font-family: var(--mono); font-size: 11.5px; color: var(--ink-faded);
+    border-left: 2px solid var(--amber-soft); padding-left: 12px; margin: 16px 0;
+  }
+  .card button.primary {
+    font-family: var(--sans); font-weight: 700; font-size: 15px;
+    background: var(--amber); color: #fff; border: none; border-radius: 2px;
+    padding: 13px 28px; cursor: pointer; margin-top: 6px;
+  }
+  .card button.primary:hover { background: #9a3a12; }
+  .card p.fsnote {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .04em;
+    color: var(--ink-faded); margin: 10px 0 0;
+  }
+  .card p.fsnote.hidden { display: none; }
+  .card table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 10px 0 16px; }
+  .card table th {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-faded); text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--rule);
+  }
+  .card table td { padding: 7px 8px; border-bottom: 1px solid var(--paper-deep); color: var(--ink-soft); }
+  .card table td:first-child { color: var(--ink); font-weight: 600; }
+  .card td.ok { color: var(--good); font-weight: 700; }
+  .verdict {
+    background: #f6dede; border: 1px solid #eab8b8; color: #7c1420;
+    border-radius: 2px; padding: 12px 16px; font-size: 14px; font-weight: 600; margin-bottom: 14px;
+  }
+  .washgrade {
+    border-radius: 2px; padding: 10px 16px; font-size: 13.5px; font-weight: 600; margin-bottom: 14px;
+    background: #e4efdd; border: 1px solid #c4dbb4; color: #2e5a1e;
+  }
+  .washgrade.warn { background: #f9ecd2; border-color: #eccf94; color: #7a5a10; }
+  .washgrade.bad  { background: #f6dede; border-color: #eab8b8; color: #7c1420; }
+  .mist { font-size: 13px; color: var(--ink-faded); margin-bottom: 4px; }
+
+  footer {
+    margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--rule);
+    font-size: 12px; color: var(--ink-faded); font-family: var(--mono);
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <div class="eyebrow">Penetrant Testing · Method B · Post-Emulsifiable</div>
+      <h1>Lipophilic <em>Emulsifier Line</em></h1>
+    </div>
+    <div class="hdr-actions">
+      <button class="fsbtn" id="fsBtn" type="button">⛶ Fullscreen</button>
+      <a class="back" href="index.html" target="_top">← Exercise Hub</a>
+    </div>
+  </header>
+
+  <div class="steps" id="steps">
+    <div class="s" data-i="1"><span class="n">1</span><span class="l">Pre-wash</span></div>
+    <div class="s" data-i="2"><span class="n">2</span><span class="l">Penetrant</span></div>
+    <div class="s" data-i="3"><span class="n">3</span><span class="l">Emulsifier</span></div>
+    <div class="s" data-i="4"><span class="n">4</span><span class="l">Rinse</span></div>
+    <div class="s" data-i="5"><span class="n">5</span><span class="l">Dry</span></div>
+    <div class="s" data-i="6"><span class="n">6</span><span class="l">Dust dev</span></div>
+    <div class="s" data-i="7"><span class="n">7</span><span class="l">Develop</span></div>
+    <div class="s" data-i="8"><span class="n">8</span><span class="l">Inspect</span></div>
+    <div class="s" data-i="9"><span class="n">9</span><span class="l">Post-clean</span></div>
+  </div>
+
+  <div class="instr" id="instr">
+    <div>
+      <div class="step-tag" id="stepTag">Step 1 of 8 · Pre-wash</div>
+      <div class="text" id="stepText">…</div>
+    </div>
+    <div class="widget" id="widget"></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="cv" width="940" height="430"></canvas>
+    <svg class="overlay" id="ovl" viewBox="0 0 940 430" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="lightchip" id="lightChip">White light</div>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <!-- wash station params (rinse step) -->
+  <div class="panel wash" id="washPanel">
+    <h4>Rinse station setup — confirm each setting, in order</h4>
+    <div class="wrows">
+      <div class="wrow" id="rowPsi">
+        <label>1 · Water pressure</label>
+        <input type="range" id="wPsi" min="10" max="60" value="55" step="1">
+        <span class="wval" id="wPsiV">55 PSI</span>
+        <button class="setbtn" id="setPsi" type="button">Set</button>
+        <span class="wmark" id="wPsiM"></span>
+      </div>
+      <div class="wrow" id="rowTemp">
+        <label>2 · Water temperature</label>
+        <input type="range" id="wTemp" min="40" max="130" value="115" step="1">
+        <span class="wval" id="wTempV">115 °F</span>
+        <button class="setbtn" id="setTemp" type="button">Set</button>
+        <span class="wmark" id="wTempM"></span>
+      </div>
+      <div class="wrow" id="rowDist">
+        <label>3 · Nozzle distance</label>
+        <input type="range" id="wDist" min="4" max="24" value="6" step="1">
+        <span class="wval" id="wDistV">6 in</span>
+        <button class="setbtn" id="setDist" type="button">Set</button>
+        <span class="wmark" id="wDistM"></span>
+      </div>
+      <div class="wrow" id="rowAng">
+        <label>4 · Spray angle</label>
+        <input type="range" id="wAng" min="15" max="90" value="90" step="5">
+        <span class="wval" id="wAngV">90°</span>
+        <button class="setbtn" id="setAng" type="button">Set</button>
+        <span class="wmark" id="wAngM"></span>
+      </div>
+    </div>
+    <div class="gostate" id="washGo">🔒 Water is off until all four settings are confirmed.</div>
+    <div class="spec">Procedure: coarse spray · 38 PSI (40 max) · water 60–100 °F · nozzle ≈ 12 in from part · ≈ 45° to the surface, never perpendicular.</div>
+  </div>
+
+  <!-- dryer -->
+  <div class="panel dryer" id="dryerPanel">
+    <h4>Forced-air dryer oven</h4>
+    <div class="drow">
+      <div class="orow" id="ovenRow">
+        <label>Oven setting</label>
+        <input type="range" id="ovenT" min="100" max="200" value="180" step="5">
+        <span class="oval" id="ovenTV">180 °F</span>
+        <span class="omark" id="ovenTM"></span>
+      </div>
+      <button id="dryStart" type="button" disabled>Start dryer · 5 min</button>
+      <span class="digits" id="dryDig">5:00</span>
+      <button id="gunBtn" type="button" disabled>🌡 Thermal gun — check the part</button>
+    </div>
+    <div class="spec">Procedure: oven at 140 °F · dry 5 minutes · verify the part reads below 150 °F before the dust chamber.</div>
+  </div>
+
+  <!-- measurements -->
+  <div class="panel measure" id="measure">
+    <h4>Indication measurements — under UV-A</h4>
+    <div class="rows">
+      <div class="row">
+        <label>Longitudinal crack on the <b>weld centerline</b> — length, inches</label>
+        <input id="mCL" type="number" step="0.05" min="0" inputmode="decimal" placeholder="0.00">
+        <span class="mark" id="kCL"></span>
+      </div>
+      <div class="row">
+        <label>Crack at the <b>weld toe / HAZ</b> (below the bead) — length, inches</label>
+        <input id="mHAZ" type="number" step="0.05" min="0" inputmode="decimal" placeholder="0.00">
+        <span class="mark" id="kHAZ"></span>
+      </div>
+      <div class="row">
+        <label>Number of <b>rounded indications</b> (porosity)</label>
+        <input id="mPOR" type="number" step="1" min="0" inputmode="numeric" placeholder="0">
+        <span class="mark" id="kPOR"></span>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="checkBtn">Check measurements</button>
+      <span class="fb" id="mFb">Drag the ruler over each glowing indication. Measure tip-to-tip.</span>
+    </div>
+  </div>
+
+  <footer>PT-1 Practical · Method A tank line · Timers accelerated for training · Drag the part along the rail; drag down to dip</footer>
+</div>
+
+<div id="ghost"></div>
+
+<!-- intro -->
+<div class="veil" id="intro">
+  <div class="card">
+    <div class="eyebrow">Practical Exercise · Liquid Penetrant Testing · Method A</div>
+    <h2>Run a part through the <em>water washable line</em></h2>
+    <p><b>Scope:</b> process the welded plate through a <b>Method B post-emulsifiable line</b>: the penetrant is not water washable until a <b>lipophilic (oil-based) emulsifier</b> makes it so. Evaluate under UV-A.</p>
+    <p><b>How it works:</b> the part hangs from an overhead carrier. <b>Drag it along the rail</b> to move between stations, and <b>drag it down</b> to lower it into a tank — you'll see it go under and come back out.</p>
+    <ul>
+      <li>Stations, in order: water pre-wash · penetrant tank · drain rack (dwell) · <b>lipophilic emulsifier tank</b> · rinse under UV-A · forced-air dryer · dry-powder dust chamber · development rack · inspection booth.</li>
+      <li>The emulsifier is applied by <b>dipping only</b> and works by <b>diffusion — no agitation</b> in the tank.</li>
+      <li><b>Emulsification time is critical</b>: after the dip, a 90-second clock runs and the wash must follow immediately.</li>
+      <li>The rinse water stays <b>off</b> until you've set the station per procedure, one setting at a time.</li>
+      <li>Dwell times matter both ways: once a timer finishes, a red clock starts — <b>don't let the part sit</b>.</li>
+      <li>The part must be completely dry before the dust chamber — set the oven per procedure, run the cycle, then verify with the thermal gun.</li>
+    </ul>
+    <div class="note">Dwell timers are accelerated: 10 min runs in ~45 s. In the real shop you wait the full time.</div>
+    <button class="primary" id="beginBtn">Begin — part on the hook →</button>
+    <p class="fsnote" id="fsNote">Opens fullscreen for room to work — press <b>Esc</b> to exit.</p>
+  </div>
+</div>
+
+<!-- report -->
+<div class="veil hidden" id="report">
+  <div class="card">
+    <div class="eyebrow">Inspection complete</div>
+    <h2>PT Report — <em>welded plate</em></h2>
+    <div class="verdict" id="verdictBox"></div>
+    <div class="washgrade" id="washGrade"></div>
+    <table>
+      <thead><tr><th>Indication</th><th>Type</th><th>Your measurement</th><th></th></tr></thead>
+      <tbody id="repRows"></tbody>
+    </table>
+    <p class="mist" id="repMistakes"></p>
+    <button class="primary" onclick="location.reload()">Run the line again</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ================= constants ================= */
+const W = 940, H = 430, PPI = 45;
+/* zoom view (close-up plate) geometry — same plate as the bench exercises */
+const PLATE = { x0: 40, y0: 88, x1: 900, y1: 342 };
+const WELD_Y = 215, BEAD_HALF = 15;
+const Z = { x0: PLATE.x0, x1: PLATE.x1,
+            y0: WELD_Y - BEAD_HALF - PPI, y1: WELD_Y + BEAD_HALF + PPI };
+const CS = 10;
+const COLS = Math.floor((Z.x1 - Z.x0) / CS), ROWS = Math.floor((Z.y1 - Z.y0) / CS);
+
+const PORES = [ {x: 208, y: 212, r: 4.5}, {x: 318, y: 209, r: 5}, {x: 538, y: 217, r: 5.5}, {x: 724, y: 212, r: 4.5} ];
+const CRACKS = [
+  { id:'CL',  x0: 380, y0: 215, x1: 429.5, y1: 215, len: 1.1 },
+  { id:'HAZ', x0: 610, y0: 251, x1: 637,   y1: 253.5, len: 0.6 }
+];
+const TOL = 0.3;
+
+const WASH = {
+  psi:  { target: 38, max: 40, min: 20 },
+  temp: { lo: 60, hi: 100 },
+  dist: { lo: 10, hi: 16, tooClose: 8 },
+  ang:  { lo: 30, hi: 60, perp: 75 }
+};
+const DRY = { oven: 140, ovenTol: 5, partMax: 150, sim: 300, real: 25 };
+const OVERDWELL = { warnSim: 120, badSim: 300 };   // seconds of sim time past a finished dwell
+
+/* ================= line view geometry ================= */
+const RAIL_Y = 46;
+const FLOOR_Y = 402;
+const PART_W = 58, PART_H = 92;
+const CARRY_Y = 96;                        // part top y while carried
+const SURF_Y = 292;                        // liquid / chamber working level
+const ST = [
+  { id:'prewash',  x: 88,  label:'PRE-WASH',    type:'booth'  },
+  { id:'pen',      x: 192, label:'PENETRANT',   type:'tank', liquid:'#7ba821' },
+  { id:'dwell',    x: 296, label:'DRAIN RACK',  type:'rack'   },
+  { id:'emul',     x: 400, label:'EMULSIFIER',  type:'tank', liquid:'#d8842a' },
+  { id:'rinse',    x: 504, label:'RINSE · UV',  type:'booth', uv:true },
+  { id:'dryer',    x: 608, label:'DRYER',       type:'dryer'  },
+  { id:'dust',     x: 712, label:'DUST DEV',    type:'dust'   },
+  { id:'devrack',  x: 816, label:'DEVELOP RACK',type:'rack'   },
+  { id:'inspect',  x: 898, label:'INSPECT',     type:'booth', uv:true }
+];
+const stById = id => ST.find(s => s.id === id);
+
+/* ================= dom ================= */
+const $ = id => document.getElementById(id);
+const stage = $('stage'), cv = $('cv'), ctx = cv.getContext('2d');
+const ovl = $('ovl'), toastEl = $('toast'), ghost = $('ghost');
+const widget = $('widget'), stepTag = $('stepTag'), stepText = $('stepText');
+
+/* ================= zoom-view offscreen layers ================= */
+function layer(){ const c = document.createElement('canvas'); c.width = W; c.height = H; return c; }
+const baseC = layer(), dirtC = layer(), penC = layer(), devTexC = layer();
+const bctx = baseC.getContext('2d'), dctx = dirtC.getContext('2d'),
+      pctx = penC.getContext('2d'), xctx = devTexC.getContext('2d');
+
+function makeGrid(){ return new Float32Array(COLS * ROWS); }
+function stampGrid(g, x, y, rad, amt){
+  const c0 = Math.max(0, Math.floor((x - rad - Z.x0) / CS)),
+        c1 = Math.min(COLS - 1, Math.floor((x + rad - Z.x0) / CS)),
+        r0 = Math.max(0, Math.floor((y - rad - Z.y0) / CS)),
+        r1 = Math.min(ROWS - 1, Math.floor((y + rad - Z.y0) / CS));
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++){
+    const cx = Z.x0 + c * CS + CS/2, cy = Z.y0 + r * CS + CS/2;
+    const d2 = (cx-x)*(cx-x) + (cy-y)*(cy-y);
+    if (d2 <= rad*rad){
+      const i = r * COLS + c;
+      g[i] = Math.min(1, g[i] + amt * (1 - Math.sqrt(d2) / rad));
+    }
+  }
+}
+function coverage(g){ let n = 0; for (let i = 0; i < g.length; i++) if (g[i] >= 0.5) n++; return n / g.length; }
+function cellAt(g, x, y){
+  const c = Math.floor((x - Z.x0) / CS), r = Math.floor((y - Z.y0) / CS);
+  if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return 0;
+  return g[r * COLS + c];
+}
+let grid = makeGrid();
+
+/* ================= state ================= */
+const state = {
+  idx: -1,
+  mode: 'line',              // 'line' | 'zoom'
+  zoomKind: null,            // 'prewash' | 'rinse' | 'inspect' | 'postclean'
+  part: { x: 88, y: CARRY_Y, station: 'prewash', grabbed: false, gx: 0, gy: 0 },
+  dipProg: 0, dipDone: false, wasOut: true,
+  dustProg: 0,
+  washing: false,
+  px: 0, py: 0, clientX: 0, clientY: 0,
+  penA: 0, dirtA: 1,
+  dried: false,
+  dustA: 0,
+  emulA: 0, agit: 0, agitWarned: false, lastDipPx: null, lastDipPy: null,
+  procDmg: 0,
+  dryT: null,                // dryer cycle timer {left, rate, running, done}
+  gunActive: false, gunChip: null,
+  overClock: null,           // {label, sim, warned, penalized} — time past a finished dwell
+  overDmg: 0,
+  bleed: 0, bleedFade: 1, devFade: 0,
+  uvT: 0, uvTarget: 0,
+  washDamage: 0, washIssues: {},
+  timer: null,
+  mistakes: [],
+  hintAt: 0, lastHint: '',
+  lastApplyAt: 0, gapHintShown: false,
+  advancing: false,
+  results: null,
+  done: false
+};
+
+/* ================= procedure flow ================= */
+const FLOW = [
+ { step:1, name:'Pre-wash',   id:'p1', type:'zoomwash', station:'prewash', light:0, need:0.95,
+   text:'Everything on this line runs on water — no solvents. Carry the part to the <b>pre-wash booth</b> and drop it in to clean it.',
+   ztext:'Wash the grime off with the <b>water spray</b> — press and sweep across the whole part.', covLabel:'Surface cleaned' },
+ { step:2, name:'Penetrant',  id:'p2', type:'dip', station:'pen',
+   text:'Lower the part into the <b class="fl">penetrant tank</b> until it’s fully under, hold, then pull it out.' },
+ { step:2, name:'Penetrant',  id:'p3', type:'rack', station:'dwell', sim:600, real:45,
+   text:'Hang the part on the <b>drain rack</b> — penetrant dwell, <b>10 minutes</b>.' },
+ { step:3, name:'Emulsifier', id:'e1', type:'dip', station:'emul',
+   text:'Lower the part into the <b>lipophilic emulsifier</b> — dip and hold, <b>no agitation</b>. It works by diffusion alone.' },
+ { step:3, name:'Emulsifier', id:'e2', type:'rack', station:'emul', sim:90, real:15, auto:true,
+   text:'Let it hang and drain over the tank — <b>emulsification time is critical: 90 seconds</b>. Be ready to move.' },
+ { step:4, name:'Rinse',      id:'p4', type:'zoomwash', station:'rinse', light:1, need:0.97, params:true,
+   text:'The wash <b>stops the emulsification</b> — get the part to the rinse station NOW.',
+   ztext:'<b>Water is off.</b> Confirm the four station settings below, one at a time — then rinse until the glowing background is gone. <b>Don’t over-wash.</b>', covLabel:'Background removed' },
+ { step:5, name:'Dry', id:'p6', type:'dryer', station:'dryer',
+   text:'Into the <b>forced-air dryer</b> — dry powder developer needs a completely dry surface. Set the oven per procedure, run the cycle, then verify the part with the thermal gun.' },
+ { step:6, name:'Dust dev', id:'p7', type:'dip', station:'dust',
+   text:'Lower the part into the <b>dust chamber</b> — dry powder developer is circulating. Hold it in the cloud, then pull it out.' },
+ { step:7, name:'Develop',    id:'p8', type:'rack', station:'devrack', sim:600, real:45,
+   text:'Onto the <b>development rack</b> — developer dwell, <b>10 minutes</b>, while the indications bleed out.' },
+ { step:8, name:'Inspect',    id:'p9', type:'inspect', station:'inspect', light:1,
+   text:'Development is done — get the part into the <b>inspection booth</b> before it over-develops.',
+   ztext:'Drag the <b>ruler</b> to each glowing indication, measure tip-to-tip, and enter your readings below.' },
+ { step:9, name:'Post-clean', id:'p10', type:'zoomwash', station:'prewash', light:0, need:0.9,
+   text:'Good work. Back to the <b>pre-wash booth</b> for post-cleaning.',
+   ztext:'Rinse the developer and residue off the part.', covLabel:'Cleaned' }
+];
+const cur = () => FLOW[state.idx];
+
+/* ================= prerendered zoom art ================= */
+function drawBase(){
+  const g = bctx;
+  g.fillStyle = '#2b2723'; g.fillRect(0, 0, W, H);
+  g.strokeStyle = 'rgba(255,255,255,.03)';
+  for (let y = 0; y < H; y += 7){ g.beginPath(); g.moveTo(0, y); g.lineTo(W, y + 2); g.stroke(); }
+  g.save();
+  g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = 18; g.shadowOffsetY = 6;
+  const pg = g.createLinearGradient(0, PLATE.y0, 0, PLATE.y1);
+  pg.addColorStop(0, '#c3c8cd'); pg.addColorStop(0.5, '#aab0b7'); pg.addColorStop(1, '#969ca4');
+  g.fillStyle = pg;
+  g.fillRect(PLATE.x0, PLATE.y0, PLATE.x1 - PLATE.x0, PLATE.y1 - PLATE.y0);
+  g.restore();
+  g.save();
+  g.beginPath(); g.rect(PLATE.x0, PLATE.y0, PLATE.x1 - PLATE.x0, PLATE.y1 - PLATE.y0); g.clip();
+  let seed = 19;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 240; i++){
+    const y = PLATE.y0 + rnd() * (PLATE.y1 - PLATE.y0);
+    const x = PLATE.x0 + rnd() * (PLATE.x1 - PLATE.x0);
+    g.strokeStyle = `rgba(255,255,255,${0.02 + rnd() * 0.05})`;
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x + 30 + rnd() * 120, y); g.stroke();
+  }
+  const hz = g.createLinearGradient(0, WELD_Y - BEAD_HALF - 34, 0, WELD_Y);
+  hz.addColorStop(0, 'rgba(120,110,140,0)'); hz.addColorStop(1, 'rgba(96,88,120,.18)');
+  g.fillStyle = hz; g.fillRect(PLATE.x0, WELD_Y - BEAD_HALF - 34, PLATE.x1 - PLATE.x0, 34 + BEAD_HALF);
+  const hz2 = g.createLinearGradient(0, WELD_Y + BEAD_HALF + 34, 0, WELD_Y);
+  hz2.addColorStop(0, 'rgba(120,110,140,0)'); hz2.addColorStop(1, 'rgba(96,88,120,.18)');
+  g.fillStyle = hz2; g.fillRect(PLATE.x0, WELD_Y - BEAD_HALF, PLATE.x1 - PLATE.x0, 34 + BEAD_HALF);
+  g.fillStyle = 'rgba(190,150,80,.10)';
+  g.fillRect(PLATE.x0, WELD_Y - BEAD_HALF - 12, PLATE.x1 - PLATE.x0, 12);
+  g.fillRect(PLATE.x0, WELD_Y + BEAD_HALF, PLATE.x1 - PLATE.x0, 12);
+  const bg = g.createLinearGradient(0, WELD_Y - BEAD_HALF, 0, WELD_Y + BEAD_HALF);
+  bg.addColorStop(0, '#9298a0'); bg.addColorStop(0.45, '#c9ced4'); bg.addColorStop(1, '#7e848c');
+  g.fillStyle = bg;
+  g.fillRect(PLATE.x0, WELD_Y - BEAD_HALF, PLATE.x1 - PLATE.x0, BEAD_HALF * 2);
+  for (let x = PLATE.x0 - 6; x < PLATE.x1 + 8; x += 11){
+    g.beginPath();
+    g.ellipse(x, WELD_Y, 10, BEAD_HALF - 1.5, 0, -Math.PI/2, Math.PI/2);
+    g.strokeStyle = 'rgba(70,76,84,.5)'; g.lineWidth = 1.6; g.stroke();
+    g.beginPath();
+    g.ellipse(x - 3, WELD_Y, 10, BEAD_HALF - 2.5, 0, -Math.PI/2, Math.PI/2);
+    g.strokeStyle = 'rgba(235,238,242,.55)'; g.lineWidth = 1; g.stroke();
+  }
+  g.strokeStyle = 'rgba(60,66,74,.65)'; g.lineWidth = 1.4;
+  g.strokeRect(PLATE.x0, WELD_Y - BEAD_HALF, PLATE.x1 - PLATE.x0, BEAD_HALF * 2);
+  g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1;
+  g.strokeRect(PLATE.x0 + 0.5, PLATE.y0 + 0.5, PLATE.x1 - PLATE.x0 - 1, PLATE.y1 - PLATE.y0 - 1);
+  g.restore();
+  g.fillStyle = 'rgba(60,60,64,.5)';
+  g.font = '600 11px "JetBrains Mono", monospace';
+  g.fillText('PLATE  PT-405  ·  4130  ·  GTAW', PLATE.x0 + 8, PLATE.y1 - 10);
+}
+function drawDirt(){
+  const g = dctx; g.clearRect(0, 0, W, H);
+  let seed = 77;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  g.save();
+  g.beginPath(); g.rect(Z.x0 - 20, Z.y0 - 26, Z.x1 - Z.x0 + 40, Z.y1 - Z.y0 + 52); g.clip();
+  for (let i = 0; i < 26; i++){
+    const x = Z.x0 + rnd() * (Z.x1 - Z.x0), y = Z.y0 - 14 + rnd() * (Z.y1 - Z.y0 + 28);
+    const rx = 12 + rnd() * 34, ry = 5 + rnd() * 12;
+    const gr = g.createRadialGradient(x, y, 0, x, y, rx);
+    gr.addColorStop(0, `rgba(64,54,38,${0.12 + rnd() * 0.14})`);
+    gr.addColorStop(1, 'rgba(64,54,38,0)');
+    g.fillStyle = gr;
+    g.save(); g.translate(x, y); g.scale(1, ry / rx);
+    g.beginPath(); g.arc(0, 0, rx, 0, Math.PI * 2); g.fill(); g.restore();
+  }
+  g.restore();
+}
+function drawDevTex(){
+  const g = xctx; g.clearRect(0, 0, W, H);
+  let seed = 133;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  g.save();
+  g.beginPath(); g.rect(PLATE.x0, PLATE.y0, PLATE.x1 - PLATE.x0, PLATE.y1 - PLATE.y0); g.clip();
+  g.fillStyle = 'rgba(240,242,240,.9)';
+  g.fillRect(PLATE.x0, PLATE.y0, PLATE.x1 - PLATE.x0, PLATE.y1 - PLATE.y0);
+  for (let i = 0; i < 900; i++){
+    const x = PLATE.x0 + rnd() * (PLATE.x1 - PLATE.x0), y = PLATE.y0 + rnd() * (PLATE.y1 - PLATE.y0);
+    g.fillStyle = `rgba(${200 + Math.floor(rnd()*40)},${205 + Math.floor(rnd()*35)},${205 + Math.floor(rnd()*30)},${0.25 + rnd()*0.4})`;
+    g.beginPath(); g.arc(x, y, 0.6 + rnd() * 1.8, 0, Math.PI * 2); g.fill();
+  }
+  g.restore();
+}
+function coatPenetrant(){
+  /* dip coat: uniform fluorescent film with slight streaking */
+  const g = pctx; g.clearRect(0, 0, W, H);
+  g.save();
+  g.beginPath(); g.rect(PLATE.x0, PLATE.y0, PLATE.x1 - PLATE.x0, PLATE.y1 - PLATE.y0); g.clip();
+  g.fillStyle = 'rgba(154,219,44,.85)';
+  g.fillRect(PLATE.x0, PLATE.y0, PLATE.x1 - PLATE.x0, PLATE.y1 - PLATE.y0);
+  let seed = 55;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 60; i++){
+    const x = PLATE.x0 + rnd() * (PLATE.x1 - PLATE.x0);
+    g.strokeStyle = `rgba(190,240,90,${0.1 + rnd() * 0.2})`;
+    g.lineWidth = 2 + rnd() * 6;
+    g.beginPath(); g.moveTo(x, PLATE.y0); g.lineTo(x + 10 - rnd() * 20, PLATE.y1); g.stroke();
+  }
+  g.restore();
+}
+drawBase(); drawDirt(); drawDevTex();
+
+function wipeLayer(g, x, y, r, a){
+  g.save(); g.globalCompositeOperation = 'destination-out';
+  const gr = g.createRadialGradient(x, y, 0, x, y, r);
+  gr.addColorStop(0, `rgba(0,0,0,${a})`); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+
+/* ================= particles ================= */
+const parts = [];
+function spawn(x, y, rgb, n, opts){
+  opts = opts || {};
+  for (let i = 0; i < n; i++){
+    parts.push({
+      x: x + (Math.random()*(opts.jx||10) - (opts.jx||10)/2),
+      y: y + (Math.random()*(opts.jy||4) - (opts.jy||4)/2),
+      vx: (opts.vx||0) + (Math.random()-0.5)*(opts.sx||40),
+      vy: (opts.vy||60) + Math.random()*(opts.sy||60),
+      life: (opts.life||0.4) + Math.random()*0.25, t: 0,
+      r: (opts.r||1.2) + Math.random()*2, rgb, g: opts.g == null ? 120 : opts.g });
+  }
+}
+function stepParts(dt){
+  for (let i = parts.length - 1; i >= 0; i--){
+    const p = parts[i]; p.t += dt;
+    if (p.t > p.life){ parts.splice(i, 1); continue; }
+    p.x += p.vx * dt; p.y += p.vy * dt; p.vy += p.g * dt;
+  }
+}
+
+/* ================= indications ================= */
+function crackPts(c){
+  if (c.pts) return c.pts;
+  const pts = []; const n = 9;
+  let seed = c.id === 'CL' ? 23 : 31;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i <= n; i++){
+    const t = i / n;
+    const jx = (i === 0 || i === n) ? 0 : (rnd() - 0.5) * 2.4;
+    const jy = (i === 0 || i === n) ? 0 : (rnd() - 0.5) * 3.4;
+    pts.push({ x: c.x0 + (c.x1 - c.x0) * t + jx, y: c.y0 + (c.y1 - c.y0) * t + jy });
+  }
+  c.pts = pts; return pts;
+}
+function indicationBrightness(){
+  return Math.max(0.3, 1 - 0.7 * Math.min(1, state.washDamage) - 0.5 * state.overDmg - 0.5 * state.procDmg);
+}
+function drawBleed(g){
+  const bp = state.bleed * state.bleedFade;
+  if (bp <= 0) return;
+  const br = indicationBrightness();
+  g.save();
+  g.globalCompositeOperation = 'lighter';
+  for (const p of PORES){
+    const r = p.r * (0.55 + 0.75 * state.bleed);
+    const halo = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 2.4);
+    halo.addColorStop(0, `rgba(190,255,70,${0.9 * bp * br})`);
+    halo.addColorStop(0.45, `rgba(150,230,60,${0.45 * bp * br})`);
+    halo.addColorStop(1, 'rgba(120,200,50,0)');
+    g.fillStyle = halo; g.beginPath(); g.arc(p.x, p.y, r * 2.4, 0, Math.PI * 2); g.fill();
+    g.fillStyle = `rgba(225,255,150,${0.95 * bp * br})`;
+    g.beginPath(); g.arc(p.x, p.y, r * 0.6, 0, Math.PI * 2); g.fill();
+  }
+  for (const c of CRACKS){
+    const pts = crackPts(c);
+    const path = () => { g.beginPath(); g.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y); };
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    path(); g.strokeStyle = `rgba(150,230,60,${0.3 * bp * br})`; g.lineWidth = 3 + 8.5 * state.bleed; g.stroke();
+    path(); g.strokeStyle = `rgba(190,255,80,${0.6 * bp * br})`; g.lineWidth = 2 + 3.6 * state.bleed; g.stroke();
+    path(); g.strokeStyle = `rgba(235,255,170,${0.95 * bp * br})`; g.lineWidth = 1.6; g.stroke();
+  }
+  g.restore();
+}
+
+/* ================= overlay svg: zone + ruler (zoom mode) ================= */
+const NS = 'http://www.w3.org/2000/svg';
+function el(n, attrs){ const e = document.createElementNS(NS, n);
+  for (const k in attrs) e.setAttribute(k, attrs[k]); return e; }
+const zoneG = el('g', { class: 'zone', visibility: 'hidden' });
+zoneG.appendChild(el('rect', { x: Z.x0, y: Z.y0, width: Z.x1 - Z.x0, height: Z.y1 - Z.y0,
+  fill: 'none', stroke: '#e8a87c', 'stroke-width': 1.4, 'stroke-dasharray': '7 6', opacity: 0.85 }));
+const zoneLabel = el('text', { x: Z.x0 + 2, y: Z.y0 - 8, fill: '#8a3810', 'font-size': 11,
+  'font-family': "'JetBrains Mono', monospace", 'letter-spacing': '1.5',
+  stroke: 'rgba(250,247,242,.85)', 'stroke-width': 2.5, 'paint-order': 'stroke' });
+zoneLabel.textContent = 'INSPECTION AREA — FULL WELD + 1 IN EACH SIDE (HAZ)';
+zoneG.appendChild(zoneLabel);
+ovl.appendChild(zoneG);
+
+const RULER_L = 5 * PPI, RULER_H = 44;
+let rulerG = null, rulerPos = { x: 340, y: 350 };
+function buildRuler(){
+  rulerG = el('g', { class: 'ruler', visibility: 'hidden' });
+  rulerG.appendChild(el('rect', { x: 0, y: 0, width: RULER_L + 16, height: RULER_H, rx: 3,
+    fill: 'rgba(238,207,109,.88)', stroke: '#a88b32', 'stroke-width': 1.4 }));
+  for (let e = 0; e <= 5 * 8; e++){
+    const x = 8 + e * PPI / 8;
+    const major = e % 8 === 0, half = e % 4 === 0;
+    rulerG.appendChild(el('rect', { x: x - 0.6, y: 0, width: 1.2,
+      height: major ? 16 : half ? 11 : 7, fill: '#4d3f12' }));
+    if (major){
+      const t = el('text', { x: x, y: 30, 'text-anchor': 'middle', fill: '#4d3f12',
+        'font-size': 13, 'font-weight': 700, 'font-family': "'JetBrains Mono', monospace" });
+      t.textContent = e / 8; rulerG.appendChild(t);
+    }
+  }
+  const lbl = el('text', { x: RULER_L / 2 + 8, y: 41, 'text-anchor': 'middle', fill: 'rgba(77,63,18,.6)',
+    'font-size': 8, 'letter-spacing': '2', 'font-family': "'JetBrains Mono', monospace" });
+  lbl.textContent = 'INCHES'; rulerG.appendChild(lbl);
+  ovl.appendChild(rulerG);
+  setRuler(rulerPos.x, rulerPos.y);
+  let drag = null;
+  rulerG.addEventListener('pointerdown', e => {
+    e.preventDefault(); e.stopPropagation();
+    rulerG.classList.add('grabbing');
+    const p = svgPoint(e);
+    drag = { dx: p.x - rulerPos.x, dy: p.y - rulerPos.y, id: e.pointerId };
+    rulerG.setPointerCapture(e.pointerId);
+  });
+  rulerG.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const p = svgPoint(e);
+    setRuler(
+      Math.max(-RULER_L * 0.5, Math.min(W - RULER_L * 0.5, p.x - drag.dx)),
+      Math.max(0, Math.min(H - RULER_H, p.y - drag.dy)));
+  });
+  const end = e => { if (drag && e.pointerId === drag.id){ drag = null; rulerG.classList.remove('grabbing'); } };
+  rulerG.addEventListener('pointerup', end); rulerG.addEventListener('pointercancel', end);
+}
+function setRuler(x, y){ rulerPos = { x, y }; rulerG.setAttribute('transform', `translate(${x} ${y})`); }
+function svgPoint(e){
+  const r = ovl.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
+}
+buildRuler();
+
+/* ================= toast & mistakes ================= */
+let toastTimer = 0;
+function toast(msg, kind){
+  const now = performance.now();
+  if (msg === state.lastHint && now - state.hintAt < 2600) return;
+  state.lastHint = msg; state.hintAt = now;
+  toastEl.textContent = msg;
+  toastEl.className = 'toast show' + (kind ? ' ' + kind : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3400);
+}
+function mistake(msg){
+  state.mistakes.push(msg);
+  toast('⚠ ' + msg, 'warn');
+}
+
+/* ================= widgets & timers ================= */
+function renderWidget(){
+  const s = cur();
+  if (!s){ widget.innerHTML = ''; return; }
+  if (s.type === 'zoomwash' && state.mode === 'zoom'){
+    widget.innerHTML = `<div class="covbox"><div class="covlabel">${s.covLabel} · <span id="covpct">0%</span></div>
+      <div class="covbar" id="covbar"><i id="covfill"></i></div></div>`;
+  } else if (s.type === 'rack' && state.part.station === s.station && !state.part.grabbed){
+    const mm = Math.floor(s.sim / 60), ss = s.sim % 60;
+    widget.innerHTML = `<div class="timerbox" id="timerbox">
+      <div><div class="digits" id="tdig">${mm}:${String(ss).padStart(2,'0')}</div>
+      <div class="sub">simulated ×${(s.sim / s.real).toFixed(1)} speed</div></div>
+      <button id="tstart">Start timer</button></div>`;
+    $('tstart').addEventListener('click', startTimer);
+  } else widget.innerHTML = '';
+}
+function setCovBar(v, need){
+  need = need || 1;
+  const f = $('covfill'); if (!f) return;
+  f.style.width = Math.round(v * 100) + '%';
+  const b = $('covbar'); if (b) b.classList.toggle('full', v >= need);
+  const p = $('covpct'); if (p) p.textContent = Math.floor(v * 100) + '%';
+}
+function startTimer(){
+  const s = cur(); if (!s || s.type !== 'rack' || state.timer) return;
+  state.timer = { sim: s.sim, left: s.sim, rate: s.sim / s.real, running: true };
+  const btn = $('tstart'); if (btn){ btn.disabled = true; btn.textContent = 'Running…'; }
+  const box = $('timerbox'); if (box) box.classList.add('running');
+}
+function stepTimer(dt){
+  const t = state.timer; if (!t || !t.running) return;
+  t.left = Math.max(0, t.left - dt * t.rate);
+  const id = cur() && cur().id;
+  if (id === 'p8') state.bleed = Math.min(1, 1 - t.left / t.sim + 0.02);
+  const d = $('tdig');
+  if (d){
+    const mm = Math.floor(t.left / 60), ss = Math.floor(t.left % 60);
+    d.textContent = `${mm}:${String(ss).padStart(2, '0')}`;
+  }
+  if (t.left <= 0){
+    t.running = false;
+    const box = $('timerbox'); if (box){ box.classList.remove('running'); box.classList.add('done'); }
+    if (id === 'p8'){ state.bleed = 1; toast('✓ Developed — carry it to inspection.', 'good'); }
+    else if (id === 'e2') toast('⏱ Emulsification time is UP — rinse now.', 'warn');
+    else toast('✓ Dwell complete.', 'good');
+    advance();
+  }
+}
+
+/* ================= step machine ================= */
+function advance(){
+  if (state.advancing) return;
+  state.advancing = true;
+  setTimeout(() => {
+    state.advancing = false;
+    state.timer = null;
+    const leaving = cur();
+    if (leaving && leaving.id === 'p10'){ finish(); return; }
+    if (leaving && leaving.id === 'p3') startOverClock('penetrant dwell');
+    if (leaving && leaving.id === 'e2') startOverClock('emulsification window',
+      { rate: 3, warn: 15, bad: 30, dmg: 0.05, msg: 'the emulsifier kept working and stripped penetrant out of the flaws' });
+    if (leaving && leaving.id === 'p8') startOverClock('development time');
+    state.idx++;
+    grid = makeGrid();
+    state.gapHintShown = false;
+    state.dipProg = 0; state.dipDone = false; state.dustProg = 0;
+    enterStep();
+  }, 650);
+}
+function enterStep(){
+  const s = cur(); if (!s) return;
+  stepTag.textContent = `Step ${s.step} of 9 · ${s.name}`;
+  stepText.innerHTML = s.text;
+  state.uvTarget = 0;   // line view is white light; UV comes on inside zoom booths
+  document.querySelectorAll('#steps .s').forEach(p => {
+    const i = +p.dataset.i;
+    p.classList.toggle('active', i === s.step);
+    p.classList.toggle('done', i < s.step);
+  });
+  $('washPanel').classList.remove('show');
+  $('dryerPanel').classList.remove('show');
+  $('measure').classList.remove('show');
+  zoneG.setAttribute('visibility', 'hidden');
+  rulerG.setAttribute('visibility', 'hidden');
+  renderWidget();
+  /* if the part is already sitting at the right station, trigger arrival */
+  if (!state.part.grabbed && state.part.station === s.station) onArrive(s.station);
+  refit();
+}
+
+/* part placed at a station (after snap) */
+function onArrive(stationId){
+  const s = cur(); if (!s || state.mode !== 'line') return;
+  if (stationId !== s.station) return;
+  stopOverClock();
+  if (s.type === 'zoomwash'){
+    enterZoom(s.id === 'p10' ? 'postclean' : s.station, s.light);
+    stepText.innerHTML = s.ztext;
+    if (s.params){ resetWashSetup(); $('washPanel').classList.add('show'); }
+    renderWidget();
+  } else if (s.type === 'rack'){
+    renderWidget();
+    if (s.auto){ startTimer(); toast('⏱ The emulsifier is already working — 90 seconds.', 'warn'); }
+    else toast('On the rack — start the dwell timer.', 'good');
+  } else if (s.type === 'dryer'){
+    state.dryT = null; state.gunActive = false;
+    $('dryDig').textContent = '5:00'; $('dryDig').className = 'digits';
+    $('gunBtn').disabled = true;
+    $('dryStart').disabled = !ovenOk(); $('dryStart').textContent = 'Start dryer · 5 min';
+    $('dryerPanel').classList.add('show');
+    toast('Set the oven to the procedure temperature first.', 'good');
+  } else if (s.type === 'inspect'){
+    enterZoom('inspect', 1);
+    stepText.innerHTML = s.ztext;
+    zoneG.setAttribute('visibility', 'visible');
+    rulerG.setAttribute('visibility', 'visible');
+    setRuler(330, 300);
+    $('measure').classList.add('show');
+    toast('Ruler is on the bench — drag it up to the part.', 'good');
+  }
+  refit();
+}
+function enterZoom(kind, uv){
+  state.mode = 'zoom'; state.zoomKind = kind;
+  state.uvTarget = uv ? 1 : 0;
+  stage.classList.remove('grabbable');
+}
+function exitZoom(){
+  state.mode = 'line'; state.zoomKind = null;
+  state.uvTarget = 0;
+  zoneG.setAttribute('visibility', 'hidden');
+  rulerG.setAttribute('visibility', 'hidden');
+  stage.classList.remove('washing-cursor');
+  ghost.style.display = 'none';
+}
+function checkCoverage(){
+  const s = cur(); if (!s || s.type !== 'zoomwash') return;
+  const c = coverage(grid);
+  setCovBar(c, s.need);
+  if (c >= s.need && !state.advancing){
+    if (s.id === 'p1'){ state.dirtA = 0; toast('✓ Clean — on to the penetrant tank.', 'good'); }
+    if (s.id === 'p4'){ state.penA = 0; state.emulA = 0; pctx.clearRect(0,0,W,H); toast('✓ Background is clean — stop. Straight into the dryer.', 'good'); }
+    if (s.id === 'p10'){ toast('✓ Part is clean.', 'good'); }
+    setTimeout(exitZoom, 600);
+    advance();
+  }
+}
+
+/* ================= wash controls — confirmed one at a time ================= */
+const washCtl = { psi: 55, temp: 115, dist: 6, ang: 90 };
+const WSEQ = [
+  { key:'psi',  slider:'wPsi',  row:'rowPsi',  btn:'setPsi',  name:'water pressure' },
+  { key:'temp', slider:'wTemp', row:'rowTemp', btn:'setTemp', name:'water temperature' },
+  { key:'dist', slider:'wDist', row:'rowDist', btn:'setDist', name:'nozzle distance' },
+  { key:'ang',  slider:'wAng',  row:'rowAng',  btn:'setAng',  name:'spray angle' }
+];
+const washSetup = { idx: 0, confirmed: false };
+function washSettingOk(key){
+  const v = washCtl[key];
+  if (key === 'psi')  return v >= WASH.psi.min && v <= WASH.psi.max;
+  if (key === 'temp') return v >= WASH.temp.lo && v <= WASH.temp.hi;
+  if (key === 'dist') return v >= WASH.dist.lo && v <= WASH.dist.hi;
+  if (key === 'ang')  return v >= WASH.ang.lo && v <= WASH.ang.hi;
+  return true;
+}
+function bindWash(cfg, unit){
+  const inp = $(cfg.slider), val = $(cfg.slider + 'V'), mark = $(cfg.slider + 'M');
+  const upd = () => {
+    washCtl[cfg.key] = +inp.value;
+    val.textContent = inp.value + unit;
+    const ok = washSettingOk(cfg.key);
+    mark.textContent = ok ? '✓' : '✗';
+    mark.className = 'wmark ' + (ok ? 'ok' : 'bad');
+    const btn = $(cfg.btn);
+    if (btn && !washSetup.confirmed) btn.disabled = !ok || WSEQ[washSetup.idx] !== cfg;
+  };
+  inp.addEventListener('input', upd); upd();
+  $(cfg.btn).addEventListener('click', () => {
+    if (washSetup.confirmed || WSEQ[washSetup.idx] !== cfg || !washSettingOk(cfg.key)) return;
+    washSetup.idx++;
+    if (washSetup.idx >= WSEQ.length){
+      washSetup.confirmed = true;
+      toast('✓ Station set — water is on. Rinse the whole part.', 'good');
+    } else {
+      toast(`✓ ${cfg.name[0].toUpperCase() + cfg.name.slice(1)} set — next: ${WSEQ[washSetup.idx].name}.`, 'good');
+    }
+    updateWashRows();
+  });
+}
+bindWash(WSEQ[0], ' PSI');
+bindWash(WSEQ[1], ' °F');
+bindWash(WSEQ[2], ' in');
+bindWash(WSEQ[3], '°');
+function updateWashRows(){
+  WSEQ.forEach((cfg, i) => {
+    const row = $(cfg.row), btn = $(cfg.btn);
+    row.classList.toggle('done', washSetup.confirmed || i < washSetup.idx);
+    row.classList.toggle('active', !washSetup.confirmed && i === washSetup.idx);
+    row.classList.toggle('locked', !washSetup.confirmed && i > washSetup.idx);
+    btn.textContent = (washSetup.confirmed || i < washSetup.idx) ? '✓ Set' : 'Set';
+    btn.disabled = washSetup.confirmed || i !== washSetup.idx || !washSettingOk(cfg.key);
+  });
+  const go = $('washGo');
+  go.className = 'gostate' + (washSetup.confirmed ? ' ready' : '');
+  go.textContent = washSetup.confirmed
+    ? '💧 Water is ON — press and sweep across the part.'
+    : `🔒 Water is off — setting ${washSetup.idx + 1} of 4: adjust the ${WSEQ[washSetup.idx].name} to the procedure value, then press Set.`;
+}
+function resetWashSetup(){
+  washSetup.idx = 0; washSetup.confirmed = false;
+  updateWashRows();
+}
+function washIssue(key, msg, damaging){
+  if (!state.washIssues[key]){
+    state.washIssues[key] = true;
+    if (damaging) mistake(msg); else toast(msg, 'warn');
+  } else if (damaging) toast('⚠ ' + msg, 'warn');
+}
+
+/* ================= pointer interaction ================= */
+function stagePos(e){
+  const r = cv.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
+}
+function overPart(p){
+  const pt = state.part;
+  return p.x >= pt.x - PART_W/2 - 10 && p.x <= pt.x + PART_W/2 + 10 &&
+         p.y >= pt.y - 14 && p.y <= pt.y + PART_H + 8;
+}
+stage.addEventListener('pointerdown', e => {
+  if (e.target.closest('.ruler')) return;
+  const p = stagePos(e);
+  state.px = p.x; state.py = p.y;
+  if (state.mode === 'line'){
+    if (state.gunActive){
+      if (overPart(p)) gunRead();
+      else toast('Aim the thermal gun at the part and click it.');
+      return;
+    }
+    if (overPart(p) && !isPartLocked()){
+      e.preventDefault();
+      state.part.grabbed = true;
+      state.part.gx = p.x - state.part.x;
+      state.part.gy = p.y - state.part.y;
+      stage.classList.add('grabbing');
+      state.wasOut = true;
+      stage.setPointerCapture(e.pointerId);
+      widget.innerHTML = '';
+    }
+  } else if (state.mode === 'zoom'){
+    const s = cur();
+    if (s && s.type === 'zoomwash'){
+      e.preventDefault();
+      if (s.params && !washSetup.confirmed){
+        toast('🔒 Water is off — confirm the four station settings below first, one at a time.');
+        return;
+      }
+      state.washing = true;
+      stage.setPointerCapture(e.pointerId);
+    }
+  }
+});
+function isPartLocked(){
+  const s = cur(); if (!s) return false;
+  /* part can't be pulled off a running rack timer or out of the dryer mid-cycle */
+  if (s.type === 'rack' && state.timer && state.timer.running) { toast('Let the dwell finish before moving the part.'); return true; }
+  return false;
+}
+window.addEventListener('pointerdown', e => {
+  state.clientX = e.clientX; state.clientY = e.clientY;
+}, true);
+window.addEventListener('pointermove', e => {
+  state.clientX = e.clientX; state.clientY = e.clientY;
+  const p = stagePos(e); state.px = p.x; state.py = p.y;
+  if (state.part.grabbed){
+    movePart(p.x - state.part.gx, p.y - state.part.gy);
+  }
+  moveGhost();
+  if (state.mode === 'line') stage.classList.toggle('grabbable', overPart(p) && !state.part.grabbed);
+});
+window.addEventListener('pointerup', () => {
+  state.washing = false;
+  if (state.part.grabbed){
+    state.part.grabbed = false;
+    stage.classList.remove('grabbing');
+    snapPart();
+  }
+  moveGhost();
+});
+
+function dipStationAt(x){
+  for (const st of ST){
+    if ((st.type === 'tank' || st.type === 'dust') && Math.abs(x - st.x) < 62) return st;
+  }
+  return null;
+}
+function movePart(nx, ny){
+  const pt = state.part;
+  pt.x = Math.max(56, Math.min(W - 34, nx));
+  const dipSt = dipStationAt(pt.x);
+  const maxY = dipSt ? SURF_Y + 6 : CARRY_Y + 34;
+  pt.y = Math.max(CARRY_Y - 26, Math.min(maxY, ny));
+  pt.station = null;
+}
+function snapPart(){
+  const pt = state.part;
+  let best = null, bd = 1e9;
+  for (const st of ST){
+    const d = Math.abs(pt.x - st.x);
+    if (d < bd){ bd = d; best = st; }
+  }
+  pt.x = best.x; pt.y = CARRY_Y; pt.station = best.id;
+  const s = cur();
+  /* released while still in the tank after coating: lifting it out on snap completes the dip */
+  if (s && s.type === 'dip' && s.station === best.id && state.dipDone){ advance(); return; }
+  if (s && best.id !== s.station && bd < 900){
+    /* wrong-station coaching, but only if they clearly parked it somewhere */
+    const target = stById(s.station);
+    if (best.type === 'tank' || best.type === 'dust' || best.type === 'booth' || best.type === 'dryer' || best.type === 'rack'){
+      if (state.lastWrongAt !== best.id){
+        state.lastWrongAt = best.id;
+        toast(`Not this station yet — next is ${target.label.replace(' ·', ' under')}.`);
+      }
+    }
+  } else state.lastWrongAt = null;
+  onArrive(best.id);
+  renderWidget();
+}
+
+/* ================= per-frame: dipping ================= */
+function submergedFrac(){
+  const bottom = state.part.y + PART_H;
+  return Math.max(0, Math.min(1, (bottom - SURF_Y) / PART_H));
+}
+function stepDip(dt){
+  const pt = state.part;
+  if (!pt.grabbed) return;
+  const st = dipStationAt(pt.x);
+  if (!st) return;
+  const frac = submergedFrac();
+  const s = cur();
+  if (!s) return;
+  const isTarget = (s.type === 'dip') && s.station === st.id;
+  if (frac > 0.15 && !isTarget){
+    if (state.lastWrongDip !== st.id + s.id){
+      state.lastWrongDip = st.id + s.id;
+      mistake(`The part went into the ${st.label} tank out of sequence — that contaminates the bath. Follow the line order.`);
+    }
+    return;
+  }
+  if (!isTarget) return;
+  if (frac >= 0.98){
+    state.wasOut = false;
+    /* Method B: lipophilic emulsifier works by diffusion — agitating the part in
+       the tank is a procedure violation and drives emulsifier into the flaws */
+    if (st.id === 'emul'){
+      if (state.lastDipPx != null)
+        state.agit += Math.abs(state.px - state.lastDipPx) + Math.abs(state.py - state.lastDipPy);
+      state.lastDipPx = state.px; state.lastDipPy = state.py;
+      if (state.agit > 240 && !state.agitWarned){
+        state.agitWarned = true;
+        state.procDmg = Math.min(0.5, state.procDmg + 0.2);
+        mistake('No agitation with lipophilic emulsifier — it works by diffusion alone. Hold the part still in the tank.');
+      }
+    }
+    const need = st.id === 'dust' ? 2.4 : 1.6;
+    if (!state.dipDone){
+      state.dipProg = Math.min(1, state.dipProg + dt / need);
+      if (state.dipProg >= 1){
+        state.dipDone = true;
+        if (st.id === 'pen'){ state.penA = 1; coatPenetrant(); toast('✓ Coated — pull it out and up.', 'good'); }
+        if (st.id === 'emul'){ state.emulA = 1; toast('✓ Coated in emulsifier — pull it out and let it drain. The clock matters now.', 'good'); }
+        if (st.id === 'dust'){ state.dustA = 1; toast('✓ Even dry powder coat — pull it out gently.', 'good'); }
+      }
+    }
+  } else { state.lastDipPx = null; state.lastDipPy = null; }
+  if (frac <= 0.02 && state.dipDone){
+    /* fully out with the coat on → step complete */
+    advance();
+    state.lastWrongDip = null;
+  }
+  if (frac > 0 && frac < 0.98 && !state.dipDone && state.dipProg > 0){
+    state.dipProg = Math.max(0, state.dipProg - dt / 3);
+  }
+}
+
+/* ================= dryer oven + thermal gun ================= */
+function ovenOk(){ return Math.abs(+$('ovenT').value - DRY.oven) <= DRY.ovenTol; }
+(function bindOven(){
+  const inp = $('ovenT'), val = $('ovenTV'), mark = $('ovenTM');
+  const upd = () => {
+    val.textContent = inp.value + ' °F';
+    const ok = ovenOk();
+    mark.textContent = ok ? '✓' : '✗';
+    mark.className = 'omark ' + (ok ? 'ok' : 'bad');
+    if (!state.dryT) $('dryStart').disabled = !ok;
+    $('ovenRow').classList.toggle('done', ok);
+  };
+  inp.addEventListener('input', upd); upd();
+})();
+$('dryStart').addEventListener('click', () => {
+  const s = cur(); if (!s || s.type !== 'dryer' || state.dryT) return;
+  if (!ovenOk()){ toast(`Set the oven to ${DRY.oven} °F per procedure first.`); return; }
+  state.dryT = { left: DRY.sim, rate: DRY.sim / DRY.real, running: true };
+  $('dryStart').disabled = true; $('dryStart').textContent = 'Drying…';
+  $('ovenT').disabled = true;
+  $('dryDig').className = 'digits running';
+});
+function stepDryer(dt){
+  const t = state.dryT; if (!t || !t.running) return;
+  t.left = Math.max(0, t.left - dt * t.rate);
+  const mm = Math.floor(t.left / 60), ss = Math.floor(t.left % 60);
+  $('dryDig').textContent = `${mm}:${String(ss).padStart(2, '0')}`;
+  if (t.left <= 0){
+    t.running = false; t.done = true;
+    state.dried = true;
+    $('dryDig').className = 'digits done';
+    $('gunBtn').disabled = false;
+    $('ovenT').disabled = false;
+    toast('✓ Cycle done — check the part temperature with the thermal gun.', 'good');
+  }
+}
+$('gunBtn').addEventListener('click', () => {
+  const s = cur(); if (!s || s.type !== 'dryer' || !state.dryT || !state.dryT.done) return;
+  state.gunActive = true;
+  toast('Point the gun — click on the part to read its temperature.');
+  moveGhost();
+});
+function gunRead(){
+  /* oven at 140 → part comes out a little cooler; always below the 150 max */
+  const temp = Math.round(+$('ovenT').value - 10 - Math.random() * 6);
+  state.gunActive = false;
+  state.gunChip = { temp, at: performance.now() };
+  toast(`✓ Part reads ${temp} °F — below the ${DRY.partMax} °F limit. On to the dust chamber.`, 'good');
+  $('dryerPanel').classList.remove('show');
+  setTimeout(advance, 400);
+}
+
+/* ================= over-dwell clock ================= */
+function startOverClock(label, cfg){
+  cfg = cfg || {};
+  state.overClock = { label, sim: 0, warned: false, penalized: false,
+    rate: cfg.rate || 600 / 45, warn: cfg.warn || OVERDWELL.warnSim,
+    bad: cfg.bad || OVERDWELL.badSim, dmg: cfg.dmg || 0.01, msg: cfg.msg };
+}
+function stopOverClock(){ state.overClock = null; }
+function stepOverClock(dt){
+  const oc = state.overClock; if (!oc || state.done) return;
+  oc.sim += dt * oc.rate;
+  if (oc.sim > oc.warn && !oc.warned){
+    oc.warned = true;
+    toast(`⚠ The part is sitting past its ${oc.label} — keep it moving.`, 'warn');
+  }
+  if (oc.sim > oc.bad && !oc.penalized){
+    oc.penalized = true;
+    mistake(`Part sat too long past its ${oc.label} — ${oc.msg || (oc.label === 'penetrant dwell' ? 'the penetrant is drying on the surface and in the flaws' : 'the indications are over-developing and losing definition')}.`);
+  }
+  if (oc.penalized) state.overDmg = Math.min(0.5, state.overDmg + dt * oc.dmg);
+  /* red running clock in the widget slot while on the line */
+  if (state.mode === 'line'){
+    const mm = Math.floor(oc.sim / 60), ss = Math.floor(oc.sim % 60);
+    const w = widget.querySelector('.overchip');
+    const txt = `⚠ +${mm}:${String(ss).padStart(2, '0')} past ${oc.label}`;
+    if (w) w.textContent = txt;
+    else widget.innerHTML = `<div class="overchip">${txt}</div>`;
+  }
+}
+
+/* ================= zoom washing ================= */
+function applyWash(dt){
+  const s = cur(); if (!s || s.type !== 'zoomwash' || state.mode !== 'zoom') return;
+  if (s.params && !washSetup.confirmed) return;
+  state.lastApplyAt = performance.now();
+  const x = Math.max(PLATE.x0, Math.min(PLATE.x1, state.px));
+  const y = Math.max(PLATE.y0, Math.min(PLATE.y1, state.py));
+  let eff = 1;
+  if (s.params){
+    let unsafe = false;
+    if (washCtl.psi > WASH.psi.max){ unsafe = true; washIssue('psi', `Water pressure ${washCtl.psi} PSI — the procedure caps it at 40. High pressure drives penetrant out of flaws.`, true); }
+    else if (washCtl.psi < WASH.psi.min){ eff *= 0.35; washIssue('psiLo', 'Pressure is too low to move the penetrant — bring it up toward 38 PSI.'); }
+    if (washCtl.ang >= WASH.ang.perp){ unsafe = true; washIssue('ang', `Spraying at ${washCtl.ang}° — never perpendicular to the surface. Hold the nozzle near 45°.`, true); }
+    else if (washCtl.ang < WASH.ang.lo){ eff *= 0.6; washIssue('angLo', 'Too shallow an angle — the spray just skates across. Bring it up toward 45°.'); }
+    if (washCtl.dist < WASH.dist.tooClose){ unsafe = true; washIssue('dist', `Nozzle at ${washCtl.dist} in is far too close — back off to about 12 in.`, true); }
+    else if (washCtl.dist > WASH.dist.hi + 4){ eff *= 0.5; washIssue('distFar', 'Nozzle is too far away to wash effectively — move in to about 12 in.'); }
+    if (washCtl.temp > WASH.temp.hi){ eff *= 0.9; washIssue('tempHi', `Water at ${washCtl.temp} °F is above the 100 °F procedure limit.`, true); }
+    else if (washCtl.temp < WASH.temp.lo){ eff *= 0.7; washIssue('tempLo', `Water at ${washCtl.temp} °F is below the 60 °F procedure limit — cold water washes poorly.`); }
+    if (unsafe){
+      eff *= 1.5;
+      state.washDamage = Math.min(1, state.washDamage + dt * 0.11);
+    }
+    if (cellAt(grid, x, y) >= 0.95)
+      state.washDamage = Math.min(1, state.washDamage + dt * 0.02);
+  }
+  const r = 34;
+  if (s.id === 'p1'){ wipeLayer(dctx, x, y, r, 0.4 * eff); }
+  if (s.id === 'p4'){ wipeLayer(pctx, x, y, r, Math.min(0.6, 0.34 * eff)); }
+  if (s.id === 'p10'){ state.devFade = Math.max(state.devFade, coverage(grid)); state.bleedFade = Math.max(0, 1 - coverage(grid) * 1.15); }
+  stampGrid(grid, x, y, r, 0.26 * eff);
+  spawn(state.px, state.py, '150,190,255', 9, { vy: 40, sy: 80, jx: 16 });
+  checkCoverage();
+}
+
+/* ================= measurement check ================= */
+$('checkBtn').addEventListener('click', () => {
+  const vCL = parseFloat($('mCL').value), vHZ = parseFloat($('mHAZ').value), vPO = parseFloat($('mPOR').value);
+  const okCL = Number.isFinite(vCL) && Math.abs(vCL - CRACKS[0].len) <= TOL;
+  const okHZ = Number.isFinite(vHZ) && Math.abs(vHZ - CRACKS[1].len) <= TOL;
+  const okPO = Number.isFinite(vPO) && vPO === PORES.length;
+  markInput('kCL', okCL); markInput('kHAZ', okHZ); markInput('kPOR', okPO);
+  const fb = $('mFb');
+  if (okCL && okHZ && okPO){
+    fb.textContent = '✓ Measurements accepted and recorded.';
+    fb.className = 'fb ok';
+    state.results = { cl: vCL, haz: vHZ, por: vPO };
+    ['mCL','mHAZ','mPOR'].forEach(id => $(id).disabled = true);
+    $('checkBtn').disabled = true;
+    setTimeout(exitZoom, 600);
+    advance();
+  } else {
+    const bad = [];
+    if (!okCL) bad.push('the centerline crack');
+    if (!okHZ) bad.push('the HAZ crack');
+    if (!okPO) bad.push('the porosity count');
+    fb.textContent = 'Re-check ' + bad.join(' and ') + '. Line the 0 mark on one tip of the indication and read at the other tip.';
+    fb.className = 'fb bad';
+    state.mistakes.push('Measurement retry: ' + bad.join(', '));
+  }
+});
+function markInput(id, ok){
+  const e = $(id); e.textContent = ok ? '✓' : '✗';
+  e.className = 'mark ' + (ok ? 'ok' : 'bad');
+}
+
+/* ================= finish ================= */
+function finish(){
+  state.done = true;
+  exitZoom();
+  const sel = window.getSelection && window.getSelection();
+  if (sel) sel.removeAllRanges();
+  const r = state.results || { cl: '—', haz: '—', por: '—' };
+  $('repRows').innerHTML = `
+    <tr><td>Weld centerline</td><td>Linear — longitudinal crack</td><td>${r.cl} in (actual 1.1 in)</td><td class="ok">✓</td></tr>
+    <tr><td>Weld toe / HAZ</td><td>Linear — crack</td><td>${r.haz} in (actual 0.6 in)</td><td class="ok">✓</td></tr>
+    <tr><td>Weld face</td><td>Rounded — porosity</td><td>${r.por} indications</td><td class="ok">✓</td></tr>`;
+  $('verdictBox').textContent = 'Disposition: REJECT — cracks (linear indications) are not acceptable in any amount. The weld requires repair and re-inspection.';
+  const wg = $('washGrade');
+  const d = state.washDamage, o = state.overDmg, p = state.procDmg;
+  const notes = [];
+  if (d < 0.15 && o < 0.05 && p < 0.05){ wg.className = 'washgrade'; wg.textContent = 'Process control: GOOD — emulsifier handled by the book, dwells on time, rinse per procedure. Indications developed at full strength.'; }
+  else {
+    if (d >= 0.15) notes.push(`over-washed ${Math.round(d*100)}% (penetrant flushed from flaws)`);
+    if (o >= 0.05) notes.push('part left sitting past a critical time window');
+    if (p >= 0.05) notes.push('emulsifier agitated in the tank');
+    const sev = (d + o + p) < 0.5 ? 'warn' : 'bad';
+    wg.className = 'washgrade ' + sev;
+    wg.textContent = 'Process control: ' + notes.join(' · ') + ' — the indications came up dimmer than they should. ' +
+      (sev === 'bad' ? 'In the field these could have been missed entirely — reprocess from pre-clean.' : 'Keep the part moving and watch the rinse parameters.');
+  }
+  const n = state.mistakes.length;
+  $('repMistakes').textContent = n === 0
+    ? 'Procedure followed with no deviations. Excellent technique.'
+    : `Procedure deviations flagged during the run: ${n}.`;
+  $('report').classList.remove('hidden');
+}
+
+/* ================= LINE VIEW rendering ================= */
+function drawPartMini(g, x, y, uvLocal){
+  /* x,y = top-left of hanging part */
+  const w = PART_W, h = PART_H;
+  g.save();
+  /* hanger wire + hook */
+  g.strokeStyle = '#6b6560'; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(x + w/2, RAIL_Y + 8); g.lineTo(x + w/2, y - 2); g.stroke();
+  g.fillStyle = '#4c4844';
+  g.fillRect(x + w/2 - 7, RAIL_Y + 2, 14, 8);
+  /* plate */
+  const pg = g.createLinearGradient(x, y, x + w, y);
+  pg.addColorStop(0, '#c3c8cd'); pg.addColorStop(0.5, '#aab0b7'); pg.addColorStop(1, '#969ca4');
+  g.fillStyle = pg;
+  g.fillRect(x, y, w, h);
+  /* weld seam (part hangs with the weld vertical) */
+  g.fillStyle = 'rgba(126,132,140,.9)';
+  g.fillRect(x + w/2 - 5, y, 10, h);
+  g.strokeStyle = 'rgba(70,76,84,.6)'; g.lineWidth = 1;
+  for (let yy = y + 3; yy < y + h - 2; yy += 6){
+    g.beginPath(); g.ellipse(x + w/2, yy, 4.5, 3, 0, 0, Math.PI * 2); g.stroke();
+  }
+  /* state tints */
+  if (state.dirtA > 0){ g.fillStyle = `rgba(74,60,40,${0.28 * state.dirtA})`; g.fillRect(x, y, w, h); }
+  if (state.penA > 0){
+    g.fillStyle = uvLocal ? `rgba(170,240,60,${0.85 * state.penA})` : `rgba(154,219,44,${0.5 * state.penA})`;
+    g.fillRect(x, y, w, h);
+  }
+  if (state.emulA > 0){ g.fillStyle = `rgba(216,132,42,${0.4 * state.emulA})`; g.fillRect(x, y, w, h); }
+  if (state.dustA > 0){ g.fillStyle = `rgba(248,248,244,${0.72 * state.dustA * (1 - state.devFade)})`; g.fillRect(x, y, w, h); }
+  /* developed indications faintly visible on the mini part */
+  if (state.bleed > 0 && state.bleedFade > 0.05){
+    const br = indicationBrightness();
+    g.fillStyle = `rgba(160,220,60,${0.5 * state.bleed * state.bleedFade * br})`;
+    g.fillRect(x + w/2 - 1.5, y + h*0.42, 3, h*0.16);
+    g.beginPath(); g.arc(x + w/2 + 1, y + h*0.25, 2, 0, Math.PI*2); g.fill();
+    g.beginPath(); g.arc(x + w/2 - 2, y + h*0.6, 2, 0, Math.PI*2); g.fill();
+  }
+  g.strokeStyle = 'rgba(50,54,60,.7)'; g.lineWidth = 1.2;
+  g.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+  g.restore();
+}
+function drawStation(g, st, isTarget, now){
+  const w = 96, x0 = st.x - w/2;
+  g.save();
+  if (st.type === 'tank' || st.type === 'dust'){
+    /* tank body */
+    g.fillStyle = '#3a3f45';
+    g.fillRect(x0, 258, w, FLOOR_Y - 258);
+    g.fillStyle = '#2c3036';
+    g.fillRect(x0 + 5, 264, w - 10, FLOOR_Y - 270);
+    if (st.type === 'tank'){
+      g.fillStyle = st.liquid;
+      g.globalAlpha = st.id === 'pen' ? 0.92 : 0.95;
+      g.fillRect(x0 + 5, SURF_Y - 8, w - 10, FLOOR_Y - 6 - (SURF_Y - 8));
+      g.globalAlpha = 1;
+      g.fillStyle = 'rgba(255,255,255,.25)';
+      g.fillRect(x0 + 5, SURF_Y - 8, w - 10, 3);
+    } else {
+      /* dust chamber: enclosed with window */
+      g.fillStyle = '#494f56';
+      g.fillRect(x0, 246, w, 16);
+      g.fillStyle = 'rgba(230,230,222,.14)';
+      g.fillRect(x0 + 5, 264, w - 10, FLOOR_Y - 270);
+      /* swirling powder */
+      g.fillStyle = 'rgba(240,240,232,.5)';
+      for (let i = 0; i < 14; i++){
+        const a = now / 700 + i * 1.9;
+        const px = st.x + Math.cos(a + i) * (16 + (i % 4) * 8);
+        const py = (SURF_Y + 30) + Math.sin(a * 1.3 + i) * 38;
+        g.globalAlpha = 0.25 + 0.3 * Math.abs(Math.sin(a + i * 2));
+        g.beginPath(); g.arc(px, py, 1.4 + (i % 3), 0, Math.PI * 2); g.fill();
+      }
+      g.globalAlpha = 1;
+    }
+    /* rim */
+    g.fillStyle = '#555b62';
+    g.fillRect(x0 - 3, 252, w + 6, 8);
+  } else if (st.type === 'booth'){
+    /* open spray booth: side posts, overhead spray header with nozzles, drain grate —
+       deliberately nothing like a tank (no walls, no liquid) */
+    g.fillStyle = '#555b62';
+    g.fillRect(x0 + 2, 152, 6, FLOOR_Y - 152);
+    g.fillRect(x0 + w - 8, 152, 6, FLOOR_Y - 152);
+    /* header pipe */
+    g.fillStyle = '#666c74';
+    g.fillRect(x0 + 2, 152, w - 4, 10);
+    /* nozzles + falling spray */
+    for (let i = 0; i < 3; i++){
+      const nx = x0 + 18 + i * ((w - 36) / 2);
+      g.fillStyle = '#8a9099';
+      g.beginPath(); g.moveTo(nx - 4, 162); g.lineTo(nx + 4, 162); g.lineTo(nx, 170); g.closePath(); g.fill();
+      const sway = Math.sin(now / 300 + i * 2) * 2;
+      const spray = g.createLinearGradient(0, 170, 0, 320);
+      spray.addColorStop(0, st.uv ? 'rgba(160,150,255,.4)' : 'rgba(160,200,235,.42)');
+      spray.addColorStop(1, 'rgba(160,200,235,0)');
+      g.fillStyle = spray;
+      g.beginPath();
+      g.moveTo(nx - 2, 170);
+      g.lineTo(nx + 2, 170);
+      g.lineTo(nx + 13 + sway, 320);
+      g.lineTo(nx - 13 + sway, 320);
+      g.closePath(); g.fill();
+    }
+    if (st.uv){
+      /* UV tube under the header */
+      g.fillStyle = '#8a6cff';
+      g.shadowColor = '#8a6cff'; g.shadowBlur = 14;
+      g.fillRect(x0 + 12, 164, w - 24, 4);
+      g.shadowBlur = 0;
+      g.fillStyle = 'rgba(110,80,255,.10)';
+      g.fillRect(x0 + 8, 168, w - 16, 190);
+    }
+    /* splash drain grate */
+    g.fillStyle = '#33373c';
+    g.fillRect(x0 - 2, FLOOR_Y - 12, w + 4, 12);
+    g.fillStyle = '#1d2023';
+    for (let gx = x0 + 2; gx < x0 + w - 4; gx += 8) g.fillRect(gx, FLOOR_Y - 10, 4, 8);
+  } else if (st.type === 'rack'){
+    g.strokeStyle = '#5c6167'; g.lineWidth = 4;
+    g.beginPath(); g.moveTo(x0 + 8, FLOOR_Y); g.lineTo(x0 + 8, 200); g.lineTo(x0 + w - 8, 200); g.lineTo(x0 + w - 8, FLOOR_Y); g.stroke();
+    g.lineWidth = 2.5;
+    g.beginPath(); g.moveTo(st.x, 200); g.lineTo(st.x, 216); g.stroke();
+    g.fillStyle = '#5c6167';
+    g.beginPath(); g.arc(st.x, 220, 4, 0, Math.PI * 2); g.fill();
+    /* drip tray */
+    g.fillStyle = '#3a3f45';
+    g.fillRect(x0 + 4, FLOOR_Y - 10, w - 8, 10);
+  } else if (st.type === 'dryer'){
+    const running = state.dryT && state.dryT.running;
+    g.fillStyle = '#454a51';
+    g.fillRect(x0 - 2, 170, w + 4, FLOOR_Y - 170);
+    g.fillStyle = '#33373c';
+    g.fillRect(x0 + 6, 182, w - 12, FLOOR_Y - 192);
+    /* oven setpoint readout on the box */
+    g.fillStyle = running ? '#ffb060' : '#9aa1a9';
+    g.font = '600 10px "JetBrains Mono", monospace';
+    g.textAlign = 'center';
+    g.fillText(($('ovenT') ? $('ovenT').value : '—') + '°F', st.x, 178);
+    /* fan */
+    g.save();
+    g.translate(st.x, 204);
+    g.rotate(running ? now / 60 : now / 800);
+    g.fillStyle = '#7d848c';
+    for (let i = 0; i < 4; i++){ g.rotate(Math.PI / 2); g.fillRect(-2, 0, 4, 12); }
+    g.restore();
+    g.strokeStyle = '#7d848c'; g.lineWidth = 1.5;
+    g.beginPath(); g.arc(st.x, 204, 14, 0, Math.PI * 2); g.stroke();
+    if (running){
+      g.fillStyle = 'rgba(255,150,60,.15)';
+      g.fillRect(x0 + 6, 182, w - 12, FLOOR_Y - 192);
+    }
+  }
+  /* target highlight */
+  if (isTarget){
+    const pulse = 0.5 + 0.5 * Math.sin(now / 320);
+    g.strokeStyle = `rgba(232,168,124,${0.5 + 0.45 * pulse})`;
+    g.lineWidth = 2; g.setLineDash([7, 6]);
+    g.strokeRect(x0 - 7, 146, w + 14, FLOOR_Y - 140);
+    g.setLineDash([]);
+    /* down arrow */
+    g.fillStyle = `rgba(232,168,124,${0.6 + 0.4 * pulse})`;
+    const ay = 122 + pulse * 6;
+    g.beginPath();
+    g.moveTo(st.x - 8, ay); g.lineTo(st.x + 8, ay); g.lineTo(st.x, ay + 12);
+    g.closePath(); g.fill();
+  }
+  /* label */
+  g.fillStyle = isTarget ? '#e8a87c' : 'rgba(230,225,215,.55)';
+  g.font = '600 9px "JetBrains Mono", monospace';
+  g.textAlign = 'center';
+  g.fillText(st.label, st.x, FLOOR_Y + 16);
+  g.restore();
+}
+function renderLine(now, dt){
+  /* room */
+  ctx.fillStyle = '#2b2723'; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(255,255,255,.03)';
+  for (let y = 0; y < H; y += 7){ ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y + 2); ctx.stroke(); }
+  /* floor */
+  ctx.fillStyle = '#211e1b';
+  ctx.fillRect(0, FLOOR_Y, W, H - FLOOR_Y);
+  ctx.strokeStyle = 'rgba(255,255,255,.06)';
+  ctx.beginPath(); ctx.moveTo(0, FLOOR_Y); ctx.lineTo(W, FLOOR_Y); ctx.stroke();
+  /* rail */
+  ctx.fillStyle = '#4c4844';
+  ctx.fillRect(20, RAIL_Y, W - 40, 6);
+  ctx.fillStyle = '#3a3733';
+  for (let x = 40; x < W - 30; x += 60) ctx.fillRect(x, RAIL_Y - 6, 4, 6);
+  const s = cur();
+  for (const st of ST) drawStation(ctx, st, s && st.id === s.station && state.mode === 'line' && !state.done, now);
+  /* part */
+  const pt = state.part;
+  const uvLocal = pt.station === 'rinse' || pt.station === 'inspect';
+  /* clip part inside tank when submerged so it visibly goes under */
+  const dipSt = dipStationAt(pt.x);
+  if (dipSt && pt.y + PART_H > SURF_Y - 10){
+    /* draw part behind liquid: draw part, then liquid overlay strip */
+    drawPartMini(ctx, pt.x - PART_W/2, pt.y, uvLocal);
+    if (dipSt.type === 'tank'){
+      ctx.fillStyle = dipSt.liquid;
+      ctx.globalAlpha = dipSt.id === 'pen' ? 0.75 : 0.8;
+      const lx = dipSt.x - 48 + 5, lw = 96 - 10;
+      ctx.fillRect(lx, SURF_Y - 8, lw, FLOOR_Y - 6 - (SURF_Y - 8));
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(255,255,255,.3)';
+      ctx.fillRect(lx, SURF_Y - 8, lw, 3);
+      /* ripples where the hanger wire enters */
+      if (pt.y + PART_H > SURF_Y){
+        ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.ellipse(pt.x, SURF_Y - 7, 12 + Math.sin(now/200) * 2, 3, 0, 0, Math.PI * 2); ctx.stroke();
+      }
+    } else if (dipSt.type === 'dust'){
+      ctx.fillStyle = 'rgba(235,235,228,.28)';
+      ctx.fillRect(dipSt.x - 43, 264, 86, FLOOR_Y - 270);
+    }
+  } else {
+    drawPartMini(ctx, pt.x - PART_W/2, pt.y, uvLocal);
+  }
+  /* dip progress ring */
+  if (state.dipProg > 0 && state.dipProg < 1 && pt.grabbed){
+    ctx.strokeStyle = 'rgba(232,168,124,.9)'; ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(pt.x, Math.min(pt.y - 26, 240), 13, -Math.PI/2, -Math.PI/2 + state.dipProg * Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.15)';
+    ctx.beginPath(); ctx.arc(pt.x, Math.min(pt.y - 26, 240), 13, 0, Math.PI * 2); ctx.stroke();
+  }
+  /* drips: on drain rack during dwell, or freshly dipped */
+  if (!state.done){
+    if (s && s.id === 'e2' && pt.station === 'emul' && state.timer && state.timer.running && Math.random() < 0.2)
+      spawn(pt.x + (Math.random()*30 - 15), pt.y + PART_H, '216,132,42', 1, { vy: 90, sy: 30, jx: 4, r: 1.4 });
+    if (s && s.id === 'p3' && pt.station === 'dwell' && state.timer && state.timer.running && Math.random() < 0.2)
+      spawn(pt.x + (Math.random()*30 - 15), pt.y + PART_H, '154,219,44', 1, { vy: 90, sy: 30, jx: 4, r: 1.4 });
+  }
+  /* thermal-gun reading chip floating by the part */
+  if (state.gunChip && now - state.gunChip.at < 3500){
+    const a = Math.min(1, (3500 - (now - state.gunChip.at)) / 800);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = 'rgba(20,18,16,.92)';
+    const chipW = 96;
+    ctx.fillRect(pt.x + PART_W/2 + 10, pt.y + 8, chipW, 34);
+    ctx.strokeStyle = '#6fce9a'; ctx.lineWidth = 2;
+    ctx.strokeRect(pt.x + PART_W/2 + 10, pt.y + 8, chipW, 34);
+    ctx.fillStyle = '#6fce9a';
+    ctx.font = '600 16px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(state.gunChip.temp + ' °F', pt.x + PART_W/2 + 10 + chipW/2, 26 + pt.y);
+    ctx.font = '600 8px "JetBrains Mono", monospace';
+    ctx.fillText('< ' + DRY.partMax + ' °F MAX ✓', pt.x + PART_W/2 + 10 + chipW/2, 37 + pt.y);
+    ctx.globalAlpha = 1;
+  }
+  /* gun laser dot while aiming */
+  if (state.gunActive){
+    ctx.strokeStyle = 'rgba(255,60,60,.55)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(state.px + 14, state.py + 10); ctx.lineTo(state.px, state.py); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,60,60,.95)';
+    ctx.beginPath(); ctx.arc(state.px, state.py, 2.4, 0, Math.PI * 2); ctx.fill();
+  }
+  /* particles */
+  for (const p of parts){
+    ctx.globalAlpha = Math.max(0, 1 - p.t / p.life) * 0.6;
+    ctx.fillStyle = `rgb(${p.rgb})`;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  /* debug hooks for automated tests */
+  stage.dataset.px = Math.round(pt.x); stage.dataset.py = Math.round(pt.y);
+}
+
+/* ================= ZOOM VIEW rendering ================= */
+function renderZoom(now){
+  const uv = Math.max(0, Math.min(1, state.uvT));
+  ctx.clearRect(0, 0, W, H);
+  ctx.drawImage(baseC, 0, 0);
+  if (state.dirtA > 0){ ctx.globalAlpha = (1 - uv * 0.5); ctx.drawImage(dirtC, 0, 0); ctx.globalAlpha = 1; }
+  if (state.dustA > 0){
+    ctx.globalAlpha = 0.62 * state.dustA * (1 - uv * 0.85) * (1 - state.devFade);
+    ctx.drawImage(devTexC, 0, 0);
+    ctx.globalAlpha = 1;
+  }
+  if (state.penA > 0 && uv < 1){ ctx.globalAlpha = 0.4 * state.penA * (1 - uv); ctx.drawImage(penC, 0, 0); ctx.globalAlpha = 1; }
+  if (uv > 0){
+    ctx.fillStyle = `rgba(10,8,30,${0.86 * uv})`;
+    ctx.fillRect(0, 0, W, H);
+    if (state.dustA > 0){ ctx.globalAlpha = 0.2 * uv * state.dustA * (1 - state.devFade); ctx.drawImage(devTexC, 0, 0); ctx.globalAlpha = 1; }
+    if (state.penA > 0){
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.95 * uv * state.penA;
+      ctx.drawImage(penC, 0, 0);
+      ctx.restore();
+    }
+    ctx.save(); ctx.globalAlpha = uv; drawBleed(ctx); ctx.restore();
+  }
+  /* big coverage readout pinned right above the part — hard to miss */
+  const csHud = cur();
+  if (csHud && csHud.type === 'zoomwash' && !state.done){
+    const c = coverage(grid);
+    const locked = csHud.params && !washSetup.confirmed;
+    const hx = PLATE.x0, hy = 34, hw = locked ? 430 : 380, hh = 40;
+    ctx.fillStyle = uv > 0.5 ? 'rgba(18,14,48,.88)' : 'rgba(250,247,242,.94)';
+    ctx.fillRect(hx, hy, hw, hh);
+    ctx.strokeStyle = locked ? 'rgba(200,16,46,.8)' : (c >= csHud.need ? '#2e7d4f' : '#e8a87c');
+    ctx.lineWidth = 2;
+    ctx.strokeRect(hx, hy, hw, hh);
+    ctx.textAlign = 'left';
+    if (locked){
+      ctx.fillStyle = uv > 0.5 ? '#ffb3be' : '#c8102e';
+      ctx.font = '600 15px "JetBrains Mono", monospace';
+      ctx.fillText('🔒 WATER OFF — SET THE STATION BELOW', hx + 14, hy + 26);
+    } else {
+      ctx.fillStyle = uv > 0.5 ? '#cfc8b8' : '#4a4a47';
+      ctx.font = '600 12px "JetBrains Mono", monospace';
+      ctx.fillText(csHud.covLabel.toUpperCase(), hx + 14, hy + 25);
+      ctx.font = '700 24px "JetBrains Mono", monospace';
+      ctx.fillStyle = c >= csHud.need ? '#4fc084' : (uv > 0.5 ? '#e8a87c' : '#b54515');
+      ctx.textAlign = 'right';
+      ctx.fillText(Math.floor(c * 100) + '%', hx + hw - 130, hy + 30);
+      /* mini bar */
+      ctx.fillStyle = uv > 0.5 ? 'rgba(255,255,255,.15)' : 'rgba(0,0,0,.12)';
+      ctx.fillRect(hx + hw - 118, hy + 14, 104, 12);
+      ctx.fillStyle = c >= csHud.need ? '#4fc084' : '#e8a87c';
+      ctx.fillRect(hx + hw - 118, hy + 14, Math.round(104 * Math.min(1, c)), 12);
+      ctx.textAlign = 'left';
+    }
+  }
+  const cs = cur();
+  if (cs && cs.type === 'zoomwash' && !state.done && !state.washing){
+    const c = coverage(grid);
+    if (c > 0.3 && c < cs.need && now - state.lastApplyAt > 1200){
+      const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const pulse = reduce ? 0.22 : 0.19 + 0.1 * Math.sin(now / 260);
+      ctx.fillStyle = cs.light ? `rgba(154,219,44,${pulse * 0.9})` : `rgba(181,69,21,${pulse})`;
+      for (let r = 0; r < ROWS; r++) for (let cc = 0; cc < COLS; cc++)
+        if (grid[r * COLS + cc] < 0.5) ctx.fillRect(Z.x0 + cc * CS, Z.y0 + r * CS, CS, CS);
+      if (!state.gapHintShown){
+        state.gapHintShown = true;
+        toast(cs.id === 'p4' ? 'The glowing patches are penetrant still on the surface — wash them off.' :
+          'The highlighted patches still need washing — cover the whole part.');
+      }
+    }
+  }
+  for (const p of parts){
+    ctx.globalAlpha = Math.max(0, 1 - p.t / p.life) * 0.55;
+    ctx.fillStyle = `rgb(${p.rgb})`;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* nozzle ghost cursor in zoom wash mode */
+function nozzleSVG(h){
+  h = h || 64;
+  return `<svg class="can" width="${h*1.15}" height="${h}" viewBox="0 0 60 52">
+    <rect x="26" y="20" width="12" height="26" rx="3" fill="#3f4750" stroke="#20262c" stroke-width="1.2"/>
+    <rect x="22" y="14" width="24" height="9" rx="3" fill="#5a636d" stroke="#2c333a" stroke-width="1.2"/>
+    <rect x="10" y="15.5" width="13" height="6" rx="2" fill="#c7ccd2" stroke="#8d949c" stroke-width="1"/>
+    <path d="M30 26 L34 26 L36 34 L28 34 Z" fill="#e0653a"/>
+    <rect x="36" y="30" width="7" height="14" rx="2.5" fill="#3f4750"/>
+    <path d="M43 42 Q52 44 56 50" fill="none" stroke="#2c333a" stroke-width="3.4" stroke-linecap="round"/>
+  </svg>`;
+}
+function gunSVG(h){
+  h = h || 56;
+  return `<svg width="${h}" height="${h*0.85}" viewBox="0 0 56 48">
+    <rect x="6" y="12" width="34" height="14" rx="4" fill="#f2b632" stroke="#8a6a12" stroke-width="1.4"/>
+    <rect x="40" y="14" width="8" height="10" rx="2" fill="#3a3f45"/>
+    <rect x="14" y="26" width="11" height="16" rx="3" fill="#3a3f45"/>
+    <rect x="9" y="15" width="10" height="8" rx="1.5" fill="#1d2023"/>
+    <text x="14" y="21.5" font-size="5.5" fill="#6fce9a" font-family="monospace">°F</text>
+  </svg>`;
+}
+function moveGhost(){
+  const s = cur();
+  if (state.mode === 'line' && state.gunActive){
+    const r = stage.getBoundingClientRect();
+    const inside = state.clientX >= r.left && state.clientX <= r.right && state.clientY >= r.top && state.clientY <= r.bottom;
+    if (!inside){ ghost.style.display = 'none'; return; }
+    if (ghost.dataset.kind !== 'gun'){ ghost.innerHTML = gunSVG(56); ghost.dataset.kind = 'gun'; }
+    ghost.style.display = 'block';
+    ghost.style.transform = `translate(${state.clientX + 10}px, ${state.clientY + 8}px)`;
+    return;
+  }
+  const showNozzle = state.mode === 'zoom' && s && s.type === 'zoomwash' && (!s.params || washSetup.confirmed);
+  if (!showNozzle){ ghost.style.display = 'none'; stage.classList.remove('washing-cursor'); return; }
+  const r = stage.getBoundingClientRect();
+  const inside = state.clientX >= r.left && state.clientX <= r.right && state.clientY >= r.top && state.clientY <= r.bottom;
+  if (!inside){ ghost.style.display = 'none'; stage.classList.remove('washing-cursor'); return; }
+  stage.classList.add('washing-cursor');
+  if (!ghost.innerHTML) ghost.innerHTML = nozzleSVG(64);
+  if (!ghost.dataset.kind || ghost.dataset.kind !== 'nozzle'){ ghost.innerHTML = nozzleSVG(64); ghost.dataset.kind = 'nozzle'; }
+  ghost.style.display = 'block';
+  ghost.style.transform = `translate(${state.clientX - 12}px, ${state.clientY - 4}px)`;
+  const svg = ghost.querySelector('svg');
+  if (svg && s.params) svg.style.transform = `rotate(${-(90 - washCtl.ang)}deg)`;
+}
+
+/* ================= main loop ================= */
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (state.idx >= 0 && !state.done){
+    if (state.washing) applyWash(dt);
+    stepTimer(dt);
+    stepDip(dt);
+    stepDryer(dt);
+    stepOverClock(dt);
+  }
+  stepParts(dt);
+  const dtv = dt * 2.2;
+  state.uvT += Math.max(-dtv, Math.min(dtv, state.uvTarget - state.uvT));
+  const uv = Math.max(0, Math.min(1, state.uvT));
+  const chip = $('lightChip');
+  if (uv > 0.5 && !chip.classList.contains('uv')){ chip.classList.add('uv'); chip.textContent = 'UV-A · 365 nm'; }
+  if (uv <= 0.5 && chip.classList.contains('uv')){ chip.classList.remove('uv'); chip.textContent = 'White light'; }
+  if (state.mode === 'zoom') renderZoom(now);
+  else renderLine(now, dt);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ================= fullscreen ================= */
+const fsBtn = $('fsBtn'), container = document.querySelector('.container');
+const fsSupported = !!(document.documentElement.requestFullscreen && document.fullscreenEnabled);
+if (!fsSupported){ fsBtn.classList.add('hidden'); $('fsNote').classList.add('hidden'); }
+function enterFullscreen(){
+  if (!fsSupported || document.fullscreenElement) return Promise.resolve();
+  return document.documentElement.requestFullscreen().catch(() => {});
+}
+function toggleFullscreen(){
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  else enterFullscreen();
+}
+fsBtn.addEventListener('click', toggleFullscreen);
+function fitLayout(){
+  if (!document.fullscreenElement){ container.style.maxWidth = ''; return; }
+  container.style.maxWidth = '';
+  const fits = () => container.scrollHeight <= window.innerHeight;
+  let prev = Infinity;
+  for (let i = 0; i < 5; i++){
+    const stageH = stage.getBoundingClientRect().height;
+    const otherH = container.scrollHeight - stageH;
+    const avail = window.innerHeight - otherH - 6;
+    if (avail <= 0) break;
+    const wanted = avail * W / H + 56;
+    const next = Math.round(Math.max(560, Math.min(1760, wanted)));
+    container.style.maxWidth = next + 'px';
+    if (fits()) break;
+    if (Math.abs(next - prev) < 4) break;
+    prev = next;
+  }
+  if (!fits()) container.style.maxWidth = '';
+}
+function refit(){ requestAnimationFrame(() => requestAnimationFrame(fitLayout)); }
+document.addEventListener('fullscreenchange', () => {
+  fsBtn.textContent = document.fullscreenElement ? '⛶ Exit fullscreen' : '⛶ Fullscreen';
+  refit();
+});
+window.addEventListener('resize', refit);
+
+/* ================= begin ================= */
+$('beginBtn').addEventListener('click', () => {
+  enterFullscreen().then(refit);
+  $('intro').classList.add('hidden');
+  state.idx = 0;
+  enterStep();
+});
+
+})();
+</script>
+</body>
+</html>
