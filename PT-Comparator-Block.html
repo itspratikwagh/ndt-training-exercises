@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PT — Aluminum Comparator Block</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #faf7f2; --paper-deep: #f1ece2; --ink: #1a1a1a; --ink-soft: #4a4a47;
+    --ink-faded: #8a8a85; --rule: #d9d2c4; --amber: #b54515; --amber-soft: #e8a87c;
+    --amber-tint: #fdf2e6; --pen-red: #c8102e; --good: #2e7d4f; --fluor: #9adb2c;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px -12px rgba(60,40,20,0.12);
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'Manrope', -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--paper); }
+  body {
+    font-family: var(--sans); background: var(--paper); color: var(--ink);
+    line-height: 1.55; min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(181,69,21,0.04), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(154,219,44,0.04), transparent 50%);
+  }
+  .container { max-width: 1000px; margin: 0 auto; padding: 36px 28px 72px; }
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+  .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--amber); margin-bottom: 8px; font-weight: 500; }
+  h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(26px,4vw,38px); line-height: 1.05; letter-spacing: -.02em; font-variation-settings: 'opsz' 144; }
+  h1 em { font-style: italic; color: var(--amber); font-weight: 500; }
+  a.back { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faded); text-decoration: none; padding-bottom: 6px; }
+  a.back:hover { color: var(--amber); }
+
+  .instr {
+    background: var(--ink); color: var(--paper); border-radius: 2px; padding: 18px 22px;
+    margin-bottom: 14px; box-shadow: var(--shadow);
+    display: grid; grid-template-columns: 1fr auto; gap: 8px 24px; align-items: center;
+    min-height: 86px; position: relative;
+  }
+  .instr::before { content: ''; position: absolute; inset: 4px; border: 1px solid rgba(154,219,44,0.15); border-radius: 2px; pointer-events: none; }
+  .instr .step-tag { font-family: var(--mono); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--amber-soft); margin-bottom: 5px; }
+  .instr .text { font-size: 16px; font-weight: 500; max-width: 620px; }
+  .instr .text b { color: var(--amber-soft); }
+  .instr .widget { justify-self: end; text-align: right; }
+  .instr .widget button {
+    font-family: var(--sans); font-weight: 700; font-size: 13.5px;
+    background: var(--amber); color: #fff; border: none; border-radius: 2px;
+    padding: 12px 20px; cursor: pointer; white-space: nowrap;
+  }
+  .instr .widget button:hover { background: #9a3a12; }
+  .instr .digits { font-family: var(--mono); font-size: 32px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--amber-soft); line-height: 1; }
+  .instr .sub { font-family: var(--mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: #b9b4aa; margin-top: 4px; }
+  .covbox .covlabel { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #b9b4aa; margin-bottom: 6px; }
+  .covbar { width: 190px; height: 10px; background: rgba(255,255,255,.12); border-radius: 99px; overflow: hidden; display: inline-block; }
+  .covbar i { display: block; height: 100%; width: 0%; background: var(--amber-soft); border-radius: 99px; transition: width .12s linear; }
+  .covbar.full i { background: #6fce9a; }
+  @media (max-width: 700px){ .instr { grid-template-columns: 1fr; } .instr .widget { justify-self: start; text-align: left; } }
+
+  .scenario {
+    background: var(--amber-tint); border: 1px solid var(--amber-soft); border-radius: 2px;
+    padding: 12px 16px; margin-bottom: 14px; font-size: 14px; color: var(--ink-soft);
+  }
+  .scenario b { color: var(--amber); font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; display: block; margin-bottom: 3px; }
+
+  .stage {
+    position: relative; border-radius: 2px; overflow: hidden;
+    box-shadow: var(--shadow); border: 1px solid var(--rule);
+    touch-action: none; user-select: none; -webkit-user-select: none; background: #262320;
+  }
+  .stage canvas { display: block; width: 100%; height: auto; }
+  .stage.pour, .stage.wash { cursor: crosshair; }
+  .lightchip {
+    position: absolute; top: 10px; right: 12px;
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 99px; pointer-events: none;
+    background: rgba(250,247,242,.85); color: var(--ink-soft); transition: all .4s;
+  }
+  .lightchip.uv { background: rgba(40,30,90,.85); color: #b9a5ff; box-shadow: 0 0 14px rgba(120,80,255,.5); }
+  .toast {
+    position: absolute; left: 50%; bottom: 14px; transform: translate(-50%, 8px);
+    background: rgba(20,18,16,.94); color: var(--paper); font-size: 13.5px; font-weight: 500;
+    padding: 10px 16px; border-radius: 3px; max-width: 500px; line-height: 1.4;
+    opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s;
+    border-left: 3px solid var(--amber-soft);
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast.good { border-left-color: #6fce9a; }
+
+  .panel { background: var(--paper-deep); border: 1px solid var(--rule); border-radius: 2px; padding: 16px 18px; margin-top: 12px; display: none; }
+  .panel.show { display: block; }
+  .panel h4 { font-family: var(--serif); font-size: 17px; font-weight: 600; margin-bottom: 10px; }
+  .rowline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; font-size: 14px; color: var(--ink-soft); }
+  .choice {
+    font-family: var(--sans); font-weight: 700; font-size: 13px;
+    background: #fff; color: var(--ink); border: 1.5px solid var(--rule); border-radius: 2px;
+    padding: 10px 16px; cursor: pointer;
+  }
+  .choice:hover { border-color: var(--amber); color: var(--amber); }
+  .choice.sel { background: var(--amber); border-color: var(--amber); color: #fff; }
+  .choice:disabled { opacity: .5; cursor: default; }
+  .fb { font-size: 13.5px; color: var(--ink-soft); margin-top: 6px; line-height: 1.5; }
+  .fb.ok { color: var(--good); font-weight: 600; }
+  .fb.bad { color: var(--pen-red); font-weight: 600; }
+  .verdict-good, .verdict-bad { border-radius: 2px; padding: 12px 16px; font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+  .verdict-good { background: #e4efdd; border: 1px solid #c4dbb4; color: #2e5a1e; }
+  .verdict-bad { background: #f6dede; border: 1px solid #eab8b8; color: #7c1420; }
+  .lesson { font-size: 14px; color: var(--ink-soft); margin-bottom: 12px; }
+  .lesson b { color: var(--amber); }
+  .panel button.primary { font-family: var(--sans); font-weight: 700; font-size: 14px; background: var(--amber); color: #fff; border: none; border-radius: 2px; padding: 11px 22px; cursor: pointer; }
+  .panel button.primary:hover { background: #9a3a12; }
+  table.history { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.history th { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faded); text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--rule); }
+  table.history td { padding: 6px 8px; border-bottom: 1px solid rgba(0,0,0,.05); color: var(--ink-soft); }
+  table.history td.ok { color: var(--good); font-weight: 700; }
+  table.history td.bad { color: var(--pen-red); font-weight: 700; }
+
+  .veil { position: fixed; inset: 0; background: rgba(26,24,20,.55); backdrop-filter: blur(2px); display: flex; align-items: flex-start; justify-content: center; z-index: 100; padding: 28px 24px; overflow-y: auto; }
+  .veil.hidden { display: none; }
+  .card { background: var(--paper); border-radius: 3px; box-shadow: 0 24px 80px -20px rgba(0,0,0,.5); max-width: 620px; width: 100%; padding: 32px 38px; }
+  .card h2 { font-family: var(--serif); font-weight: 600; font-size: 27px; margin-bottom: 12px; }
+  .card h2 em { font-style: italic; color: var(--amber); }
+  .card p { font-size: 14.5px; color: var(--ink-soft); margin-bottom: 12px; }
+  .card ul { margin: 0 0 14px 18px; font-size: 14px; color: var(--ink-soft); }
+  .card ul li { margin-bottom: 5px; }
+  .card button.primary { font-family: var(--sans); font-weight: 700; font-size: 15px; background: var(--amber); color: #fff; border: none; border-radius: 2px; padding: 13px 28px; cursor: pointer; margin-top: 4px; }
+  .card button.primary:hover { background: #9a3a12; }
+  footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--rule); font-size: 12px; color: var(--ink-faded); font-family: var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+  @media (prefers-reduced-motion: reduce){ * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <div class="eyebrow">Penetrant Testing · Material Verification</div>
+      <h1>Aluminum <em>Comparator Block</em></h1>
+    </div>
+    <a class="back" href="index.html" target="_top">← Exercise Hub</a>
+  </header>
+
+  <div class="scenario" id="scenario"><b>Why we're testing</b><span id="scenarioText">…</span></div>
+
+  <div class="instr">
+    <div>
+      <div class="step-tag" id="stepTag">Step 1 of 6</div>
+      <div class="text" id="stepText">…</div>
+    </div>
+    <div class="widget" id="widget"></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="cv" width="940" height="430"></canvas>
+    <div class="lightchip" id="lightChip">White light</div>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <!-- compare -->
+  <div class="panel" id="cmpPanel">
+    <h4>Compare the two halves</h4>
+    <div class="rowline">Same block, same cracks, same processing — the only difference is the penetrant. How does <b>side A (in-use)</b> look next to <b>side B (fresh reference)</b>?</div>
+    <div class="rowline">
+      <button class="choice" data-cmp="dimmer" type="button">A is noticeably dimmer / fewer indications</button>
+      <button class="choice" data-cmp="equal" type="button">A ≈ B — comparable brightness</button>
+      <button class="choice" data-cmp="brighter" type="button">A is brighter than B</button>
+    </div>
+    <div class="fb" id="cmpFb"></div>
+  </div>
+
+  <!-- disposition -->
+  <div class="panel" id="dispPanel">
+    <h4>Disposition — what do you report?</h4>
+    <div class="rowline">
+      <button class="choice" id="dBad" type="button">In-use penetrant is DEGRADED — recommend drain &amp; recharge</button>
+      <button class="choice" id="dGood" type="button">In-use penetrant performs like new — look elsewhere</button>
+    </div>
+    <div class="fb" id="dispFb"></div>
+  </div>
+
+  <!-- result -->
+  <div class="panel" id="resultPanel">
+    <h4>Result</h4>
+    <div id="verdictBox"></div>
+    <div class="lesson" id="lesson"></div>
+    <button class="primary" id="againBtn" type="button">Run another comparison →</button>
+  </div>
+  <div class="panel" id="historyPanel">
+    <h4>Your comparisons</h4>
+    <table class="history">
+      <thead><tr><th>Run</th><th>Situation</th><th>Truth</th><th>Your read</th><th>Disposition</th></tr></thead>
+      <tbody id="histRows"></tbody>
+    </table>
+  </div>
+
+  <footer>PT Material Verification · Quench-cracked aluminum comparator · Side-by-side A/B test · Timers accelerated</footer>
+</div>
+
+<div class="veil" id="intro">
+  <div class="card">
+    <div class="eyebrow">Material Verification · Occasional Check</div>
+    <h2>Is the penetrant itself <em>still good?</em></h2>
+    <p>The <b>quench-cracked aluminum comparator</b> is one block, cracked by heating and water-quenching, divided into two matched halves — <b>A and B</b>. Because both halves carry the same crack network, processing two penetrants side by side under identical conditions isolates <b>one variable: the penetrant</b>.</p>
+    <ul>
+      <li>Apply the <b>in-use</b> penetrant to side A and <b>fresh reference</b> penetrant to side B.</li>
+      <li>Same dwell, same wash, same developer — then compare the two halves under UV-A.</li>
+      <li>This is an <b>occasional</b> check, done when penetrant condition is in question — not the daily TAM panel check.</li>
+    </ul>
+    <button class="primary" id="beginBtn">Start the comparison →</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+const W = 940, H = 430;
+const $ = id => document.getElementById(id);
+const stage = $('stage'), cv = $('cv'), ctx = cv.getContext('2d');
+const stepTag = $('stepTag'), stepText = $('stepText'), widget = $('widget'), toastEl = $('toast');
+
+/* block geometry: two halves with a center groove */
+const BLK = { x: 170, y: 90, w: 600, h: 260, groove: 10 };
+const HALF_W = (BLK.w - BLK.groove) / 2;
+const A = { x: BLK.x, y: BLK.y, w: HALF_W, h: BLK.h };
+const B = { x: BLK.x + HALF_W + BLK.groove, y: BLK.y, w: HALF_W, h: BLK.h };
+
+const SCENARIOS = {
+  degraded: { aBright: 0.42, reason: 'A rinse hose was found dripping into the open penetrant tank overnight — the Level III suspects water contamination and asked for a comparator check before the material tests come back.',
+    truthText: 'Side A came up clearly dimmer — the in-use penetrant has lost performance (water contamination kills fluorescent brightness and penetrating ability). Recommend drain, clean, recharge — and quarantine parts processed since the last good check.' },
+  ok:       { aBright: 0.96, reason: 'The in-use penetrant is 14 months in service. As a periodic verification, compare it against fresh reference material from a sealed container.',
+    truthText: 'The halves matched — the in-use penetrant still performs like new material. Age alone doesn’t condemn it; the comparison (and the scheduled lab checks) do.' }
+};
+const ORDER = ['degraded', 'ok'];
+const urlSc = new URLSearchParams(location.search).get('scenario');
+
+const state = {
+  phase: 'intro', scenario: null,
+  cleaned: false, apA: 0, apB: 0,       // applied tint 0..1
+  dwell: null,                          // {left}
+  washCover: null, washing: false,
+  devT: 0, uv: false, lightT: 0,
+  cmpPick: null, cmpOk: null, dispOk: null,
+  px: 0, py: 0, runs: []
+};
+const COLS = Math.ceil(BLK.w / 10);
+let toastTimer = 0;
+function toast(msg, kind){
+  toastEl.textContent = msg;
+  toastEl.className = 'toast show' + (kind ? ' ' + kind : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3200);
+}
+function pickScenario(){
+  const key = (urlSc && SCENARIOS[urlSc]) ? urlSc : ORDER[state.runs.length % ORDER.length];
+  state.scenario = key;
+  $('scenarioText').textContent = ' ' + SCENARIOS[key].reason;
+}
+
+/* crack network — generated once, identical on both halves */
+function genCracks(){
+  let seed = 137;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const segs = [];
+  function walk(x, y, ang, len, depth){
+    let cx = x, cy = y, a = ang;
+    const n = 4 + Math.floor(rnd() * 4);
+    for (let i = 0; i < n; i++){
+      const step = len * (0.6 + rnd() * 0.8);
+      const nx = cx + Math.cos(a) * step, ny = cy + Math.sin(a) * step;
+      segs.push({ x1: cx, y1: cy, x2: nx, y2: ny, w: Math.max(0.7, 2.2 - depth * 0.5) });
+      if (depth < 2 && rnd() < 0.4) walk(cx, cy, a + (rnd() < 0.5 ? 1 : -1) * (0.5 + rnd()), len * 0.55, depth + 1);
+      cx = nx; cy = ny; a += (rnd() - 0.5) * 0.9;
+    }
+  }
+  for (let i = 0; i < 9; i++){
+    const fx = 0.08 + rnd() * 0.84, fy = 0.08 + rnd() * 0.84;
+    walk(fx, fy, rnd() * Math.PI * 2, 0.045 + rnd() * 0.03, 0);
+  }
+  return segs;
+}
+const CRACKS = genCracks();
+
+/* ---------------- phases ---------------- */
+function hidePanels(){ ['cmpPanel','dispPanel','resultPanel'].forEach(id => $(id).classList.remove('show')); }
+function setPhase(p){
+  state.phase = p;
+  hidePanels();
+  $('historyPanel').classList.toggle('show', state.runs.length > 0);
+  stage.classList.toggle('pour', p === 'applyA' || p === 'applyB');
+  stage.classList.toggle('wash', p === 'wash');
+  const tag = n => stepTag.textContent = `Step ${n} of 6`;
+  if (p === 'clean'){
+    tag(1); state.uv = false;
+    stepText.innerHTML = 'Pre-clean the <b>comparator block</b> — any residue from the last comparison would bias this one.';
+    widget.innerHTML = '<button id="cleanBtn" type="button">Clean the block</button>';
+    $('cleanBtn').addEventListener('click', () => {
+      state.cleaned = true;
+      toast('✓ Block cleaned and dried.', 'good');
+      setPhase('applyA');
+    });
+  } else if (p === 'applyA'){
+    tag(2);
+    stepText.innerHTML = 'Apply the <b>IN-USE penetrant</b> (from the tank in question) to <b>side A</b> — click side A.';
+    widget.innerHTML = '';
+  } else if (p === 'applyB'){
+    tag(2);
+    stepText.innerHTML = 'Now the <b>FRESH REFERENCE penetrant</b> (sealed container) on <b>side B</b> — click side B.';
+  } else if (p === 'dwell'){
+    tag(3);
+    stepText.innerHTML = 'Both sides dwell <b>together</b> — identical time is the whole point of the block.';
+    widget.innerHTML = `<div><div class="digits" id="dwellDig">10:00</div><div class="sub">shared dwell · sim ×30</div></div>`;
+    state.dwell = { left: 600 };
+  } else if (p === 'wash'){
+    tag(4);
+    stepText.innerHTML = 'Wash <b>both halves the same way</b> — press and sweep across the whole block.';
+    widget.innerHTML = `<div class="covbox"><div class="covlabel">Washed · <span id="covpct">0%</span></div>
+      <div class="covbar" id="covbar"><i id="covfill"></i></div></div>`;
+    state.washCover = new Float32Array(COLS);
+  } else if (p === 'develop'){
+    tag(5);
+    stepText.innerHTML = 'Developer on both halves — lights out while it works.';
+    widget.innerHTML = '';
+    state.devT = 0.0001;
+  } else if (p === 'compare'){
+    tag(6); state.uv = true;
+    stepText.innerHTML = 'Under UV-A: <b>read side A against side B</b> and make the call below.';
+    $('cmpFb').textContent = ''; $('cmpFb').className = 'fb';
+    document.querySelectorAll('#cmpPanel .choice').forEach(b => { b.classList.remove('sel'); b.disabled = false; });
+    $('cmpPanel').classList.add('show');
+  } else if (p === 'result'){
+    finishRun();
+  }
+}
+
+/* ---------------- interactions ---------------- */
+function stagePos(e){
+  const r = cv.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
+}
+function inRect(p, r){ return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h; }
+stage.addEventListener('pointerdown', e => {
+  const p = stagePos(e);
+  state.px = p.x; state.py = p.y;
+  if (state.phase === 'applyA'){
+    if (inRect(p, A)){ state.apA = 0.001; }
+    else if (inRect(p, B)) toast('That’s side B — the in-use penetrant goes on side A (left).');
+  } else if (state.phase === 'applyB'){
+    if (inRect(p, B)){ state.apB = 0.001; }
+    else if (inRect(p, A)) toast('Side A already has the in-use penetrant — the reference goes on side B (right).');
+  } else if (state.phase === 'wash'){
+    state.washing = true;
+    stage.setPointerCapture(e.pointerId);
+  }
+});
+window.addEventListener('pointermove', e => {
+  const p = stagePos(e); state.px = p.x; state.py = p.y;
+});
+window.addEventListener('pointerup', () => { state.washing = false; });
+
+document.querySelectorAll('#cmpPanel .choice').forEach(b => {
+  b.addEventListener('click', () => {
+    if (state.cmpPick) return;
+    state.cmpPick = b.dataset.cmp;
+    b.classList.add('sel');
+    document.querySelectorAll('#cmpPanel .choice').forEach(x => x.disabled = true);
+    const truth = SCENARIOS[state.scenario].aBright < 0.7 ? 'dimmer' : 'equal';
+    state.cmpOk = state.cmpPick === truth;
+    const fb = $('cmpFb');
+    fb.textContent = state.cmpOk ? '✓ That matches the block.' :
+      (truth === 'dimmer' ? '✗ Look again — count indications on each half and compare the faintest ones. A is down.' :
+       '✗ Look again — the networks match in count and brightness. A is performing like B.');
+    fb.className = 'fb ' + (state.cmpOk ? 'ok' : 'bad');
+    setTimeout(() => { $('dispFb').textContent = ''; $('dispPanel').classList.add('show'); }, 1000);
+  });
+});
+$('dBad').addEventListener('click', () => disposition(true));
+$('dGood').addEventListener('click', () => disposition(false));
+function disposition(saidBad){
+  if (state.phase !== 'compare' || state.dispOk !== null) return;
+  const isBad = SCENARIOS[state.scenario].aBright < 0.7;
+  state.dispOk = (saidBad === isBad);
+  const fb = $('dispFb');
+  fb.textContent = state.dispOk ? '✓ Right call.' :
+    (isBad ? '✗ The comparison says otherwise — releasing degraded penetrant means every future indication is dimmer than it should be.'
+           : '✗ You’d be dumping a good tank — the block shows the in-use material performing like new.');
+  fb.className = 'fb ' + (state.dispOk ? 'ok' : 'bad');
+  setTimeout(() => setPhase('result'), 1400);
+}
+function finishRun(){
+  const sc = SCENARIOS[state.scenario];
+  const isBad = sc.aBright < 0.7;
+  const v = $('verdictBox');
+  v.className = isBad ? 'verdict-bad' : 'verdict-good';
+  v.textContent = isBad ? 'Comparator verdict: in-use penetrant DEGRADED — drain & recharge recommended.'
+                        : 'Comparator verdict: in-use penetrant serviceable.';
+  $('lesson').innerHTML = '<b>What the block showed:</b> ' + sc.truthText +
+    ' <br><b>After use:</b> the block gets cleaned thoroughly — penetrant left in the cracks would bias the next comparison.';
+  const mark = ok => ok ? '✓' : '✗', cls = ok => ok ? 'ok' : 'bad';
+  const row = document.createElement('tr');
+  row.innerHTML = `<td>#${state.runs.length + 1}</td>
+    <td>${isBad ? 'Water-contaminated tank' : 'Routine verification, healthy tank'}</td>
+    <td>${isBad ? 'A dimmer' : 'A ≈ B'}</td>
+    <td class="${cls(state.cmpOk)}">${mark(state.cmpOk)}</td>
+    <td class="${cls(state.dispOk)}">${mark(state.dispOk)}</td>`;
+  $('histRows').appendChild(row);
+  state.runs.push(state.scenario);
+  $('resultPanel').classList.add('show');
+  $('historyPanel').classList.add('show');
+  stepTag.textContent = 'Comparison complete';
+  stepText.innerHTML = 'Logged. Remember: <b>TAM panel = is the LINE working (daily). Comparator block = is the PENETRANT good (when in question).</b>';
+}
+$('againBtn').addEventListener('click', () => {
+  state.cleaned = false; state.apA = 0; state.apB = 0; state.dwell = null;
+  state.washCover = null; state.devT = 0; state.uv = false;
+  state.cmpPick = null; state.cmpOk = null; state.dispOk = null;
+  pickScenario();
+  setPhase('clean');
+});
+
+/* ---------------- drawing ---------------- */
+function drawBlockBody(g, uv){
+  g.save();
+  g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = 16; g.shadowOffsetY = 6;
+  const grad = g.createLinearGradient(BLK.x, BLK.y, BLK.x, BLK.y + BLK.h);
+  grad.addColorStop(0, '#cfd3d8'); grad.addColorStop(0.5, '#b4bac0'); grad.addColorStop(1, '#9aa1a8');
+  g.fillStyle = grad;
+  g.fillRect(BLK.x, BLK.y, BLK.w, BLK.h);
+  g.restore();
+  /* groove */
+  g.fillStyle = '#4a4f55';
+  g.fillRect(BLK.x + HALF_W, BLK.y, BLK.groove, BLK.h);
+  g.strokeStyle = 'rgba(60,66,74,.7)'; g.lineWidth = 1.5;
+  g.strokeRect(BLK.x, BLK.y, BLK.w, BLK.h);
+  /* labels — hidden once the UV takes over (UV pass draws its own) */
+  if (uv < 0.5){
+    g.font = '700 22px "JetBrains Mono", monospace'; g.textAlign = 'center';
+    g.fillStyle = 'rgba(60,64,70,.75)';
+    g.fillText('A', A.x + A.w / 2, BLK.y - 14);
+    g.fillText('B', B.x + B.w / 2, BLK.y - 14);
+    g.font = '600 10px "JetBrains Mono", monospace';
+    g.fillStyle = '#c9c2b2';
+    g.fillText('IN-USE PENETRANT', A.x + A.w / 2, BLK.y + BLK.h + 22);
+    g.fillText('FRESH REFERENCE', B.x + B.w / 2, BLK.y + BLK.h + 22);
+  }
+}
+function drawCracksOn(g, half, bright, glow){
+  g.save();
+  g.beginPath(); g.rect(half.x + 4, half.y + 4, half.w - 8, half.h - 8); g.clip();
+  if (glow) g.globalCompositeOperation = 'lighter';
+  /* degraded penetrant loses the FINE indications first, and dims hard */
+  const cut = glow ? 0.7 + (1 - bright) * 1.3 : 0;
+  const amp = glow ? bright * bright : bright;
+  for (const s of CRACKS){
+    if (glow && s.w < cut) continue;
+    const x1 = half.x + s.x1 * half.w, y1 = half.y + s.y1 * half.h;
+    const x2 = half.x + s.x2 * half.w, y2 = half.y + s.y2 * half.h;
+    if (glow){
+      g.strokeStyle = `rgba(160,235,70,${0.3 * amp})`;
+      g.lineWidth = s.w + 3.2; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+      g.strokeStyle = `rgba(215,255,140,${0.9 * amp})`;
+      g.lineWidth = s.w;
+      g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+    } else {
+      g.strokeStyle = `rgba(90,96,104,${0.5 * bright})`;
+      g.lineWidth = s.w * 0.7;
+      g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+    }
+  }
+  g.restore();
+}
+let last = performance.now();
+function frame(now){
+  const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
+  /* pour fills */
+  if (state.apA > 0 && state.apA < 1){
+    state.apA = Math.min(1, state.apA + dt / 0.9);
+    if (state.apA >= 1 && state.phase === 'applyA'){ toast('✓ Side A coated.', 'good'); setPhase('applyB'); }
+  }
+  if (state.apB > 0 && state.apB < 1){
+    state.apB = Math.min(1, state.apB + dt / 0.9);
+    if (state.apB >= 1 && state.phase === 'applyB'){ toast('✓ Side B coated — shared dwell starts now.', 'good'); setPhase('dwell'); }
+  }
+  /* dwell */
+  if (state.phase === 'dwell' && state.dwell){
+    state.dwell.left = Math.max(0, state.dwell.left - dt * 30);
+    const d = $('dwellDig');
+    if (d) d.textContent = Math.floor(state.dwell.left / 60) + ':' + String(Math.floor(state.dwell.left % 60)).padStart(2, '0');
+    if (state.dwell.left <= 0){ setPhase('wash'); }
+  }
+  /* wash */
+  if (state.phase === 'wash' && state.washing && state.washCover){
+    const c0 = Math.max(0, Math.floor((state.px - 40 - BLK.x) / 10)),
+          c1 = Math.min(COLS - 1, Math.floor((state.px + 40 - BLK.x) / 10));
+    for (let i = c0; i <= c1; i++){
+      const cx = BLK.x + i * 10 + 5;
+      state.washCover[i] = Math.min(1, state.washCover[i] + 0.08 * (1 - Math.abs(cx - state.px) / 46));
+    }
+    let n = 0; for (const v of state.washCover) if (v >= 0.5) n++;
+    const c = n / COLS;
+    const f = $('covfill'), pc = $('covpct');
+    if (f) f.style.width = Math.round(c * 100) + '%';
+    if (pc) pc.textContent = Math.floor(c * 100) + '%';
+    if (c >= 0.95){ const b = $('covbar'); if (b) b.classList.add('full'); setPhase('develop'); }
+  }
+  /* develop */
+  if (state.devT > 0 && state.devT < 1){
+    state.devT = Math.min(1, state.devT + dt / 3);
+    if (state.devT >= 1) setPhase('compare');
+  }
+  /* lighting */
+  const target = state.uv ? 1 : 0;
+  state.lightT += Math.max(-dt * 2.5, Math.min(dt * 2.5, target - state.lightT));
+  const uv = state.lightT;
+  const chip = $('lightChip');
+  if (uv > 0.5 && !chip.classList.contains('uv')){ chip.classList.add('uv'); chip.textContent = 'UV-A · 365 nm'; }
+  if (uv <= 0.5 && chip.classList.contains('uv')){ chip.classList.remove('uv'); chip.textContent = 'White light'; }
+
+  /* ---- draw ---- */
+  ctx.fillStyle = '#2b2723'; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(255,255,255,.03)';
+  for (let y = 0; y < H; y += 7){ ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y + 2); ctx.stroke(); }
+  drawBlockBody(ctx, uv);
+  /* faint cracks visible in white light */
+  drawCracksOn(ctx, A, 0.5, false);
+  drawCracksOn(ctx, B, 0.5, false);
+  /* penetrant tints while applying/dwelling */
+  const preUV = state.phase === 'applyA' || state.phase === 'applyB' || state.phase === 'dwell';
+  if (preUV || state.phase === 'clean'){
+    if (state.apA > 0){ ctx.fillStyle = `rgba(154,219,44,${0.4 * state.apA})`; ctx.fillRect(A.x + 3, A.y + 3 + (1 - state.apA) * A.h, A.w - 6, state.apA * A.h - 6); }
+    if (state.apB > 0){ ctx.fillStyle = `rgba(154,219,44,${0.4 * state.apB})`; ctx.fillRect(B.x + 3, B.y + 3 + (1 - state.apB) * B.h, B.w - 6, state.apB * B.h - 6); }
+  }
+  /* developer film */
+  if (state.phase === 'develop' || state.phase === 'compare' || state.phase === 'result'){
+    ctx.fillStyle = `rgba(232,230,222,${0.55 * Math.min(1, state.devT * 2)})`;
+    ctx.fillRect(BLK.x + 3, BLK.y + 3, BLK.w - 6, BLK.h - 6);
+    ctx.fillStyle = '#4a4f55';
+    ctx.fillRect(BLK.x + HALF_W, BLK.y, BLK.groove, BLK.h);
+  }
+  /* UV darkness + glowing networks */
+  if (uv > 0){
+    ctx.fillStyle = `rgba(10,8,30,${0.88 * uv})`;
+    ctx.fillRect(0, 0, W, H);
+    /* block silhouettes */
+    ctx.fillStyle = `rgba(30,32,52,${0.9 * uv})`;
+    ctx.fillRect(BLK.x, BLK.y, BLK.w, BLK.h);
+    ctx.fillStyle = `rgba(12,13,24,${uv})`;
+    ctx.fillRect(BLK.x + HALF_W, BLK.y, BLK.groove, BLK.h);
+    const aB = state.scenario ? SCENARIOS[state.scenario].aBright : 1;
+    ctx.save(); ctx.globalAlpha = uv;
+    drawCracksOn(ctx, A, aB, true);
+    drawCracksOn(ctx, B, 1, true);
+    ctx.restore();
+    ctx.font = '700 20px "JetBrains Mono", monospace'; ctx.textAlign = 'center';
+    ctx.fillStyle = `rgba(200,195,230,${0.8 * uv})`;
+    ctx.fillText('A', A.x + A.w / 2, BLK.y - 14);
+    ctx.fillText('B', B.x + B.w / 2, BLK.y - 14);
+    ctx.font = '600 10px "JetBrains Mono", monospace';
+    ctx.fillText('IN-USE', A.x + A.w / 2, BLK.y + BLK.h + 22);
+    ctx.fillText('FRESH REFERENCE', B.x + B.w / 2, BLK.y + BLK.h + 22);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+$('beginBtn').addEventListener('click', () => {
+  $('intro').classList.add('hidden');
+  pickScenario();
+  setPhase('clean');
+});
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PT — Daily TAM Panel Check</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #faf7f2; --paper-deep: #f1ece2; --ink: #1a1a1a; --ink-soft: #4a4a47;
+    --ink-faded: #8a8a85; --rule: #d9d2c4; --amber: #b54515; --amber-soft: #e8a87c;
+    --amber-tint: #fdf2e6; --pen-red: #c8102e; --good: #2e7d4f; --fluor: #9adb2c;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px -12px rgba(60,40,20,0.12);
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'Manrope', -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--paper); }
+  body {
+    font-family: var(--sans); background: var(--paper); color: var(--ink);
+    line-height: 1.55; min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(181,69,21,0.04), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(154,219,44,0.04), transparent 50%);
+  }
+  .container { max-width: 1000px; margin: 0 auto; padding: 36px 28px 72px; }
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+  .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--amber); margin-bottom: 8px; font-weight: 500; }
+  h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(26px,4vw,38px); line-height: 1.05; letter-spacing: -.02em; font-variation-settings: 'opsz' 144; }
+  h1 em { font-style: italic; color: var(--amber); font-weight: 500; }
+  a.back { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faded); text-decoration: none; padding-bottom: 6px; }
+  a.back:hover { color: var(--amber); }
+
+  .instr {
+    background: var(--ink); color: var(--paper); border-radius: 2px; padding: 18px 22px;
+    margin-bottom: 14px; box-shadow: var(--shadow);
+    display: grid; grid-template-columns: 1fr auto; gap: 8px 24px; align-items: center;
+    min-height: 86px; position: relative;
+  }
+  .instr::before { content: ''; position: absolute; inset: 4px; border: 1px solid rgba(154,219,44,0.15); border-radius: 2px; pointer-events: none; }
+  .instr .step-tag { font-family: var(--mono); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--amber-soft); margin-bottom: 5px; }
+  .instr .text { font-size: 16px; font-weight: 500; max-width: 620px; }
+  .instr .text b { color: var(--amber-soft); }
+  .instr .widget { justify-self: end; }
+  .instr .widget button {
+    font-family: var(--sans); font-weight: 700; font-size: 13.5px;
+    background: var(--amber); color: #fff; border: none; border-radius: 2px;
+    padding: 12px 20px; cursor: pointer; white-space: nowrap;
+  }
+  .instr .widget button:hover { background: #9a3a12; }
+  @media (max-width: 700px){ .instr { grid-template-columns: 1fr; } .instr .widget { justify-self: start; } }
+
+  .stage {
+    position: relative; border-radius: 2px; overflow: hidden;
+    box-shadow: var(--shadow); border: 1px solid var(--rule);
+    touch-action: none; user-select: none; -webkit-user-select: none; background: #262320;
+  }
+  .stage canvas { display: block; width: 100%; height: auto; }
+  .stage.marking { cursor: crosshair; }
+  .lightchip {
+    position: absolute; top: 10px; right: 12px;
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 99px; pointer-events: none;
+    background: rgba(250,247,242,.85); color: var(--ink-soft); transition: all .4s;
+  }
+  .lightchip.uv { background: rgba(40,30,90,.85); color: #b9a5ff; box-shadow: 0 0 14px rgba(120,80,255,.5); }
+  .toast {
+    position: absolute; left: 50%; bottom: 14px; transform: translate(-50%, 8px);
+    background: rgba(20,18,16,.94); color: var(--paper); font-size: 13.5px; font-weight: 500;
+    padding: 10px 16px; border-radius: 3px; max-width: 500px; line-height: 1.4;
+    opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s;
+    border-left: 3px solid var(--amber-soft);
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast.warn { border-left-color: var(--pen-red); background: rgba(60,12,16,.95); }
+  .toast.good { border-left-color: #6fce9a; }
+
+  .panel { background: var(--paper-deep); border: 1px solid var(--rule); border-radius: 2px; padding: 16px 18px; margin-top: 12px; display: none; }
+  .panel.show { display: block; }
+  .panel h4 { font-family: var(--serif); font-size: 17px; font-weight: 600; margin-bottom: 10px; }
+  .rowline { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; font-size: 14px; color: var(--ink-soft); }
+  .rowline b { color: var(--ink); }
+  .choice {
+    font-family: var(--sans); font-weight: 700; font-size: 13px;
+    background: #fff; color: var(--ink); border: 1.5px solid var(--rule); border-radius: 2px;
+    padding: 9px 16px; cursor: pointer;
+  }
+  .choice:hover { border-color: var(--amber); color: var(--amber); }
+  .choice.sel { background: var(--amber); border-color: var(--amber); color: #fff; }
+  .choice.big { font-size: 14px; padding: 12px 20px; }
+  .choice:disabled { opacity: .5; cursor: default; }
+  .fb { font-size: 13.5px; color: var(--ink-soft); margin-top: 8px; line-height: 1.5; }
+  .fb.ok { color: var(--good); font-weight: 600; }
+  .fb.bad { color: var(--pen-red); font-weight: 600; }
+  .actions-list { display: grid; gap: 8px; }
+  .actions-list .choice { text-align: left; font-weight: 600; }
+
+  .verdict-good, .verdict-bad {
+    border-radius: 2px; padding: 12px 16px; font-size: 14px; font-weight: 600; margin-bottom: 12px;
+  }
+  .verdict-good { background: #e4efdd; border: 1px solid #c4dbb4; color: #2e5a1e; }
+  .verdict-bad { background: #f6dede; border: 1px solid #eab8b8; color: #7c1420; }
+  .lesson { font-size: 14px; color: var(--ink-soft); margin-bottom: 12px; }
+  .lesson b { color: var(--amber); }
+  .panel button.primary {
+    font-family: var(--sans); font-weight: 700; font-size: 14px;
+    background: var(--amber); color: #fff; border: none; border-radius: 2px;
+    padding: 11px 22px; cursor: pointer;
+  }
+  .panel button.primary:hover { background: #9a3a12; }
+  table.history { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.history th { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faded); text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--rule); }
+  table.history td { padding: 6px 8px; border-bottom: 1px solid rgba(0,0,0,.05); color: var(--ink-soft); }
+  table.history td.ok { color: var(--good); font-weight: 700; }
+  table.history td.bad { color: var(--pen-red); font-weight: 700; }
+
+  .veil { position: fixed; inset: 0; background: rgba(26,24,20,.55); backdrop-filter: blur(2px); display: flex; align-items: flex-start; justify-content: center; z-index: 100; padding: 28px 24px; overflow-y: auto; }
+  .veil.hidden { display: none; }
+  .card { background: var(--paper); border-radius: 3px; box-shadow: 0 24px 80px -20px rgba(0,0,0,.5); max-width: 620px; width: 100%; padding: 32px 38px; }
+  .card h2 { font-family: var(--serif); font-weight: 600; font-size: 27px; margin-bottom: 12px; }
+  .card h2 em { font-style: italic; color: var(--amber); }
+  .card p { font-size: 14.5px; color: var(--ink-soft); margin-bottom: 12px; }
+  .card ul { margin: 0 0 14px 18px; font-size: 14px; color: var(--ink-soft); }
+  .card ul li { margin-bottom: 5px; }
+  .card button.primary { font-family: var(--sans); font-weight: 700; font-size: 15px; background: var(--amber); color: #fff; border: none; border-radius: 2px; padding: 13px 28px; cursor: pointer; margin-top: 4px; }
+  .card button.primary:hover { background: #9a3a12; }
+  footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--rule); font-size: 12px; color: var(--ink-faded); font-family: var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+  @media (prefers-reduced-motion: reduce){ * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <div class="eyebrow">Penetrant Testing · Process Control</div>
+      <h1>Daily <em>TAM Panel</em> Check</h1>
+    </div>
+    <a class="back" href="index.html" target="_top">← Exercise Hub</a>
+  </header>
+
+  <div class="instr">
+    <div>
+      <div class="step-tag" id="stepTag">Shift start</div>
+      <div class="text" id="stepText">…</div>
+    </div>
+    <div class="widget" id="widget"></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="cv" width="940" height="430"></canvas>
+    <div class="lightchip" id="lightChip">White light</div>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <!-- reading panel -->
+  <div class="panel" id="readPanel">
+    <h4>Your reading</h4>
+    <div class="rowline">Indications marked on today's panel: <b id="markCount">0</b> of 5 baseline &nbsp;·&nbsp; click the panel to mark each star you can see (click a mark to remove it)</div>
+    <div class="rowline">Washability strip (grit-blasted half):
+      <button class="choice" data-bg="clean" type="button">Clean</button>
+      <button class="choice" data-bg="moderate" type="button">Moderate background</button>
+      <button class="choice" data-bg="heavy" type="button">Heavy background</button>
+    </div>
+    <div class="rowline">
+      <button class="choice big" id="submitRead" type="button">Submit reading →</button>
+      <span class="fb" id="readFb"></span>
+    </div>
+  </div>
+
+  <!-- disposition -->
+  <div class="panel" id="dispPanel">
+    <h4>Disposition — can the line run parts today?</h4>
+    <div class="rowline">
+      <button class="choice big" id="dAccept" type="button">✓ System check PASSES — log it, release the line</button>
+      <button class="choice big" id="dReject" type="button">✗ FAILS — stop, do not process parts</button>
+    </div>
+    <div class="fb" id="dispFb"></div>
+  </div>
+
+  <!-- first action on failure -->
+  <div class="panel" id="actPanel">
+    <h4>The check failed. What's your FIRST action?</h4>
+    <div class="actions-list">
+      <button class="choice" data-act="clean" type="button">Ultrasonically re-clean the TAM panel and run the check again</button>
+      <button class="choice" data-act="dump" type="button">Drain and recharge the penetrant tank</button>
+      <button class="choice" data-act="continue" type="button">Keep processing parts while investigating</button>
+      <button class="choice" data-act="wash" type="button">Verify wash pressure / temperature / time against the procedure, then retest</button>
+    </div>
+    <div class="fb" id="actFb"></div>
+  </div>
+
+  <!-- result + history -->
+  <div class="panel" id="resultPanel">
+    <h4>Shift log</h4>
+    <div id="verdictBox"></div>
+    <div class="lesson" id="lesson"></div>
+    <button class="primary" id="againBtn" type="button">Next shift →</button>
+  </div>
+  <div class="panel" id="historyPanel">
+    <h4>Your shifts</h4>
+    <table class="history">
+      <thead><tr><th>Shift</th><th>What was really going on</th><th>Your reading</th><th>Disposition</th><th>First action</th></tr></thead>
+      <tbody id="histRows"></tbody>
+    </table>
+  </div>
+
+  <footer>PT Process Control · PSM-5 / TAM panel · Per-shift system performance check</footer>
+</div>
+
+<div class="veil" id="intro">
+  <div class="card">
+    <div class="eyebrow">Process Control · Daily System Check</div>
+    <h2>Before any part runs: <em>prove the line works</em></h2>
+    <p>Every shift, a <b>TAM panel</b> (PSM-5) goes through the penetrant line like a part. Five star-shaped crack centers — from coarse to very fine — measure the <b>whole system's sensitivity</b> in one shot; the grit-blasted half checks <b>washability</b>.</p>
+    <ul>
+      <li>Process the panel, then read it under UV-A <b>against the baseline photo</b>: mark every star you can see, and judge the background.</li>
+      <li>If it doesn't match baseline, the line doesn't run — and your <b>first suspect is the panel itself</b>, not the tank.</li>
+      <li>Each run is a different shift — some days the line is healthy, some days it isn't.</li>
+    </ul>
+    <button class="primary" id="beginBtn">Start the shift →</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+const W = 940, H = 430;
+const $ = id => document.getElementById(id);
+const stage = $('stage'), cv = $('cv'), ctx = cv.getContext('2d');
+const stepTag = $('stepTag'), stepText = $('stepText'), widget = $('widget'), toastEl = $('toast');
+
+/* ---------------- scenarios ---------------- */
+const SCENARIOS = {
+  healthy:    { stars: [1,1,1,1,1],          bg: 'clean',    cause: 'Line healthy',
+                truthText: 'The system was healthy — all five stars at full brightness, grit half clean.' },
+  dirtyPanel: { stars: [1,.85,.5,.15,0],     bg: 'moderate', cause: 'Panel not cleaned after last use (clogged cracks)', retest: { stars: [1,1,1,1,1], bg: 'clean' }, firstAct: 'clean',
+                truthText: 'The LINE was fine — the panel’s fine cracks were clogged with old penetrant. After an ultrasonic clean it read 5/5. This is why the panel is always the first suspect.' },
+  systemFail: { stars: [1,.9,.55,.1,0],      bg: 'moderate', retest: { stars: [1,.9,.55,.1,0], bg: 'moderate' }, firstAct: 'clean', stillBad: true,
+                cause: 'Real sensitivity loss (degraded penetrant)',
+                truthText: 'A re-cleaned panel STILL read 3/5 — real sensitivity loss. Stop the line, tag it, notify the Level III. Material checks (water content, brightness) come next — that’s their call, not a tank dump on a hunch.' },
+  washFail:   { stars: [1,1,.95,.85,.7],     bg: 'heavy',    retest: { stars: [1,1,.95,.85,.7], bg: 'clean' }, firstAct: 'wash',
+                cause: 'Wash pressure drifted low (heavy background)',
+                truthText: 'Sensitivity was fine — all five stars — but the grit half carried heavy background: a removal problem. Wash pressure had drifted low; corrected and retested clean.' }
+};
+const ORDER = ['dirtyPanel', 'healthy', 'washFail', 'systemFail'];
+const urlSc = new URLSearchParams(location.search).get('scenario');
+
+/* ---------------- state ---------------- */
+const state = {
+  phase: 'intro', scenario: null, attempt: 1,
+  cur: null,                 // {stars[], bg} currently on the panel
+  marks: [], bgPick: null,
+  readOk: null, dispOk: null, actPick: null, actOk: null,
+  processT: 0, runs: [], uv: false,
+  lightT: 0
+};
+let toastTimer = 0;
+function toast(msg, kind){
+  toastEl.textContent = msg;
+  toastEl.className = 'toast show' + (kind ? ' ' + kind : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3400);
+}
+function pickScenario(){
+  const key = (urlSc && SCENARIOS[urlSc]) ? urlSc : ORDER[state.runs.length % ORDER.length];
+  state.scenario = key;
+  const sc = SCENARIOS[key];
+  state.cur = { stars: sc.stars.slice(), bg: sc.bg };
+}
+
+/* ---------------- geometry ---------------- */
+/* two panels drawn side by side during inspection */
+const PANEL_W = 360, PANEL_H = 280;
+const BASE_X = 65, TODAY_X = 515, PANEL_Y = 75;
+const starXs = [0.14, 0.32, 0.5, 0.68, 0.86];     // across the chrome half
+const starSizes = [15, 12, 9.5, 7, 4.6];
+function starCenters(px){
+  return starXs.map((fx, i) => ({ x: px + fx * PANEL_W, y: PANEL_Y + 62, r: starSizes[i] }));
+}
+
+/* ---------------- phases ---------------- */
+function hidePanels(){ ['readPanel','dispPanel','actPanel','resultPanel'].forEach(id => $(id).classList.remove('show')); }
+function setPhase(p){
+  state.phase = p;
+  stage.classList.toggle('marking', p === 'inspect');
+  hidePanels();
+  $('historyPanel').classList.toggle('show', state.runs.length > 0);
+  if (p === 'retrieve'){
+    state.uv = false;
+    stepTag.textContent = 'Shift start · Panel out';
+    stepText.innerHTML = 'New shift. Take the <b>TAM panel</b> out of its solvent storage — click the container.';
+    widget.innerHTML = '';
+  } else if (p === 'process'){
+    stepTag.textContent = 'Shift start · Process the panel';
+    stepText.innerHTML = 'Run the panel through the penetrant line <b>exactly like a part</b> — same penetrant, wash, dryer, developer.';
+    widget.innerHTML = '<button id="runBtn" type="button">Run it through the line →</button>';
+    $('runBtn').addEventListener('click', () => { state.processT = 0.0001; widget.innerHTML = ''; });
+  } else if (p === 'inspect'){
+    state.uv = true;
+    stepTag.textContent = (state.attempt > 1 ? 'Retest · ' : '') + 'Read the panel · UV-A';
+    stepText.innerHTML = 'Compare against the <b>baseline photo</b> on the left. On today’s panel, <b>click every star you can see</b>, judge the washability strip, then submit.';
+    widget.innerHTML = '';
+    state.marks = []; state.bgPick = null;
+    document.querySelectorAll('#readPanel .choice[data-bg]').forEach(b => b.classList.remove('sel'));
+    $('markCount').textContent = '0';
+    $('readFb').textContent = ''; $('readFb').className = 'fb';
+    $('readPanel').classList.add('show');
+  } else if (p === 'dispose'){
+    state.dispLock = false;
+    $('dispFb').textContent = ''; $('dispFb').className = 'fb';
+    $('dispPanel').classList.add('show');
+  } else if (p === 'action'){
+    $('actFb').textContent = ''; $('actFb').className = 'fb';
+    document.querySelectorAll('#actPanel .choice').forEach(b => { b.classList.remove('sel'); b.disabled = false; });
+    $('actPanel').classList.add('show');
+  } else if (p === 'result'){
+    finishRun();
+  }
+}
+
+/* ---------------- interactions ---------------- */
+function stagePos(e){
+  const r = cv.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
+}
+stage.addEventListener('pointerdown', e => {
+  const p = stagePos(e);
+  if (state.phase === 'retrieve'){
+    if (p.x > 330 && p.x < 610 && p.y > 120 && p.y < 330) setPhase('process');
+    return;
+  }
+  if (state.phase !== 'inspect') return;
+  /* toggle marks on today's panel */
+  for (let i = state.marks.length - 1; i >= 0; i--){
+    const m = state.marks[i];
+    if (Math.hypot(m.x - p.x, m.y - p.y) < 18){ state.marks.splice(i, 1); $('markCount').textContent = state.marks.length; return; }
+  }
+  if (p.x > TODAY_X && p.x < TODAY_X + PANEL_W && p.y > PANEL_Y && p.y < PANEL_Y + 120){
+    state.marks.push({ x: p.x, y: p.y });
+    $('markCount').textContent = state.marks.length;
+  }
+});
+document.querySelectorAll('#readPanel .choice[data-bg]').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#readPanel .choice[data-bg]').forEach(x => x.classList.remove('sel'));
+    b.classList.add('sel');
+    state.bgPick = b.dataset.bg;
+  });
+});
+function visibleCount(){
+  /* a star counts as readable when bright enough to see */
+  return state.cur.stars.filter(v => v >= 0.35).length;
+}
+$('submitRead').addEventListener('click', () => {
+  if (!state.bgPick){ $('readFb').textContent = 'Pick a washability call first.'; $('readFb').className = 'fb bad'; return; }
+  const truth = visibleCount();
+  const marked = state.marks.length;
+  const countOk = marked === truth;
+  const bgOk = state.bgPick === state.cur.bg;
+  state.readOk = countOk && bgOk;
+  const fb = $('readFb');
+  if (state.readOk){ fb.textContent = `✓ Reading recorded: ${marked}/5 stars, ${state.bgPick} background.`; fb.className = 'fb ok'; }
+  else {
+    const parts = [];
+    if (!countOk) parts.push(`look again — ${truth} star${truth === 1 ? '' : 's'} are actually readable (you marked ${marked})`);
+    if (!bgOk) parts.push(`the strip shows ${state.cur.bg} background`);
+    fb.textContent = '△ Recorded, but ' + parts.join('; ') + '.';
+    fb.className = 'fb bad';
+  }
+  setTimeout(() => setPhase('dispose'), 900);
+});
+function truthPasses(){
+  return visibleCount() === 5 && state.cur.bg === 'clean';
+}
+$('dAccept').addEventListener('click', () => disposition(true));
+$('dReject').addEventListener('click', () => disposition(false));
+function disposition(accepted){
+  if (state.phase !== 'dispose' || state.dispLock) return;
+  state.dispLock = true;
+  const pass = truthPasses();
+  state.dispOk = (accepted === pass);
+  const fb = $('dispFb');
+  if (state.dispOk && pass){
+    fb.textContent = '✓ Correct — matches baseline: 5/5 stars, clean strip. Log it and run parts.';
+    fb.className = 'fb ok';
+    setTimeout(() => setPhase('result'), 1200);
+  } else if (state.dispOk && !pass){
+    fb.textContent = state.attempt > 1
+      ? '✓ Correct — still off baseline after corrective action. The line stays down.'
+      : '✓ Correct — this does NOT match baseline. No parts run until it does.';
+    fb.className = 'fb ok';
+    setTimeout(() => setPhase(state.attempt > 1 ? 'result' : 'action'), 1200);
+  } else if (!state.dispOk && pass){
+    fb.textContent = '✗ Too cautious this time — the panel matches baseline (5/5, clean). This check PASSES.';
+    fb.className = 'fb bad';
+    setTimeout(() => setPhase('result'), 1600);
+  } else {
+    fb.textContent = '✗ Dangerous call — the panel does NOT match baseline, and you just released the line. Every part processed now is suspect.';
+    fb.className = 'fb bad';
+    setTimeout(() => setPhase(state.attempt > 1 ? 'result' : 'action'), 1800);
+  }
+}
+document.querySelectorAll('#actPanel .choice').forEach(b => {
+  b.addEventListener('click', () => {
+    if (state.actPick) return;
+    state.actPick = b.dataset.act;
+    b.classList.add('sel');
+    document.querySelectorAll('#actPanel .choice').forEach(x => x.disabled = true);
+    const sc = SCENARIOS[state.scenario];
+    state.actOk = state.actPick === sc.firstAct;
+    const fb = $('actFb');
+    const msgs = {
+      clean: 'Re-cleaning the panel first is the standard move — a clogged panel is the most common cause of a “failed” check.',
+      dump: 'Premature — you’d be dumping an expensive tank on a hunch. Prove the panel is clean and the process is set right first; material condition is the Level III’s call.',
+      continue: 'Never — a failed system check means every part processed is suspect. The line is down until the panel reads baseline.',
+      wash: 'Reasonable when the background is the problem — heavy background with full sensitivity points at removal, not the penetrant.'
+    };
+    if (state.actOk){
+      fb.textContent = '✓ ' + msgs[state.actPick] + ' Retesting…';
+      fb.className = 'fb ok';
+    } else {
+      fb.textContent = '✗ ' + msgs[state.actPick] + (sc.firstAct === 'clean'
+        ? ' Here, the right first move: re-clean the panel and retest.'
+        : ' Here, the right first move: verify the wash settings and retest.');
+      fb.className = 'fb bad';
+    }
+    setTimeout(() => {
+      if (sc.retest){
+        state.cur = { stars: sc.retest.stars.slice(), bg: sc.retest.bg };
+        state.attempt = 2;
+        toast(state.actOk ? 'Corrective action taken — running the panel again.' : 'Following the procedure anyway — panel re-cleaned, settings verified, retesting.', 'good');
+        state.processT = 0.0001;
+        state.uv = false;
+        setPhase('process');
+        widget.innerHTML = '';
+      } else setPhase('result');
+    }, 2600);
+  });
+});
+
+/* second-attempt disposition shortcut: after a retest, reading flows back through the same panels */
+
+/* ---------------- finish ---------------- */
+function finishRun(){
+  const sc = SCENARIOS[state.scenario];
+  const finalPass = truthPasses();
+  const v = $('verdictBox');
+  v.className = finalPass ? 'verdict-good' : 'verdict-bad';
+  v.textContent = finalPass
+    ? 'Shift outcome: system check PASSED' + (state.attempt > 1 ? ' after corrective action' : '') + ' — line released, check logged.'
+    : 'Shift outcome: system check FAILED even after retest — line tagged out, Level III notified, no parts processed.';
+  $('lesson').innerHTML = '<b>What was really going on:</b> ' + sc.truthText;
+  const mark = ok => ok == null ? '—' : ok ? '✓' : '✗';
+  const cls = ok => ok == null ? '' : ok ? 'ok' : 'bad';
+  const row = document.createElement('tr');
+  row.innerHTML = `<td>#${state.runs.length + 1}</td><td>${sc.cause}</td>
+    <td class="${cls(state.readOk)}">${mark(state.readOk)}</td>
+    <td class="${cls(state.dispOk)}">${mark(state.dispOk)}</td>
+    <td class="${cls(state.actOk)}">${mark(state.actOk)}</td>`;
+  $('histRows').appendChild(row);
+  state.runs.push(state.scenario);
+  $('resultPanel').classList.add('show');
+  $('historyPanel').classList.add('show');
+  stepTag.textContent = 'Shift complete';
+  stepText.innerHTML = finalPass
+    ? 'Panel cleaned ultrasonically and returned to <b>solvent storage</b> — ready for tomorrow.'
+    : 'The line stays down. <b>That is the system working</b> — the panel caught it before any part was mis-called.';
+}
+$('againBtn').addEventListener('click', () => {
+  state.attempt = 1; state.readOk = null; state.dispOk = null; state.actPick = null; state.actOk = null;
+  state.marks = []; state.processT = 0;
+  pickScenario();
+  setPhase('retrieve');
+});
+
+/* ---------------- drawing ---------------- */
+function drawStar(g, x, y, r, bright){
+  if (bright <= 0.02) return;
+  const glow = g.createRadialGradient(x, y, 0, x, y, r * 2.2);
+  glow.addColorStop(0, `rgba(190,255,90,${0.75 * bright})`);
+  glow.addColorStop(0.5, `rgba(150,230,60,${0.3 * bright})`);
+  glow.addColorStop(1, 'rgba(120,200,50,0)');
+  g.fillStyle = glow;
+  g.beginPath(); g.arc(x, y, r * 2.2, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = `rgba(215,255,140,${0.95 * bright})`;
+  g.lineWidth = 1.3; g.lineCap = 'round';
+  const n = 12;
+  for (let i = 0; i < n; i++){
+    const a = (i / n) * Math.PI * 2 + (i % 2 ? 0.12 : 0);
+    const len = r * (i % 2 ? 0.62 : 1);
+    g.beginPath();
+    g.moveTo(x + Math.cos(a) * r * 0.12, y + Math.sin(a) * r * 0.12);
+    g.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len);
+    g.stroke();
+  }
+  g.fillStyle = `rgba(235,255,190,${0.95 * bright})`;
+  g.beginPath(); g.arc(x, y, Math.max(1.4, r * 0.16), 0, Math.PI * 2); g.fill();
+}
+let bgSeedCache = {};
+function drawPanelUV(g, px, data, label, isBaseline, now){
+  /* panel body */
+  g.fillStyle = '#101322';
+  g.fillRect(px, PANEL_Y, PANEL_W, PANEL_H);
+  g.strokeStyle = 'rgba(160,150,200,.35)'; g.lineWidth = 1.5;
+  g.strokeRect(px, PANEL_Y, PANEL_W, PANEL_H);
+  /* chrome half (top) */
+  g.fillStyle = 'rgba(60,64,92,.55)';
+  g.fillRect(px + 6, PANEL_Y + 6, PANEL_W - 12, 112);
+  /* stars */
+  starCenters(px).forEach((c, i) => drawStar(g, c.x, c.y, c.r, data.stars[i]));
+  /* grit half (bottom) — washability background */
+  g.fillStyle = 'rgba(38,40,58,.9)';
+  g.fillRect(px + 6, PANEL_Y + 128, PANEL_W - 12, PANEL_H - 134);
+  const level = data.bg === 'clean' ? 0 : data.bg === 'moderate' ? 1 : 2;
+  if (level > 0){
+    const key = px + ':' + level;
+    if (!bgSeedCache[key]){
+      let seed = 91 + px + level * 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      const dots = [];
+      const n = level === 1 ? 90 : 260;
+      for (let i = 0; i < n; i++)
+        dots.push({ x: px + 12 + rnd() * (PANEL_W - 24), y: PANEL_Y + 134 + rnd() * (PANEL_H - 146), r: 0.7 + rnd() * (level === 1 ? 1.6 : 2.4), a: 0.2 + rnd() * (level === 1 ? 0.3 : 0.55) });
+      bgSeedCache[key] = dots;
+    }
+    for (const d of bgSeedCache[key]){
+      g.fillStyle = `rgba(170,240,80,${d.a})`;
+      g.beginPath(); g.arc(d.x, d.y, d.r, 0, Math.PI * 2); g.fill();
+    }
+  }
+  /* labels */
+  g.font = '600 11px "JetBrains Mono", monospace';
+  g.fillStyle = isBaseline ? '#b9a5ff' : '#e8a87c';
+  g.textAlign = 'left';
+  g.fillText(label, px, PANEL_Y - 12);
+  g.fillStyle = 'rgba(200,195,230,.45)';
+  g.font = '600 9px "JetBrains Mono", monospace';
+  g.fillText('SENSITIVITY — 5 STAR CENTERS', px + 8, PANEL_Y + 20);
+  g.fillText('WASHABILITY — GRIT-BLASTED', px + 8, PANEL_Y + 144);
+}
+function drawBench(g){
+  g.fillStyle = '#2b2723'; g.fillRect(0, 0, W, H);
+  g.strokeStyle = 'rgba(255,255,255,.03)';
+  for (let y = 0; y < H; y += 7){ g.beginPath(); g.moveTo(0, y); g.lineTo(W, y + 2); g.stroke(); }
+}
+function drawPanelWhite(g, x, y, w, h){
+  g.save();
+  g.shadowColor = 'rgba(0,0,0,.4)'; g.shadowBlur = 10; g.shadowOffsetY = 4;
+  g.fillStyle = '#d8d5cf'; g.fillRect(x, y, w, h);
+  g.restore();
+  g.fillStyle = '#e9e7e2'; g.fillRect(x + 4, y + 4, w - 8, h * 0.42);
+  g.fillStyle = '#b9b3a9'; g.fillRect(x + 4, y + h * 0.46, w - 8, h * 0.5);
+  g.strokeStyle = '#7c776d'; g.lineWidth = 1.4; g.strokeRect(x, y, w, h);
+  g.fillStyle = '#8a857b';
+  g.beginPath(); g.arc(x + w - 14, y + 14, 4.5, 0, Math.PI * 2); g.fill();
+}
+let last = performance.now();
+function frame(now){
+  const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
+  /* lighting blend */
+  const target = state.uv ? 1 : 0;
+  state.lightT += Math.max(-dt * 2.5, Math.min(dt * 2.5, target - state.lightT));
+  const uv = state.lightT;
+  const chip = $('lightChip');
+  if (uv > 0.5 && !chip.classList.contains('uv')){ chip.classList.add('uv'); chip.textContent = 'UV-A · 365 nm'; }
+  if (uv <= 0.5 && chip.classList.contains('uv')){ chip.classList.remove('uv'); chip.textContent = 'White light'; }
+  /* processing animation */
+  if (state.processT > 0 && state.processT < 1){
+    state.processT = Math.min(1, state.processT + dt / 5);
+    if (state.processT >= 1) setPhase('inspect');
+  }
+
+  drawBench(ctx);
+  if (state.phase === 'retrieve'){
+    /* solvent storage container */
+    ctx.fillStyle = '#3a3f45'; ctx.fillRect(360, 140, 220, 180);
+    ctx.fillStyle = 'rgba(110,150,190,.35)'; ctx.fillRect(372, 172, 196, 136);
+    ctx.fillStyle = '#555b62'; ctx.fillRect(352, 128, 236, 18);
+    ctx.fillStyle = '#c9c2b2'; ctx.font = '600 11px "JetBrains Mono", monospace'; ctx.textAlign = 'center';
+    ctx.fillText('TAM PANEL — SOLVENT STORAGE', 470, 356);
+    /* panel silhouette inside */
+    ctx.save(); ctx.globalAlpha = .8; drawPanelWhite(ctx, 420, 190, 100, 100); ctx.restore();
+    const pulse = 0.5 + 0.5 * Math.sin(now / 320);
+    ctx.strokeStyle = `rgba(232,168,124,${0.4 + 0.5 * pulse})`; ctx.setLineDash([7, 6]); ctx.lineWidth = 2;
+    ctx.strokeRect(340, 120, 260, 210); ctx.setLineDash([]);
+  } else if (state.phase === 'process'){
+    /* mini line glyphs + moving panel */
+    const stations = ['PEN', 'DWELL', 'RINSE', 'DRY', 'DEV'];
+    const t = state.processT;
+    stations.forEach((s, i) => {
+      const x = 120 + i * 175;
+      ctx.fillStyle = '#3a3f45'; ctx.fillRect(x - 45, 200, 90, 120);
+      ctx.fillStyle = i === 0 ? '#7ba821' : i === 4 ? '#e9ebe6' : '#2c3036';
+      if (i === 0 || i === 4) ctx.fillRect(x - 39, 250, 78, 64);
+      ctx.fillStyle = '#c9c2b2'; ctx.font = '600 10px "JetBrains Mono", monospace'; ctx.textAlign = 'center';
+      ctx.fillText(s, x, 340);
+    });
+    if (t > 0){
+      const px = 120 + t * 700;
+      drawPanelWhite(ctx, px - 32, 130, 64, 56);
+      ctx.fillStyle = '#e8a87c'; ctx.font = '600 11px "JetBrains Mono", monospace'; ctx.textAlign = 'center';
+      ctx.fillText('PROCESSING — SAME AS ANY PART', 470, 80);
+      ctx.fillStyle = 'rgba(255,255,255,.15)'; ctx.fillRect(170, 96, 600, 8);
+      ctx.fillStyle = '#e8a87c'; ctx.fillRect(170, 96, 600 * t, 8);
+    } else {
+      drawPanelWhite(ctx, 420, 150, 100, 90);
+    }
+  } else if (state.phase === 'inspect' || state.phase === 'dispose' || state.phase === 'action' || state.phase === 'result'){
+    /* dark room + two panels */
+    ctx.fillStyle = `rgba(10,8,30,${0.9 * uv})`; ctx.fillRect(0, 0, W, H);
+    drawPanelUV(ctx, BASE_X, { stars: [1,1,1,1,1], bg: 'clean' }, 'BASELINE PHOTO · PANEL S/N 4471 · KNOWN GOOD', true, now);
+    drawPanelUV(ctx, TODAY_X, state.cur, 'TODAY' + (state.attempt > 1 ? ' · RETEST' : '') + ' — YOUR READING', false, now);
+    /* marks */
+    for (const m of state.marks){
+      ctx.strokeStyle = '#e8a87c'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(m.x, m.y, 15, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(200,195,230,.5)';
+    ctx.font = '600 10px "JetBrains Mono", monospace'; ctx.textAlign = 'center';
+    ctx.fillText('◄ COMPARE — SAME PANEL, KNOWN-GOOD SYSTEM', 470, 405);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+$('beginBtn').addEventListener('click', () => {
+  $('intro').classList.add('hidden');
+  pickScenario();
+  setPhase('retrieve');
+});
+
+})();
+</script>
+</body>
+</html>
