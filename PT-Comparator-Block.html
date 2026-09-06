@@ -224,6 +224,11 @@ const BLK = { x: 170, y: 90, w: 600, h: 260, groove: 10 };
 const HALF_W = (BLK.w - BLK.groove) / 2;
 const A = { x: BLK.x, y: BLK.y, w: HALF_W, h: BLK.h };
 const B = { x: BLK.x + HALF_W + BLK.groove, y: BLK.y, w: HALF_W, h: BLK.h };
+/* the two penetrant containers on the prep bench (right margin) */
+const CONT = {
+  inuse: { cx: 855, cy: 150 },
+  fresh: { cx: 855, cy: 302 }
+};
 
 const SCENARIOS = {
   degraded: { aBright: 0.42, reason: 'A rinse hose was found dripping into the open penetrant tank overnight — the Level III suspects water contamination and asked for a comparator check before the material tests come back.',
@@ -237,6 +242,7 @@ const urlSc = new URLSearchParams(location.search).get('scenario');
 const state = {
   phase: 'intro', scenario: null,
   cleaned: false, apA: 0, apB: 0,       // applied tint 0..1
+  drag: null,                           // container being dragged: 'inuse' | 'fresh'
   dwell: null,                          // {left}
   washCover: null, washing: false,
   devCover: null, devWait: null, uv: false, lightT: 0,
@@ -287,7 +293,7 @@ function setPhase(p){
   state.phase = p;
   hidePanels();
   $('historyPanel').classList.toggle('show', state.runs.length > 0);
-  stage.classList.toggle('pour', p === 'applyA' || p === 'applyB');
+  stage.classList.toggle('pour', p === 'apply');
   stage.classList.toggle('wash', p === 'wash' || p === 'develop');
   const tag = n => stepTag.textContent = `Step ${n} of 6`;
   if (p === 'clean'){
@@ -297,15 +303,12 @@ function setPhase(p){
     $('cleanBtn').addEventListener('click', () => {
       state.cleaned = true;
       toast('✓ Block cleaned and dried.', 'good');
-      setPhase('applyA');
+      setPhase('apply');
     });
-  } else if (p === 'applyA'){
+  } else if (p === 'apply'){
     tag(2);
-    stepText.innerHTML = 'Apply the <b>IN-USE penetrant</b> (from the tank in question) to <b>side A</b> — click side A.';
+    stepText.innerHTML = 'Two penetrants are on the bench. Drag the <b>IN-USE sample</b> onto <b>side A</b>, and the <b>FRESH REFERENCE</b> onto <b>side B</b>.';
     widget.innerHTML = '';
-  } else if (p === 'applyB'){
-    tag(2);
-    stepText.innerHTML = 'Now the <b>FRESH REFERENCE penetrant</b> (sealed container) on <b>side B</b> — click side B.';
   } else if (p === 'dwell'){
     tag(3);
     stepText.innerHTML = 'Both sides dwell <b>together</b> — identical time is the whole point of the block.';
@@ -348,12 +351,16 @@ function inRect(p, r){ return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.
 stage.addEventListener('pointerdown', e => {
   const p = stagePos(e);
   state.px = p.x; state.py = p.y;
-  if (state.phase === 'applyA'){
-    if (inRect(p, A)){ state.apA = 0.001; }
-    else if (inRect(p, B)) toast('That’s side B — the in-use penetrant goes on side A (left).');
-  } else if (state.phase === 'applyB'){
-    if (inRect(p, B)){ state.apB = 0.001; }
-    else if (inRect(p, A)) toast('Side A already has the in-use penetrant — the reference goes on side B (right).');
+  if (state.phase === 'apply'){
+    for (const key of ['inuse', 'fresh']){
+      const poured = key === 'inuse' ? state.apA > 0 : state.apB > 0;
+      const c = CONT[key];
+      if (!poured && Math.abs(p.x - c.cx) < 60 && Math.abs(p.y - c.cy) < 62){
+        state.drag = key;
+        stage.setPointerCapture(e.pointerId);
+        break;
+      }
+    }
   } else if (state.phase === 'wash' || state.phase === 'develop'){
     state.washing = true;
     stage.setPointerCapture(e.pointerId);
@@ -362,7 +369,20 @@ stage.addEventListener('pointerdown', e => {
 window.addEventListener('pointermove', e => {
   const p = stagePos(e); state.px = p.x; state.py = p.y;
 });
-window.addEventListener('pointerup', () => { state.washing = false; });
+window.addEventListener('pointerup', e => {
+  state.washing = false;
+  if (state.drag){
+    const key = state.drag; state.drag = null;
+    const p = stagePos(e);
+    if (inRect(p, A)){
+      if (key === 'inuse') state.apA = 0.001;
+      else toast('That’s the FRESH REFERENCE — it goes on side B (right). Side A gets the in-use penetrant.');
+    } else if (inRect(p, B)){
+      if (key === 'fresh') state.apB = 0.001;
+      else toast('That’s the IN-USE penetrant — it goes on side A (left). Side B gets the fresh reference.');
+    }
+  }
+});
 
 document.querySelectorAll('#cmpPanel .choice').forEach(b => {
   b.addEventListener('click', () => {
@@ -417,7 +437,7 @@ function finishRun(){
   stepText.innerHTML = 'Logged. Remember: <b>TAM panel = is the LINE working (daily). Comparator block = is the PENETRANT good (when in question).</b>';
 }
 $('againBtn').addEventListener('click', () => {
-  state.cleaned = false; state.apA = 0; state.apB = 0; state.dwell = null;
+  state.cleaned = false; state.apA = 0; state.apB = 0; state.drag = null; state.dwell = null;
   state.washCover = null; state.devCover = null; state.devWait = null; state.uv = false;
   state.cmpPick = null; state.cmpOk = null; state.dispOk = null;
   pickScenario();
@@ -476,17 +496,44 @@ function drawCracksOn(g, half, bright, glow){
   }
   g.restore();
 }
+function drawContainer(g, key, x, y, tilt){
+  g.save(); g.translate(x, y); if (tilt) g.rotate(tilt);
+  if (key === 'inuse'){
+    /* open sample beaker dipped from the tank */
+    g.fillStyle = 'rgba(210,214,220,.16)';
+    g.fillRect(-22, -28, 44, 58);
+    g.fillStyle = 'rgba(150,190,50,.85)';
+    g.fillRect(-19, -4, 38, 31);
+    g.strokeStyle = '#a7adb5'; g.lineWidth = 2;
+    g.strokeRect(-22, -28, 44, 58);
+    g.strokeStyle = 'rgba(255,255,255,.22)'; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(-14, -22); g.lineTo(-14, 24); g.stroke();
+  } else {
+    /* sealed reference can */
+    g.fillStyle = '#cfd3d8'; g.fillRect(-20, -24, 40, 54);
+    g.fillStyle = '#87b32a'; g.fillRect(-20, -6, 40, 18);
+    g.fillStyle = '#6a7076'; g.fillRect(-23, -31, 46, 8);
+    g.strokeStyle = '#8a9098'; g.lineWidth = 2; g.strokeRect(-20, -24, 40, 54);
+  }
+  g.restore();
+}
 let last = performance.now();
 function frame(now){
   const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
   /* pour fills */
   if (state.apA > 0 && state.apA < 1){
     state.apA = Math.min(1, state.apA + dt / 0.9);
-    if (state.apA >= 1 && state.phase === 'applyA'){ toast('✓ Side A coated.', 'good'); setPhase('applyB'); }
+    if (state.apA >= 1 && state.phase === 'apply'){
+      if (state.apB >= 1){ toast('✓ Both halves coated — shared dwell starts now.', 'good'); setPhase('dwell'); }
+      else toast('✓ Side A coated with the in-use sample — now the fresh reference onto side B.', 'good');
+    }
   }
   if (state.apB > 0 && state.apB < 1){
     state.apB = Math.min(1, state.apB + dt / 0.9);
-    if (state.apB >= 1 && state.phase === 'applyB'){ toast('✓ Side B coated — shared dwell starts now.', 'good'); setPhase('dwell'); }
+    if (state.apB >= 1 && state.phase === 'apply'){
+      if (state.apA >= 1){ toast('✓ Both halves coated — shared dwell starts now.', 'good'); setPhase('dwell'); }
+      else toast('✓ Side B coated with fresh reference — now the in-use sample onto side A.', 'good');
+    }
   }
   /* dwell */
   if (state.phase === 'dwell' && state.dwell){
@@ -549,7 +596,32 @@ function frame(now){
   drawCracksOn(ctx, A, 0.5, false);
   drawCracksOn(ctx, B, 0.5, false);
   /* penetrant tints while applying/dwelling */
-  const preUV = state.phase === 'applyA' || state.phase === 'applyB' || state.phase === 'dwell';
+  /* prep bench containers during the apply step */
+  if (state.phase === 'apply'){
+    for (const key of ['inuse', 'fresh']){
+      const poured = key === 'inuse' ? state.apA : state.apB;
+      const c = CONT[key];
+      ctx.font = '600 9px "JetBrains Mono", monospace'; ctx.textAlign = 'center';
+      ctx.fillStyle = '#c9c2b2';
+      if (key === 'inuse'){ ctx.fillText('IN-USE', c.cx, c.cy + 46); ctx.fillText('FROM THE TANK', c.cx, c.cy + 58); }
+      else { ctx.fillText('FRESH', c.cx, c.cy + 46); ctx.fillText('SEALED REFERENCE', c.cx, c.cy + 58); }
+      if (poured > 0 && poured < 1){
+        /* pouring over its half */
+        const half = key === 'inuse' ? A : B;
+        const hx = half.x + half.w / 2;
+        drawContainer(ctx, key, hx, BLK.y - 42, 0.5);
+        ctx.strokeStyle = 'rgba(154,219,44,.8)'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(hx + 20, BLK.y - 28); ctx.lineTo(hx + 26, BLK.y + 6); ctx.stroke();
+      } else if (poured >= 1){
+        ctx.save(); ctx.globalAlpha = .4; drawContainer(ctx, key, c.cx, c.cy, 0); ctx.restore();
+      } else if (state.drag === key){
+        drawContainer(ctx, key, state.px, state.py, -0.15);
+      } else {
+        drawContainer(ctx, key, c.cx, c.cy, 0);
+      }
+    }
+  }
+  const preUV = state.phase === 'apply' || state.phase === 'dwell';
   if (preUV || state.phase === 'clean'){
     if (state.apA > 0){ ctx.fillStyle = `rgba(154,219,44,${0.4 * state.apA})`; ctx.fillRect(A.x + 3, A.y + 3 + (1 - state.apA) * A.h, A.w - 6, state.apA * A.h - 6); }
     if (state.apB > 0){ ctx.fillStyle = `rgba(154,219,44,${0.4 * state.apB})`; ctx.fillRect(B.x + 3, B.y + 3 + (1 - state.apB) * B.h, B.w - 6, state.apB * B.h - 6); }
