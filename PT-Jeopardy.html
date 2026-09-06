@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PT Jeopardy — Class Review Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #faf7f2;
+    --paper-deep: #f1ece2;
+    --ink: #1a1a1a;
+    --ink-soft: #4a4a47;
+    --ink-faded: #8a8a85;
+    --rule: #d9d2c4;
+    --amber: #b54515;
+    --amber-soft: #e8a87c;
+    --amber-tint: #fdf2e6;
+    --board: #241f1b;
+    --board-cell: #2f2823;
+    --green: #2e7d4f;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px -12px rgba(60,40,20,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Manrope', -apple-system, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.55;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(181, 69, 21, 0.04), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(181, 69, 21, 0.03), transparent 50%);
+  }
+  .container { max-width: 1200px; margin: 0 auto; padding: 48px 32px 80px; }
+
+  header {
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 28px;
+    margin-bottom: 32px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: end;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: clamp(30px, 5vw, 46px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    font-variation-settings: 'opsz' 144;
+    margin-bottom: 10px;
+  }
+  h1 em { font-style: italic; color: var(--amber); font-weight: 500; }
+  header p { font-size: 14px; color: var(--ink-soft); max-width: 560px; }
+  .back-link {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faded);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .back-link:hover { color: var(--amber); }
+
+  /* ===== SETUP ===== */
+  .setup {
+    background: var(--paper-deep);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    box-shadow: var(--shadow);
+    padding: 36px;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  .setup h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 24px;
+    margin-bottom: 6px;
+  }
+  .setup > p { font-size: 14px; color: var(--ink-soft); margin-bottom: 24px; }
+  .setup .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faded);
+    margin-bottom: 10px;
+  }
+  .team-count { display: flex; gap: 8px; margin-bottom: 24px; }
+  .team-count button {
+    flex: 1;
+    padding: 12px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    font-weight: 600;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    cursor: pointer;
+    color: var(--ink-soft);
+    transition: all 0.15s;
+  }
+  .team-count button:hover { border-color: var(--amber); }
+  .team-count button.active {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: var(--paper);
+  }
+  .team-names { display: grid; gap: 10px; margin-bottom: 28px; }
+  .team-names input {
+    width: 100%;
+    padding: 12px 14px;
+    font-family: 'Manrope', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    color: var(--ink);
+  }
+  .team-names input:focus { outline: none; border-color: var(--amber); }
+  .btn {
+    display: inline-block;
+    background: var(--amber);
+    color: var(--paper);
+    border: none;
+    padding: 14px 28px;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: #9a3a12; }
+  .btn.ghost {
+    background: transparent;
+    color: var(--ink-soft);
+    border: 1px solid var(--rule);
+  }
+  .btn.ghost:hover { border-color: var(--amber); color: var(--amber); background: transparent; }
+
+  /* ===== BOARD ===== */
+  #gameArea { display: none; }
+  .board {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    background: var(--board);
+    padding: 6px;
+    border-radius: 2px;
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+  }
+  .cat-header {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: clamp(11px, 1.4vw, 16px);
+    text-align: center;
+    padding: 16px 6px;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 74px;
+    line-height: 1.25;
+    border-bottom: 2px solid var(--amber);
+  }
+  .cell {
+    background: var(--board-cell);
+    color: var(--amber-soft);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: clamp(16px, 2.4vw, 28px);
+    text-align: center;
+    padding: 22px 6px;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, transform 0.1s;
+  }
+  .cell:hover:not(:disabled) {
+    background: var(--amber);
+    color: var(--paper);
+    transform: scale(1.02);
+  }
+  .cell:disabled {
+    background: var(--board);
+    color: rgba(232, 168, 124, 0.12);
+    cursor: default;
+  }
+
+  /* ===== SCOREBOARD ===== */
+  .scoreboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .score-card {
+    background: var(--paper-deep);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 14px 18px;
+    text-align: center;
+  }
+  .score-card.leader { border-color: var(--amber); background: var(--amber-tint); }
+  .score-card .team-name {
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .score-card .team-score {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--amber);
+  }
+  .score-card .team-score.negative { color: var(--ink-faded); }
+  .game-controls { text-align: center; }
+
+  /* ===== CLUE MODAL ===== */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(26, 22, 18, 0.82);
+    z-index: 50;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .overlay.open { display: flex; }
+  .clue-card {
+    background: var(--paper);
+    border-radius: 2px;
+    box-shadow: 0 20px 60px -20px rgba(0,0,0,0.5);
+    max-width: 760px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 40px 44px;
+    position: relative;
+  }
+  .clue-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgba(181, 69, 21, 0.25);
+    border-radius: 2px;
+    pointer-events: none;
+    margin: 5px;
+  }
+  .clue-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .daily-double {
+    display: none;
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 20px;
+    color: var(--paper);
+    background: var(--amber);
+    padding: 8px 18px;
+    border-radius: 2px;
+    margin-bottom: 16px;
+  }
+  .daily-double.show { display: inline-block; }
+  .clue-text {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: clamp(20px, 3vw, 28px);
+    line-height: 1.35;
+    margin: 18px 0 26px;
+  }
+  .answer-block {
+    display: none;
+    background: var(--amber-tint);
+    border-left: 3px solid var(--amber);
+    padding: 18px 22px;
+    margin-bottom: 26px;
+    border-radius: 2px;
+  }
+  .answer-block.show { display: block; }
+  .answer-block .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 4px;
+  }
+  .answer-block .answer-text {
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    font-weight: 600;
+  }
+  .scoring { display: none; }
+  .scoring.show { display: block; }
+  .scoring .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faded);
+    margin-bottom: 10px;
+  }
+  .scoring-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .scoring-row:last-of-type { border-bottom: none; }
+  .scoring-row .name { font-weight: 600; font-size: 15px; }
+  .scoring-row .btns { display: flex; gap: 8px; }
+  .scoring-row button {
+    padding: 8px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 2px;
+    border: 1px solid var(--rule);
+    background: var(--paper-deep);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .scoring-row button.correct:hover { background: var(--green); border-color: var(--green); color: #fff; }
+  .scoring-row button.wrong:hover { background: var(--amber); border-color: var(--amber); color: #fff; }
+  .scoring-row button:disabled { opacity: 0.35; cursor: default; }
+  .modal-actions { margin-top: 24px; display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+
+  /* ===== TIMER ===== */
+  .timer-wrap { display: flex; align-items: center; gap: 14px; margin: 2px 0 12px; }
+  .timer-bar { flex: 1; height: 9px; background: var(--paper-deep); border: 1px solid var(--rule); border-radius: 99px; overflow: hidden; }
+  .timer-bar i { display: block; height: 100%; width: 100%; background: var(--green); border-radius: 99px; transition: width .1s linear, background .3s; }
+  .timer-wrap.low .timer-bar i { background: var(--amber); }
+  .timer-wrap.expired .timer-bar i { background: #c8102e; width: 100% !important; }
+  .timer-digits { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); min-width: 70px; text-align: right; }
+  .timer-wrap.low .timer-digits { color: var(--amber); }
+  .timer-wrap.expired .timer-digits { color: #c8102e; animation: timerPulse 0.9s infinite; }
+  @keyframes timerPulse { 50% { opacity: 0.35; } }
+
+  /* ===== GAME OVER ===== */
+  .final-card { text-align: center; padding: 48px 44px; }
+  .final-card h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 34px;
+    margin-bottom: 6px;
+  }
+  .final-card h2 em { font-style: italic; color: var(--amber); }
+  .final-card .winner {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-style: italic;
+    color: var(--amber);
+    margin-bottom: 24px;
+  }
+  .final-ranks { max-width: 380px; margin: 0 auto 30px; text-align: left; }
+  .final-ranks .rank-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--rule);
+    font-size: 15px;
+  }
+  .final-ranks .rank-row .pts { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--amber); }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    font-size: 12px;
+    color: var(--ink-faded);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 640px) {
+    .container { padding: 32px 14px 60px; }
+    .clue-card { padding: 28px 22px; }
+    .cell { padding: 14px 4px; }
+    .cat-header { min-height: 58px; padding: 10px 4px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="header-text">
+      <div class="eyebrow">Penetrant Testing · Class Review Game</div>
+      <h1>PT <em>Jeopardy</em></h1>
+      <p>Pick a category and value, read the clue aloud, and beat the clock — then reveal the answer and score each team. Correct and wrong answers get their own sounds, wrong answers lose points, and it all comes down to the Final Jeopardy wager.</p>
+    </div>
+    <a class="back-link" href="index.html">← Exercise Hub</a>
+  </header>
+
+  <!-- ===== SETUP ===== -->
+  <div class="setup" id="setupPanel">
+    <h2>Set up the game</h2>
+    <p>Choose how many teams are playing and name them, then hit start.</p>
+    <div class="label">Number of teams</div>
+    <div class="team-count" id="teamCountBtns"></div>
+    <div class="label">Team names</div>
+    <div class="team-names" id="teamNameInputs"></div>
+    <div class="label">Answer timer (per clue)</div>
+    <div class="team-count" id="timerBtns"></div>
+    <button class="btn" id="startBtn">Start Game →</button>
+  </div>
+
+  <!-- ===== GAME ===== -->
+  <div id="gameArea">
+    <div class="board" id="board"></div>
+    <div class="scoreboard" id="scoreboard"></div>
+    <div class="game-controls">
+      <button class="btn ghost" id="muteBtn">🔊 Sound on</button>
+      <button class="btn ghost" id="resetBtn">Reset Game</button>
+    </div>
+  </div>
+
+  <!-- ===== CLUE MODAL ===== -->
+  <div class="overlay" id="clueOverlay">
+    <div class="clue-card">
+      <div class="clue-meta" id="clueMeta"></div>
+      <div class="daily-double" id="dailyDoubleBadge">★ Daily Double — points are doubled!</div>
+      <div class="timer-wrap" id="timerWrap">
+        <div class="timer-bar"><i id="timerFill"></i></div>
+        <div class="timer-digits" id="timerDigits">0:30</div>
+      </div>
+      <div class="clue-text" id="clueText"></div>
+      <div class="answer-block" id="answerBlock">
+        <div class="label">Answer</div>
+        <div class="answer-text" id="answerText"></div>
+      </div>
+      <div class="scoring" id="scoringPanel">
+        <div class="label">Who got it? Correct adds points · wrong deducts and play continues</div>
+        <div id="scoringRows"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="revealBtn">Reveal Answer</button>
+        <button class="btn ghost" id="nobodyBtn" style="display:none">No one answered</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== FINAL JEOPARDY ===== -->
+  <div class="overlay" id="fjOverlay">
+    <div class="clue-card">
+      <div class="clue-meta">Final Jeopardy</div>
+      <div class="clue-text" id="fjClue"></div>
+      <div class="answer-block" id="fjAnswerBlock">
+        <div class="label">Answer</div>
+        <div class="answer-text" id="fjAnswerText"></div>
+      </div>
+      <div class="scoring show">
+        <div class="label">Enter each team's wager, reveal the answer, then judge ✓ / ✗</div>
+        <div id="fjRows"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="fjRevealBtn">Reveal Answer</button>
+        <button class="btn" id="fjDoneBtn" style="display:none">Show Final Scores →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== GAME OVER ===== -->
+  <div class="overlay" id="finalOverlay">
+    <div class="clue-card final-card">
+      <h2>Final <em>Scores</em></h2>
+      <div class="winner" id="winnerLine"></div>
+      <div class="final-ranks" id="finalRanks"></div>
+      <button class="btn" id="playAgainBtn">Play Again</button>
+    </div>
+  </div>
+
+  <footer>NDT Training · PT Jeopardy Review · From class slides</footer>
+</div>
+
+<script>
+/* =====================================================================
+   GAME DATA — taken from the class slides (PT_Jeopardy.pdf).
+   Each category has exactly 5 clues (100–500 points, in order).
+   Set daily: true on a clue to make it a Daily Double (double points).
+   ===================================================================== */
+const GAME_DATA = {
+  categories: [
+    {
+      title: "Penetrants",
+      clues: [
+        { value: 100, clue: "The principle on which the entering of penetrant into the crack is based is called…", answer: "Capillary action" },
+        { value: 200, clue: "Dual response penetrants permit inspection of large indications under visible light and finer indications under black light. (T/F)", answer: "True" },
+        { value: 300, clue: "Penetrants can be applied by which 4 methods?", answer: "Dipping, spraying, brushing, pouring" },
+        { value: 400, clue: "What is the other name for visible penetrants? What is the other name for fluorescent penetrants?", answer: "Visible: color contrast penetrants · Fluorescent: brightness contrast penetrants" },
+        { value: 500, clue: "List the sensitivity levels of penetrants. Which type of penetrants do not have sensitivity levels?", answer: "Levels ½, 1, 2, 3, 4 · Type II (visible) penetrants have no sensitivity levels" }
+      ]
+    },
+    {
+      title: "General Theory I",
+      clues: [
+        { value: 100, clue: "What is the minimum black light intensity for fluorescent penetrant inspection?", answer: "1000 µW/cm²" },
+        { value: 200, clue: "The dye penetrant indication is usually ________ than the actual discontinuity size. (larger / smaller / same size)", answer: "Larger" },
+        { value: 300, clue: "What are the black light intensity requirement and the max white light allowed for a fluorescent inspection? What is the white light intensity requirement for visible inspection?", answer: "Fluorescent: 1000 µW/cm² black light, max 20 lux (2 ft-candles) white light · Visible: 1000 lux (100 ft-candles) white light" },
+        { value: 400, clue: "What is a refractometer used for? What is a hydrometer used for?", answer: "Refractometer: measures the concentration of hydrophilic emulsifier in water · Hydrometer: measures the specific gravity of water-based developers" },
+        { value: 500, clue: "When dryers are used to speed up drying time, they are used ________ application of a water-based wet developer (before / after). When using a dry developer, a dryer must be used ________ developer application.", answer: "After · Before" }
+      ]
+    },
+    {
+      title: "Emulsifiers",
+      clues: [
+        { value: 100, clue: "Emulsifiers make the penetrant ____________.", answer: "Water washable" },
+        { value: 200, clue: "List the two types of emulsifiers.", answer: "Lipophilic (oil based) · Hydrophilic (water based)" },
+        { value: 300, clue: "List 2 limitations of LPT.", answer: "Cannot be used on porous materials · cannot find subsurface discontinuities" },
+        { value: 400, clue: "Postemulsifiable penetrants are more sensitive than water-washable penetrants. (T/F)", answer: "True" },
+        { value: 500, clue: "Emulsifiers cannot be applied by which of the following methods, and why? Dipping, spraying, flowing, pouring, brushing.", answer: "Brushing — it might drive the emulsifier into cracks and wipe out the penetrant" }
+      ]
+    },
+    {
+      title: "Developer",
+      clues: [
+        { value: 100, clue: "When the powder is suspended in water, the developer is said to be a ________ developer.", answer: "Water-suspendable (Form c)" },
+        { value: 200, clue: "Dry developer is good for rough surfaces. (T/F)", answer: "True" },
+        { value: 300, clue: "When using non-aqueous wet developer, test surfaces must be ________ before applying developer. (dry / wet)", answer: "Dry" },
+        { value: 400, clue: "The period from developer application to inspection of discontinuity is called ________ time.", answer: "Development / developing time" },
+        { value: 500, clue: "The least sensitive developer is ________. The most sensitive developer is ________.", answer: "Least: dry powder · Most: non-aqueous wet developer" }
+      ]
+    },
+    {
+      title: "General Theory II",
+      clues: [
+        { value: 100, clue: "Indications that are caused by reasons other than actual discontinuities are called…", answer: "Non-relevant / false indications" },
+        { value: 200, clue: "List two causes of non-relevant indications.", answer: "Part geometry · drilled holes on the surface · improper excess-penetrant removal (anything other than an actual discontinuity)" },
+        { value: 300, clue: "Post-cleaning is not always needed, but when needed it can be the same as step 1. (T/F)", answer: "True" },
+        { value: 400, clue: "Washing excess fluorescent penetrant from a surface is a very critical step and should be conducted under… (white light / black light)", answer: "A black light" },
+        { value: 500, clue: "Glass and plastics can also be inspected using LPT. (T/F)", answer: "True" }
+      ]
+    }
+  ],
+  finalJeopardy: {
+    clue: "Explain the steps involved in a \u201cType I, Method B, Form a\u201d technique.",
+    answer: "Pre-clean → apply (fluorescent) penetrant → apply (lipophilic) emulsifier → water wash → dry → apply (dry powder) developer → develop & inspect under black light → post-clean"
+  }
+};
+/* ===================== END GAME DATA ===================== */
+
+/* ---------- audio (Web Audio API — no files needed) ---------- */
+let audioCtx = null, muted = false;
+function ac(){
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function tone(freq, t0, dur, type, gain){
+  try {
+    const c = ac();
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type || 'sine'; o.frequency.value = freq;
+    const t = c.currentTime + t0;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain || 0.18, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(t); o.stop(t + dur + 0.05);
+  } catch (e) { /* audio unavailable — play on silently */ }
+}
+function playCorrect(){ if (muted) return; [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, i * 0.09, 0.22, 'triangle', 0.2)); }
+function playWrong(){ if (muted) return; tone(196, 0, 0.28, 'sawtooth', 0.12); tone(155.56, 0.26, 0.45, 'sawtooth', 0.12); }
+function playOpen(){ if (muted) return; tone(660, 0, 0.09, 'sine', 0.08); tone(880, 0.09, 0.12, 'sine', 0.08); }
+function playTick(){ if (muted) return; tone(880, 0, 0.05, 'square', 0.05); }
+function playTimeUp(){ if (muted) return; [0, 0.18, 0.36].forEach(t => tone(233, t, 0.14, 'square', 0.12)); }
+
+/* ---------- clue timer ---------- */
+const TIMER_OPTS = [15, 30, 45, 60, 0];   // 0 = off
+let timerLen = 30;
+let timerId = null, timerEnd = 0, lastTickSec = null;
+function startTimer(){
+  stopTimer();
+  const wrap = document.getElementById('timerWrap');
+  wrap.classList.remove('expired', 'low');
+  if (!timerLen){ wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  timerEnd = Date.now() + timerLen * 1000;
+  lastTickSec = null;
+  timerId = setInterval(updateTimer, 100);
+  updateTimer();
+}
+function stopTimer(){ if (timerId){ clearInterval(timerId); timerId = null; } }
+function updateTimer(){
+  const wrap = document.getElementById('timerWrap');
+  const remain = Math.max(0, (timerEnd - Date.now()) / 1000);
+  const sec = Math.ceil(remain);
+  document.getElementById('timerFill').style.width = (remain / timerLen * 100) + '%';
+  document.getElementById('timerDigits').textContent =
+    remain > 0 ? Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0') : 'TIME!';
+  wrap.classList.toggle('low', remain > 0 && sec <= 5);
+  if (remain > 0 && sec <= 5 && sec !== lastTickSec){ playTick(); lastTickSec = sec; }
+  if (remain <= 0){
+    stopTimer();
+    wrap.classList.add('expired');
+    playTimeUp();
+  }
+}
+
+const MAX_TEAMS = 4;
+let teamCount = 2;
+let teams = [];          // [{ name, score }]
+let usedClues = new Set();
+let currentClue = null;  // { catIndex, clueIndex }
+let answeredWrong = new Set(); // team indexes that already missed the open clue
+
+const $ = id => document.getElementById(id);
+
+/* ---------- setup ---------- */
+function renderSetup() {
+  const btns = $('teamCountBtns');
+  btns.innerHTML = '';
+  for (let n = 1; n <= MAX_TEAMS; n++) {
+    const b = document.createElement('button');
+    b.textContent = n;
+    b.className = n === teamCount ? 'active' : '';
+    b.addEventListener('click', () => { teamCount = n; renderSetup(); });
+    btns.appendChild(b);
+  }
+  const tb = $('timerBtns');
+  tb.innerHTML = '';
+  TIMER_OPTS.forEach(v => {
+    const b = document.createElement('button');
+    b.textContent = v ? v + 's' : 'Off';
+    b.className = v === timerLen ? 'active' : '';
+    b.addEventListener('click', () => { timerLen = v; renderSetup(); });
+    tb.appendChild(b);
+  });
+  const names = $('teamNameInputs');
+  const existing = [...names.querySelectorAll('input')].map(i => i.value);
+  names.innerHTML = '';
+  for (let n = 0; n < teamCount; n++) {
+    const input = document.createElement('input');
+    input.maxLength = 24;
+    input.placeholder = 'Team ' + (n + 1);
+    input.value = existing[n] || '';
+    names.appendChild(input);
+  }
+}
+
+$('startBtn').addEventListener('click', () => {
+  const inputs = [...$('teamNameInputs').querySelectorAll('input')];
+  teams = inputs.map((i, idx) => ({ name: i.value.trim() || ('Team ' + (idx + 1)), score: 0 }));
+  usedClues = new Set();
+  $('setupPanel').style.display = 'none';
+  $('gameArea').style.display = 'block';
+  renderBoard();
+  renderScores();
+});
+
+/* ---------- board ---------- */
+function renderBoard() {
+  const board = $('board');
+  board.innerHTML = '';
+  board.style.gridTemplateColumns = 'repeat(' + GAME_DATA.categories.length + ', 1fr)';
+  GAME_DATA.categories.forEach(cat => {
+    const h = document.createElement('div');
+    h.className = 'cat-header';
+    h.textContent = cat.title;
+    board.appendChild(h);
+  });
+  for (let row = 0; row < 5; row++) {
+    GAME_DATA.categories.forEach((cat, ci) => {
+      const key = ci + '-' + row;
+      const cell = document.createElement('button');
+      cell.className = 'cell';
+      cell.textContent = cat.clues[row].value;
+      cell.disabled = usedClues.has(key);
+      cell.addEventListener('click', () => openClue(ci, row));
+      board.appendChild(cell);
+    });
+  }
+}
+
+function renderScores() {
+  const sb = $('scoreboard');
+  sb.innerHTML = '';
+  const top = Math.max(...teams.map(t => t.score));
+  teams.forEach(t => {
+    const card = document.createElement('div');
+    card.className = 'score-card' + (t.score === top && t.score > 0 ? ' leader' : '');
+    const name = document.createElement('div');
+    name.className = 'team-name';
+    name.textContent = t.name;
+    const score = document.createElement('div');
+    score.className = 'team-score' + (t.score < 0 ? ' negative' : '');
+    score.textContent = t.score;
+    card.append(name, score);
+    sb.appendChild(card);
+  });
+}
+
+/* ---------- clue modal ---------- */
+function openClue(ci, row) {
+  currentClue = { catIndex: ci, clueIndex: row };
+  answeredWrong = new Set();
+  const cat = GAME_DATA.categories[ci];
+  const clue = cat.clues[row];
+  $('clueMeta').textContent = cat.title + ' · ' + clue.value + (clue.daily ? ' × 2' : '');
+  $('dailyDoubleBadge').classList.toggle('show', !!clue.daily);
+  $('clueText').textContent = clue.clue;
+  $('answerText').textContent = clue.answer;
+  $('answerBlock').classList.remove('show');
+  $('scoringPanel').classList.remove('show');
+  $('revealBtn').style.display = '';
+  $('nobodyBtn').style.display = 'none';
+  $('clueOverlay').classList.add('open');
+  playOpen();
+  startTimer();
+}
+
+$('revealBtn').addEventListener('click', () => {
+  stopTimer();
+  $('answerBlock').classList.add('show');
+  $('scoringPanel').classList.add('show');
+  $('revealBtn').style.display = 'none';
+  $('nobodyBtn').style.display = '';
+  renderScoringRows();
+});
+
+function clueValue() {
+  const c = GAME_DATA.categories[currentClue.catIndex].clues[currentClue.clueIndex];
+  return c.value * (c.daily ? 2 : 1);
+}
+
+function renderScoringRows() {
+  const rows = $('scoringRows');
+  rows.innerHTML = '';
+  teams.forEach((t, ti) => {
+    const row = document.createElement('div');
+    row.className = 'scoring-row';
+    const name = document.createElement('div');
+    name.className = 'name';
+    name.textContent = t.name;
+    const btns = document.createElement('div');
+    btns.className = 'btns';
+    const ok = document.createElement('button');
+    ok.className = 'correct';
+    ok.textContent = '✓ +' + clueValue();
+    ok.disabled = answeredWrong.has(ti);
+    ok.addEventListener('click', () => {
+      playCorrect();
+      teams[ti].score += clueValue();
+      closeClue();
+    });
+    const bad = document.createElement('button');
+    bad.className = 'wrong';
+    bad.textContent = '✗ −' + clueValue();
+    bad.disabled = answeredWrong.has(ti);
+    bad.addEventListener('click', () => {
+      playWrong();
+      teams[ti].score -= clueValue();
+      answeredWrong.add(ti);
+      renderScores();
+      if (answeredWrong.size >= teams.length) { closeClue(); return; }
+      renderScoringRows();
+    });
+    btns.append(ok, bad);
+    row.append(name, btns);
+    rows.appendChild(row);
+  });
+}
+
+$('nobodyBtn').addEventListener('click', closeClue);
+
+function closeClue() {
+  stopTimer();
+  usedClues.add(currentClue.catIndex + '-' + currentClue.clueIndex);
+  currentClue = null;
+  $('clueOverlay').classList.remove('open');
+  renderBoard();
+  renderScores();
+  const total = GAME_DATA.categories.length * 5;
+  if (usedClues.size >= total) {
+    if (GAME_DATA.finalJeopardy) openFinalJeopardy();
+    else showFinal();
+  }
+}
+
+/* ---------- final jeopardy ---------- */
+let fjJudged = new Set();
+
+function openFinalJeopardy() {
+  fjJudged = new Set();
+  $('fjClue').textContent = GAME_DATA.finalJeopardy.clue;
+  $('fjAnswerText').textContent = GAME_DATA.finalJeopardy.answer;
+  $('fjAnswerBlock').classList.remove('show');
+  $('fjRevealBtn').style.display = '';
+  $('fjDoneBtn').style.display = 'none';
+  renderFjRows(false);
+  $('fjOverlay').classList.add('open');
+}
+
+function renderFjRows(revealed) {
+  const rows = $('fjRows');
+  const savedWagers = [...rows.querySelectorAll('input')].map(i => i.value);
+  rows.innerHTML = '';
+  teams.forEach((t, ti) => {
+    const row = document.createElement('div');
+    row.className = 'scoring-row';
+    const name = document.createElement('div');
+    name.className = 'name';
+    name.textContent = t.name + ' (' + t.score + ')';
+    const controls = document.createElement('div');
+    controls.className = 'btns';
+    const wager = document.createElement('input');
+    wager.type = 'number';
+    wager.min = 0;
+    wager.max = Math.max(t.score, 500);
+    wager.placeholder = 'Wager';
+    wager.value = savedWagers[ti] || '';
+    wager.style.cssText = 'width:90px;padding:8px;font-family:JetBrains Mono,monospace;font-size:13px;border:1px solid var(--rule);border-radius:2px;background:var(--paper-deep);';
+    wager.disabled = revealed;
+    controls.appendChild(wager);
+    if (revealed) {
+      const ok = document.createElement('button');
+      ok.className = 'correct';
+      ok.textContent = '✓';
+      const bad = document.createElement('button');
+      bad.className = 'wrong';
+      bad.textContent = '✗';
+      const judged = fjJudged.has(ti);
+      ok.disabled = judged;
+      bad.disabled = judged;
+      const wagerAmt = () => Math.max(0, Math.min(parseInt(wager.value, 10) || 0, Math.max(t.score, 500)));
+      ok.addEventListener('click', () => { playCorrect(); teams[ti].score += wagerAmt(); fjJudged.add(ti); renderFjRows(true); });
+      bad.addEventListener('click', () => { playWrong(); teams[ti].score -= wagerAmt(); fjJudged.add(ti); renderFjRows(true); });
+      controls.append(ok, bad);
+    }
+    row.append(name, controls);
+    rows.appendChild(row);
+  });
+}
+
+$('fjRevealBtn').addEventListener('click', () => {
+  $('fjAnswerBlock').classList.add('show');
+  $('fjRevealBtn').style.display = 'none';
+  $('fjDoneBtn').style.display = '';
+  renderFjRows(true);
+});
+$('fjDoneBtn').addEventListener('click', () => {
+  $('fjOverlay').classList.remove('open');
+  showFinal();
+});
+
+/* ---------- game over ---------- */
+function showFinal() {
+  const ranked = [...teams].sort((a, b) => b.score - a.score);
+  const topScore = ranked[0].score;
+  const winners = ranked.filter(t => t.score === topScore).map(t => t.name);
+  $('winnerLine').textContent = winners.length > 1
+    ? 'It’s a tie: ' + winners.join(' & ') + '!'
+    : ranked[0].name + ' wins!';
+  const ranks = $('finalRanks');
+  ranks.innerHTML = '';
+  ranked.forEach((t, i) => {
+    const row = document.createElement('div');
+    row.className = 'rank-row';
+    const n = document.createElement('div');
+    n.textContent = (i + 1) + '. ' + t.name;
+    const p = document.createElement('div');
+    p.className = 'pts';
+    p.textContent = t.score;
+    row.append(n, p);
+    ranks.appendChild(row);
+  });
+  $('finalOverlay').classList.add('open');
+}
+
+function resetGame() {
+  $('finalOverlay').classList.remove('open');
+  $('clueOverlay').classList.remove('open');
+  $('fjOverlay').classList.remove('open');
+  $('gameArea').style.display = 'none';
+  $('setupPanel').style.display = '';
+  renderSetup();
+}
+$('muteBtn').addEventListener('click', () => {
+  muted = !muted;
+  $('muteBtn').textContent = muted ? '🔇 Sound off' : '🔊 Sound on';
+});
+$('playAgainBtn').addEventListener('click', resetGame);
+$('resetBtn').addEventListener('click', () => {
+  if (confirm('Reset the game? All scores and board progress will be lost.')) resetGame();
+});
+
+renderSetup();
+</script>
+</body>
+</html>
