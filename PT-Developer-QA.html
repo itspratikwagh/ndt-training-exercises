@@ -75,6 +75,9 @@
   .panel { background: var(--paper-deep); border: 1px solid var(--rule); border-radius: 2px; padding: 16px 18px; margin-top: 12px; display: none; }
   .panel.show { display: block; }
   .panel h4 { font-family: var(--serif); font-size: 17px; font-weight: 600; margin-bottom: 10px; }
+  .teach { background: var(--amber-tint); border-left: 3px solid var(--amber-soft); border-radius: 2px; padding: 10px 14px; margin-bottom: 12px; font-size: 13.5px; color: var(--ink-soft); line-height: 1.55; }
+  .teach b { color: var(--amber); }
+  .teach .tag { font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--amber); display: block; margin-bottom: 4px; font-weight: 600; }
   .rowline { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; font-size: 14px; color: var(--ink-soft); }
   .rowline b { color: var(--ink); }
   .choice {
@@ -157,6 +160,7 @@
   <!-- dry powder condition -->
   <div class="panel" id="fluffPanel">
     <h4>Dry powder — condition check</h4>
+    <div class="teach"><span class="tag">Why this test</span>After drying, the part goes into a cloud of this fine white powder. It clings to the surface and works like blotting paper — wicking penetrant back out of any crack and spreading it wide enough to see. That only works if the powder is <b>bone-dry and fluffy</b>, so it dusts into a light, even coat. Moisture — humid air, a lid left open, a damp part — cakes it into lumps that can't coat evenly, and a spot the powder misses develops nothing.</div>
     <div class="rowline">Turn the sample over next to the reference — how does the powder behave?
       <button class="choice" data-powder="fluffy" type="button">Fluffy &amp; free-flowing</button>
       <button class="choice" data-powder="caked" type="button">Caked into lumps</button>
@@ -168,6 +172,7 @@
   <!-- speck count -->
   <div class="panel" id="countPanel">
     <h4>UV speck test — dragged-in penetrant</h4>
+    <div class="teach"><span class="tag">Why this test</span>Every glowing speck is a grain of powder soaked in penetrant — carried in by parts that went into the chamber before they were fully dry. In service, one of those grains can land on a clean part and glow like a real crack: a <b>false indication</b> that wastes inspection time or scraps a good part. So the procedure caps them: <b>no more than 10 specks</b> inside the 100&nbsp;mm circle.</div>
     <div class="rowline">Count the <b>fluorescent specks inside the marked circle</b> (specks outside it don't count):
       <input class="reading" id="countIn" type="number" step="1" min="0" max="40" placeholder="specks">
       <button class="choice" id="countBtn" type="button">Record →</button>
@@ -178,6 +183,7 @@
   <!-- hydrometer -->
   <div class="panel" id="hydroPanel">
     <h4>Aqueous developer — hydrometer</h4>
+    <div class="teach"><span class="tag">Why this test</span>The dip tank is developer powder dissolved in water, and everything depends on <b>concentration</b> — too dilute and the dried film is too thin to pull penetrant out of tight cracks. You can't see concentration, but you can weigh it: more dissolved solids make the liquid <b>denser</b>, and the hydrometer floats <b>higher</b> in a denser liquid. So the number on the stem at the surface line — the specific gravity — stands in for concentration.</div>
     <div class="rowline">Read the stem scale <b>at the liquid surface line</b>:
       <input class="reading" id="sgIn" type="number" step="0.005" min="1" max="1.1" placeholder="SG">
       <button class="choice" id="sgBtn" type="button">Record →</button>
@@ -188,6 +194,7 @@
   <!-- disposition -->
   <div class="panel" id="dispPanel">
     <h4>Disposition — what goes in the QA log?</h4>
+    <div class="teach"><span class="tag">Making the call</span>Readings don't protect parts — <b>dispositions</b> do. Put this week's three results — powder condition, speck count, specific gravity — against their limits and decide what the log says.</div>
     <div class="actions-list">
       <button class="choice" data-act="log" type="button">ALL IN SPEC — log both developers, release for use</button>
       <button class="choice" data-act="caked" type="button">DRY POWDER CAKED — moisture got in; replace the powder, fix the storage</button>
@@ -221,7 +228,7 @@
   <div class="card">
     <div class="eyebrow">Process Control · Materials QA</div>
     <h2>Will the developer <em>still do its job?</em></h2>
-    <p>The developer is the last material a part sees — it draws penetrant back out of defects. Two forms, two simple checks:</p>
+    <p>The developer is the last material a part sees — it draws penetrant back out of defects and makes the indication visible. Two forms, two simple checks. <b>Each step opens with a short note on why the test exists</b> — read it first, then make the check.</p>
     <ul>
       <li><b>Dry powder:</b> it must be <b>fluffy and free-flowing</b> (moisture cakes it), and <b>clean under UV-A</b> — every glowing speck is dragged-in penetrant, and the limit is <b>10 specks</b> inside the marked circle.</li>
       <li><b>Aqueous developer:</b> concentration is checked with a <b>hydrometer</b> — read the specific gravity at the surface line; limits <b>1.040–1.080</b>, target ≈1.060.</li>
@@ -320,7 +327,7 @@ function setPhase(p){
     $('fluffPanel').classList.add('show');
   } else if (p === 'sprinkle'){
     stepTag.textContent = 'Step 2 of 4 · UV speck test';
-    stepText.innerHTML = 'Sprinkle a thin layer on the test plate and switch the booth to UV-A — <b>click the test plate</b>.';
+    stepText.innerHTML = 'Caking isn’t the only enemy — the powder can also be <b>contaminated with penetrant</b>, and that’s invisible in white light. Sprinkle a thin layer on the test plate and switch to UV-A — <b>click the test plate</b>.';
   } else if (p === 'count'){
     stepTag.textContent = 'Step 2 of 4 · UV speck test';
     stepText.innerHTML = 'Count every <b>glowing speck inside the marked circle</b> and record the number. Limit: <b>' + SPECK_LIMIT + '</b>.';
@@ -331,7 +338,7 @@ function setPhase(p){
     $('countPanel').classList.add('show');
   } else if (p === 'hydroGo'){
     stepTag.textContent = 'Step 3 of 4 · Aqueous developer';
-    stepText.innerHTML = 'Now the dip tank: draw a sample into the cylinder and float the hydrometer — <b>click the cylinder</b>.';
+    stepText.innerHTML = 'Dry powder done. Now the <b>aqueous developer</b> — the dip-tank form, powder dissolved in water. Draw a sample into the cylinder and float the hydrometer — <b>click the cylinder</b>.';
   } else if (p === 'hydroRead'){
     stepTag.textContent = retag + 'Step 3 of 4 · Aqueous developer';
     stepText.innerHTML = 'Read the stem <b>where the liquid surface crosses it</b> and record the specific gravity.';

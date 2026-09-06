@@ -75,6 +75,9 @@
   .panel { background: var(--paper-deep); border: 1px solid var(--rule); border-radius: 2px; padding: 16px 18px; margin-top: 12px; display: none; }
   .panel.show { display: block; }
   .panel h4 { font-family: var(--serif); font-size: 17px; font-weight: 600; margin-bottom: 10px; }
+  .teach { background: var(--amber-tint); border-left: 3px solid var(--amber-soft); border-radius: 2px; padding: 10px 14px; margin-bottom: 12px; font-size: 13.5px; color: var(--ink-soft); line-height: 1.55; }
+  .teach b { color: var(--amber); }
+  .teach .tag { font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--amber); display: block; margin-bottom: 4px; font-weight: 600; }
   .rowline { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; font-size: 14px; color: var(--ink-soft); }
   .rowline b { color: var(--ink); }
   .choice {
@@ -157,6 +160,7 @@
   <!-- appearance -->
   <div class="panel" id="lookPanel">
     <h4>Appearance — sample vs. new material</h4>
+    <div class="teach"><span class="tag">Why this test</span>The remover is dyed pink so problems show. Fresh material is a clear, even pink. The penetrant that parts drag in is green and fluorescent — enough of it gives the whole tank a visible <b>green cast</b>, and a contaminated tank smears fluorescence back onto every part it processes. This is the cheapest test in the shop: hold the sample next to new material and just look.</div>
     <div class="rowline">
       <button class="choice" data-look="clean" type="button">Looks like the reference — clear pink</button>
       <button class="choice" data-look="green" type="button">Green tint — penetrant carryover in the tank</button>
@@ -168,6 +172,7 @@
   <!-- refractometer reading -->
   <div class="panel" id="readPanel">
     <h4>Refractometer reading</h4>
+    <div class="teach"><span class="tag">How the instrument works</span>A refractometer measures how strongly the liquid <b>bends light</b> — and that depends on how much remover is dissolved in the water. In the eyepiece it shows up as a boundary between a blue field and a light one, crossing a scale: <b>more remover pushes the boundary higher</b>. Your only job is to read the scale exactly where the shadow edge sits.</div>
     <div class="rowline">Read where the <b>shadow boundary</b> crosses the scale in the eyepiece:
       <input class="reading" id="brixIn" type="number" step="0.5" min="0" max="32" placeholder="°Bx">
       <button class="choice" id="brixBtn" type="button">Record →</button>
@@ -178,6 +183,7 @@
   <!-- chart conversion -->
   <div class="panel" id="chartPanel">
     <h4>Convert on the calibration chart</h4>
+    <div class="teach"><span class="tag">Why the chart</span>The eyepiece reads <b>°Brix</b> — a raw optical number, not a concentration. The supplier's calibration chart converts it: find your Brix on the bottom axis, go <b>up</b> to the red line, then <b>across</b> to the left axis. The green band is the working window, <b>10–30&nbsp;%</b>.</div>
     <div class="rowline">Follow the guides on the chart — what <b>concentration&nbsp;%</b> does this Brix reading give?
       <input class="reading" id="concIn" type="number" step="0.5" min="0" max="50" placeholder="%">
       <button class="choice" id="concBtn" type="button">Record →</button>
@@ -188,6 +194,7 @@
   <!-- disposition -->
   <div class="panel" id="dispPanel">
     <h4>Disposition — what does the log say this week?</h4>
+    <div class="teach"><span class="tag">Making the call</span>Two results are on the bench: the <b>appearance</b> against the reference, and the <b>concentration</b> against the 10–30&nbsp;% limits. They don't always agree — and both have a say in what happens to the tank.</div>
     <div class="actions-list">
       <button class="choice" data-act="log" type="button">IN RANGE — log the check, tank released for use</button>
       <button class="choice" data-act="addconc" type="button">LOW — add remover concentrate, mix, and re-check</button>
@@ -221,7 +228,7 @@
   <div class="card">
     <div class="eyebrow">Process Control · Materials QA</div>
     <h2>Is the remover tank <em>still in spec?</em></h2>
-    <p>The <b>hydrophilic remover</b> (Method D emulsifier) is a working solution — water make-up dilutes it, evaporation concentrates it, and dragged-in penetrant contaminates it. So every week it gets a simple check: <b>look at it, and measure it</b>.</p>
+    <p>The <b>hydrophilic remover</b> (Method D emulsifier) is a working solution — water make-up dilutes it, evaporation concentrates it, and dragged-in penetrant contaminates it. So every week it gets a simple check: <b>look at it, and measure it</b>. <b>Each step opens with a short note on why the test exists</b> — read it first, then make the check.</p>
     <ul>
       <li>Draw a sample and compare its <b>appearance</b> against fresh reference material.</li>
       <li>Read the <b>refractometer</b> (°Brix), then convert to <b>concentration&nbsp;%</b> on the calibration chart.</li>
@@ -299,7 +306,7 @@ function setPhase(p){
   const retag = state.attempt > 1 ? 'Retest · ' : '';
   if (p === 'sample'){
     stepTag.textContent = 'Step 1 of 5 · Sample';
-    stepText.innerHTML = 'Weekly check on <b>Tank 2</b>. Draw a sample of the remover — <b>click the tank</b>.';
+    stepText.innerHTML = 'The remover is a working solution — water make-up dilutes it, evaporation concentrates it, and parts drag penetrant in. Once a week we check it. Draw a sample — <b>click the tank</b>.';
     limitsChip();
   } else if (p === 'look'){
     stepTag.textContent = 'Step 2 of 5 · Appearance';
@@ -311,7 +318,7 @@ function setPhase(p){
     $('lookPanel').classList.add('show');
   } else if (p === 'drop'){
     stepTag.textContent = 'Step 3 of 5 · Refractometer';
-    stepText.innerHTML = 'Put a drop of the sample on the prism — <b>click the refractometer</b>.';
+    stepText.innerHTML = 'Appearance done — now measure the <b>concentration</b>. Put a drop of the sample on the refractometer’s prism — <b>click the refractometer</b>.';
   } else if (p === 'read'){
     stepTag.textContent = retag + 'Step 3 of 5 · Refractometer';
     stepText.innerHTML = 'Look into the eyepiece: read the scale where the <b>shadow boundary</b> sits, and record it below.';
