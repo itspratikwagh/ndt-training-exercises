@@ -190,6 +190,7 @@
       <button class="choice" data-act="wash" type="button">Verify wash pressure / temperature / time against the procedure, then retest</button>
     </div>
     <div class="fb" id="actFb"></div>
+    <button class="primary" id="retestBtn" type="button" style="display:none;margin-top:12px">Run the retest →</button>
   </div>
 
   <!-- result + history -->
@@ -197,6 +198,7 @@
     <h4>Shift log</h4>
     <div id="verdictBox"></div>
     <div class="lesson" id="lesson"></div>
+    <div class="lesson" id="progNote"></div>
     <button class="primary" id="againBtn" type="button">Next shift →</button>
   </div>
   <div class="panel" id="historyPanel">
@@ -218,7 +220,7 @@
     <ul>
       <li>Process the panel, then read it under UV-A <b>against the baseline photo</b>: mark every star you can see, and judge the background.</li>
       <li>If it doesn't match baseline, the line doesn't run — and your <b>first suspect is the panel itself</b>, not the tank.</li>
-      <li>Each run is a different shift — some days the line is healthy, some days it isn't.</li>
+      <li>Each run is a different shift, and there are <b>four scenarios</b> to work through — some days the line is healthy, some days it isn't. Keep hitting “Next shift” until you've seen all four.</li>
     </ul>
     <button class="primary" id="beginBtn">Start the shift →</button>
   </div>
@@ -318,6 +320,7 @@ function setPhase(p){
     $('dispPanel').classList.add('show');
   } else if (p === 'action'){
     $('actFb').textContent = ''; $('actFb').className = 'fb';
+    $('retestBtn').style.display = 'none';
     document.querySelectorAll('#actPanel .choice').forEach(b => { b.classList.remove('sel'); b.disabled = false; });
     $('actPanel').classList.add('show');
   } else if (p === 'result'){
@@ -428,7 +431,7 @@ document.querySelectorAll('#actPanel .choice').forEach(b => {
       wash: 'Reasonable when the background is the problem — heavy background with full sensitivity points at removal, not the penetrant.'
     };
     if (state.actOk){
-      fb.textContent = '✓ ' + msgs[state.actPick] + ' Retesting…';
+      fb.textContent = '✓ ' + msgs[state.actPick];
       fb.className = 'fb ok';
     } else {
       fb.textContent = '✗ ' + msgs[state.actPick] + (sc.firstAct === 'clean'
@@ -436,18 +439,24 @@ document.querySelectorAll('#actPanel .choice').forEach(b => {
         : ' Here, the right first move: verify the wash settings and retest.');
       fb.className = 'fb bad';
     }
-    setTimeout(() => {
-      if (sc.retest){
-        state.cur = { stars: sc.retest.stars.slice(), bg: sc.retest.bg };
-        state.attempt = 2;
-        toast(state.actOk ? 'Corrective action taken — running the panel again.' : 'Following the procedure anyway — panel re-cleaned, settings verified, retesting.', 'good');
-        state.processT = 0.0001;
-        state.uv = false;
-        setPhase('process');
-        widget.innerHTML = '';
-      } else setPhase('result');
-    }, 2600);
+    /* nothing moves until the student clicks — read at your own pace */
+    const rb = $('retestBtn');
+    rb.textContent = sc.retest ? 'Run the retest →' : 'Continue →';
+    rb.style.display = 'inline-block';
   });
+});
+$('retestBtn').addEventListener('click', () => {
+  const sc = SCENARIOS[state.scenario];
+  $('retestBtn').style.display = 'none';
+  if (sc.retest){
+    state.cur = { stars: sc.retest.stars.slice(), bg: sc.retest.bg };
+    state.attempt = 2;
+    toast(state.actOk ? 'Corrective action taken — running the panel again.' : 'Following the procedure anyway — panel re-cleaned, settings verified, retesting.', 'good');
+    state.processT = 0.0001;
+    state.uv = false;
+    setPhase('process');
+    widget.innerHTML = '';
+  } else setPhase('result');
 });
 
 /* second-attempt disposition shortcut: after a retest, reading flows back through the same panels */
@@ -471,6 +480,12 @@ function finishRun(){
     <td class="${cls(state.actOk)}">${mark(state.actOk)}</td>`;
   $('histRows').appendChild(row);
   state.runs.push(state.scenario);
+  const seen = new Set(state.runs).size;
+  $('progNote').innerHTML = (urlSc && SCENARIOS[urlSc])
+    ? ''
+    : (seen < 4
+      ? `<b>Scenario progress: ${seen} of 4.</b> You are not done yet — “Next shift” brings a different situation.`
+      : '<b>Scenario progress: 4 of 4 — all shift scenarios covered.</b> Further shifts repeat the rotation for practice.');
   $('resultPanel').classList.add('show');
   $('historyPanel').classList.add('show');
   stepTag.textContent = 'Shift complete';

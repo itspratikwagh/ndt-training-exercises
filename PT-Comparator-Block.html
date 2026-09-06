@@ -184,6 +184,7 @@
     <h4>Result</h4>
     <div id="verdictBox"></div>
     <div class="lesson" id="lesson"></div>
+    <div class="lesson" id="progNote"></div>
     <button class="primary" id="againBtn" type="button">Try another scenario →</button>
   </div>
   <div class="panel" id="historyPanel">
@@ -206,6 +207,7 @@
       <li>Apply the <b>in-use</b> penetrant to side A and <b>fresh reference</b> penetrant to side B.</li>
       <li>Same dwell, same wash, same developer — then compare the two halves under UV-A.</li>
       <li>This is an <b>occasional</b> check, done when penetrant condition is in question — not the daily TAM panel check.</li>
+      <li>There are <b>two scenarios</b> — run the comparison twice to see both a degraded tank and a healthy one.</li>
     </ul>
     <button class="primary" id="beginBtn">Start the comparison →</button>
   </div>
@@ -431,6 +433,12 @@ function finishRun(){
     <td class="${cls(state.dispOk)}">${mark(state.dispOk)}</td>`;
   $('histRows').appendChild(row);
   state.runs.push(state.scenario);
+  const seen = new Set(state.runs).size;
+  $('progNote').innerHTML = (urlSc && SCENARIOS[urlSc])
+    ? ''
+    : (seen < 2
+      ? '<b>Scenario progress: 1 of 2.</b> You are not done yet — “Try another scenario” shows the other case.'
+      : '<b>Scenario progress: 2 of 2 — both cases covered.</b> Further runs repeat them for practice.');
   $('resultPanel').classList.add('show');
   $('historyPanel').classList.add('show');
   stepTag.textContent = 'Comparison complete';
