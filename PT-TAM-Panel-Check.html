@@ -286,7 +286,9 @@ function hidePanels(){ ['readPanel','dispPanel','actPanel','resultPanel'].forEac
 function setPhase(p){
   state.phase = p;
   stage.classList.toggle('marking', p === 'inspect');
-  hidePanels();
+  /* question panels STACK below each other so earlier answers stay readable;
+     they only clear when a new reading round starts */
+  if (p === 'retrieve' || p === 'process' || p === 'inspect') hidePanels();
   $('historyPanel').classList.toggle('show', state.runs.length > 0);
   if (p === 'retrieve'){
     state.uv = false;
@@ -304,12 +306,14 @@ function setPhase(p){
     stepText.innerHTML = 'Compare against the <b>baseline photo</b> on the left. On today’s panel, <b>click every star you can see</b>, judge the washability strip, then submit.';
     widget.innerHTML = '';
     state.marks = []; state.bgPick = null;
-    document.querySelectorAll('#readPanel .choice[data-bg]').forEach(b => b.classList.remove('sel'));
+    $('submitRead').disabled = false;
+    document.querySelectorAll('#readPanel .choice[data-bg]').forEach(b => { b.classList.remove('sel'); b.disabled = false; });
     $('markCount').textContent = '0';
     $('readFb').textContent = ''; $('readFb').className = 'fb';
     $('readPanel').classList.add('show');
   } else if (p === 'dispose'){
     state.dispLock = false;
+    [$('dAccept'), $('dReject')].forEach(b => { b.disabled = false; b.classList.remove('sel'); });
     $('dispFb').textContent = ''; $('dispFb').className = 'fb';
     $('dispPanel').classList.add('show');
   } else if (p === 'action'){
@@ -370,7 +374,10 @@ $('submitRead').addEventListener('click', () => {
     fb.textContent = '△ Recorded, but ' + parts.join('; ') + '.';
     fb.className = 'fb bad';
   }
-  setTimeout(() => setPhase('dispose'), 900);
+  /* lock this reading in place — the next question appears below it */
+  $('submitRead').disabled = true;
+  document.querySelectorAll('#readPanel .choice[data-bg]').forEach(b => b.disabled = true);
+  setTimeout(() => setPhase('dispose'), 600);
 });
 function truthPasses(){
   return visibleCount() === 5 && state.cur.bg === 'clean';
@@ -380,27 +387,29 @@ $('dReject').addEventListener('click', () => disposition(false));
 function disposition(accepted){
   if (state.phase !== 'dispose' || state.dispLock) return;
   state.dispLock = true;
+  (accepted ? $('dAccept') : $('dReject')).classList.add('sel');
+  $('dAccept').disabled = true; $('dReject').disabled = true;
   const pass = truthPasses();
   state.dispOk = (accepted === pass);
   const fb = $('dispFb');
   if (state.dispOk && pass){
     fb.textContent = '✓ Correct — matches baseline: 5/5 stars, clean strip. Log it and run parts.';
     fb.className = 'fb ok';
-    setTimeout(() => setPhase('result'), 1200);
+    setTimeout(() => setPhase('result'), 700);
   } else if (state.dispOk && !pass){
     fb.textContent = state.attempt > 1
       ? '✓ Correct — still off baseline after corrective action. The line stays down.'
       : '✓ Correct — this does NOT match baseline. No parts run until it does.';
     fb.className = 'fb ok';
-    setTimeout(() => setPhase(state.attempt > 1 ? 'result' : 'action'), 1200);
+    setTimeout(() => setPhase(state.attempt > 1 ? 'result' : 'action'), 700);
   } else if (!state.dispOk && pass){
     fb.textContent = '✗ Too cautious this time — the panel matches baseline (5/5, clean). This check PASSES.';
     fb.className = 'fb bad';
-    setTimeout(() => setPhase('result'), 1600);
+    setTimeout(() => setPhase('result'), 700);
   } else {
     fb.textContent = '✗ Dangerous call — the panel does NOT match baseline, and you just released the line. Every part processed now is suspect.';
     fb.className = 'fb bad';
-    setTimeout(() => setPhase(state.attempt > 1 ? 'result' : 'action'), 1800);
+    setTimeout(() => setPhase(state.attempt > 1 ? 'result' : 'action'), 700);
   }
 }
 document.querySelectorAll('#actPanel .choice').forEach(b => {
