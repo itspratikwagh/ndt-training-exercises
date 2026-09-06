@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PT — Emulsifier QA Check</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #faf7f2; --paper-deep: #f1ece2; --ink: #1a1a1a; --ink-soft: #4a4a47;
+    --ink-faded: #8a8a85; --rule: #d9d2c4; --amber: #b54515; --amber-soft: #e8a87c;
+    --amber-tint: #fdf2e6; --pen-red: #c8102e; --good: #2e7d4f; --fluor: #9adb2c;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px -12px rgba(60,40,20,0.12);
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'Manrope', -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--paper); }
+  body {
+    font-family: var(--sans); background: var(--paper); color: var(--ink);
+    line-height: 1.55; min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(181,69,21,0.04), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(154,219,44,0.04), transparent 50%);
+  }
+  .container { max-width: 1000px; margin: 0 auto; padding: 36px 28px 72px; }
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+  .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--amber); margin-bottom: 8px; font-weight: 500; }
+  h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(26px,4vw,38px); line-height: 1.05; letter-spacing: -.02em; font-variation-settings: 'opsz' 144; }
+  h1 em { font-style: italic; color: var(--amber); font-weight: 500; }
+  a.back { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faded); text-decoration: none; padding-bottom: 6px; }
+  a.back:hover { color: var(--amber); }
+
+  .scenario {
+    background: var(--amber-tint); border: 1px solid var(--amber-soft); border-radius: 2px;
+    padding: 12px 16px; margin-bottom: 14px; font-size: 14px; color: var(--ink-soft);
+  }
+  .scenario b { color: var(--amber); font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; display: block; margin-bottom: 3px; }
+
+  .instr {
+    background: var(--ink); color: var(--paper); border-radius: 2px; padding: 18px 22px;
+    margin-bottom: 14px; box-shadow: var(--shadow);
+    display: grid; grid-template-columns: 1fr auto; gap: 8px 24px; align-items: center;
+    min-height: 86px; position: relative;
+  }
+  .instr::before { content: ''; position: absolute; inset: 4px; border: 1px solid rgba(154,219,44,0.15); border-radius: 2px; pointer-events: none; }
+  .instr .step-tag { font-family: var(--mono); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--amber-soft); margin-bottom: 5px; }
+  .instr .text { font-size: 16px; font-weight: 500; max-width: 640px; }
+  .instr .text b { color: var(--amber-soft); }
+  .instr .widget { justify-self: end; text-align: right; }
+  .instr .widget .chip { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #b9b4aa; line-height: 1.7; }
+  .instr .widget .chip b { color: var(--amber-soft); }
+  @media (max-width: 700px){ .instr { grid-template-columns: 1fr; } .instr .widget { justify-self: start; text-align: left; } }
+
+  .stage {
+    position: relative; border-radius: 2px; overflow: hidden;
+    box-shadow: var(--shadow); border: 1px solid var(--rule);
+    touch-action: none; user-select: none; -webkit-user-select: none; background: #262320;
+  }
+  .stage canvas { display: block; width: 100%; height: auto; }
+  .stage.clickable { cursor: pointer; }
+  .toast {
+    position: absolute; left: 50%; bottom: 14px; transform: translate(-50%, 8px);
+    background: rgba(20,18,16,.94); color: var(--paper); font-size: 13.5px; font-weight: 500;
+    padding: 10px 16px; border-radius: 3px; max-width: 500px; line-height: 1.4;
+    opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s;
+    border-left: 3px solid var(--amber-soft);
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast.good { border-left-color: #6fce9a; }
+
+  .panel { background: var(--paper-deep); border: 1px solid var(--rule); border-radius: 2px; padding: 16px 18px; margin-top: 12px; display: none; }
+  .panel.show { display: block; }
+  .panel h4 { font-family: var(--serif); font-size: 17px; font-weight: 600; margin-bottom: 10px; }
+  .rowline { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; font-size: 14px; color: var(--ink-soft); }
+  .rowline b { color: var(--ink); }
+  .choice {
+    font-family: var(--sans); font-weight: 700; font-size: 13px;
+    background: #fff; color: var(--ink); border: 1.5px solid var(--rule); border-radius: 2px;
+    padding: 10px 16px; cursor: pointer;
+  }
+  .choice:hover { border-color: var(--amber); color: var(--amber); }
+  .choice.sel { background: var(--amber); border-color: var(--amber); color: #fff; }
+  .choice:disabled { opacity: .5; cursor: default; }
+  .actions-list { display: grid; gap: 8px; }
+  .actions-list .choice { text-align: left; font-weight: 600; }
+  input.reading {
+    font-family: var(--mono); font-size: 18px; font-weight: 600; width: 110px;
+    padding: 8px 10px; border: 1.5px solid var(--rule); border-radius: 2px;
+    background: #fff; color: var(--ink);
+  }
+  input.reading:focus { outline: none; border-color: var(--amber); }
+  input.reading:disabled { opacity: .55; }
+  .fb { font-size: 13.5px; color: var(--ink-soft); margin-top: 8px; line-height: 1.5; }
+  .fb.ok { color: var(--good); font-weight: 600; }
+  .fb.bad { color: var(--pen-red); font-weight: 600; }
+  .panel button.primary {
+    font-family: var(--sans); font-weight: 700; font-size: 14px;
+    background: var(--amber); color: #fff; border: none; border-radius: 2px;
+    padding: 11px 22px; cursor: pointer;
+  }
+  .panel button.primary:hover { background: #9a3a12; }
+
+  .verdict-good, .verdict-bad { border-radius: 2px; padding: 12px 16px; font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+  .verdict-good { background: #e4efdd; border: 1px solid #c4dbb4; color: #2e5a1e; }
+  .verdict-bad { background: #f6dede; border: 1px solid #eab8b8; color: #7c1420; }
+  .lesson { font-size: 14px; color: var(--ink-soft); margin-bottom: 12px; }
+  .lesson b { color: var(--amber); }
+  table.history { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.history th { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faded); text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--rule); }
+  table.history td { padding: 6px 8px; border-bottom: 1px solid rgba(0,0,0,.05); color: var(--ink-soft); }
+  table.history td.ok { color: var(--good); font-weight: 700; }
+  table.history td.bad { color: var(--pen-red); font-weight: 700; }
+
+  .veil { position: fixed; inset: 0; background: rgba(26,24,20,.55); backdrop-filter: blur(2px); display: flex; align-items: flex-start; justify-content: center; z-index: 100; padding: 28px 24px; overflow-y: auto; }
+  .veil.hidden { display: none; }
+  .card { background: var(--paper); border-radius: 3px; box-shadow: 0 24px 80px -20px rgba(0,0,0,.5); max-width: 620px; width: 100%; padding: 32px 38px; }
+  .card h2 { font-family: var(--serif); font-weight: 600; font-size: 27px; margin-bottom: 12px; }
+  .card h2 em { font-style: italic; color: var(--amber); }
+  .card p { font-size: 14.5px; color: var(--ink-soft); margin-bottom: 12px; }
+  .card ul { margin: 0 0 14px 18px; font-size: 14px; color: var(--ink-soft); }
+  .card ul li { margin-bottom: 5px; }
+  .card button.primary { font-family: var(--sans); font-weight: 700; font-size: 15px; background: var(--amber); color: #fff; border: none; border-radius: 2px; padding: 13px 28px; cursor: pointer; margin-top: 4px; }
+  .card button.primary:hover { background: #9a3a12; }
+  footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--rule); font-size: 12px; color: var(--ink-faded); font-family: var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+  @media (prefers-reduced-motion: reduce){ * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <div class="eyebrow">Penetrant Testing · Process Control</div>
+      <h1>Emulsifier <em>QA Check</em></h1>
+    </div>
+    <a class="back" href="index.html" target="_top">← Exercise Hub</a>
+  </header>
+
+  <div class="scenario"><b>This week's check</b><span id="scenarioText">Weekly materials QA — Tank 2, hydrophilic remover. Procedure limits: 10–30&nbsp;% concentration by volume, target ≈20&nbsp;%.</span></div>
+
+  <div class="instr">
+    <div>
+      <div class="step-tag" id="stepTag">Step 1 of 5</div>
+      <div class="text" id="stepText">…</div>
+    </div>
+    <div class="widget" id="widget"></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="cv" width="940" height="430"></canvas>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <!-- appearance -->
+  <div class="panel" id="lookPanel">
+    <h4>Appearance — sample vs. new material</h4>
+    <div class="rowline">
+      <button class="choice" data-look="clean" type="button">Looks like the reference — clear pink</button>
+      <button class="choice" data-look="green" type="button">Green tint — penetrant carryover in the tank</button>
+    </div>
+    <div class="fb" id="lookFb"></div>
+    <button class="primary" id="lookNextBtn" type="button" style="display:none;margin-top:12px">To the refractometer →</button>
+  </div>
+
+  <!-- refractometer reading -->
+  <div class="panel" id="readPanel">
+    <h4>Refractometer reading</h4>
+    <div class="rowline">Read where the <b>shadow boundary</b> crosses the scale in the eyepiece:
+      <input class="reading" id="brixIn" type="number" step="0.5" min="0" max="32" placeholder="°Bx">
+      <button class="choice" id="brixBtn" type="button">Record →</button>
+    </div>
+    <div class="fb" id="readFb"></div>
+  </div>
+
+  <!-- chart conversion -->
+  <div class="panel" id="chartPanel">
+    <h4>Convert on the calibration chart</h4>
+    <div class="rowline">Follow the guides on the chart — what <b>concentration&nbsp;%</b> does this Brix reading give?
+      <input class="reading" id="concIn" type="number" step="0.5" min="0" max="50" placeholder="%">
+      <button class="choice" id="concBtn" type="button">Record →</button>
+    </div>
+    <div class="fb" id="chartFb"></div>
+  </div>
+
+  <!-- disposition -->
+  <div class="panel" id="dispPanel">
+    <h4>Disposition — what does the log say this week?</h4>
+    <div class="actions-list">
+      <button class="choice" data-act="log" type="button">IN RANGE — log the check, tank released for use</button>
+      <button class="choice" data-act="addconc" type="button">LOW — add remover concentrate, mix, and re-check</button>
+      <button class="choice" data-act="addwater" type="button">HIGH — add water, mix, and re-check</button>
+      <button class="choice" data-act="dump" type="button">CONTAMINATED — dump, clean, and recharge the tank</button>
+    </div>
+    <div class="fb" id="dispFb"></div>
+    <button class="primary" id="actBtn" type="button" style="display:none;margin-top:12px">Continue →</button>
+  </div>
+
+  <!-- result + history -->
+  <div class="panel" id="resultPanel">
+    <h4>QA log</h4>
+    <div id="verdictBox"></div>
+    <div class="lesson" id="lesson"></div>
+    <div class="lesson" id="progNote"></div>
+    <button class="primary" id="againBtn" type="button">Next week →</button>
+  </div>
+  <div class="panel" id="historyPanel">
+    <h4>Your checks</h4>
+    <table class="history">
+      <thead><tr><th>Week</th><th>What was really going on</th><th>Appearance</th><th>Readings</th><th>Disposition</th></tr></thead>
+      <tbody id="histRows"></tbody>
+    </table>
+  </div>
+
+  <footer>PT Process Control · Hydrophilic remover · Weekly refractometer check · Limits 10–30 %</footer>
+</div>
+
+<div class="veil" id="intro">
+  <div class="card">
+    <div class="eyebrow">Process Control · Materials QA</div>
+    <h2>Is the remover tank <em>still in spec?</em></h2>
+    <p>The <b>hydrophilic remover</b> (Method D emulsifier) is a working solution — water make-up dilutes it, evaporation concentrates it, and dragged-in penetrant contaminates it. So every week it gets a simple check: <b>look at it, and measure it</b>.</p>
+    <ul>
+      <li>Draw a sample and compare its <b>appearance</b> against fresh reference material.</li>
+      <li>Read the <b>refractometer</b> (°Brix), then convert to <b>concentration&nbsp;%</b> on the calibration chart.</li>
+      <li>Procedure limits: <b>10–30&nbsp;%</b>. Too weak → poor removal, heavy background. Too strong → risks stripping penetrant out of real defects.</li>
+      <li>There are <b>four scenarios</b> to work through — keep hitting “Next week” until you've seen all four.</li>
+    </ul>
+    <button class="primary" id="beginBtn">Start the check →</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+const W = 940, H = 430;
+const $ = id => document.getElementById(id);
+const stage = $('stage'), cv = $('cv'), ctx = cv.getContext('2d');
+const stepTag = $('stepTag'), stepText = $('stepText'), widget = $('widget'), toastEl = $('toast');
+
+/* ---------------- scenarios ---------------- */
+/* calibration: concentration % = 1.5 × °Brix; procedure limits 10–30 % */
+const SLOPE = 1.5, LIM_LO = 10, LIM_HI = 30;
+const SCENARIOS = {
+  good:   { brix: 13.5, look: 'clean', truthAct: 'log',
+            cause: 'Remover healthy (~20 %)',
+            truthText: 'The tank was right where it should be — ≈20 % and clean. Logged, released. Most weeks look like this; the check is what makes sure of it.' },
+  low:    { brix: 5.0,  look: 'clean', truthAct: 'addconc', retestBrix: 13.0,
+            cause: 'Diluted by water make-up (~7.5 %)',
+            truthText: 'Automatic water make-up had quietly diluted the tank to ≈7.5 % — too weak to remove surface penetrant properly, which shows up as heavy background on parts. Concentrate added, re-checked in range.' },
+  contam: { brix: 12.0, look: 'green', truthAct: 'dump',
+            cause: 'Penetrant carryover (concentration was fine!)',
+            truthText: 'The refractometer said ≈18 % — in range — but the green tint told the real story: dragged-in penetrant loading up the tank. A contaminated tank redeposits fluorescence on every part. Concentration alone never clears a tank; appearance matters.' },
+  high:   { brix: 22.0, look: 'clean', truthAct: 'addwater', retestBrix: 14.0,
+            cause: 'Over-concentrated (~33 %)',
+            truthText: 'Evaporation had crept the tank up to ≈33 % — an aggressive remover can pull penetrant back out of real defects, so indications get weaker. Water added, re-checked in range.' }
+};
+const ORDER = ['good', 'low', 'contam', 'high'];
+const urlSc = new URLSearchParams(location.search).get('scenario');
+
+/* ---------------- state ---------------- */
+const state = {
+  phase: 'intro', scenario: null, attempt: 1, week: 1,
+  sampleT: 0,               // beaker fill animation 0..1
+  brixTruth: 0,             // what the eyepiece currently shows
+  showGuides: false,        // chart guides after the Brix is recorded
+  lookOk: null, readOk: null, chartOk: null, dispOk: null,
+  lookLock: false, readLock: false, chartLock: false, dispLock: false,
+  runs: []
+};
+let toastTimer = 0;
+function toast(msg, kind){
+  toastEl.textContent = msg;
+  toastEl.className = 'toast show' + (kind ? ' ' + kind : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3400);
+}
+function pickScenario(){
+  const key = (urlSc && SCENARIOS[urlSc]) ? urlSc : ORDER[state.runs.length % ORDER.length];
+  state.scenario = key;
+  state.brixTruth = SCENARIOS[key].brix;
+  $('scenarioText').textContent = `Week ${state.week} materials QA — Tank 2, hydrophilic remover. Procedure limits: 10–30 % concentration by volume, target ≈20 %.`;
+}
+const truthConc = () => state.brixTruth * SLOPE;
+
+/* ---------------- phases ---------------- */
+function hidePanels(){ ['lookPanel','readPanel','chartPanel','dispPanel','resultPanel'].forEach(id => $(id).classList.remove('show')); }
+function limitsChip(){
+  widget.innerHTML = '<div class="chip">TANK 2 · HYDROPHILIC REMOVER<br>LIMITS <b>10–30 %</b> · TARGET <b>≈20 %</b></div>';
+}
+function setPhase(p){
+  state.phase = p;
+  stage.classList.toggle('clickable', p === 'sample' || p === 'drop');
+  /* panels stack within a round; they clear only when a new round starts */
+  if (p === 'sample') hidePanels();
+  $('historyPanel').classList.toggle('show', state.runs.length > 0);
+  const retag = state.attempt > 1 ? 'Retest · ' : '';
+  if (p === 'sample'){
+    stepTag.textContent = 'Step 1 of 5 · Sample';
+    stepText.innerHTML = 'Weekly check on <b>Tank 2</b>. Draw a sample of the remover — <b>click the tank</b>.';
+    limitsChip();
+  } else if (p === 'look'){
+    stepTag.textContent = 'Step 2 of 5 · Appearance';
+    stepText.innerHTML = 'Hold the sample against the <b>fresh reference</b> — how does it look?';
+    state.lookLock = false;
+    $('lookFb').textContent = ''; $('lookFb').className = 'fb';
+    $('lookNextBtn').style.display = 'none';
+    document.querySelectorAll('#lookPanel .choice[data-look]').forEach(b => { b.classList.remove('sel'); b.disabled = false; });
+    $('lookPanel').classList.add('show');
+  } else if (p === 'drop'){
+    stepTag.textContent = 'Step 3 of 5 · Refractometer';
+    stepText.innerHTML = 'Put a drop of the sample on the prism — <b>click the refractometer</b>.';
+  } else if (p === 'read'){
+    stepTag.textContent = retag + 'Step 3 of 5 · Refractometer';
+    stepText.innerHTML = 'Look into the eyepiece: read the scale where the <b>shadow boundary</b> sits, and record it below.';
+    state.showGuides = false;
+    state.readLock = false;
+    $('brixIn').value = ''; $('brixIn').disabled = false;
+    $('brixBtn').disabled = false;
+    $('readFb').textContent = ''; $('readFb').className = 'fb';
+    $('readPanel').classList.add('show');
+  } else if (p === 'chart'){
+    stepTag.textContent = retag + 'Step 4 of 5 · Calibration chart';
+    stepText.innerHTML = 'Follow the dashed guides on the chart: up from your Brix reading to the line, across to the axis — record the <b>concentration&nbsp;%</b>.';
+    state.showGuides = true;
+    state.chartLock = false;
+    $('concIn').value = ''; $('concIn').disabled = false;
+    $('concBtn').disabled = false;
+    $('chartFb').textContent = ''; $('chartFb').className = 'fb';
+    $('chartPanel').classList.add('show');
+  } else if (p === 'disp'){
+    stepTag.textContent = retag + 'Step 5 of 5 · Disposition';
+    stepText.innerHTML = 'Concentration and appearance are both on the bench now — <b>what goes in the QA log?</b>';
+    state.dispLock = false;
+    $('dispFb').textContent = ''; $('dispFb').className = 'fb';
+    $('actBtn').style.display = 'none';
+    document.querySelectorAll('#dispPanel .choice[data-act]').forEach(b => { b.classList.remove('sel'); b.disabled = false; });
+    $('dispPanel').classList.add('show');
+  } else if (p === 'result'){
+    finishRun();
+  }
+}
+
+/* ---------------- interactions ---------------- */
+function stagePos(e){
+  const r = cv.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
+}
+stage.addEventListener('pointerdown', e => {
+  const p = stagePos(e);
+  if (state.phase === 'sample'){
+    if (p.x > 110 && p.x < 445 && p.y > 95 && p.y < 345) state.sampleT = 0.001;
+  } else if (state.phase === 'drop'){
+    if (p.x > 610 && p.x < 850 && p.y > 160 && p.y < 330) setPhase('read');
+  }
+});
+
+/* appearance */
+document.querySelectorAll('#lookPanel .choice[data-look]').forEach(b => {
+  b.addEventListener('click', () => {
+    if (state.phase !== 'look' || state.lookLock) return;
+    state.lookLock = true;
+    b.classList.add('sel');
+    document.querySelectorAll('#lookPanel .choice[data-look]').forEach(x => x.disabled = true);
+    const truth = SCENARIOS[state.scenario].look;
+    state.lookOk = b.dataset.look === truth;
+    const fb = $('lookFb');
+    if (state.lookOk){
+      fb.textContent = truth === 'green'
+        ? '✓ Good eye — that green cast is fluorescent penetrant loading up the remover. Keep that in mind for the disposition.'
+        : '✓ Recorded — matches the reference. Clean sample.';
+      fb.className = 'fb ok';
+    } else {
+      fb.textContent = truth === 'green'
+        ? '✗ Look again — next to the reference, the sample carries a green cast. That’s dragged-in penetrant. Noted for the disposition.'
+        : '✗ Compare again — the sample matches the reference. No contamination here.';
+      fb.className = 'fb bad';
+    }
+    $('lookNextBtn').style.display = 'inline-block';
+  });
+});
+$('lookNextBtn').addEventListener('click', () => { $('lookNextBtn').style.display = 'none'; setPhase('drop'); });
+
+/* refractometer reading */
+$('brixBtn').addEventListener('click', () => {
+  if (state.phase !== 'read' || state.readLock) return;
+  const v = parseFloat($('brixIn').value);
+  if (isNaN(v)){ $('readFb').textContent = 'Type the reading first.'; $('readFb').className = 'fb bad'; return; }
+  state.readLock = true;
+  $('brixIn').disabled = true; $('brixBtn').disabled = true;
+  const ok = Math.abs(v - state.brixTruth) <= 0.5;
+  if (state.readOk === null || state.attempt === 1) state.readOk = ok;
+  const fb = $('readFb');
+  fb.textContent = ok
+    ? `✓ Recorded: ${state.brixTruth.toFixed(1)} °Brix.`
+    : `△ Recorded, but the boundary sits at ${state.brixTruth.toFixed(1)} °Brix (you read ${v}). Line your eye up with where the blue field ends.`;
+  fb.className = ok ? 'fb ok' : 'fb bad';
+  setTimeout(() => setPhase('chart'), 500);
+});
+
+/* chart conversion */
+$('concBtn').addEventListener('click', () => {
+  if (state.phase !== 'chart' || state.chartLock) return;
+  const v = parseFloat($('concIn').value);
+  if (isNaN(v)){ $('chartFb').textContent = 'Type the concentration first.'; $('chartFb').className = 'fb bad'; return; }
+  state.chartLock = true;
+  $('concIn').disabled = true; $('concBtn').disabled = true;
+  const truth = truthConc();
+  const ok = Math.abs(v - truth) <= 2;
+  if (state.chartOk === null || state.attempt === 1) state.chartOk = ok;
+  const inRange = truth >= LIM_LO && truth <= LIM_HI;
+  const fb = $('chartFb');
+  fb.textContent = (ok ? `✓ ${truth.toFixed(1).replace(/\.0$/,'')} % concentration` :
+    `△ Recorded, but the chart gives ${truth.toFixed(1).replace(/\.0$/,'')} % (you read ${v} %)`) +
+    ` — limits are ${LIM_LO}–${LIM_HI} %, so this tank is ${inRange ? 'IN range' : 'OUT of range'} on concentration.`;
+  fb.className = ok ? 'fb ok' : 'fb bad';
+  setTimeout(() => setPhase('disp'), 500);
+});
+
+/* disposition */
+document.querySelectorAll('#dispPanel .choice[data-act]').forEach(b => {
+  b.addEventListener('click', () => {
+    if (state.phase !== 'disp' || state.dispLock) return;
+    state.dispLock = true;
+    b.classList.add('sel');
+    document.querySelectorAll('#dispPanel .choice[data-act]').forEach(x => x.disabled = true);
+    const sc = SCENARIOS[state.scenario];
+    /* after a successful retest the tank is back in range, so the truth is 'log' */
+    const truth = state.attempt > 1 ? 'log' : sc.truthAct;
+    const ok = b.dataset.act === truth;
+    if (state.dispOk === null || state.attempt === 1) state.dispOk = ok;
+    const fb = $('dispFb');
+    const why = {
+      log: 'concentration in limits and the sample matches the reference — that’s a releasable tank.',
+      addconc: 'the tank is below 10 % — too weak to do its job. Concentrate brings it back to target.',
+      addwater: 'the tank is above 30 % — an over-strong remover risks pulling penetrant out of real defects. Water brings it down.',
+      dump: 'the green tint is penetrant carryover — a contaminated tank redeposits fluorescence on parts, no matter what the concentration says.'
+    };
+    fb.textContent = (ok ? '✓ Right call — ' : `✗ Not this one — the right call: ${why[truth]} `) + (ok ? why[truth] : '');
+    fb.className = ok ? 'fb ok' : 'fb bad';
+    const ab = $('actBtn');
+    ab.textContent = truth === 'addconc' ? 'Add concentrate, mix & re-check →'
+                   : truth === 'addwater' ? 'Add water, mix & re-check →'
+                   : truth === 'dump' ? 'Dump, clean & recharge →'
+                   : 'Log the check →';
+    ab.style.display = 'inline-block';
+  });
+});
+$('actBtn').addEventListener('click', () => {
+  $('actBtn').style.display = 'none';
+  const sc = SCENARIOS[state.scenario];
+  if (state.attempt === 1 && (sc.truthAct === 'addconc' || sc.truthAct === 'addwater')){
+    state.attempt = 2;
+    state.brixTruth = sc.retestBrix;
+    toast(sc.truthAct === 'addconc' ? 'Concentrate added and mixed — draw a fresh drop and re-check.' : 'Water added and mixed — draw a fresh drop and re-check.', 'good');
+    hidePanels();
+    setPhase('read');
+  } else {
+    setPhase('result');
+  }
+});
+
+/* ---------------- finish ---------------- */
+function finishRun(){
+  const sc = SCENARIOS[state.scenario];
+  const v = $('verdictBox');
+  const wasDump = sc.truthAct === 'dump';
+  v.className = 'verdict-good';
+  v.textContent = wasDump
+    ? 'QA log: tank condemned for contamination — dumped, cleaned, recharged with fresh remover at 20 %.'
+    : state.attempt > 1
+      ? `QA log: concentration corrected to ${truthConc().toFixed(1).replace(/\.0$/,'')} % and verified — tank released.`
+      : 'QA log: in range, appearance good — tank released for the week.';
+  $('lesson').innerHTML = '<b>What was really going on:</b> ' + sc.truthText;
+  const seen = new Set(state.runs.concat([state.scenario])).size;
+  $('progNote').innerHTML = (urlSc && SCENARIOS[urlSc])
+    ? ''
+    : (seen < 4
+      ? `<b>Scenario progress: ${seen} of 4.</b> You are not done yet — “Next week” brings a different tank condition.`
+      : '<b>Scenario progress: 4 of 4 — all tank conditions covered.</b> Further weeks repeat the rotation for practice.');
+  const mark = ok => ok == null ? '—' : ok ? '✓' : '✗';
+  const cls = ok => ok == null ? '' : ok ? 'ok' : 'bad';
+  const readings = (state.readOk && state.chartOk);
+  const row = document.createElement('tr');
+  row.innerHTML = `<td>#${state.week}</td><td>${sc.cause}</td>
+    <td class="${cls(state.lookOk)}">${mark(state.lookOk)}</td>
+    <td class="${cls(readings)}">${mark(readings)}</td>
+    <td class="${cls(state.dispOk)}">${mark(state.dispOk)}</td>`;
+  $('histRows').appendChild(row);
+  state.runs.push(state.scenario);
+  $('resultPanel').classList.add('show');
+  $('historyPanel').classList.add('show');
+  stepTag.textContent = 'Check complete';
+  stepText.innerHTML = 'Same time next week. <b>Materials drift — the log is what catches them before parts do.</b>';
+}
+$('againBtn').addEventListener('click', () => {
+  state.attempt = 1; state.week++;
+  state.sampleT = 0; state.showGuides = false;
+  state.lookOk = null; state.readOk = null; state.chartOk = null; state.dispOk = null;
+  pickScenario();
+  setPhase('sample');
+});
+
+/* ---------------- drawing ---------------- */
+function bench(g){
+  g.fillStyle = '#2b2723'; g.fillRect(0, 0, W, H);
+  g.strokeStyle = 'rgba(255,255,255,.03)';
+  for (let y = 0; y < H; y += 7){ g.beginPath(); g.moveTo(0, y); g.lineTo(W, y + 2); g.stroke(); }
+}
+function liquidColor(look, a){
+  return `rgba(233,155,180,${a})`;
+}
+function drawBeaker(g, x, y, w, h, fill, look){
+  g.strokeStyle = '#a7adb5'; g.lineWidth = 2;
+  g.fillStyle = 'rgba(220,224,230,.12)';
+  g.fillRect(x, y, w, h); g.strokeRect(x, y, w, h);
+  if (fill > 0){
+    g.fillStyle = liquidColor(look, .85);
+    const fh = (h - 8) * fill;
+    const ly = y + h - 3 - fh;
+    g.fillRect(x + 3, ly, w - 6, fh);
+    if (look === 'green'){
+      /* dragged-in penetrant: green swirls through the pink body + a film on top */
+      g.save();
+      g.beginPath(); g.rect(x + 3, ly, w - 6, fh); g.clip();
+      g.strokeStyle = 'rgba(150,210,70,.45)'; g.lineCap = 'round';
+      for (let i = 0; i < 4; i++){
+        const sx = x + 10 + (i / 3.2) * (w - 24);
+        g.lineWidth = 5 + i * 2;
+        g.beginPath();
+        g.moveTo(sx, ly + 4);
+        g.bezierCurveTo(sx + 14, ly + fh * 0.3, sx - 14, ly + fh * 0.65, sx + 6, ly + fh - 4);
+        g.stroke();
+      }
+      g.restore();
+      g.fillStyle = 'rgba(165,220,70,.55)';
+      g.fillRect(x + 3, ly, w - 6, Math.max(6, fh * 0.1));    /* fluorescent film on the surface */
+    }
+  }
+  g.strokeStyle = 'rgba(255,255,255,.2)'; g.lineWidth = 1;
+  g.beginPath(); g.moveTo(x + 7, y + 5); g.lineTo(x + 7, y + h - 6); g.stroke();
+}
+function drawRefractometer(g, x, y, glowPulse){
+  /* handheld refractometer lying on the bench */
+  g.save();
+  g.translate(x, y);
+  g.fillStyle = '#6a7076';
+  g.beginPath(); g.roundRect(-90, -16, 150, 32, 8); g.fill();
+  g.fillStyle = '#555b62';
+  g.beginPath(); g.roundRect(60, -22, 46, 44, 6); g.fill();     /* eyepiece block */
+  g.fillStyle = '#3a3f45';
+  g.beginPath(); g.arc(83, 0, 13, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#8a9098';
+  g.beginPath(); g.roundRect(-104, -10, 18, 20, 3); g.fill();    /* prism cover */
+  g.restore();
+  if (glowPulse != null){
+    g.strokeStyle = `rgba(232,168,124,${0.4 + 0.5 * glowPulse})`;
+    g.setLineDash([7, 6]); g.lineWidth = 2;
+    g.strokeRect(x - 118, y - 40, 240, 80); g.setLineDash([]);
+  }
+}
+function label(g, txt, x, y, color){
+  g.fillStyle = color || '#c9c2b2';
+  g.font = '600 10px "JetBrains Mono", monospace'; g.textAlign = 'center';
+  g.fillText(txt, x, y);
+}
+/* eyepiece: circular field, blue above the boundary, light below, vertical Brix scale */
+const EYE = { cx: 225, cy: 210, r: 150 };
+function brixToY(b){ return EYE.cy + 118 - (b / 30) * 236; }
+function drawEyepiece(g, brix){
+  g.save();
+  g.beginPath(); g.arc(EYE.cx, EYE.cy, EYE.r, 0, Math.PI * 2); g.clip();
+  const by = brixToY(brix);
+  g.fillStyle = '#e9edf2'; g.fillRect(EYE.cx - EYE.r, EYE.cy - EYE.r, EYE.r * 2, EYE.r * 2);
+  const grad = g.createLinearGradient(0, EYE.cy - EYE.r, 0, by);
+  grad.addColorStop(0, '#26467e'); grad.addColorStop(0.85, '#3f6fb5'); grad.addColorStop(1, '#7d9fd0');
+  g.fillStyle = grad;
+  g.fillRect(EYE.cx - EYE.r, EYE.cy - EYE.r, EYE.r * 2, by - (EYE.cy - EYE.r));
+  /* scale */
+  g.strokeStyle = '#2a2f38'; g.lineWidth = 1.5;
+  g.beginPath(); g.moveTo(EYE.cx, brixToY(0)); g.lineTo(EYE.cx, brixToY(30)); g.stroke();
+  g.font = '600 11px "JetBrains Mono", monospace'; g.textAlign = 'right';
+  for (let b = 0; b <= 30; b++){
+    const y = brixToY(b);
+    const major = b % 5 === 0;
+    g.strokeStyle = '#2a2f38'; g.lineWidth = major ? 1.6 : 1;
+    g.beginPath(); g.moveTo(EYE.cx - (major ? 16 : 8), y); g.lineTo(EYE.cx + (major ? 16 : 8), y); g.stroke();
+    if (major){ g.fillStyle = '#2a2f38'; g.fillText(String(b), EYE.cx - 22, y + 4); }
+  }
+  g.restore();
+  g.strokeStyle = '#11131a'; g.lineWidth = 8;
+  g.beginPath(); g.arc(EYE.cx, EYE.cy, EYE.r + 3, 0, Math.PI * 2); g.stroke();
+  g.strokeStyle = '#555b62'; g.lineWidth = 2;
+  g.beginPath(); g.arc(EYE.cx, EYE.cy, EYE.r + 8, 0, Math.PI * 2); g.stroke();
+  label(ctx, 'EYEPIECE VIEW · °BRIX', EYE.cx, EYE.cy + EYE.r + 32, '#c9c2b2');
+}
+/* calibration chart */
+const CH = { x: 480, y: 55, w: 420, h: 300 };
+function chX(b){ return CH.x + (b / 30) * CH.w; }
+function chY(c){ return CH.y + CH.h - (c / 45) * CH.h; }
+function drawChart(g, guides, brix){
+  g.fillStyle = '#f4f1ea';
+  g.fillRect(CH.x - 46, CH.y - 26, CH.w + 76, CH.h + 74);
+  g.strokeStyle = '#b9b3a6'; g.lineWidth = 1;
+  g.strokeRect(CH.x - 46, CH.y - 26, CH.w + 76, CH.h + 74);
+  /* limits band 10–30 % */
+  g.fillStyle = 'rgba(110,180,110,.18)';
+  g.fillRect(CH.x, chY(LIM_HI), CH.w, chY(LIM_LO) - chY(LIM_HI));
+  /* grid */
+  g.strokeStyle = 'rgba(0,0,0,.08)';
+  for (let b = 0; b <= 30; b += 5){ g.beginPath(); g.moveTo(chX(b), CH.y); g.lineTo(chX(b), CH.y + CH.h); g.stroke(); }
+  for (let c = 0; c <= 45; c += 5){ g.beginPath(); g.moveTo(CH.x, chY(c)); g.lineTo(CH.x + CH.w, chY(c)); g.stroke(); }
+  /* axes labels */
+  g.font = '600 10px "JetBrains Mono", monospace'; g.fillStyle = '#4a4a47'; g.textAlign = 'center';
+  for (let b = 0; b <= 30; b += 5) g.fillText(String(b), chX(b), CH.y + CH.h + 16);
+  g.textAlign = 'right';
+  for (let c = 0; c <= 45; c += 10) g.fillText(String(c), CH.x - 8, chY(c) + 4);
+  g.textAlign = 'center';
+  g.fillText('°BRIX', CH.x + CH.w / 2, CH.y + CH.h + 34);
+  g.save(); g.translate(CH.x - 32, CH.y + CH.h / 2); g.rotate(-Math.PI / 2);
+  g.fillText('CONCENTRATION %', 0, 0); g.restore();
+  g.fillStyle = '#7a8a5a'; g.textAlign = 'left';
+  g.fillText('LIMITS 10–30 %', CH.x + 6, chY(LIM_HI) + 14);
+  /* calibration line */
+  g.strokeStyle = '#b54515'; g.lineWidth = 2.5;
+  g.beginPath(); g.moveTo(chX(0), chY(0)); g.lineTo(chX(30), chY(45)); g.stroke();
+  g.fillStyle = '#4a4a47'; g.font = '600 10px "JetBrains Mono", monospace'; g.textAlign = 'center';
+  g.fillText('REMOVER CALIBRATION CHART', CH.x + CH.w / 2, CH.y - 10);
+  if (guides){
+    const c = brix * SLOPE;
+    g.strokeStyle = '#1a1a1a'; g.lineWidth = 1.5; g.setLineDash([6, 5]);
+    g.beginPath(); g.moveTo(chX(brix), CH.y + CH.h); g.lineTo(chX(brix), chY(c)); g.stroke();
+    g.beginPath(); g.moveTo(chX(brix), chY(c)); g.lineTo(CH.x, chY(c)); g.stroke();
+    g.setLineDash([]);
+    g.fillStyle = '#1a1a1a';
+    g.beginPath(); g.arc(chX(brix), chY(c), 4.5, 0, Math.PI * 2); g.fill();
+  }
+}
+let last = performance.now();
+function frame(now){
+  const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
+  if (state.sampleT > 0 && state.sampleT < 1){
+    state.sampleT = Math.min(1, state.sampleT + dt / 0.9);
+    if (state.sampleT >= 1 && state.phase === 'sample'){
+      toast('✓ Sample drawn.', 'good');
+      setPhase('look');
+    }
+  }
+  const look = state.scenario ? SCENARIOS[state.scenario].look : 'clean';
+  const pulse = 0.5 + 0.5 * Math.sin(now / 320);
+
+  bench(ctx);
+  if (state.phase === 'sample'){
+    /* remover tank */
+    ctx.fillStyle = '#3a3f45'; ctx.fillRect(130, 110, 300, 220);
+    ctx.fillStyle = liquidColor(look === 'green' ? 'clean' : 'clean', .55);   /* tank looks normal from above — the tint shows in the sample */
+    ctx.fillRect(142, 140, 276, 178);
+    ctx.fillStyle = '#555b62'; ctx.fillRect(122, 98, 316, 16);
+    label(ctx, 'TANK 2 — HYDROPHILIC REMOVER', 280, 356);
+    ctx.strokeStyle = `rgba(232,168,124,${0.4 + 0.5 * pulse})`; ctx.setLineDash([7, 6]); ctx.lineWidth = 2;
+    ctx.strokeRect(118, 94, 326, 244); ctx.setLineDash([]);
+    drawBeaker(ctx, 560, 230, 64, 92, state.sampleT, look);
+    label(ctx, 'SAMPLE BEAKER', 592, 356);
+    drawRefractometer(ctx, 750, 260, null);
+    label(ctx, 'REFRACTOMETER', 750, 356);
+  } else if (state.phase === 'look'){
+    drawBeaker(ctx, 250, 110, 130, 200, 0.85, 'clean');
+    label(ctx, 'NEW MATERIAL — REFERENCE', 315, 350);
+    drawBeaker(ctx, 560, 110, 130, 200, 0.85, look);
+    label(ctx, 'THIS WEEK’S SAMPLE', 625, 350, '#e8a87c');
+    label(ctx, '◄ COMPARE SIDE BY SIDE — WHITE LIGHT', 470, 402);
+  } else if (state.phase === 'drop'){
+    drawBeaker(ctx, 480, 210, 60, 88, 0.85, look);
+    label(ctx, 'SAMPLE', 510, 330);
+    drawRefractometer(ctx, 730, 240, pulse);
+    label(ctx, 'REFRACTOMETER — CLICK', 730, 356, '#e8a87c');
+  } else {
+    drawEyepiece(ctx, state.brixTruth);
+    drawChart(ctx, state.showGuides, state.brixTruth);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+$('beginBtn').addEventListener('click', () => {
+  $('intro').classList.add('hidden');
+  pickScenario();
+  setPhase('sample');
+});
+
+})();
+</script>
+</body>
+</html>
