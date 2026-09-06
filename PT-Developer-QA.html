@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PT — Developer QA Check</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #faf7f2; --paper-deep: #f1ece2; --ink: #1a1a1a; --ink-soft: #4a4a47;
+    --ink-faded: #8a8a85; --rule: #d9d2c4; --amber: #b54515; --amber-soft: #e8a87c;
+    --amber-tint: #fdf2e6; --pen-red: #c8102e; --good: #2e7d4f; --fluor: #9adb2c;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px -12px rgba(60,40,20,0.12);
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'Manrope', -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--paper); }
+  body {
+    font-family: var(--sans); background: var(--paper); color: var(--ink);
+    line-height: 1.55; min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(181,69,21,0.04), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(154,219,44,0.04), transparent 50%);
+  }
+  .container { max-width: 1000px; margin: 0 auto; padding: 36px 28px 72px; }
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+  .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--amber); margin-bottom: 8px; font-weight: 500; }
+  h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(26px,4vw,38px); line-height: 1.05; letter-spacing: -.02em; font-variation-settings: 'opsz' 144; }
+  h1 em { font-style: italic; color: var(--amber); font-weight: 500; }
+  a.back { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faded); text-decoration: none; padding-bottom: 6px; }
+  a.back:hover { color: var(--amber); }
+
+  .scenario {
+    background: var(--amber-tint); border: 1px solid var(--amber-soft); border-radius: 2px;
+    padding: 12px 16px; margin-bottom: 14px; font-size: 14px; color: var(--ink-soft);
+  }
+  .scenario b { color: var(--amber); font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; display: block; margin-bottom: 3px; }
+
+  .instr {
+    background: var(--ink); color: var(--paper); border-radius: 2px; padding: 18px 22px;
+    margin-bottom: 14px; box-shadow: var(--shadow);
+    display: grid; grid-template-columns: 1fr auto; gap: 8px 24px; align-items: center;
+    min-height: 86px; position: relative;
+  }
+  .instr::before { content: ''; position: absolute; inset: 4px; border: 1px solid rgba(154,219,44,0.15); border-radius: 2px; pointer-events: none; }
+  .instr .step-tag { font-family: var(--mono); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--amber-soft); margin-bottom: 5px; }
+  .instr .text { font-size: 16px; font-weight: 500; max-width: 640px; }
+  .instr .text b { color: var(--amber-soft); }
+  .instr .widget { justify-self: end; text-align: right; }
+  .instr .widget .chip { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #b9b4aa; line-height: 1.7; }
+  .instr .widget .chip b { color: var(--amber-soft); }
+  @media (max-width: 700px){ .instr { grid-template-columns: 1fr; } .instr .widget { justify-self: start; text-align: left; } }
+
+  .stage {
+    position: relative; border-radius: 2px; overflow: hidden;
+    box-shadow: var(--shadow); border: 1px solid var(--rule);
+    touch-action: none; user-select: none; -webkit-user-select: none; background: #262320;
+  }
+  .stage canvas { display: block; width: 100%; height: auto; }
+  .stage.clickable { cursor: pointer; }
+  .toast {
+    position: absolute; left: 50%; bottom: 14px; transform: translate(-50%, 8px);
+    background: rgba(20,18,16,.94); color: var(--paper); font-size: 13.5px; font-weight: 500;
+    padding: 10px 16px; border-radius: 3px; max-width: 500px; line-height: 1.4;
+    opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s;
+    border-left: 3px solid var(--amber-soft);
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast.good { border-left-color: #6fce9a; }
+
+  .panel { background: var(--paper-deep); border: 1px solid var(--rule); border-radius: 2px; padding: 16px 18px; margin-top: 12px; display: none; }
+  .panel.show { display: block; }
+  .panel h4 { font-family: var(--serif); font-size: 17px; font-weight: 600; margin-bottom: 10px; }
+  .rowline { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; font-size: 14px; color: var(--ink-soft); }
+  .rowline b { color: var(--ink); }
+  .choice {
+    font-family: var(--sans); font-weight: 700; font-size: 13px;
+    background: #fff; color: var(--ink); border: 1.5px solid var(--rule); border-radius: 2px;
+    padding: 10px 16px; cursor: pointer;
+  }
+  .choice:hover { border-color: var(--amber); color: var(--amber); }
+  .choice.sel { background: var(--amber); border-color: var(--amber); color: #fff; }
+  .choice:disabled { opacity: .5; cursor: default; }
+  .actions-list { display: grid; gap: 8px; }
+  .actions-list .choice { text-align: left; font-weight: 600; }
+  input.reading {
+    font-family: var(--mono); font-size: 18px; font-weight: 600; width: 120px;
+    padding: 8px 10px; border: 1.5px solid var(--rule); border-radius: 2px;
+    background: #fff; color: var(--ink);
+  }
+  input.reading:focus { outline: none; border-color: var(--amber); }
+  input.reading:disabled { opacity: .55; }
+  .fb { font-size: 13.5px; color: var(--ink-soft); margin-top: 8px; line-height: 1.5; }
+  .fb.ok { color: var(--good); font-weight: 600; }
+  .fb.bad { color: var(--pen-red); font-weight: 600; }
+  .panel button.primary {
+    font-family: var(--sans); font-weight: 700; font-size: 14px;
+    background: var(--amber); color: #fff; border: none; border-radius: 2px;
+    padding: 11px 22px; cursor: pointer;
+  }
+  .panel button.primary:hover { background: #9a3a12; }
+
+  .verdict-good, .verdict-bad { border-radius: 2px; padding: 12px 16px; font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+  .verdict-good { background: #e4efdd; border: 1px solid #c4dbb4; color: #2e5a1e; }
+  .verdict-bad { background: #f6dede; border: 1px solid #eab8b8; color: #7c1420; }
+  .lesson { font-size: 14px; color: var(--ink-soft); margin-bottom: 12px; }
+  .lesson b { color: var(--amber); }
+  table.history { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.history th { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faded); text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--rule); }
+  table.history td { padding: 6px 8px; border-bottom: 1px solid rgba(0,0,0,.05); color: var(--ink-soft); }
+  table.history td.ok { color: var(--good); font-weight: 700; }
+  table.history td.bad { color: var(--pen-red); font-weight: 700; }
+
+  .veil { position: fixed; inset: 0; background: rgba(26,24,20,.55); backdrop-filter: blur(2px); display: flex; align-items: flex-start; justify-content: center; z-index: 100; padding: 28px 24px; overflow-y: auto; }
+  .veil.hidden { display: none; }
+  .card { background: var(--paper); border-radius: 3px; box-shadow: 0 24px 80px -20px rgba(0,0,0,.5); max-width: 620px; width: 100%; padding: 32px 38px; }
+  .card h2 { font-family: var(--serif); font-weight: 600; font-size: 27px; margin-bottom: 12px; }
+  .card h2 em { font-style: italic; color: var(--amber); }
+  .card p { font-size: 14.5px; color: var(--ink-soft); margin-bottom: 12px; }
+  .card ul { margin: 0 0 14px 18px; font-size: 14px; color: var(--ink-soft); }
+  .card ul li { margin-bottom: 5px; }
+  .card button.primary { font-family: var(--sans); font-weight: 700; font-size: 15px; background: var(--amber); color: #fff; border: none; border-radius: 2px; padding: 13px 28px; cursor: pointer; margin-top: 4px; }
+  .card button.primary:hover { background: #9a3a12; }
+  footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--rule); font-size: 12px; color: var(--ink-faded); font-family: var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+  @media (prefers-reduced-motion: reduce){ * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <div class="eyebrow">Penetrant Testing · Process Control</div>
+      <h1>Developer <em>QA Check</em></h1>
+    </div>
+    <a class="back" href="index.html" target="_top">← Exercise Hub</a>
+  </header>
+
+  <div class="scenario"><b>This week's check</b><span id="scenarioText">…</span></div>
+
+  <div class="instr">
+    <div>
+      <div class="step-tag" id="stepTag">Step 1 of 4</div>
+      <div class="text" id="stepText">…</div>
+    </div>
+    <div class="widget" id="widget"></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="cv" width="940" height="430"></canvas>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <!-- dry powder condition -->
+  <div class="panel" id="fluffPanel">
+    <h4>Dry powder — condition check</h4>
+    <div class="rowline">Turn the sample over next to the reference — how does the powder behave?
+      <button class="choice" data-powder="fluffy" type="button">Fluffy &amp; free-flowing</button>
+      <button class="choice" data-powder="caked" type="button">Caked into lumps</button>
+    </div>
+    <div class="fb" id="fluffFb"></div>
+    <button class="primary" id="fluffNextBtn" type="button" style="display:none;margin-top:12px">To the UV speck test →</button>
+  </div>
+
+  <!-- speck count -->
+  <div class="panel" id="countPanel">
+    <h4>UV speck test — dragged-in penetrant</h4>
+    <div class="rowline">Count the <b>fluorescent specks inside the marked circle</b> (specks outside it don't count):
+      <input class="reading" id="countIn" type="number" step="1" min="0" max="40" placeholder="specks">
+      <button class="choice" id="countBtn" type="button">Record →</button>
+    </div>
+    <div class="fb" id="countFb"></div>
+  </div>
+
+  <!-- hydrometer -->
+  <div class="panel" id="hydroPanel">
+    <h4>Aqueous developer — hydrometer</h4>
+    <div class="rowline">Read the stem scale <b>at the liquid surface line</b>:
+      <input class="reading" id="sgIn" type="number" step="0.005" min="1" max="1.1" placeholder="SG">
+      <button class="choice" id="sgBtn" type="button">Record →</button>
+    </div>
+    <div class="fb" id="hydroFb"></div>
+  </div>
+
+  <!-- disposition -->
+  <div class="panel" id="dispPanel">
+    <h4>Disposition — what goes in the QA log?</h4>
+    <div class="actions-list">
+      <button class="choice" data-act="log" type="button">ALL IN SPEC — log both developers, release for use</button>
+      <button class="choice" data-act="caked" type="button">DRY POWDER CAKED — moisture got in; replace the powder, fix the storage</button>
+      <button class="choice" data-act="contam" type="button">DRY POWDER CONTAMINATED — specks over limit; replace the powder</button>
+      <button class="choice" data-act="addpowder" type="button">AQUEOUS LOW — add developer powder, mix, and re-check</button>
+    </div>
+    <div class="fb" id="dispFb"></div>
+    <button class="primary" id="actBtn" type="button" style="display:none;margin-top:12px">Continue →</button>
+  </div>
+
+  <!-- result + history -->
+  <div class="panel" id="resultPanel">
+    <h4>QA log</h4>
+    <div id="verdictBox"></div>
+    <div class="lesson" id="lesson"></div>
+    <div class="lesson" id="progNote"></div>
+    <button class="primary" id="againBtn" type="button">Next week →</button>
+  </div>
+  <div class="panel" id="historyPanel">
+    <h4>Your checks</h4>
+    <table class="history">
+      <thead><tr><th>Week</th><th>What was really going on</th><th>Powder</th><th>Readings</th><th>Disposition</th></tr></thead>
+      <tbody id="histRows"></tbody>
+    </table>
+  </div>
+
+  <footer>PT Process Control · Dry powder &amp; aqueous developer · Max 10 specks · SG 1.040–1.080</footer>
+</div>
+
+<div class="veil" id="intro">
+  <div class="card">
+    <div class="eyebrow">Process Control · Materials QA</div>
+    <h2>Will the developer <em>still do its job?</em></h2>
+    <p>The developer is the last material a part sees — it draws penetrant back out of defects. Two forms, two simple checks:</p>
+    <ul>
+      <li><b>Dry powder:</b> it must be <b>fluffy and free-flowing</b> (moisture cakes it), and <b>clean under UV-A</b> — every glowing speck is dragged-in penetrant, and the limit is <b>10 specks</b> inside the marked circle.</li>
+      <li><b>Aqueous developer:</b> concentration is checked with a <b>hydrometer</b> — read the specific gravity at the surface line; limits <b>1.040–1.080</b>, target ≈1.060.</li>
+      <li>There are <b>four scenarios</b> to work through — keep hitting “Next week” until you've seen all four.</li>
+    </ul>
+    <button class="primary" id="beginBtn">Start the check →</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+const W = 940, H = 430;
+const $ = id => document.getElementById(id);
+const stage = $('stage'), cv = $('cv'), ctx = cv.getContext('2d');
+const stepTag = $('stepTag'), stepText = $('stepText'), widget = $('widget'), toastEl = $('toast');
+
+/* ---------------- scenarios ---------------- */
+const SPECK_LIMIT = 10, SG_LO = 1.040, SG_HI = 1.080;
+const SCENARIOS = {
+  allGood: { powder: 'fluffy', specks: 3,  sg: 1.060, truthAct: 'log',
+             cause: 'Both developers in spec',
+             truthText: 'Powder fluffy and clean (3 specks, limit 10), aqueous right on 1.060 — both released. Most weeks look like this; the log proves it.' },
+  specks:  { powder: 'fluffy', specks: 14, sg: 1.055, truthAct: 'contam',
+             cause: 'Dry powder contaminated (14 specks, limit 10)',
+             truthText: 'Fourteen glowing specks — parts had gone into the dust chamber still wet with penetrant, loading the powder. Every speck can transfer to a part as a FALSE indication. Powder replaced; drying practice corrected.' },
+  sgLow:   { powder: 'fluffy', specks: 4,  sg: 1.030, truthAct: 'addpowder', retestSg: 1.055,
+             cause: 'Aqueous developer diluted (SG 1.030)',
+             truthText: 'SG 1.030 is below the 1.040 floor — a dilute tank leaves a film too thin to pull penetrant out of tight defects, so indications come up faint. Powder added, mixed, re-checked in range. (Evaporation drifts it the other way — high SG — and the fix is water.)' },
+  caked:   { powder: 'caked',  specks: 2,  sg: 1.060, truthAct: 'caked',
+             cause: 'Dry powder caked (moisture in the chamber)',
+             truthText: 'The powder had taken on moisture — a lid left open over the weekend. Caked developer won’t fluff into the light, even coat that development depends on. Replaced, and the storage fixed; no speck count or hydrometer reading rescues caked powder.' }
+};
+const ORDER = ['allGood', 'specks', 'sgLow', 'caked'];
+const urlSc = new URLSearchParams(location.search).get('scenario');
+
+/* ---------------- state ---------------- */
+const state = {
+  phase: 'intro', scenario: null, attempt: 1, week: 1,
+  sgTruth: 0, speckPts: [], outsidePts: [],
+  fluffOk: null, countOk: null, sgOk: null, dispOk: null,
+  fluffLock: false, countLock: false, sgLock: false, dispLock: false,
+  runs: []
+};
+let toastTimer = 0;
+function toast(msg, kind){
+  toastEl.textContent = msg;
+  toastEl.className = 'toast show' + (kind ? ' ' + kind : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3400);
+}
+const CIRC = { cx: 470, cy: 208, r: 118 };
+function genSpecks(n, seed){
+  const pts = [];
+  let s = seed;
+  const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < n; i++){
+    const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * CIRC.r * 0.86;
+    pts.push({ x: CIRC.cx + Math.cos(a) * d, y: CIRC.cy + Math.sin(a) * d, r: 2 + rnd() * 1.6 });
+  }
+  return pts;
+}
+function pickScenario(){
+  const key = (urlSc && SCENARIOS[urlSc]) ? urlSc : ORDER[state.runs.length % ORDER.length];
+  state.scenario = key;
+  const sc = SCENARIOS[key];
+  state.sgTruth = sc.sg;
+  state.speckPts = genSpecks(sc.specks, 401 + sc.specks * 13);
+  /* a couple of specks OUTSIDE the circle that must not be counted */
+  state.outsidePts = [
+    { x: CIRC.cx - CIRC.r - 60, y: CIRC.cy - 70, r: 2.6 },
+    { x: CIRC.cx + CIRC.r + 78, y: CIRC.cy + 55, r: 2.2 }
+  ];
+  $('scenarioText').textContent = `Week ${state.week} materials QA — dry developer (dust chamber) and aqueous developer (dip tank). Limits: max ${SPECK_LIMIT} specks in the circle · SG ${SG_LO.toFixed(3)}–${SG_HI.toFixed(3)}.`;
+}
+
+/* ---------------- phases ---------------- */
+function hidePanels(){ ['fluffPanel','countPanel','hydroPanel','dispPanel','resultPanel'].forEach(id => $(id).classList.remove('show')); }
+function limitsChip(){
+  widget.innerHTML = '<div class="chip">DRY: MAX <b>10 SPECKS</b> / CIRCLE<br>AQUEOUS: SG <b>1.040–1.080</b></div>';
+}
+function setPhase(p){
+  state.phase = p;
+  stage.classList.toggle('clickable', p === 'sprinkle' || p === 'hydroGo');
+  if (p === 'fluff') hidePanels();
+  $('historyPanel').classList.toggle('show', state.runs.length > 0);
+  const retag = state.attempt > 1 ? 'Retest · ' : '';
+  if (p === 'fluff'){
+    stepTag.textContent = 'Step 1 of 4 · Dry powder';
+    stepText.innerHTML = 'Weekly check. Scoop a sample from the <b>dust chamber</b> and compare it with fresh reference powder — <b>how does it behave?</b>';
+    limitsChip();
+    state.fluffLock = false;
+    $('fluffFb').textContent = ''; $('fluffFb').className = 'fb';
+    $('fluffNextBtn').style.display = 'none';
+    document.querySelectorAll('#fluffPanel .choice[data-powder]').forEach(b => { b.classList.remove('sel'); b.disabled = false; });
+    $('fluffPanel').classList.add('show');
+  } else if (p === 'sprinkle'){
+    stepTag.textContent = 'Step 2 of 4 · UV speck test';
+    stepText.innerHTML = 'Sprinkle a thin layer on the test plate and switch the booth to UV-A — <b>click the test plate</b>.';
+  } else if (p === 'count'){
+    stepTag.textContent = 'Step 2 of 4 · UV speck test';
+    stepText.innerHTML = 'Count every <b>glowing speck inside the marked circle</b> and record the number. Limit: <b>' + SPECK_LIMIT + '</b>.';
+    state.countLock = false;
+    $('countIn').value = ''; $('countIn').disabled = false;
+    $('countBtn').disabled = false;
+    $('countFb').textContent = ''; $('countFb').className = 'fb';
+    $('countPanel').classList.add('show');
+  } else if (p === 'hydroGo'){
+    stepTag.textContent = 'Step 3 of 4 · Aqueous developer';
+    stepText.innerHTML = 'Now the dip tank: draw a sample into the cylinder and float the hydrometer — <b>click the cylinder</b>.';
+  } else if (p === 'hydroRead'){
+    stepTag.textContent = retag + 'Step 3 of 4 · Aqueous developer';
+    stepText.innerHTML = 'Read the stem <b>where the liquid surface crosses it</b> and record the specific gravity.';
+    state.sgLock = false;
+    $('sgIn').value = ''; $('sgIn').disabled = false;
+    $('sgBtn').disabled = false;
+    $('hydroFb').textContent = ''; $('hydroFb').className = 'fb';
+    $('hydroPanel').classList.add('show');
+  } else if (p === 'disp'){
+    stepTag.textContent = retag + 'Step 4 of 4 · Disposition';
+    stepText.innerHTML = 'Powder condition, speck count, and SG are all on the bench — <b>what goes in the QA log?</b>';
+    state.dispLock = false;
+    $('dispFb').textContent = ''; $('dispFb').className = 'fb';
+    $('actBtn').style.display = 'none';
+    document.querySelectorAll('#dispPanel .choice[data-act]').forEach(b => { b.classList.remove('sel'); b.disabled = false; });
+    $('dispPanel').classList.add('show');
+  } else if (p === 'result'){
+    finishRun();
+  }
+}
+
+/* ---------------- interactions ---------------- */
+function stagePos(e){
+  const r = cv.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
+}
+stage.addEventListener('pointerdown', e => {
+  const p = stagePos(e);
+  if (state.phase === 'sprinkle'){
+    if (p.x > 250 && p.x < 690 && p.y > 70 && p.y < 350){ toast('Powder down, UV on.', 'good'); setPhase('count'); }
+  } else if (state.phase === 'hydroGo'){
+    if (p.x > 560 && p.x < 760 && p.y > 60 && p.y < 390){ toast('✓ Sample drawn — hydrometer floating.', 'good'); setPhase('hydroRead'); }
+  }
+});
+
+/* powder condition */
+document.querySelectorAll('#fluffPanel .choice[data-powder]').forEach(b => {
+  b.addEventListener('click', () => {
+    if (state.phase !== 'fluff' || state.fluffLock) return;
+    state.fluffLock = true;
+    b.classList.add('sel');
+    document.querySelectorAll('#fluffPanel .choice[data-powder]').forEach(x => x.disabled = true);
+    const truth = SCENARIOS[state.scenario].powder;
+    state.fluffOk = b.dataset.powder === truth;
+    const fb = $('fluffFb');
+    if (state.fluffOk){
+      fb.textContent = truth === 'caked'
+        ? '✓ Right — those lumps are moisture. Caked powder can’t fluff into an even coat. Keep that in mind for the disposition.'
+        : '✓ Recorded — fluffy and free-flowing, like the reference.';
+      fb.className = 'fb ok';
+    } else {
+      fb.textContent = truth === 'caked'
+        ? '✗ Look again — next to the reference the sample sits in dense lumps. That’s moisture caking. Noted for the disposition.'
+        : '✗ Compare again — the sample flows like the reference. No caking here.';
+      fb.className = 'fb bad';
+    }
+    $('fluffNextBtn').style.display = 'inline-block';
+  });
+});
+$('fluffNextBtn').addEventListener('click', () => { $('fluffNextBtn').style.display = 'none'; setPhase('sprinkle'); });
+
+/* speck count */
+$('countBtn').addEventListener('click', () => {
+  if (state.phase !== 'count' || state.countLock) return;
+  const v = parseInt($('countIn').value, 10);
+  if (isNaN(v)){ $('countFb').textContent = 'Type your count first.'; $('countFb').className = 'fb bad'; return; }
+  state.countLock = true;
+  $('countIn').disabled = true; $('countBtn').disabled = true;
+  const truth = SCENARIOS[state.scenario].specks;
+  const ok = Math.abs(v - truth) <= 1;
+  state.countOk = ok;
+  const over = truth > SPECK_LIMIT;
+  const fb = $('countFb');
+  fb.textContent = (ok
+    ? `✓ ${truth} speck${truth === 1 ? '' : 's'} in the circle`
+    : `△ Recorded, but there are ${truth} in the circle (you counted ${v}; the two outside the circle don't count)`) +
+    ` — limit is ${SPECK_LIMIT}, so the powder is ${over ? 'OVER the limit' : 'within limits'}.`;
+  fb.className = ok ? 'fb ok' : 'fb bad';
+  setTimeout(() => setPhase('hydroGo'), 500);
+});
+
+/* hydrometer */
+$('sgBtn').addEventListener('click', () => {
+  if (state.phase !== 'hydroRead' || state.sgLock) return;
+  const v = parseFloat($('sgIn').value);
+  if (isNaN(v)){ $('hydroFb').textContent = 'Type the reading first.'; $('hydroFb').className = 'fb bad'; return; }
+  state.sgLock = true;
+  $('sgIn').disabled = true; $('sgBtn').disabled = true;
+  const truth = state.sgTruth;
+  const ok = Math.abs(v - truth) <= 0.005;
+  if (state.sgOk === null || state.attempt === 1) state.sgOk = ok;
+  const inRange = truth >= SG_LO && truth <= SG_HI;
+  const fb = $('hydroFb');
+  fb.textContent = (ok
+    ? `✓ SG ${truth.toFixed(3)}`
+    : `△ Recorded, but the surface line sits at ${truth.toFixed(3)} (you read ${v})`) +
+    ` — limits are ${SG_LO.toFixed(3)}–${SG_HI.toFixed(3)}, so the tank is ${inRange ? 'IN range' : 'OUT of range'}.`;
+  fb.className = ok ? 'fb ok' : 'fb bad';
+  setTimeout(() => setPhase('disp'), 500);
+});
+
+/* disposition */
+document.querySelectorAll('#dispPanel .choice[data-act]').forEach(b => {
+  b.addEventListener('click', () => {
+    if (state.phase !== 'disp' || state.dispLock) return;
+    state.dispLock = true;
+    b.classList.add('sel');
+    document.querySelectorAll('#dispPanel .choice[data-act]').forEach(x => x.disabled = true);
+    const sc = SCENARIOS[state.scenario];
+    const truth = state.attempt > 1 ? 'log' : sc.truthAct;
+    const ok = b.dataset.act === truth;
+    if (state.dispOk === null || state.attempt === 1) state.dispOk = ok;
+    const why = {
+      log: 'powder fluffy and clean, aqueous SG in limits — both developers released.',
+      caked: 'caked powder is a moisture problem — it can’t coat evenly, and no other reading rescues it. Replace it and fix the storage.',
+      contam: 'over ' + SPECK_LIMIT + ' specks means dragged-in penetrant — each one can show up on a part as a false indication. Replace the powder.',
+      addpowder: 'SG below ' + SG_LO.toFixed(3) + ' is a dilute tank — the dried film is too thin to develop indications properly. Add powder, mix, re-check.'
+    };
+    const fb = $('dispFb');
+    fb.textContent = ok ? '✓ Right call — ' + why[truth] : `✗ Not this one — the right call: ${why[truth]}`;
+    fb.className = ok ? 'fb ok' : 'fb bad';
+    const ab = $('actBtn');
+    ab.textContent = truth === 'addpowder' ? 'Add powder, mix & re-check →'
+                   : truth === 'caked' || truth === 'contam' ? 'Replace the powder →'
+                   : 'Log the checks →';
+    ab.style.display = 'inline-block';
+  });
+});
+$('actBtn').addEventListener('click', () => {
+  $('actBtn').style.display = 'none';
+  const sc = SCENARIOS[state.scenario];
+  if (state.attempt === 1 && sc.truthAct === 'addpowder'){
+    state.attempt = 2;
+    state.sgTruth = sc.retestSg;
+    toast('Powder added and mixed in — float the hydrometer again.', 'good');
+    hidePanels();
+    setPhase('hydroRead');
+  } else {
+    setPhase('result');
+  }
+});
+
+/* ---------------- finish ---------------- */
+function finishRun(){
+  const sc = SCENARIOS[state.scenario];
+  const v = $('verdictBox');
+  v.className = 'verdict-good';
+  v.textContent = sc.truthAct === 'log'
+    ? 'QA log: both developers in spec — released for the week.'
+    : sc.truthAct === 'addpowder'
+      ? `QA log: aqueous corrected to SG ${state.sgTruth.toFixed(3)} and verified — released. Dry powder in spec.`
+      : sc.truthAct === 'contam'
+        ? 'QA log: dry powder condemned for contamination — replaced with fresh powder. Aqueous in spec.'
+        : 'QA log: dry powder condemned for caking — replaced, storage corrected. Aqueous in spec.';
+  $('lesson').innerHTML = '<b>What was really going on:</b> ' + sc.truthText;
+  const seen = new Set(state.runs.concat([state.scenario])).size;
+  $('progNote').innerHTML = (urlSc && SCENARIOS[urlSc])
+    ? ''
+    : (seen < 4
+      ? `<b>Scenario progress: ${seen} of 4.</b> You are not done yet — “Next week” brings a different condition.`
+      : '<b>Scenario progress: 4 of 4 — all conditions covered.</b> Further weeks repeat the rotation for practice.');
+  const mark = ok => ok == null ? '—' : ok ? '✓' : '✗';
+  const cls = ok => ok == null ? '' : ok ? 'ok' : 'bad';
+  const readings = (state.countOk && state.sgOk);
+  const row = document.createElement('tr');
+  row.innerHTML = `<td>#${state.week}</td><td>${sc.cause}</td>
+    <td class="${cls(state.fluffOk)}">${mark(state.fluffOk)}</td>
+    <td class="${cls(readings)}">${mark(readings)}</td>
+    <td class="${cls(state.dispOk)}">${mark(state.dispOk)}</td>`;
+  $('histRows').appendChild(row);
+  state.runs.push(state.scenario);
+  $('resultPanel').classList.add('show');
+  $('historyPanel').classList.add('show');
+  stepTag.textContent = 'Check complete';
+  stepText.innerHTML = 'Same time next week. <b>The developer is the last thing a part sees — keep it honest.</b>';
+}
+$('againBtn').addEventListener('click', () => {
+  state.attempt = 1; state.week++;
+  state.fluffOk = null; state.countOk = null; state.sgOk = null; state.dispOk = null;
+  pickScenario();
+  setPhase('fluff');
+});
+
+/* ---------------- drawing ---------------- */
+function bench(g){
+  g.fillStyle = '#2b2723'; g.fillRect(0, 0, W, H);
+  g.strokeStyle = 'rgba(255,255,255,.03)';
+  for (let y = 0; y < H; y += 7){ g.beginPath(); g.moveTo(0, y); g.lineTo(W, y + 2); g.stroke(); }
+}
+function label(g, txt, x, y, color){
+  g.fillStyle = color || '#c9c2b2';
+  g.font = '600 10px "JetBrains Mono", monospace'; g.textAlign = 'center';
+  g.fillText(txt, x, y);
+}
+function drawTray(g, x, y, w, h, kind, seed){
+  g.fillStyle = '#4a4f55';
+  g.fillRect(x - 8, y - 8, w + 16, h + 16);
+  g.fillStyle = '#3a3f45';
+  g.fillRect(x - 8, y - 8, w + 16, 6);
+  g.fillStyle = '#efece3';
+  g.fillRect(x, y, w, h);
+  let s = seed;
+  const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  if (kind === 'fluffy'){
+    /* soft even texture */
+    for (let i = 0; i < 260; i++){
+      g.fillStyle = `rgba(210,205,192,${0.25 + rnd() * 0.3})`;
+      g.beginPath(); g.arc(x + rnd() * w, y + rnd() * h, 0.8 + rnd() * 1.6, 0, Math.PI * 2); g.fill();
+    }
+    g.fillStyle = 'rgba(255,255,255,.5)';
+    g.beginPath(); g.ellipse(x + w * 0.5, y + h * 0.42, w * 0.32, h * 0.2, 0, 0, Math.PI * 2); g.fill();
+  } else {
+    /* dense cracked lumps */
+    for (let i = 0; i < 16; i++){
+      const lx = x + 12 + rnd() * (w - 40), ly = y + 10 + rnd() * (h - 36);
+      const lw = 18 + rnd() * 34, lh = 12 + rnd() * 22;
+      g.fillStyle = '#ddd8cb';
+      g.beginPath(); g.ellipse(lx + lw / 2, ly + lh / 2, lw / 2, lh / 2, rnd() * 0.8, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = 'rgba(120,112,96,.5)'; g.lineWidth = 1.4;
+      g.stroke();
+    }
+    g.strokeStyle = 'rgba(120,112,96,.45)'; g.lineWidth = 1.2;
+    for (let i = 0; i < 7; i++){
+      g.beginPath();
+      const cx0 = x + rnd() * w, cy0 = y + rnd() * h;
+      g.moveTo(cx0, cy0); g.lineTo(cx0 + (rnd() - 0.5) * 60, cy0 + (rnd() - 0.5) * 40);
+      g.stroke();
+    }
+  }
+}
+function drawSpeckScene(g){
+  /* UV booth */
+  g.fillStyle = '#12101f'; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#232438';
+  g.fillRect(180, 55, 580, 310);
+  g.fillStyle = '#2e3048';
+  g.fillRect(192, 67, 556, 286);
+  /* thin powder layer */
+  g.fillStyle = 'rgba(150,150,175,.28)';
+  g.fillRect(200, 75, 540, 270);
+  /* marked circle */
+  g.strokeStyle = 'rgba(220,215,240,.75)'; g.lineWidth = 2; g.setLineDash([8, 6]);
+  g.beginPath(); g.arc(CIRC.cx, CIRC.cy, CIRC.r, 0, Math.PI * 2); g.stroke();
+  g.setLineDash([]);
+  /* specks */
+  const draw = pt => {
+    const glow = g.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, pt.r * 4);
+    glow.addColorStop(0, 'rgba(200,255,110,.9)');
+    glow.addColorStop(0.4, 'rgba(160,235,70,.45)');
+    glow.addColorStop(1, 'rgba(120,200,50,0)');
+    g.fillStyle = glow;
+    g.beginPath(); g.arc(pt.x, pt.y, pt.r * 4, 0, Math.PI * 2); g.fill();
+    g.fillStyle = 'rgba(235,255,190,.95)';
+    g.beginPath(); g.arc(pt.x, pt.y, pt.r * 0.9, 0, Math.PI * 2); g.fill();
+  };
+  state.speckPts.forEach(draw);
+  state.outsidePts.forEach(draw);
+  label(g, '100 mm TEST CIRCLE — COUNT INSIDE ONLY', CIRC.cx, CIRC.cy + CIRC.r + 28, 'rgba(200,195,230,.7)');
+  g.fillStyle = 'rgba(185,165,255,.8)';
+  g.font = '600 10px "JetBrains Mono", monospace'; g.textAlign = 'right';
+  g.fillText('UV-A · 365 nm', W - 16, 24);
+}
+/* hydrometer cylinder */
+const CYL = { x: 610, y: 68, w: 110, h: 310 };
+const SURF_Y = 165;
+function sgStemY(v){ /* stem mark for value v, aligned so truth sits at the surface */
+  return SURF_Y + (v - state.sgTruth) / 0.10 * 240;
+}
+function drawHydroScene(g, pulse){
+  bench(g);
+  if (pulse == null){
+    /* reading view: big cylinder */
+    g.fillStyle = 'rgba(160,170,185,.08)';
+    g.fillRect(CYL.x, CYL.y, CYL.w, CYL.h);
+    /* liquid — white aqueous developer, clearly filled below the surface */
+    g.fillStyle = 'rgba(242,240,232,.95)';
+    g.fillRect(CYL.x + 3, SURF_Y, CYL.w - 6, CYL.y + CYL.h - SURF_Y - 3);
+    g.fillStyle = 'rgba(180,176,164,.35)';
+    g.fillRect(CYL.x + 3, SURF_Y, CYL.w - 6, 4);                      /* meniscus edge */
+    g.strokeStyle = '#a7adb5'; g.lineWidth = 2;
+    g.strokeRect(CYL.x, CYL.y, CYL.w, CYL.h);
+    /* hydrometer: bulb + stem (kept inside the glass) */
+    const cx = CYL.x + CYL.w / 2;
+    g.fillStyle = 'rgba(205,212,220,.85)';
+    g.beginPath(); g.ellipse(cx, SURF_Y + 150, 20, 46, 0, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = 'rgba(140,148,158,.8)'; g.lineWidth = 1.5; g.stroke();
+    g.fillStyle = '#7c7568';
+    g.beginPath(); g.ellipse(cx, SURF_Y + 180, 13, 15, 0, 0, Math.PI * 2); g.fill();
+    const stemTop = Math.max(sgStemY(1.0), CYL.y + 4);
+    const stemBot = Math.min(sgStemY(1.10) + 60, CYL.y + CYL.h - 6);
+    g.fillStyle = '#f4f1ea';
+    g.fillRect(cx - 7, stemTop, 14, stemBot - stemTop);
+    g.strokeStyle = 'rgba(150,145,130,.6)'; g.lineWidth = 1;
+    g.strokeRect(cx - 7, stemTop, 14, stemBot - stemTop);
+    /* green limits band on the stem */
+    g.fillStyle = 'rgba(110,180,110,.4)';
+    g.fillRect(cx - 7, sgStemY(SG_LO), 14, sgStemY(SG_HI) - sgStemY(SG_LO));
+    /* stem graduations: 1.000 (top) → 1.100 (bottom) */
+    g.font = '600 10px "JetBrains Mono", monospace';
+    for (let m = 0; m <= 100; m += 5){
+      const v = 1.0 + m / 1000;
+      const y = sgStemY(v);
+      if (y < CYL.y + 6 || y > CYL.y + CYL.h - 10) continue;
+      const major = m % 20 === 0;
+      g.strokeStyle = '#2a2f38'; g.lineWidth = major ? 1.6 : 1;
+      g.beginPath(); g.moveTo(cx - (major ? 7 : 4), y); g.lineTo(cx + (major ? 7 : 4), y); g.stroke();
+      if (major){
+        g.fillStyle = '#2a2f38'; g.textAlign = 'left';
+        g.fillText(v.toFixed(2), cx + 11, y + 4);
+      }
+    }
+    /* surface line + callout */
+    g.strokeStyle = '#e8a87c'; g.lineWidth = 1.5; g.setLineDash([6, 5]);
+    g.beginPath(); g.moveTo(CYL.x - 170, SURF_Y); g.lineTo(CYL.x + CYL.w + 60, SURF_Y); g.stroke();
+    g.setLineDash([]);
+    g.fillStyle = '#e8a87c'; g.font = '600 10px "JetBrains Mono", monospace'; g.textAlign = 'right';
+    g.fillText('READ AT THE SURFACE LINE →', CYL.x - 178, SURF_Y + 4);
+    label(g, 'SAMPLE CYLINDER · HYDROMETER', CYL.x + CYL.w / 2, 412);
+    /* reference note card */
+    g.fillStyle = '#f4f1ea'; g.fillRect(120, 90, 300, 130);
+    g.strokeStyle = '#b9b3a6'; g.strokeRect(120, 90, 300, 130);
+    g.fillStyle = '#4a4a47'; g.font = '600 11px "JetBrains Mono", monospace'; g.textAlign = 'left';
+    g.fillText('SUPPLIER DATA — DEVELOPER "AD-2"', 138, 116);
+    g.fillText('LIMITS  : SG 1.040 – 1.080', 138, 146);
+    g.fillText('TARGET  : SG 1.060', 138, 168);
+    g.fillText('LOW  → ADD POWDER', 138, 190);
+    g.fillText('HIGH → ADD WATER', 138, 208);
+  } else {
+    /* tank + cylinder to click */
+    ctx.fillStyle = '#3a3f45'; ctx.fillRect(130, 120, 300, 210);
+    ctx.fillStyle = 'rgba(236,233,224,.85)'; ctx.fillRect(142, 150, 276, 168);
+    ctx.fillStyle = '#555b62'; ctx.fillRect(122, 108, 316, 16);
+    label(ctx, 'AQUEOUS DEVELOPER — DIP TANK', 280, 356);
+    ctx.fillStyle = 'rgba(220,224,230,.12)';
+    ctx.fillRect(620, 110, 80, 240);
+    ctx.strokeStyle = '#a7adb5'; ctx.lineWidth = 2; ctx.strokeRect(620, 110, 80, 240);
+    label(ctx, 'SAMPLE CYLINDER — CLICK', 660, 380, '#e8a87c');
+    ctx.strokeStyle = `rgba(232,168,124,${0.4 + 0.5 * pulse})`; ctx.setLineDash([7, 6]); ctx.lineWidth = 2;
+    ctx.strokeRect(600, 95, 120, 270); ctx.setLineDash([]);
+  }
+}
+let last = performance.now();
+function frame(now){
+  const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
+  const pulse = 0.5 + 0.5 * Math.sin(now / 320);
+  const powder = state.scenario ? SCENARIOS[state.scenario].powder : 'fluffy';
+
+  if (state.phase === 'fluff'){
+    bench(ctx);
+    drawTray(ctx, 160, 120, 260, 180, 'fluffy', 77);
+    label(ctx, 'NEW POWDER — REFERENCE', 290, 350);
+    drawTray(ctx, 520, 120, 260, 180, powder, 191);
+    label(ctx, 'DUST CHAMBER SAMPLE', 650, 350, '#e8a87c');
+    label(ctx, '◄ COMPARE SIDE BY SIDE — WHITE LIGHT', 470, 402);
+  } else if (state.phase === 'sprinkle'){
+    bench(ctx);
+    ctx.fillStyle = '#232438'; ctx.fillRect(270, 90, 400, 240);
+    ctx.fillStyle = '#2e3048'; ctx.fillRect(282, 102, 376, 216);
+    ctx.strokeStyle = 'rgba(220,215,240,.5)'; ctx.setLineDash([8, 6]); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(470, 210, 100, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    label(ctx, 'TEST PLATE — CLICK TO SPRINKLE & SWITCH TO UV-A', 470, 366, '#e8a87c');
+    ctx.strokeStyle = `rgba(232,168,124,${0.4 + 0.5 * pulse})`; ctx.setLineDash([7, 6]); ctx.lineWidth = 2;
+    ctx.strokeRect(258, 78, 424, 264); ctx.setLineDash([]);
+  } else if (state.phase === 'count'){
+    drawSpeckScene(ctx);
+  } else if (state.phase === 'hydroGo'){
+    drawHydroScene(ctx, pulse);
+  } else if (state.phase === 'hydroRead' || state.phase === 'disp' || state.phase === 'result'){
+    drawHydroScene(ctx, null);
+  } else {
+    bench(ctx);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+$('beginBtn').addEventListener('click', () => {
+  $('intro').classList.add('hidden');
+  pickScenario();
+  setPhase('fluff');
+});
+
+})();
+</script>
+</body>
+</html>
