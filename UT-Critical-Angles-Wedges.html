@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UT Critical Angles — Wedge Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page: #f6f3ee;
+    --panel: #ffffff;
+    --ink: #1f1d1b;
+    --ink-soft: #57524d;
+    --ink-faded: #8f8882;
+    --rule: #ddd6cc;
+    --red: #A82020;
+    --red-deep: #7a1818;
+    --navy: #0f1c2b;
+    --L: #ffb347;
+    --S: #6ec6ff;
+    --SW: #7dffb0;
+    --none: #9aa4ad;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Manrope', system-ui, sans-serif; background: var(--page); color: var(--ink); line-height: 1.5; min-height: 100vh; }
+  header { background: linear-gradient(135deg, var(--red-deep), var(--red)); color: #fff; padding: 1.4rem 1.5rem 1.2rem; }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  header .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; margin-bottom: 6px; }
+  header h1 { font-size: clamp(22px, 3.4vw, 30px); font-weight: 800; letter-spacing: -0.01em; line-height: 1.15; text-wrap: balance; }
+  header a.back { color: #fff; opacity: 0.8; font-size: 13px; text-decoration: none; display: inline-block; margin-top: 8px; }
+  header a.back:hover { opacity: 1; text-decoration: underline; }
+  main { padding: 1.25rem 1rem 3rem; }
+
+  .steps { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 14px; color: var(--ink-soft); padding: 12px 16px; margin-bottom: 12px; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; }
+  .steps span { display: flex; align-items: center; }
+  .steps span.done { color: var(--ink-faded); text-decoration: line-through; }
+  .steps span.now { color: var(--ink); font-weight: 700; }
+  .steps b { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--ink-faded); color: #fff; font-size: 12px; font-weight: 700; margin-right: 7px; flex: none; }
+  .steps span.now b { background: var(--red); }
+  .steps span.done b { background: var(--ink-faded); }
+
+  canvas#sim { display: block; width: 100%; height: auto; background: var(--navy); border-radius: 10px; touch-action: none; cursor: default; }
+  canvas#sim.grab { cursor: grab; }
+  canvas#sim.grabbing { cursor: grabbing; }
+
+  .ctrl { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; padding: 12px 14px; margin-top: 10px; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; font-size: 13px; color: var(--ink-soft); }
+  .ctrl button { padding: 8px 16px; background: var(--ink); color: #fff; border: none; border-radius: 6px; font: 700 13px 'Manrope', sans-serif; cursor: pointer; }
+  .ctrl button:hover:not(:disabled) { background: #000; }
+  .ctrl button:disabled { opacity: 0.35; cursor: default; }
+  .ctrl button:focus-visible { outline: 3px solid var(--L); outline-offset: 2px; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .legend i { display: inline-block; width: 18px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+
+  .result { margin-top: 10px; padding: 14px 16px; background: var(--panel); border: 1px solid var(--rule); border-left: 4px solid var(--red); border-radius: 8px; }
+  .result .k { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faded); }
+  .result h2 { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; margin: 2px 0 4px; }
+  .result p { font-size: 15px; color: var(--ink-soft); max-width: 68ch; }
+  .result p b { color: var(--ink); }
+
+  .bar { margin-top: 16px; }
+  .bar .track { position: relative; height: 34px; border-radius: 6px; overflow: hidden; display: flex; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: #fff; }
+  .bar .zone { display: flex; align-items: center; justify-content: center; opacity: 0.35; transition: opacity .3s; }
+  .bar .zone.lit { opacity: 1; }
+  .bar .zone.z2 { background: #b3712a; }
+  .bar .zone.z1 { background: #2f7fb0; }
+  .bar .zone.z0 { background: #6c757d; }
+  .bar .ticks { position: relative; height: 34px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-faded); }
+  .bar .tick { position: absolute; top: 0; transform: translateX(-50%); text-align: center; white-space: nowrap; }
+  .bar .tick::before { content: ''; display: block; width: 1px; height: 8px; background: var(--ink-faded); margin: 0 auto 2px; }
+  .bar .pin { position: absolute; top: -4px; width: 14px; height: 14px; border-radius: 50%; background: var(--panel); border: 3px solid var(--red); transform: translateX(-50%); transition: left .4s; }
+  .bar .tried { position: absolute; top: 24px; width: 6px; height: 6px; border-radius: 50%; background: var(--ink-faded); transform: translateX(-50%); }
+  [hidden] { display: none !important; }
+  @media (max-width: 560px) { .legend { margin-left: 0; } .bar .tick { font-size: 10px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Ultrasonic Testing · Level 1</div>
+    <h1>Critical Angles — Build the Probe, Watch the Beam</h1>
+    <a class="back" href="index.html">← Exercise Hub</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="steps" id="steps">
+    <span class="now" id="s1"><b>1</b>Drag a plastic wedge onto the probe</span>
+    <span id="s2"><b>2</b>Drag the probe onto the steel</span>
+    <span id="s3"><b>3</b>Watch what enters the steel</span>
+  </div>
+
+  <canvas id="sim" width="900" height="560" aria-label="Drag-and-drop wedge and probe simulation"></canvas>
+
+  <div class="ctrl">
+    <button id="replay" type="button" disabled>Replay</button>
+    <button id="swap" type="button" disabled>Try another wedge</button>
+    <div class="legend">
+      <span><i style="background:var(--L)"></i>Longitudinal</span>
+      <span><i style="background:var(--S)"></i>Shear</span>
+      <span><i style="background:var(--SW)"></i>Surface wave</span>
+    </div>
+  </div>
+
+  <div class="result" id="result" hidden>
+    <div class="k" id="rZone"></div>
+    <h2 id="rTitle"></h2>
+    <p id="rText"></p>
+    <div class="bar">
+      <div class="track">
+        <div class="zone z2" id="z2" style="flex:27.5">2 beams · L + S</div>
+        <div class="zone z1" id="z1" style="flex:29.5">1 beam · S only</div>
+        <div class="zone z0" id="z0" style="flex:33">no beam</div>
+      </div>
+      <div class="ticks" id="ticks">
+        <div class="tick" style="left:0%">0°</div>
+        <div class="tick" style="left:30.6%">1st critical<br>27.5°</div>
+        <div class="tick" style="left:63.3%">2nd critical<br>57°</div>
+        <div class="tick" style="left:100%">90°</div>
+        <div class="pin" id="pin"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  const canvas = document.getElementById('sim');
+  const ctx = canvas.getContext('2d');
+  const W = 900, H = 560;
+
+  // Materials (m/s) — same values as the Mode Conversion exercise
+  const V_WEDGE = 2730, V_L = 5920, V_S = 3250;
+  const CRIT1 = Math.asin(V_WEDGE / V_L) * 180 / Math.PI;   // ≈ 27.5°
+  const CRIT2 = Math.asin(V_WEDGE / V_S) * 180 / Math.PI;   // ≈ 57.1°
+
+  const WEDGES = [
+    { deg: 15,    label: '15°',   zone: 'two' },
+    { deg: CRIT1, label: '27.5°', zone: 'crit1' },
+    { deg: 45,    label: '45°',   zone: 'one' },
+    { deg: CRIT2, label: '57°',   zone: 'crit2' },
+    { deg: 70,    label: '70°',   zone: 'none' }
+  ];
+  const LESSON = {
+    two:   { k: 'Below the 1st critical angle', t: 'Two beams in the steel', p: 'A <b>longitudinal</b> beam and a <b>shear</b> beam both enter, at different angles and speeds. Two beams give two sets of echoes, so this wedge is not used for angle-beam testing.' },
+    crit1: { k: 'At the 1st critical angle', t: 'The longitudinal beam hits the surface', p: 'The <b>longitudinal</b> beam bends all the way over and skims along the top of the steel. Only the <b>shear</b> beam goes down into the steel.' },
+    one:   { k: 'Between the critical angles', t: 'One beam in the steel: shear only', p: 'The longitudinal beam is gone. A single <b>shear</b> beam enters the steel: one beam, one clear echo. This is where angle-beam probes work.' },
+    crit2: { k: 'At the 2nd critical angle', t: 'The shear beam hits the surface', p: 'The <b>shear</b> beam bends over to the surface and becomes a <b>surface wave</b>. It runs along the top of the steel and follows the surface.' },
+    none:  { k: 'Beyond the 2nd critical angle', t: 'No beam in the steel', p: 'Nothing gets in. The whole beam <b>reflects back</b> inside the plastic wedge.' }
+  };
+
+  // Scene layout
+  const SURF = 330;                       // steel surface y
+  const STEEL = { x: 40, y: SURF, w: 820, h: 210 };
+  const BENCH = { x: 640, y: 175 };       // probe waiting spot (wedge index point)
+  const TRAY_Y = 205, TRAY_X0 = 75, TRAY_DX = 92, TRAY_SCALE = 0.62;
+  const P = 100, HALF_FACE = 30, BODY = 42;
+
+  // ---- Wedge geometry (local coords, index point at origin, beam heading down-right)
+  function geom(deg) {
+    const th = deg * Math.PI / 180;
+    const d = [Math.sin(th), Math.cos(th)], n = [Math.cos(th), -Math.sin(th)];
+    const S = [-P * d[0], -P * d[1]];
+    const A = [S[0] - HALF_FACE * n[0], S[1] - HALF_FACE * n[1]];
+    const B = [S[0] + HALF_FACE * n[0], S[1] + HALF_FACE * n[1]];
+    const xR = Math.max(A[0], B[0], 0) + 36;
+    const poly = [A, B, [xR, B[1]], [xR, 0], [A[0], 0]];
+    const body = [A, B, [B[0] - BODY * d[0], B[1] - BODY * d[1]], [A[0] - BODY * d[0], A[1] - BODY * d[1]]];
+    const back = [S[0] - BODY * d[0], S[1] - BODY * d[1]];
+    return { th, d, n, S, A, B, poly, body, back, xR, xL: A[0] };
+  }
+
+  // ---- State
+  let state = 'pick';        // pick → assembled → placed
+  let wedge = null;          // chosen wedge index
+  let asm = { x: BENCH.x, y: BENCH.y };
+  let drag = null;           // {kind:'wedge'|'asm', i, dx, dy, x, y}
+  let t0 = 0, anim = 0;
+  const tried = new Set();
+
+  // ---- Drawing helpers
+  function polyPath(pts, ox, oy, s = 1) {
+    ctx.beginPath();
+    pts.forEach((p, i) => i ? ctx.lineTo(ox + p[0] * s, oy + p[1] * s) : ctx.moveTo(ox + p[0] * s, oy + p[1] * s));
+    ctx.closePath();
+  }
+  function drawWedge(g, ox, oy, s, label, ghost) {
+    polyPath(g.poly, ox, oy, s);
+    ctx.fillStyle = ghost ? 'rgba(191,227,245,0.25)' : 'rgba(191,227,245,0.82)';
+    ctx.fill();
+    ctx.strokeStyle = ghost ? 'rgba(191,227,245,0.5)' : '#e6f4fb'; ctx.lineWidth = 1.5; ctx.stroke();
+    if (label) {
+      ctx.fillStyle = ghost ? 'rgba(15,28,43,0.5)' : '#0f1c2b';
+      ctx.font = `600 ${Math.round(13 * Math.max(s, 0.85))}px "JetBrains Mono", monospace`;
+      ctx.textAlign = 'right';
+      ctx.fillText(label, ox + (g.xR - 6) * s, oy + (g.B[1] + 16) * s);
+    }
+  }
+  function drawProbe(g, ox, oy, s) {
+    polyPath(g.body, ox, oy, s);
+    ctx.fillStyle = '#2f2f33'; ctx.fill();
+    ctx.strokeStyle = '#8d8d95'; ctx.lineWidth = 1.5; ctx.stroke();
+    // crystal face
+    ctx.beginPath(); ctx.moveTo(ox + g.A[0] * s, oy + g.A[1] * s); ctx.lineTo(ox + g.B[0] * s, oy + g.B[1] * s);
+    ctx.strokeStyle = '#ffb347'; ctx.lineWidth = 3; ctx.stroke();
+    // cable
+    ctx.beginPath();
+    ctx.moveTo(ox + g.back[0] * s, oy + g.back[1] * s);
+    ctx.lineTo(ox + (g.back[0] - 26 * g.d[0]) * s, oy + (g.back[1] - 26 * g.d[1]) * s);
+    ctx.strokeStyle = '#8d8d95'; ctx.lineWidth = 4; ctx.stroke();
+  }
+  function beam(from, dir, len, color, width, glow) {
+    if (len <= 0) return;
+    const to = [from[0] + dir[0] * len, from[1] + dir[1] * len];
+    ctx.lineCap = 'round';
+    if (glow) { ctx.strokeStyle = color; ctx.globalAlpha = 0.25; ctx.lineWidth = width * 3; ctx.beginPath(); ctx.moveTo(from[0], from[1]); ctx.lineTo(to[0], to[1]); ctx.stroke(); ctx.globalAlpha = 1; }
+    ctx.strokeStyle = color; ctx.lineWidth = width; ctx.beginPath(); ctx.moveTo(from[0], from[1]); ctx.lineTo(to[0], to[1]); ctx.stroke();
+    // pulse head
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(to[0], to[1], width + 1.5, 0, 2 * Math.PI); ctx.fill();
+    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(to[0], to[1], width * 0.9, 0, 2 * Math.PI); ctx.fill();
+  }
+  function ripple(from, len, color) {
+    if (len <= 0) return;
+    ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (let x = 0; x <= len; x += 3) ctx.lineTo(from[0] + x, from[1] + 1 + 5 * Math.sin(x / 9 - anim * 6));
+    ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(from[0] + len, from[1] + 1, 4.5, 0, 2 * Math.PI); ctx.fill();
+  }
+  function tag(text, x, y, color, align = 'left') {
+    ctx.font = '600 12px "JetBrains Mono", monospace'; ctx.textAlign = align;
+    const w = ctx.measureText(text).width + 10;
+    ctx.fillStyle = 'rgba(15,28,43,0.85)';
+    ctx.fillRect(align === 'right' ? x - w + 5 : x - 5, y - 11, w, 16);
+    ctx.fillStyle = color; ctx.fillText(text, x, y + 1);
+  }
+
+  // ---- Scene
+  function drawScene() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.font = '12px "JetBrains Mono", monospace';
+
+    // Steel block
+    const grad = ctx.createLinearGradient(0, STEEL.y, 0, STEEL.y + STEEL.h);
+    grad.addColorStop(0, '#5f6b78'); grad.addColorStop(1, '#3f4954');
+    ctx.fillStyle = grad; ctx.fillRect(STEEL.x, STEEL.y, STEEL.w, STEEL.h);
+    ctx.strokeStyle = '#9fb0c0'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(STEEL.x, SURF); ctx.lineTo(STEEL.x + STEEL.w, SURF); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.textAlign = 'right';
+    ctx.fillText('steel test piece', STEEL.x + STEEL.w - 12, STEEL.y + STEEL.h - 12);
+
+    // Tray
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.textAlign = 'left';
+    ctx.fillText('plastic wedges', 40, 40);
+    if (state === 'pick') { ctx.textAlign = 'center'; ctx.fillText('probe', BENCH.x, 40); }
+    WEDGES.forEach((w, i) => {
+      if (wedge === i) return;
+      if (drag && drag.kind === 'wedge' && drag.i === i) return;
+      const g = geom(w.deg);
+      const ghost = state !== 'pick';
+      drawWedge(g, trayX(i), TRAY_Y, TRAY_SCALE, w.label, ghost);
+    });
+
+    // Bench probe (no wedge yet) + drop target
+    if (state === 'pick') {
+      const g = geom(0);
+      const hot = drag && drag.kind === 'wedge' && near(drag.x, drag.y, BENCH.x, BENCH.y, 90);
+      ctx.setLineDash([6, 6]); ctx.strokeStyle = hot ? '#ffb347' : 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(BENCH.x, BENCH.y - 30, 78, 0, 2 * Math.PI); ctx.stroke(); ctx.setLineDash([]);
+      drawProbe(g, BENCH.x, BENCH.y + 70, 1);
+      ctx.fillStyle = hot ? '#ffb347' : 'rgba(255,255,255,0.45)'; ctx.textAlign = 'center';
+      ctx.fillText(hot ? 'drop' : 'drop a wedge here', BENCH.x, BENCH.y + 66);
+    }
+
+    // Dragged wedge
+    if (drag && drag.kind === 'wedge') {
+      const w = WEDGES[drag.i];
+      drawWedge(geom(w.deg), drag.x, drag.y, 0.85, w.label, false);
+    }
+
+    // Assembly
+    if (state !== 'pick') {
+      const g = geom(WEDGES[wedge].deg);
+      const ox = asm.x, oy = asm.y;
+      if (state === 'assembled') {
+        const hot = drag && drag.kind === 'asm' && onSteel(asm.x, asm.y);
+        ctx.strokeStyle = hot ? '#ffb347' : 'rgba(255,255,255,0.25)'; ctx.setLineDash([6, 6]); ctx.lineWidth = 1.5;
+        ctx.strokeRect(STEEL.x + 2, SURF - 2, STEEL.w - 4, 4); ctx.setLineDash([]);
+        ctx.fillStyle = hot ? '#ffb347' : 'rgba(255,255,255,0.45)'; ctx.textAlign = 'center';
+        ctx.fillText(hot ? 'drop' : 'drag the probe onto the steel', W / 2, SURF - 14);
+      }
+      drawWedge(g, ox, oy, 1, WEDGES[wedge].label, false);
+      drawProbe(g, ox, oy, 1);
+      if (state === 'placed') drawBeams(g, ox, oy);
+    }
+  }
+  function trayX(i) { return TRAY_X0 + i * TRAY_DX; }
+  function near(x, y, cx, cy, r) { return (x - cx) ** 2 + (y - cy) ** 2 < r * r; }
+  function onSteel(x, y) { return y > SURF - 80 && y < SURF + 120 && x > STEEL.x + 60 && x < STEEL.x + STEEL.w - 40; }
+
+  // ---- Beam animation
+  const PX_PER_MS = 0.045;  // wedge L-wave speed in px per ms (slow)
+  const T_IN = P / (V_WEDGE * PX_PER_MS / V_WEDGE); // = P / PX_PER_MS
+  const T_LOOP = T_IN + 4200;
+  function drawBeams(g, ox, oy) {
+    const t = (performance.now() - t0) % T_LOOP;
+    const E = [ox, oy];
+    const inLen = Math.min(P, t * PX_PER_MS);
+    const from = [ox + g.S[0], oy + g.S[1]];
+
+    // normal line at the index point
+    ctx.setLineDash([3, 5]); ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(ox, oy - 120); ctx.lineTo(ox, oy + 70); ctx.stroke(); ctx.setLineDash([]);
+
+    // incident beam (clipped to wedge)
+    ctx.save(); polyPath(g.poly, ox, oy, 1); ctx.clip();
+    beam(from, g.d, inLen, '#fff2c8', 4, true);
+    if (t > T_IN) {
+      const t2 = t - T_IN;
+      const z = WEDGES[wedge].zone;
+      const rLen = Math.min(t2 * PX_PER_MS, 160);
+      const refl = [g.d[0], -g.d[1]];
+      const strong = z === 'none';
+      beam(E, refl, rLen, strong ? '#fff2c8' : 'rgba(255,242,200,0.35)', strong ? 4 : 2, strong);
+    }
+    ctx.restore();
+    if (t > T_IN && WEDGES[wedge].zone === 'none' && (t - T_IN) * PX_PER_MS > 40)
+      tag('reflected — nothing enters the steel', ox + g.xR + 8, oy - 30, '#fff2c8');
+
+    if (t <= T_IN) return;
+    const t2 = t - T_IN;
+    const th = g.th, z = WEDGES[wedge].zone;
+    const sL = Math.sin(th) * V_L / V_WEDGE, sS = Math.sin(th) * V_S / V_WEDGE;
+
+    // refracted beams (clipped to steel)
+    ctx.save(); ctx.beginPath(); ctx.rect(STEEL.x, SURF - 8, STEEL.w, STEEL.h + 13); ctx.clip();
+    if (z === 'two') {
+      const aL = Math.asin(sL), aS = Math.asin(sS);
+      const lenL = t2 * PX_PER_MS * V_L / V_WEDGE, lenS = t2 * PX_PER_MS * V_S / V_WEDGE;
+      beam(E, [Math.sin(aL), Math.cos(aL)], lenL, '#ffb347', 4, true);
+      beam(E, [Math.sin(aS), Math.cos(aS)], lenS, '#6ec6ff', 4, true);
+      if (lenL > 60) tag('L', ox + Math.sin(aL) * 60 + 12, oy + Math.cos(aL) * 60 - 4, '#ffb347');
+      if (lenS > 60) tag('S', ox + Math.sin(aS) * 60 - 12, oy + Math.cos(aS) * 60 + 14, '#6ec6ff', 'right');
+    } else if (z === 'crit1') {
+      const aS = Math.asin(Math.min(1, sS));
+      const lenL = t2 * PX_PER_MS * V_L / V_WEDGE, lenS = t2 * PX_PER_MS * V_S / V_WEDGE;
+      beam([ox, oy + 2], [1, 0], lenL, '#ffb347', 4, true);
+      beam(E, [Math.sin(aS), Math.cos(aS)], lenS, '#6ec6ff', 4, true);
+      if (lenL > 70) tag('L skims the surface', ox + 40, oy + 22, '#ffb347');
+      if (lenS > 60) tag('S', ox + Math.sin(aS) * 70 - 12, oy + Math.cos(aS) * 70 + 14, '#6ec6ff', 'right');
+    } else if (z === 'one') {
+      const aS = Math.asin(sS);
+      const lenS = t2 * PX_PER_MS * V_S / V_WEDGE;
+      beam(E, [Math.sin(aS), Math.cos(aS)], lenS, '#6ec6ff', 4, true);
+      if (lenS > 60) tag('S', ox + Math.sin(aS) * 60 - 12, oy + Math.cos(aS) * 60 + 14, '#6ec6ff', 'right');
+    } else if (z === 'crit2') {
+      const lenS = t2 * PX_PER_MS * V_S / V_WEDGE;
+      ripple([ox, oy], lenS, '#7dffb0');
+      if (lenS > 70) tag('surface wave', ox + 40, oy + 26, '#7dffb0');
+    }
+    ctx.restore();
+  }
+
+  // ---- Loop
+  function frame(now) {
+    anim = now / 1000;
+    drawScene();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // ---- Pointer interaction
+  function pt(e) {
+    const r = canvas.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
+  }
+  function hitWedge(p) {
+    for (let i = 0; i < WEDGES.length; i++) {
+      if (wedge === i) continue;
+      if (near(p.x, p.y, trayX(i) - 10, TRAY_Y - 30, 44)) return i;
+    }
+    return -1;
+  }
+  function hitAsm(p) {
+    const g = geom(WEDGES[wedge].deg);
+    // generous hit box around the wedge + probe
+    return near(p.x, p.y, asm.x + g.S[0] * 0.6, asm.y + g.S[1] * 0.6, 95);
+  }
+  canvas.addEventListener('pointerdown', e => {
+    const p = pt(e);
+    if (state === 'pick') {
+      const i = hitWedge(p);
+      if (i < 0) return;
+      drag = { kind: 'wedge', i, x: p.x, y: p.y };
+    } else if (state === 'assembled') {
+      if (!hitAsm(p)) return;
+      drag = { kind: 'asm', dx: asm.x - p.x, dy: asm.y - p.y, x: p.x, y: p.y };
+    } else return;
+    canvas.setPointerCapture(e.pointerId);
+    canvas.classList.add('grabbing');
+    e.preventDefault();
+  });
+  canvas.addEventListener('pointermove', e => {
+    const p = pt(e);
+    if (!drag) {
+      const over = (state === 'pick' && hitWedge(p) >= 0) || (state === 'assembled' && hitAsm(p));
+      canvas.classList.toggle('grab', !!over);
+      return;
+    }
+    drag.x = p.x; drag.y = p.y;
+    if (drag.kind === 'asm') { asm.x = p.x + drag.dx; asm.y = p.y + drag.dy; }
+  });
+  function endDrag(e) {
+    if (!drag) return;
+    canvas.classList.remove('grabbing');
+    if (drag.kind === 'wedge') {
+      if (near(drag.x, drag.y, BENCH.x, BENCH.y, 90)) {
+        wedge = drag.i; state = 'assembled';
+        asm = { x: BENCH.x, y: BENCH.y };
+        setStep(2);
+      }
+    } else if (drag.kind === 'asm') {
+      if (onSteel(asm.x, asm.y)) {
+        asm.x = Math.min(Math.max(asm.x, STEEL.x + 120), STEEL.x + 420);
+        asm.y = SURF;
+        state = 'placed'; t0 = performance.now();
+        tried.add(wedge);
+        setStep(3); showResult();
+      } else {
+        asm = { x: BENCH.x, y: BENCH.y };
+      }
+    }
+    drag = null;
+  }
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
+
+  // ---- UI
+  const replayBtn = document.getElementById('replay');
+  const swapBtn = document.getElementById('swap');
+  const result = document.getElementById('result');
+  function setStep(n) {
+    [1, 2, 3].forEach(i => {
+      const el = document.getElementById('s' + i);
+      el.className = i < n ? 'done' : i === n ? 'now' : '';
+    });
+    replayBtn.disabled = n !== 3;
+    swapBtn.disabled = n === 1;
+  }
+  function showResult() {
+    const w = WEDGES[wedge], L = LESSON[w.zone];
+    document.getElementById('rZone').textContent = `${w.label} wedge · ${L.k}`;
+    document.getElementById('rTitle').textContent = L.t;
+    document.getElementById('rText').innerHTML = L.p;
+    const litId = (w.zone === 'two' || w.zone === 'crit1') ? 'z2' : (w.zone === 'one' || w.zone === 'crit2') ? 'z1' : 'z0';
+    ['z2', 'z1', 'z0'].forEach(id => document.getElementById(id).classList.toggle('lit', id === litId));
+    const pct = (w.deg / 90) * 100;
+    document.getElementById('pin').style.left = pct + '%';
+    const ticks = document.getElementById('ticks');
+    ticks.querySelectorAll('.tried').forEach(el => el.remove());
+    tried.forEach(i => {
+      if (i === wedge) return;
+      const d = document.createElement('div'); d.className = 'tried';
+      d.style.left = (WEDGES[i].deg / 90 * 100) + '%'; ticks.appendChild(d);
+    });
+    result.hidden = false;
+    result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  replayBtn.addEventListener('click', () => { t0 = performance.now(); });
+  swapBtn.addEventListener('click', () => {
+    state = 'pick'; wedge = null; asm = { x: BENCH.x, y: BENCH.y };
+    setStep(1);
+    canvas.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+})();
+</script>
+</body>
+</html>
