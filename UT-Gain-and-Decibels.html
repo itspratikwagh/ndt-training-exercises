@@ -222,19 +222,20 @@
 
     // trace
     const pct = echoPct();
+    const k = Math.pow(10, (gain - G0) / 20);        // gain multiplies everything received
     const bwx = G.x + G.w * BW_X;
     a.strokeStyle = '#7dffb0'; a.lineWidth = 2; a.lineJoin = 'round'; a.beginPath();
     for (let x = G.x; x <= G.x + G.w; x += 1) {
       let v = 0;
-      // initial pulse: ringing burst near the left edge
+      // initial pulse: huge ringing burst, already saturated at the starting gain
       const ip = (x - (G.x + 14)) / 7;
-      if (Math.abs(ip) < 3.2) v += 98 * Math.exp(-ip * ip * 0.7) * Math.abs(Math.cos(ip * 3.1));
-      // back wall echo
+      if (Math.abs(ip) < 4) v += 260 * Math.exp(-ip * ip * 0.45) * Math.abs(Math.cos(ip * 3.1));
+      // back wall echo (20 % at the starting gain, only when coupled)
       const be = (x - bwx) / 6;
-      if (Math.abs(be) < 3.5) v += pct * Math.exp(-be * be * 0.6) * Math.abs(Math.cos(be * 2.6));
-      // grass
+      if (onPlate && Math.abs(be) < 3.5) v += 20 * Math.exp(-be * be * 0.6) * Math.abs(Math.cos(be * 2.6));
+      // grass / noise
       v += 1.2 + 1.2 * Math.abs(Math.sin(x * 0.7 + now / 90) * Math.sin(x * 0.13 - now / 300));
-      const y = yOf(v);
+      const y = yOf(v * k);
       x === G.x ? a.moveTo(x, y) : a.lineTo(x, y);
     }
     a.stroke();
