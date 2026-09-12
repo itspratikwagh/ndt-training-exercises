@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UT Label the Beams</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page: #f6f3ee; --panel: #fff; --ink: #1f1d1b; --ink-soft: #57524d; --ink-faded: #8f8882; --rule: #ddd6cc;
+    --red: #A82020; --red-deep: #7a1818; --navy: #0f1c2b; --beam: #ffd98a;
+    --good: #0d904f; --good-tint: #e6f4ea; --bad: #d93025; --bad-tint: #fce8e6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Manrope', system-ui, sans-serif; background: var(--page); color: var(--ink); line-height: 1.5; min-height: 100vh; }
+  header { background: linear-gradient(135deg, var(--red-deep), var(--red)); color: #fff; padding: 1.4rem 1.5rem 1.2rem; }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  header .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; margin-bottom: 6px; }
+  header h1 { font-size: clamp(22px, 3.4vw, 30px); font-weight: 800; letter-spacing: -0.01em; line-height: 1.15; text-wrap: balance; }
+  header a.back { color: #fff; opacity: 0.8; font-size: 13px; text-decoration: none; display: inline-block; margin-top: 8px; }
+  header a.back:hover { opacity: 1; text-decoration: underline; }
+  main { padding: 1.25rem 1rem 3rem; }
+
+  .steps { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 14px; color: var(--ink-soft); padding: 12px 16px; margin-bottom: 12px; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; }
+  .steps span { display: flex; align-items: center; }
+  .steps span.done { color: var(--ink-faded); text-decoration: line-through; }
+  .steps span.now { color: var(--ink); font-weight: 700; }
+  .steps b { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--ink-faded); color: #fff; font-size: 12px; font-weight: 700; margin-right: 7px; flex: none; }
+  .steps span.now b { background: var(--red); }
+
+  .stage { position: relative; }
+  canvas#sim { display: block; width: 100%; height: auto; background: var(--navy); border-radius: 10px; touch-action: none; }
+  canvas#sim.grab { cursor: grab; } canvas#sim.grabbing { cursor: grabbing; }
+
+  .labels { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 14px; margin-top: 10px; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; }
+  .labels .q { font-weight: 700; font-size: 14px; margin-right: 6px; }
+  .chip { padding: 10px 18px; border-radius: 999px; border: 2px solid var(--ink); background: var(--panel); font: 700 15px 'Manrope', sans-serif; color: var(--ink); cursor: grab; touch-action: none; user-select: none; }
+  .chip.sel { background: var(--ink); color: #fff; }
+  .chip.used { opacity: 0.25; cursor: default; }
+  .chip:focus-visible, button:focus-visible { outline: 3px solid var(--beam); outline-offset: 2px; }
+  .ghost { position: fixed; pointer-events: none; z-index: 10; transform: translate(-50%, -50%); }
+  .labels .btn, .quiz .btn { padding: 9px 18px; border-radius: 6px; border: 1px solid var(--rule); background: var(--panel); font: 700 14px 'Manrope', sans-serif; color: var(--ink); cursor: pointer; }
+  .labels .btn.primary, .quiz .btn.primary { background: var(--red); border-color: var(--red); color: #fff; }
+  .labels .btn:disabled { opacity: 0.35; cursor: default; }
+  .labels .right { margin-left: auto; display: flex; gap: 8px; }
+  .fb { width: 100%; font-weight: 700; font-size: 14px; min-height: 20px; }
+  .fb.ok { color: var(--good); } .fb.no { color: var(--bad); }
+
+  .quiz { margin-top: 10px; padding: 14px 16px; background: var(--panel); border: 1px solid var(--rule); border-left: 4px solid var(--red); border-radius: 8px; }
+  .quiz h2 { font-size: 16px; font-weight: 800; }
+  .quiz .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .quiz .btn.good { background: var(--good-tint); border-color: var(--good); color: var(--good); }
+  .quiz .btn.badpick { background: var(--bad-tint); border-color: var(--bad); color: var(--bad); }
+  .quiz p { margin-top: 10px; font-size: 14px; color: var(--ink-soft); }
+  .quiz p b { color: var(--ink); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Ultrasonic Testing · Level 1</div>
+    <h1>Label the Beams — Incident, Reflected, Refracted</h1>
+    <a class="back" href="index.html">← Exercise Hub</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="steps">
+    <span class="now" id="s1"><b>1</b>Drag the probe onto the steel</span>
+    <span id="s2"><b>2</b>Watch the sound split at the surface</span>
+    <span id="s3"><b>3</b>Drag each label onto its beam</span>
+  </div>
+
+  <div class="stage">
+    <canvas id="sim" width="900" height="600" aria-label="Probe and wedge on a steel block with beam animation"></canvas>
+  </div>
+
+  <div class="labels" id="labels" hidden>
+    <span class="q">Labels:</span>
+    <button class="chip" type="button" data-k="incident">Incident</button>
+    <button class="chip" type="button" data-k="reflected">Reflected</button>
+    <button class="chip" type="button" data-k="refracted">Refracted</button>
+    <div class="right">
+      <button class="btn" id="replay" type="button">Replay</button>
+      <button class="btn primary" id="check" type="button" disabled>Check</button>
+      <button class="btn" id="reset" type="button" hidden>Try again</button>
+    </div>
+    <div class="fb" id="fb"></div>
+  </div>
+
+  <div class="quiz" id="quiz" hidden>
+    <h2>One more: which beam is also called the <em>transmitted</em> beam?</h2>
+    <div class="row">
+      <button class="btn" type="button" data-k="incident">Incident</button>
+      <button class="btn" type="button" data-k="reflected">Reflected</button>
+      <button class="btn" type="button" data-k="refracted">Refracted</button>
+    </div>
+    <p id="qfb"></p>
+  </div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  const canvas = document.getElementById('sim'), ctx = canvas.getContext('2d');
+  const W = 900, H = 600;
+  const V_WEDGE = 2730, V_S = 3250;
+  const DEG = 45;
+  const SURF = 390;
+  const STEEL = { x: 40, y: SURF, w: 820, h: 210 };
+  const BENCH = { x: 640, y: 300 };
+  const P = 190, HALF_FACE = 55, BODY = 80, LIP = 150;
+
+  // big wedge geometry, index point at origin, beam heading down-right
+  const th = DEG * Math.PI / 180;
+  const d = [Math.sin(th), Math.cos(th)], n = [Math.cos(th), -Math.sin(th)];
+  const S = [-P * d[0], -P * d[1]];
+  const A = [S[0] - HALF_FACE * n[0], S[1] - HALF_FACE * n[1]];
+  const B = [S[0] + HALF_FACE * n[0], S[1] + HALF_FACE * n[1]];
+  const xR = Math.max(A[0], B[0], 0) + LIP;
+  const poly = [A, B, [xR, B[1]], [xR, 0], [A[0], 0]];
+  const body = [A, B, [B[0] - BODY * d[0], B[1] - BODY * d[1]], [A[0] - BODY * d[0], A[1] - BODY * d[1]]];
+  const back = [S[0] - BODY * d[0], S[1] - BODY * d[1]];
+  const refl = [d[0], -d[1]];
+  const aR = Math.asin(Math.sin(th) * V_S / V_WEDGE);
+  const refr = [Math.sin(aR), Math.cos(aR)];
+  const LEN_REFL = 215, LEN_REFR = 260;
+
+  let state = 'pick';            // pick → placed(animating) → label → done
+  let asm = { x: BENCH.x, y: BENCH.y };
+  let drag = null;
+  let t0 = 0, frozen = false;
+  const PX = 0.05;               // px per ms, slow
+  const T_IN = P / PX, T_REFR = LEN_REFR / (PX * V_S / V_WEDGE), T_REFL = LEN_REFL / PX;
+  const T_END = T_IN + Math.max(T_REFR, T_REFL) + 400;
+
+  // labels
+  const placed = {};             // beamKey -> labelKey
+  let checked = false;
+
+  function polyPath(pts, ox, oy) {
+    ctx.beginPath();
+    pts.forEach((p, i) => i ? ctx.lineTo(ox + p[0], oy + p[1]) : ctx.moveTo(ox + p[0], oy + p[1]));
+    ctx.closePath();
+  }
+  function beam(from, dir, len, width) {
+    if (len <= 0) return;
+    const to = [from[0] + dir[0] * len, from[1] + dir[1] * len];
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#ffd98a'; ctx.globalAlpha = 0.22; ctx.lineWidth = width * 3;
+    ctx.beginPath(); ctx.moveTo(from[0], from[1]); ctx.lineTo(to[0], to[1]); ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.lineWidth = width; ctx.beginPath(); ctx.moveTo(from[0], from[1]); ctx.lineTo(to[0], to[1]); ctx.stroke();
+    // arrowhead
+    const a = Math.atan2(dir[1], dir[0]);
+    ctx.fillStyle = '#ffd98a'; ctx.beginPath();
+    ctx.moveTo(to[0], to[1]);
+    ctx.lineTo(to[0] - 14 * Math.cos(a - 0.4), to[1] - 14 * Math.sin(a - 0.4));
+    ctx.lineTo(to[0] - 14 * Math.cos(a + 0.4), to[1] - 14 * Math.sin(a + 0.4));
+    ctx.closePath(); ctx.fill();
+  }
+  function spotPos(key) {
+    const ox = asm.x, oy = asm.y;
+    if (key === 'incident') return [ox + S[0] + d[0] * P * 0.5 - 34, oy + S[1] + d[1] * P * 0.5 - 34];
+    if (key === 'reflected') return [ox + refl[0] * LEN_REFL * 0.55 + 30, oy + refl[1] * LEN_REFL * 0.55 + 34];
+    return [ox + refr[0] * LEN_REFR * 0.5 + 34, oy + refr[1] * LEN_REFR * 0.5 - 30];
+  }
+  const NUM = { incident: '1', reflected: '2', refracted: '3' };
+  const NAME = { incident: 'Incident', reflected: 'Reflected', refracted: 'Refracted' };
+
+  function draw(now) {
+    ctx.clearRect(0, 0, W, H);
+    ctx.font = '12px "JetBrains Mono", monospace';
+    // steel
+    const g = ctx.createLinearGradient(0, STEEL.y, 0, STEEL.y + STEEL.h);
+    g.addColorStop(0, '#5f6b78'); g.addColorStop(1, '#3f4954');
+    ctx.fillStyle = g; ctx.fillRect(STEEL.x, STEEL.y, STEEL.w, STEEL.h);
+    ctx.strokeStyle = '#9fb0c0'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(STEEL.x, SURF); ctx.lineTo(STEEL.x + STEEL.w, SURF); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.textAlign = 'right'; ctx.fillText('steel', STEEL.x + STEEL.w - 12, STEEL.y + STEEL.h - 12);
+
+    if (state === 'pick') {
+      const hot = drag && onSteel(asm.x, asm.y);
+      ctx.setLineDash([6, 6]); ctx.strokeStyle = hot ? '#ffd98a' : 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1.5;
+      ctx.strokeRect(STEEL.x + 2, SURF - 2, STEEL.w - 4, 4); ctx.setLineDash([]);
+      ctx.fillStyle = hot ? '#ffd98a' : 'rgba(255,255,255,0.45)'; ctx.textAlign = 'center';
+      ctx.fillText(hot ? 'drop' : 'drag the probe down onto the steel', W / 2, SURF - 16);
+    }
+
+    const ox = asm.x, oy = asm.y;
+    // wedge
+    polyPath(poly, ox, oy);
+    ctx.fillStyle = 'rgba(191,227,245,0.82)'; ctx.fill();
+    ctx.strokeStyle = '#e6f4fb'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#0f1c2b'; ctx.font = '600 14px "JetBrains Mono", monospace'; ctx.textAlign = 'right';
+    ctx.fillText('plastic wedge', ox + xR - 12, oy + B[1] + 24);
+    // probe
+    polyPath(body, ox, oy);
+    ctx.fillStyle = '#2f2f33'; ctx.fill(); ctx.strokeStyle = '#8d8d95'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ox + A[0], oy + A[1]); ctx.lineTo(ox + B[0], oy + B[1]); ctx.strokeStyle = '#ffb347'; ctx.lineWidth = 4; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ox + back[0], oy + back[1]); ctx.lineTo(ox + back[0] - 40 * d[0], oy + back[1] - 40 * d[1]); ctx.strokeStyle = '#8d8d95'; ctx.lineWidth = 6; ctx.stroke();
+    ctx.save(); ctx.translate(ox + S[0] - d[0] * BODY * 0.5, oy + S[1] - d[1] * BODY * 0.5); ctx.rotate(th);
+    ctx.fillStyle = '#c9c9cf'; ctx.font = '600 13px "JetBrains Mono", monospace'; ctx.textAlign = 'center'; ctx.fillText('probe', 0, 5); ctx.restore();
+
+    if (state === 'pick') return;
+
+    // beams
+    const t = frozen ? T_END : Math.min(T_END, now - t0);
+    if (t >= T_END && !frozen) { frozen = true; onFrozen(); }
+    const E = [ox, oy];
+    // normal
+    ctx.setLineDash([3, 6]); ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(ox, oy - 230); ctx.lineTo(ox, oy + 120); ctx.stroke(); ctx.setLineDash([]);
+
+    ctx.save(); polyPath(poly, ox, oy); ctx.clip();
+    beam([ox + S[0], oy + S[1]], d, Math.min(P, t * PX), 5);
+    if (t > T_IN) beam(E, refl, Math.min(LEN_REFL, (t - T_IN) * PX), 5);
+    ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.rect(STEEL.x, SURF, STEEL.w, STEEL.h); ctx.clip();
+    if (t > T_IN) beam(E, refr, Math.min(LEN_REFR, (t - T_IN) * PX * V_S / V_WEDGE), 5);
+    ctx.restore();
+
+    // label spots
+    if (frozen) {
+      ['incident', 'reflected', 'refracted'].forEach(k => {
+        const [x, y] = spotPos(k);
+        const lab = placed[k];
+        const hot = drag && drag.kind === 'chip' && nearestSpot(drag.x, drag.y) === k;
+        ctx.beginPath(); ctx.arc(x, y, 17, 0, 2 * Math.PI);
+        ctx.fillStyle = hot ? '#ffd98a' : lab ? '#fff' : 'rgba(15,28,43,0.85)'; ctx.fill();
+        ctx.strokeStyle = checked ? (lab === k ? '#4cd17f' : '#ff6b6b') : '#ffd98a'; ctx.lineWidth = 2.5; ctx.stroke();
+        ctx.fillStyle = lab || hot ? '#0f1c2b' : '#ffd98a'; ctx.font = '700 15px "JetBrains Mono", monospace'; ctx.textAlign = 'center';
+        ctx.fillText(NUM[k], x, y + 5);
+        if (lab) {
+          const text = checked && lab !== k ? `${NAME[lab]} ✗ → ${NAME[k]}` : NAME[lab] + (checked ? ' ✓' : '');
+          ctx.font = '700 14px "Manrope", sans-serif';
+          const tw = ctx.measureText(text).width + 16;
+          const tx = k === 'incident' ? x - 24 - tw : x + 24;
+          ctx.fillStyle = checked ? (lab === k ? '#4cd17f' : '#ff6b6b') : '#fff';
+          ctx.fillRect(tx, y - 13, tw, 26);
+          ctx.fillStyle = '#0f1c2b'; ctx.textAlign = 'left'; ctx.fillText(text, tx + 8, y + 5);
+        }
+      });
+    }
+  }
+  function onSteel(x, y) { return y > SURF - 90 && y < SURF + 140 && x > STEEL.x + 60 && x < STEEL.x + STEEL.w - 40; }
+  function nearestSpot(x, y) {
+    let best = null, bd = 70 * 70;
+    ['incident', 'reflected', 'refracted'].forEach(k => {
+      const [sx, sy] = spotPos(k); const dd = (sx - x) ** 2 + (sy - y) ** 2;
+      if (dd < bd) { bd = dd; best = k; }
+    });
+    return best;
+  }
+
+  function loop(now) { draw(now); requestAnimationFrame(loop); }
+  requestAnimationFrame(loop);
+
+  // ---- Pointer: drag the assembly
+  function pt(e) { const r = canvas.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height }; }
+  function hitAsm(p) { const cx = asm.x + S[0] * 0.7, cy = asm.y + S[1] * 0.7; return (p.x - cx) ** 2 + (p.y - cy) ** 2 < 150 * 150; }
+  canvas.addEventListener('pointerdown', e => {
+    if (state !== 'pick') return;
+    const p = pt(e); if (!hitAsm(p)) return;
+    drag = { kind: 'asm', dx: asm.x - p.x, dy: asm.y - p.y };
+    canvas.setPointerCapture(e.pointerId); canvas.classList.add('grabbing'); e.preventDefault();
+  });
+  canvas.addEventListener('pointermove', e => {
+    const p = pt(e);
+    if (!drag) { canvas.classList.toggle('grab', state === 'pick' && hitAsm(p)); return; }
+    if (drag.kind === 'asm') { asm.x = p.x + drag.dx; asm.y = p.y + drag.dy; }
+  });
+  function endAsmDrag() {
+    if (!drag || drag.kind !== 'asm') return;
+    canvas.classList.remove('grabbing');
+    if (onSteel(asm.x, asm.y)) {
+      asm.x = Math.min(Math.max(asm.x, 300), 460); asm.y = SURF;
+      state = 'placed'; t0 = performance.now(); frozen = false;
+      setStep(2);
+    } else asm = { x: BENCH.x, y: BENCH.y };
+    drag = null;
+  }
+  canvas.addEventListener('pointerup', endAsmDrag);
+  canvas.addEventListener('pointercancel', endAsmDrag);
+
+  // ---- Labels: drag chips onto the canvas (or click chip, then click a spot)
+  const labelsEl = document.getElementById('labels'), fb = document.getElementById('fb');
+  const chips = [...document.querySelectorAll('.chip')];
+  let selChip = null, ghost = null;
+  function onFrozen() { labelsEl.hidden = false; setStep(3); labelsEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+  chips.forEach(ch => {
+    ch.addEventListener('pointerdown', e => {
+      if (checked || ch.classList.contains('used')) return;
+      drag = { kind: 'chip', key: ch.dataset.k, x: -999, y: -999, moved: false, chip: ch };
+      ghost = ch.cloneNode(true); ghost.classList.add('ghost'); document.body.appendChild(ghost);
+      ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px';
+      ch.setPointerCapture(e.pointerId); e.preventDefault();
+    });
+    ch.addEventListener('pointermove', e => {
+      if (!drag || drag.kind !== 'chip') return;
+      drag.moved = true;
+      ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px';
+      const p = pt(e); drag.x = p.x; drag.y = p.y;
+    });
+    const up = e => {
+      if (!drag || drag.kind !== 'chip') return;
+      ghost.remove(); ghost = null;
+      const p = pt(e);
+      const spot = drag.moved ? nearestSpot(p.x, p.y) : null;
+      if (spot) place(spot, drag.key);
+      else if (!drag.moved) { // click-select fallback
+        chips.forEach(c => c.classList.remove('sel'));
+        selChip = selChip === ch ? null : ch; if (selChip) selChip.classList.add('sel');
+      }
+      drag = null;
+    };
+    ch.addEventListener('pointerup', up); ch.addEventListener('pointercancel', up);
+  });
+  canvas.addEventListener('click', e => {
+    if (!frozen || checked) return;
+    const p = pt(e); const spot = nearestSpot(p.x, p.y);
+    if (!spot) return;
+    if (selChip) { place(spot, selChip.dataset.k); selChip.classList.remove('sel'); selChip = null; }
+    else if (placed[spot]) { // take label back
+      const k = placed[spot]; delete placed[spot];
+      chips.find(c => c.dataset.k === k).classList.remove('used');
+      document.getElementById('check').disabled = true;
+    }
+  });
+  function place(spot, key) {
+    // one label per spot; a label already elsewhere moves
+    Object.keys(placed).forEach(s => { if (placed[s] === key) delete placed[s]; });
+    if (placed[spot]) chips.find(c => c.dataset.k === placed[spot]).classList.remove('used');
+    placed[spot] = key;
+    chips.find(c => c.dataset.k === key).classList.add('used');
+    document.getElementById('check').disabled = Object.keys(placed).length < 3;
+  }
+  document.getElementById('check').addEventListener('click', () => {
+    checked = true;
+    const score = ['incident', 'reflected', 'refracted'].filter(k => placed[k] === k).length;
+    fb.textContent = score === 3 ? 'All three correct.' : `${score} of 3. The corrections are shown on the picture.`;
+    fb.className = 'fb ' + (score === 3 ? 'ok' : 'no');
+    document.getElementById('check').hidden = true;
+    document.getElementById('reset').hidden = false;
+    document.getElementById('quiz').hidden = false;
+    document.getElementById('quiz').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+  document.getElementById('reset').addEventListener('click', () => {
+    checked = false; Object.keys(placed).forEach(k => delete placed[k]);
+    chips.forEach(c => c.classList.remove('used', 'sel')); selChip = null;
+    fb.textContent = ''; fb.className = 'fb';
+    document.getElementById('check').hidden = false; document.getElementById('check').disabled = true;
+    document.getElementById('reset').hidden = true;
+    const q = document.getElementById('quiz'); q.hidden = true;
+    q.querySelectorAll('.btn').forEach(b => { b.className = 'btn'; b.disabled = false; }); document.getElementById('qfb').textContent = '';
+  });
+  document.getElementById('replay').addEventListener('click', () => { t0 = performance.now(); frozen = false; });
+
+  // ---- Transmitted question
+  document.querySelectorAll('#quiz .btn').forEach(b => b.addEventListener('click', () => {
+    const q = document.getElementById('quiz');
+    q.querySelectorAll('.btn').forEach(x => { x.disabled = true; if (x.dataset.k === 'refracted') x.classList.add('good'); });
+    const ok = b.dataset.k === 'refracted';
+    if (!ok) b.classList.add('badpick');
+    document.getElementById('qfb').innerHTML = (ok ? '<b>Right.</b> ' : '<b>Not that one.</b> ') +
+      'The <b>refracted</b> beam is the one that got through into the steel, so it is also called the <b>transmitted</b> beam. Same beam, two names.';
+  }));
+
+  function setStep(n) {
+    [1, 2, 3].forEach(i => { document.getElementById('s' + i).className = i < n ? 'done' : i === n ? 'now' : ''; });
+  }
+})();
+</script>
+</body>
+</html>
