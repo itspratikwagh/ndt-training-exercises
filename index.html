@@ -168,6 +168,53 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
+
+  .library-cta {
+    background: var(--amber-tint);
+    color: var(--ink);
+    padding: 28px 32px;
+    border-radius: 2px;
+    border: 1px solid var(--amber-soft);
+    box-shadow: var(--shadow);
+    margin-bottom: 48px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: center;
+  }
+  .library-cta .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 8px;
+  }
+  .library-cta h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 24px;
+    margin-bottom: 6px;
+  }
+  .library-cta p { color: var(--ink-soft); font-size: 14px; }
+  .library-cta a.btn {
+    background: var(--amber);
+    color: var(--paper);
+    padding: 16px 28px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    border-radius: 2px;
+    transition: background 0.15s;
+    white-space: nowrap;
+    text-align: center;
+  }
+  .library-cta a.btn:hover { background: #9a3a12; }
+  @media (max-width: 720px) {
+    .library-cta, .tutor-cta { grid-template-columns: 1fr; }
+  }
+
 </style>
 </head>
 <body>
@@ -177,6 +224,16 @@
       <h1>Training <em>Exercise Hub</em></h1>
       <p>Interactive practice for radiographic, ultrasonic, and weld inspection topics. Work through the exercises below; ask the tutor when you get stuck.</p>
     </header>
+
+
+    <div class="library-cta">
+      <div>
+        <div class="label">NDT Video Library</div>
+        <h2>Full online NDT courses</h2>
+        <p>When you’re ready for structured video training, head over to the NDT Video Library.</p>
+      </div>
+      <a class="btn" href="https://www.ndtvideolibrary.com">Explore online NDT Training →</a>
+    </div>
 
     <div class="tutor-cta">
       <div>
