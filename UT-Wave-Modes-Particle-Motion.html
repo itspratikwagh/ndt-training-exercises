@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UT Wave Modes — Particle Motion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page: #f6f3ee;
+    --panel: #ffffff;
+    --ink: #1f1d1b;
+    --ink-soft: #57524d;
+    --ink-faded: #8f8882;
+    --rule: #ddd6cc;
+    --red: #A82020;
+    --red-deep: #7a1818;
+    --red-tint: #fbeaea;
+    --navy: #0f1c2b;
+    --orange: #ffb347;
+    --good: #0d904f;
+    --good-tint: #e6f4ea;
+    --bad: #d93025;
+    --bad-tint: #fce8e6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+    background: var(--page);
+    color: var(--ink);
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  header {
+    background: linear-gradient(135deg, var(--red-deep), var(--red));
+    color: #fff;
+    padding: 1.4rem 1.5rem 1.2rem;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  header .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    opacity: 0.8; margin-bottom: 6px;
+  }
+  header h1 { font-size: clamp(22px, 3.4vw, 30px); font-weight: 800; letter-spacing: -0.01em; line-height: 1.15; text-wrap: balance; }
+  header a.back { color: #fff; opacity: 0.8; font-size: 13px; text-decoration: none; display: inline-block; margin-top: 8px; }
+  header a.back:hover { opacity: 1; text-decoration: underline; }
+
+  main { padding: 1.25rem 1rem 3rem; }
+  .steps {
+    display: flex; flex-wrap: wrap; gap: 8px 22px;
+    font-size: 14px; color: var(--ink-soft);
+    padding: 12px 16px; margin-bottom: 14px;
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 8px;
+  }
+  .steps span b {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--red); color: #fff; font-size: 12px; font-weight: 700; margin-right: 7px;
+  }
+  .steps .dot { display:inline-block; width:10px; height:10px; border-radius:50%; background: var(--orange); vertical-align: -1px; margin: 0 2px; }
+
+  .modes { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .modes button {
+    flex: 1 1 150px;
+    padding: 10px 12px;
+    background: var(--panel); color: var(--ink-soft);
+    border: 1px solid var(--rule); border-radius: 8px;
+    font: 600 14px 'Manrope', sans-serif; cursor: pointer;
+    text-align: left; transition: border-color .15s, background .15s, color .15s;
+  }
+  .modes button small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faded); font-weight: 500; margin-top: 2px; }
+  .modes button:hover { border-color: var(--red); }
+  .modes button.active { background: var(--red); border-color: var(--red); color: #fff; }
+  .modes button.active small { color: rgba(255,255,255,0.75); }
+  .modes button:focus-visible, .ctrl button:focus-visible, .answers button:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; }
+
+  .stage { position: relative; }
+  canvas#sim {
+    display: block; width: 100%; height: auto;
+    background: var(--navy); border-radius: 10px; cursor: crosshair;
+    touch-action: manipulation;
+  }
+  .hint {
+    position: absolute; right: 12px; bottom: 10px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.05em;
+    color: rgba(255,255,255,0.55); pointer-events: none;
+  }
+
+  .ctrl {
+    display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center;
+    padding: 12px 14px; margin-top: 10px;
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 8px;
+    font-size: 13px; color: var(--ink-soft);
+  }
+  .ctrl button {
+    padding: 8px 16px; min-width: 96px;
+    background: var(--ink); color: #fff; border: none; border-radius: 6px;
+    font: 700 13px 'Manrope', sans-serif; cursor: pointer;
+  }
+  .ctrl button:hover { background: #000; }
+  .ctrl label { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+  .ctrl input[type=range] { width: 120px; accent-color: var(--red); }
+  .ctrl input[type=checkbox] { accent-color: var(--red); width: 16px; height: 16px; }
+
+  .readout {
+    margin-top: 10px; padding: 14px 16px;
+    background: var(--panel); border: 1px solid var(--rule); border-left: 4px solid var(--red); border-radius: 8px;
+    display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; align-items: baseline;
+    font-size: 14px;
+  }
+  .readout .k { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faded); }
+  .readout .v { color: var(--ink); }
+  .readout .v.big { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
+  .readout .v .sym { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--red); margin-right: 6px; }
+  .readout.hidden { display: none; }
+
+  .quiz {
+    margin-top: 18px; padding: 16px;
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 8px;
+  }
+  .quiz h2 { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+  .quiz p { font-size: 14px; color: var(--ink-soft); }
+  .quiz .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+  .quiz .row button, .answers button {
+    padding: 9px 16px; border-radius: 6px; border: 1px solid var(--rule);
+    background: var(--panel); color: var(--ink); font: 600 14px 'Manrope', sans-serif; cursor: pointer;
+  }
+  .quiz .row button.primary { background: var(--red); border-color: var(--red); color: #fff; }
+  .quiz .row button.primary:hover { background: var(--red-deep); }
+  .answers { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 12px; }
+  .answers button:hover:not(:disabled) { border-color: var(--red); }
+  .answers button:disabled { cursor: default; }
+  .answers button.right { background: var(--good-tint); border-color: var(--good); color: var(--good); }
+  .answers button.wrong { background: var(--bad-tint); border-color: var(--bad); color: var(--bad); }
+  .feedback { margin-top: 10px; font-size: 14px; font-weight: 600; min-height: 22px; }
+  .feedback.ok { color: var(--good); }
+  .feedback.no { color: var(--bad); }
+  .score { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faded); }
+  [hidden] { display: none !important; }
+
+  @media (max-width: 560px) {
+    .readout { grid-template-columns: 1fr; gap: 2px; }
+    .readout .k { margin-top: 6px; }
+    .ctrl { gap: 10px 14px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .modes button, .ctrl button { transition: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Ultrasonic Testing · Level 1</div>
+    <h1>Wave Modes — How the Particles Move</h1>
+    <a class="back" href="index.html">← Exercise Hub</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="steps">
+    <span><b>1</b>Pick a wave mode</span>
+    <span><b>2</b>Click any dot to follow it <i class="dot"></i></span>
+    <span><b>3</b>Compare its orange path with the wave direction →</span>
+  </div>
+
+  <div class="modes" id="modes" role="tablist">
+    <button data-mode="L" class="active">Longitudinal<small>Compression · L-wave</small></button>
+    <button data-mode="T">Transverse<small>Shear · S-wave</small></button>
+    <button data-mode="R">Surface<small>Rayleigh</small></button>
+    <button data-mode="S0">Lamb — Symmetric<small>Plate · S₀</small></button>
+    <button data-mode="A0">Lamb — Asymmetric<small>Plate · A₀</small></button>
+  </div>
+
+  <div class="stage">
+    <canvas id="sim" width="900" height="340" aria-label="Animated particle grid showing wave motion"></canvas>
+    <div class="hint" id="hint">click a dot</div>
+  </div>
+
+  <div class="ctrl">
+    <button id="playBtn" type="button">Pause</button>
+    <label for="speed">Speed <input type="range" id="speed" min="0.1" max="2" step="0.1" value="0.6"></label>
+    <label for="amp">Exaggerate <input type="range" id="amp" min="3" max="16" step="1" value="9"></label>
+    <label for="allPaths"><input type="checkbox" id="allPaths"> Show every dot's path</label>
+  </div>
+
+  <div class="readout" id="readout">
+    <div class="k">Wave</div><div class="v big" id="roName">Longitudinal</div>
+    <div class="k">Particles move</div><div class="v" id="roMotion"></div>
+    <div class="k">Relative to wave</div><div class="v" id="roRel"></div>
+    <div class="k">Look for</div><div class="v" id="roNote"></div>
+  </div>
+
+  <div class="quiz" id="quiz">
+    <div id="quizIntro">
+      <h2>Test yourself</h2>
+      <p>Five rounds. Watch the dots, name the wave.</p>
+      <div class="row"><button class="primary" id="startQuiz" type="button">Start</button></div>
+    </div>
+    <div id="quizLive" hidden>
+      <div class="row" style="justify-content:space-between; margin-top:0">
+        <h2>Which wave is this?</h2>
+        <span class="score" id="quizScore">Round 1 of 5</span>
+      </div>
+      <div class="answers" id="answers"></div>
+      <div class="feedback" id="feedback"></div>
+      <div class="row">
+        <button id="nextQ" type="button" hidden>Next →</button>
+        <button id="quitQuiz" type="button">Exit quiz</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  const canvas = document.getElementById('sim');
+  const ctx = canvas.getContext('2d');
+  const W = 900, H = 340;
+  const LAMBDA = 200;                 // wavelength, px
+  const K = 2 * Math.PI / LAMBDA;
+  const SPACING = 20;
+
+  // ---- Wave modes ------------------------------------------------------
+  // Each mode: layout of rest positions + displacement(x0, y0, phase) -> [ux, uy]
+  // phase = k*x0 - omega*t; wave always travels to the right (+x).
+  const MODES = {
+    L: {
+      name: 'Longitudinal', short: 'Longitudinal',
+      motion: 'Back and forth, along the wave',
+      rel: 'Parallel',
+      sym: '↔',
+      note: 'Dots bunch up (compression) and spread out (rarefaction). Nothing moves up or down.',
+      layout: bulkLayout,
+      disp(x0, y0, ph, A) { return [A * Math.sin(ph), 0]; }
+    },
+    T: {
+      name: 'Transverse (Shear)', short: 'Transverse',
+      motion: 'Up and down, across the wave',
+      rel: 'Perpendicular',
+      sym: '↕',
+      note: 'Rows slide past each other. No dot moves left or right. Needs a solid — liquids and gases cannot carry it.',
+      layout: bulkLayout,
+      disp(x0, y0, ph, A) { return [0, A * Math.sin(ph)]; }
+    },
+    R: {
+      name: 'Surface (Rayleigh)', short: 'Surface',
+      motion: 'Ellipse — backward at the top of the loop',
+      rel: 'Elliptical · retrograde',
+      sym: '⟲',
+      note: 'Motion fades within about one wavelength of depth. Turn on every path: the ellipses shrink, then flip direction below ≈ 0.2 λ.',
+      layout: surfaceLayout,
+      disp(x0, y0, ph, A) {
+        const z = Math.max(0, y0 - SURFACE_Y);
+        const q = Math.exp(-0.8475 * K * z), s = Math.exp(-0.3933 * K * z);
+        const ux = (q - 0.5773 * s) * Math.sin(ph);
+        const uy = (0.8475 * q - 1.4679 * s) * Math.cos(ph);
+        return [A * ux / 0.6204, A * uy / 0.6204];
+      }
+    },
+    S0: {
+      name: 'Lamb — Symmetric (S₀)', short: 'Lamb symmetric',
+      motion: 'Plate thickens and thins; mid-plane dots move straight along the plate',
+      rel: 'Symmetric about the mid-plane',
+      sym: '⇔',
+      note: 'Top and bottom surfaces move in opposite directions (mirror image). The plate breathes.',
+      layout: plateLayout,
+      disp(x0, y0, ph, A) {
+        const r = (y0 - PLATE_MID) / PLATE_HALF;
+        return [A * Math.cos(ph), 0.6 * A * r * Math.sin(ph)];
+      }
+    },
+    A0: {
+      name: 'Lamb — Asymmetric (A₀)', short: 'Lamb asymmetric',
+      motion: 'Whole plate flexes like a ribbon; mid-plane dots move straight up and down',
+      rel: 'Antisymmetric about the mid-plane',
+      sym: '≈',
+      note: 'Top and bottom surfaces move together (same direction). Thickness stays the same.',
+      layout: plateLayout,
+      disp(x0, y0, ph, A) {
+        const r = (y0 - PLATE_MID) / PLATE_HALF;
+        return [-0.6 * A * r * Math.cos(ph), A * Math.sin(ph)];
+      }
+    }
+  };
+  const SURFACE_Y = 60;
+  const PLATE_MID = 170, PLATE_HALF = 60;
+
+  function bulkLayout() {
+    const pts = [];
+    for (let y = 60; y <= 300; y += SPACING)
+      for (let x = 40; x <= 860; x += SPACING) pts.push({ x, y });
+    return { pts, rows: (300 - 60) / SPACING + 1, cols: (860 - 40) / SPACING + 1, defaultTrack: { x: 440, y: 160 } };
+  }
+  function surfaceLayout() {
+    const pts = [];
+    for (let y = SURFACE_Y; y <= 300; y += SPACING)
+      for (let x = 40; x <= 860; x += SPACING) pts.push({ x, y });
+    return { pts, rows: (300 - SURFACE_Y) / SPACING + 1, cols: (860 - 40) / SPACING + 1, defaultTrack: { x: 440, y: SURFACE_Y } };
+  }
+  function plateLayout() {
+    const pts = [];
+    for (let y = PLATE_MID - PLATE_HALF; y <= PLATE_MID + PLATE_HALF; y += SPACING)
+      for (let x = 40; x <= 860; x += SPACING) pts.push({ x, y });
+    return { pts, rows: (2 * PLATE_HALF) / SPACING + 1, cols: (860 - 40) / SPACING + 1, defaultTrack: { x: 440, y: PLATE_MID - PLATE_HALF } };
+  }
+
+  // ---- State -----------------------------------------------------------
+  let modeKey = 'L';
+  let mode = MODES.L;
+  let layout = mode.layout();
+  let tracked = nearest(layout.defaultTrack);
+  let trail = [];
+  let playing = true;
+  let t = 0, last = null;
+  let speed = 0.6, amp = 9, showAll = false;
+  let quiz = null;
+
+  const omega = 2 * Math.PI / 3; // 3 s period at speed 1
+
+  function nearest(p) {
+    let best = null, bd = Infinity;
+    for (const q of layout.pts) {
+      const d = (q.x - p.x) ** 2 + (q.y - p.y) ** 2;
+      if (d < bd) { bd = d; best = q; }
+    }
+    return best;
+  }
+  function pos(p, time) {
+    const ph = K * p.x - omega * time;
+    const [ux, uy] = mode.disp(p.x, p.y, ph, amp);
+    return [p.x + ux, p.y + uy];
+  }
+  function orbit(p) {
+    const pts = [];
+    for (let i = 0; i <= 48; i++) {
+      const ph = (i / 48) * 2 * Math.PI;
+      const [ux, uy] = mode.disp(p.x, p.y, ph, amp);
+      pts.push([p.x + ux, p.y + uy]);
+    }
+    return pts;
+  }
+
+  // ---- Drawing ---------------------------------------------------------
+  function drawPath(pts, color, width) {
+    ctx.beginPath();
+    pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+    ctx.strokeStyle = color; ctx.lineWidth = width; ctx.stroke();
+  }
+  function arrow(x1, y1, x2, y2, color) {
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    const a = Math.atan2(y2 - y1, x2 - x1);
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - 9 * Math.cos(a - 0.45), y2 - 9 * Math.sin(a - 0.45));
+    ctx.lineTo(x2 - 9 * Math.cos(a + 0.45), y2 - 9 * Math.sin(a + 0.45));
+    ctx.closePath(); ctx.fill();
+  }
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.font = '12px "JetBrains Mono", monospace';
+
+    // Wave direction + travelling crest marker
+    arrow(40, 22, 130, 22, 'rgba(255,255,255,0.85)');
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.textAlign = 'left'; ctx.fillText('wave direction', 140, 26);
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    const crestX0 = ((omega * t) / K) % LAMBDA;
+    for (let x = crestX0 - LAMBDA; x < W + LAMBDA; x += LAMBDA) {
+      if (x < 40 || x > 860) continue;
+      ctx.beginPath(); ctx.moveTo(x, 44); ctx.lineTo(x - 5, 36); ctx.lineTo(x + 5, 36); ctx.closePath(); ctx.fill();
+    }
+
+    // Surfaces / boundaries
+    if (modeKey === 'R') {
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.setLineDash([4, 6]); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(40, SURFACE_Y + LAMBDA); ctx.lineTo(860, SURFACE_Y + LAMBDA); ctx.stroke();
+      ctx.setLineDash([]);
+      label('free surface', 860, SURFACE_Y - 8, 'right');
+      label('1 λ deep', 862, SURFACE_Y + LAMBDA + 4, 'right');
+      drawRowLine(0, '#6ec6ff', 2);
+    } else if (modeKey === 'S0' || modeKey === 'A0') {
+      label('plate', 860, PLATE_MID - PLATE_HALF - 24, 'right');
+      drawRowLine(0, '#6ec6ff', 2);
+      drawRowLine(layout.rows - 1, '#6ec6ff', 2);
+      ctx.setLineDash([3, 7]);
+      drawRowLine((layout.rows - 1) / 2, 'rgba(110,198,255,0.35)', 1);
+      ctx.setLineDash([]);
+    }
+
+    // Every-dot orbits
+    if (showAll) {
+      for (let i = 0; i < layout.pts.length; i++) {
+        const p = layout.pts[i];
+        const col = (p.x - 40) / SPACING;
+        if (col % 2) continue;
+        if (p === tracked) continue;
+        drawPath(orbit(p), 'rgba(255,179,71,0.28)', 1);
+      }
+    }
+
+    // Particles
+    ctx.fillStyle = '#c9d6e2';
+    for (const p of layout.pts) {
+      if (p === tracked) continue;
+      const [x, y] = pos(p, t);
+      ctx.beginPath(); ctx.arc(x, y, 3, 0, 2 * Math.PI); ctx.fill();
+    }
+
+    // Tracked particle: orbit, trail, rest marker, dot
+    if (tracked) {
+      drawPath(orbit(tracked), 'rgba(255,179,71,0.55)', 1.5);
+      ctx.strokeStyle = 'rgba(255,179,71,0.5)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(tracked.x, tracked.y, 4, 0, 2 * Math.PI); ctx.stroke();
+      for (let i = 0; i < trail.length; i++) {
+        const [x, y] = trail[i];
+        ctx.fillStyle = `rgba(255,179,71,${0.08 + 0.5 * i / trail.length})`;
+        ctx.beginPath(); ctx.arc(x, y, 2.5, 0, 2 * Math.PI); ctx.fill();
+      }
+      const [x, y] = pos(tracked, t);
+      ctx.fillStyle = '#ffb347';
+      ctx.beginPath(); ctx.arc(x, y, 6.5, 0, 2 * Math.PI); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+  }
+  function label(text, x, y, align) {
+    ctx.textAlign = align;
+    const w = ctx.measureText(text).width + 10;
+    ctx.fillStyle = '#0f1c2b';
+    ctx.fillRect(align === 'right' ? x - w + 5 : x - 5, y - 11, w, 15);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillText(text, x, y);
+  }
+  function drawRowLine(row, color, width) {
+    const start = Math.round(row) * layout.cols;
+    const pts = [];
+    for (let c = 0; c < layout.cols; c++) pts.push(pos(layout.pts[start + c], t));
+    drawPath(pts, color, width);
+  }
+
+  // ---- Loop ------------------------------------------------------------
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduceMotion) { playing = false; document.getElementById('playBtn').textContent = 'Play'; }
+  let trailTimer = 0;
+  function frame(now) {
+    if (last === null) last = now;
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    if (playing) {
+      t += dt * speed;
+      trailTimer += dt * speed;
+      if (tracked && trailTimer > 0.06) {
+        trailTimer = 0;
+        trail.push(pos(tracked, t));
+        if (trail.length > 22) trail.shift();
+      }
+    }
+    draw();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // ---- Mode switching --------------------------------------------------
+  function setMode(key, opts = {}) {
+    modeKey = key; mode = MODES[key];
+    layout = mode.layout();
+    tracked = nearest(layout.defaultTrack);
+    trail = [];
+    document.querySelectorAll('#modes button').forEach(b => b.classList.toggle('active', b.dataset.mode === key && !opts.quiet));
+    if (!opts.quiet) {
+      document.getElementById('roName').textContent = mode.name;
+      document.getElementById('roMotion').innerHTML = `<span class="sym">${mode.sym}</span>${mode.motion}`;
+      document.getElementById('roRel').textContent = mode.rel;
+      document.getElementById('roNote').textContent = mode.note;
+    }
+  }
+  document.getElementById('modes').addEventListener('click', e => {
+    const b = e.target.closest('button[data-mode]');
+    if (!b || quiz) return;
+    setMode(b.dataset.mode);
+  });
+  setMode('L');
+
+  // ---- Controls --------------------------------------------------------
+  const playBtn = document.getElementById('playBtn');
+  playBtn.addEventListener('click', () => {
+    playing = !playing;
+    playBtn.textContent = playing ? 'Pause' : 'Play';
+  });
+  document.getElementById('speed').addEventListener('input', e => { speed = +e.target.value; });
+  document.getElementById('amp').addEventListener('input', e => { amp = +e.target.value; trail = []; });
+  document.getElementById('allPaths').addEventListener('change', e => { showAll = e.target.checked; });
+
+  function canvasPoint(e) {
+    const r = canvas.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
+  }
+  canvas.addEventListener('click', e => {
+    const p = canvasPoint(e);
+    const q = nearest(p);
+    if ((q.x - p.x) ** 2 + (q.y - p.y) ** 2 > 18 * 18) return;
+    tracked = q; trail = [];
+    document.getElementById('hint').textContent = 'following this dot';
+  });
+
+  // ---- Quiz ------------------------------------------------------------
+  const KEYS = Object.keys(MODES);
+  const qIntro = document.getElementById('quizIntro');
+  const qLive = document.getElementById('quizLive');
+  const answers = document.getElementById('answers');
+  const feedback = document.getElementById('feedback');
+  const nextBtn = document.getElementById('nextQ');
+  const readout = document.getElementById('readout');
+
+  function startQuiz() {
+    // 5 rounds: every mode once, shuffled
+    const order = KEYS.slice().sort(() => Math.random() - 0.5);
+    quiz = { order, i: 0, score: 0 };
+    qIntro.hidden = true; qLive.hidden = false;
+    readout.classList.add('hidden');
+    document.getElementById('modes').style.opacity = '0.4';
+    askRound();
+  }
+  function askRound() {
+    const key = quiz.order[quiz.i];
+    setMode(key, { quiet: true });
+    playing = true; playBtn.textContent = 'Pause';
+    document.getElementById('quizScore').textContent = `Round ${quiz.i + 1} of 5 · Score ${quiz.score}`;
+    feedback.textContent = ''; feedback.className = 'feedback';
+    nextBtn.hidden = true;
+    answers.innerHTML = '';
+    KEYS.forEach(k => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = MODES[k].short; b.dataset.key = k;
+      b.addEventListener('click', () => answer(k, b));
+      answers.appendChild(b);
+    });
+    document.getElementById('quiz').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  function answer(k, btn) {
+    const key = quiz.order[quiz.i];
+    answers.querySelectorAll('button').forEach(b => { b.disabled = true; if (b.dataset.key === key) b.classList.add('right'); });
+    if (k === key) {
+      quiz.score++;
+      feedback.textContent = `Correct — ${MODES[key].name}. ${MODES[key].rel}.`;
+      feedback.className = 'feedback ok';
+    } else {
+      btn.classList.add('wrong');
+      feedback.textContent = `Not quite. This is ${MODES[key].name}: ${MODES[key].motion.toLowerCase()}.`;
+      feedback.className = 'feedback no';
+    }
+    document.getElementById('quizScore').textContent = `Round ${quiz.i + 1} of 5 · Score ${quiz.score}`;
+    nextBtn.hidden = false;
+    nextBtn.textContent = quiz.i === 4 ? 'See score →' : 'Next →';
+  }
+  nextBtn.addEventListener('click', () => {
+    quiz.i++;
+    if (quiz.i < 5) { askRound(); return; }
+    answers.innerHTML = '';
+    nextBtn.hidden = true;
+    feedback.className = 'feedback ' + (quiz.score >= 4 ? 'ok' : 'no');
+    feedback.textContent = `Finished: ${quiz.score} of 5. ` + (quiz.score === 5 ? 'All five modes — nice.' : 'Exit, replay the ones you missed, then try again.');
+    document.getElementById('quizScore').textContent = 'Done';
+  });
+  document.getElementById('startQuiz').addEventListener('click', startQuiz);
+  document.getElementById('quitQuiz').addEventListener('click', () => {
+    const key = quiz ? quiz.order[Math.min(quiz.i, 4)] : 'L';
+    quiz = null;
+    qLive.hidden = true; qIntro.hidden = false;
+    readout.classList.remove('hidden');
+    document.getElementById('modes').style.opacity = '';
+    setMode(key);
+  });
+})();
+</script>
+</body>
+</html>
