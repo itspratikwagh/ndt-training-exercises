@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UT FPADSCRYN — What Frequency Changes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page: #f6f3ee; --panel: #fff; --ink: #1f1d1b; --ink-soft: #57524d; --ink-faded: #8f8882; --rule: #ddd6cc;
+    --red: #A82020; --red-deep: #7a1818; --navy: #0f1c2b;
+    --up: #ffb347; --down: #6ec6ff; --good: #0d904f; --good-tint: #e6f4ea; --bad: #d93025; --bad-tint: #fce8e6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Manrope', system-ui, sans-serif; background: var(--page); color: var(--ink); line-height: 1.5; min-height: 100vh; }
+  header { background: linear-gradient(135deg, var(--red-deep), var(--red)); color: #fff; padding: 1.4rem 1.5rem 1.2rem; }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  header .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; margin-bottom: 6px; }
+  header h1 { font-size: clamp(22px, 3.4vw, 30px); font-weight: 800; letter-spacing: -0.01em; line-height: 1.15; text-wrap: balance; }
+  header a.back { color: #fff; opacity: 0.8; font-size: 13px; text-decoration: none; display: inline-block; margin-top: 8px; }
+  header a.back:hover { opacity: 1; text-decoration: underline; }
+  main { padding: 1.25rem 1rem 3rem; }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+  .tabs button { flex: 1; padding: 10px; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; font: 700 14px 'Manrope', sans-serif; color: var(--ink-soft); cursor: pointer; }
+  .tabs button.active { background: var(--red); border-color: var(--red); color: #fff; }
+  .tabs button:focus-visible, button:focus-visible { outline: 3px solid var(--up); outline-offset: 2px; }
+
+  .steps { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 14px; color: var(--ink-soft); padding: 12px 16px; margin-bottom: 12px; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; }
+  .steps b { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--red); color: #fff; font-size: 12px; font-weight: 700; margin-right: 7px; }
+
+  .slider { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; padding: 14px 18px; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; margin-bottom: 10px; }
+  .slider .lab { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faded); }
+  .slider .val { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; min-width: 92px; text-align: right; font-variant-numeric: tabular-nums; }
+  .slider .val small { font-size: 12px; font-weight: 600; color: var(--ink-faded); margin-left: 4px; }
+  .slider input { width: 100%; accent-color: var(--red); height: 28px; }
+  .slider .ends { grid-column: 2; display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-faded); margin-top: -8px; }
+
+  canvas.strip { display: block; width: 100%; height: auto; background: var(--navy); border-radius: 10px; }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+  .tile { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 10px 8px; }
+  .tile .head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+  .tile .letter { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 16px; width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; color: #1f1d1b; }
+  .tile .letter.up { background: var(--up); } .tile .letter.down { background: var(--down); }
+  .tile .name { font-weight: 700; font-size: 14px; }
+  .tile .cap { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-faded); letter-spacing: 0.04em; }
+  .tile canvas { display: block; width: 100%; height: auto; background: var(--navy); border-radius: 6px; }
+  @media (max-width: 720px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 460px) { .tiles { grid-template-columns: 1fr; } .slider { grid-template-columns: 1fr; } .slider .val { text-align: left; } .slider .ends { grid-column: 1; } }
+
+  /* Drill */
+  .drill { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 16px; }
+  .drill h2 { font-size: 18px; font-weight: 800; }
+  .drill h2 .dir { color: var(--red); }
+  .drill .sub { font-size: 13px; color: var(--ink-faded); margin-top: 2px; }
+  .drill .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 14px; }
+  .drill .row button { padding: 9px 18px; border-radius: 6px; border: 1px solid var(--rule); background: var(--panel); font: 700 14px 'Manrope', sans-serif; color: var(--ink); cursor: pointer; }
+  .drill .row button.primary { background: var(--red); border-color: var(--red); color: #fff; }
+  .drill .row button:disabled { opacity: 0.35; cursor: default; }
+  .score { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faded); }
+  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
+  .card { border: 2px solid var(--rule); border-radius: 8px; padding: 10px; text-align: center; }
+  .card .L { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 20px; }
+  .card .w { font-size: 13px; color: var(--ink-soft); min-height: 20px; }
+  .card .ud { display: flex; gap: 6px; justify-content: center; margin-top: 8px; }
+  .card .ud button { width: 44px; height: 36px; border-radius: 6px; border: 1px solid var(--rule); background: var(--panel); font-size: 18px; cursor: pointer; }
+  .card .ud button.sel { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .card.right { border-color: var(--good); background: var(--good-tint); }
+  .card.wrong { border-color: var(--bad); background: var(--bad-tint); }
+  .card .ans { font-family: 'JetBrains Mono', monospace; font-size: 12px; margin-top: 6px; min-height: 18px; }
+  .card.right .ans { color: var(--good); } .card.wrong .ans { color: var(--bad); }
+  @media (max-width: 640px) { .cards { grid-template-columns: repeat(2, 1fr); } }
+
+  .slots { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px; }
+  .slot { width: 56px; height: 64px; border: 2px dashed var(--rule); border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 24px; cursor: pointer; background: var(--panel); }
+  .slot.filled { border-style: solid; border-color: var(--ink); }
+  .slot.fixed { border-color: var(--ink-faded); color: var(--ink-faded); cursor: default; }
+  .slot.right { border-color: var(--good); background: var(--good-tint); color: var(--good); }
+  .slot.wrong { border-color: var(--bad); background: var(--bad-tint); color: var(--bad); }
+  .slot small { font-family: 'Manrope', sans-serif; font-size: 9px; font-weight: 600; color: var(--ink-faded); margin-top: 2px; }
+  .bank { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .bank button { width: 48px; height: 48px; border-radius: 8px; border: 1px solid var(--rule); background: var(--page); font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 20px; cursor: pointer; }
+  .bank button:disabled { opacity: 0.2; cursor: default; }
+  .words { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 14px; margin-top: 12px; font-size: 13px; color: var(--ink-soft); }
+  .words b { font-family: 'JetBrains Mono', monospace; color: var(--ink); margin-right: 6px; }
+  .final { text-align: center; padding: 24px 0 8px; }
+  .final .big { font-size: 40px; font-weight: 800; letter-spacing: -0.02em; }
+  .final p { color: var(--ink-soft); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Ultrasonic Testing · Level 1</div>
+    <h1>FPADSCRYN — What Changes When You Change Frequency</h1>
+    <a class="back" href="index.html">← Exercise Hub</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="tabs">
+    <button id="tabExplore" class="active" type="button">Explore</button>
+    <button id="tabDrill" type="button">Drill</button>
+  </div>
+
+  <!-- EXPLORE -->
+  <section id="explore">
+    <div class="steps">
+      <span><b>1</b>Slide the frequency up and down</span>
+      <span><b>2</b>Watch the nine letters — every one moves opposite to the one before it</span>
+    </div>
+    <div class="slider">
+      <div class="lab">Frequency</div>
+      <input type="range" id="freq" min="1" max="10" step="0.1" value="5" aria-label="Frequency in megahertz">
+      <div class="val"><span id="fval">5.0</span><small>MHz</small></div>
+      <div class="ends"><span>low</span><span>high</span></div>
+    </div>
+    <canvas class="strip" id="strip" width="900" height="190" aria-label="Nine letters with level bars forming a zigzag"></canvas>
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <!-- DRILL -->
+  <section id="drill" hidden>
+    <div class="drill" id="drillBox"></div>
+  </section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  // Letters in mnemonic order. rises = true when the quantity goes UP as frequency goes UP.
+  const LETTERS = [
+    { L: 'F', word: 'Frequency',          rises: true,  capUp: 'more cycles',        capDown: 'fewer cycles' },
+    { L: 'P', word: 'Penetration',        rises: false, capUp: 'shallower',          capDown: 'deeper' },
+    { L: 'A', word: 'Attenuation',        rises: true,  capUp: 'dies faster',        capDown: 'dies slower' },
+    { L: 'D', word: 'Divergence',         rises: false, capUp: 'narrower beam',      capDown: 'wider beam' },
+    { L: 'S', word: 'Sensitivity',        rises: true,  capUp: 'finds smaller flaw', capDown: 'misses small flaw' },
+    { L: 'C', word: 'Crystal thickness',  rises: false, capUp: 'thinner',            capDown: 'thicker' },
+    { L: 'R', word: 'Resolution',         rises: true,  capUp: 'echoes separate',    capDown: 'echoes merge' },
+    { L: 'Y', word: 'Wavelength',         rises: false, capUp: 'shorter',            capDown: 'longer' },
+    { L: 'N', word: 'Near field',         rises: true,  capUp: 'longer',             capDown: 'shorter' }
+  ];
+  const UP = '#ffb347', DOWN = '#6ec6ff', TRACE = '#dfe8f0', DIM = 'rgba(255,255,255,0.35)';
+
+  let f = 5, u = (f - 1) / 9, us = u;     // us = smoothed for animation
+  let dirUp = true;                        // last slider direction
+  const freqEl = document.getElementById('freq');
+  freqEl.addEventListener('input', () => {
+    const nf = +freqEl.value;
+    if (nf !== f) dirUp = nf > f;
+    f = nf; u = (f - 1) / 9;
+    document.getElementById('fval').textContent = f.toFixed(1);
+    updateCaps();
+  });
+
+  // ---- Strip
+  const strip = document.getElementById('strip'), sctx = strip.getContext('2d');
+  function drawStrip() {
+    const W = 900, H = 190;
+    sctx.clearRect(0, 0, W, H);
+    const colW = W / 9, top = 52, base = 148, tops = [];
+    LETTERS.forEach((it, i) => {
+      const cx = colW * i + colW / 2;
+      const level = it.rises ? us : 1 - us;
+      const h = 10 + level * (base - top - 10);
+      const y = base - h;
+      tops.push([cx, y]);
+      sctx.fillStyle = it.rises ? UP : DOWN;
+      sctx.globalAlpha = 0.85;
+      sctx.fillRect(cx - 18, y, 36, h);
+      sctx.globalAlpha = 1;
+      // letter
+      sctx.fillStyle = '#fff'; sctx.textAlign = 'center';
+      sctx.font = '700 22px "JetBrains Mono", monospace';
+      sctx.fillText(it.L, cx, 28);
+      // arrow for the current slider direction
+      const goesUp = it.rises === dirUp;
+      sctx.fillStyle = goesUp ? UP : DOWN;
+      sctx.font = '700 16px "JetBrains Mono", monospace';
+      sctx.fillText(goesUp ? '▲' : '▼', cx, y - 12);
+      // word
+      sctx.fillStyle = DIM; sctx.font = '500 11px "JetBrains Mono", monospace';
+      const parts = it.word.split(' ');
+      parts.forEach((p, k) => sctx.fillText(p, cx, base + 16 + k * 13));
+    });
+    sctx.strokeStyle = '#A82020'; sctx.lineWidth = 2.5; sctx.lineJoin = 'round';
+    sctx.beginPath(); tops.forEach(([x, y], i) => i ? sctx.lineTo(x, y) : sctx.moveTo(x, y)); sctx.stroke();
+    sctx.fillStyle = '#fff';
+    tops.forEach(([x, y]) => { sctx.beginPath(); sctx.arc(x, y, 3.5, 0, 2 * Math.PI); sctx.fill(); });
+    sctx.strokeStyle = 'rgba(255,255,255,0.15)'; sctx.lineWidth = 1;
+    sctx.beginPath(); sctx.moveTo(20, base); sctx.lineTo(W - 20, base); sctx.stroke();
+  }
+
+  // ---- Tiles
+  const tilesEl = document.getElementById('tiles');
+  const tiles = LETTERS.map(it => {
+    const el = document.createElement('div'); el.className = 'tile';
+    el.innerHTML = `<div class="head"><span class="letter ${it.rises ? 'up' : 'down'}">${it.L}</span><span class="name">${it.word}</span><span class="cap"></span></div><canvas width="300" height="120"></canvas>`;
+    tilesEl.appendChild(el);
+    return { it, cap: el.querySelector('.cap'), c: el.querySelector('canvas').getContext('2d') };
+  });
+  function updateCaps() {
+    tiles.forEach(t => {
+      const goesUp = t.it.rises === dirUp;
+      t.cap.textContent = (goesUp ? '▲ ' : '▼ ') + (dirUp ? t.it.capUp : t.it.capDown);
+      t.cap.style.color = goesUp ? '#b3712a' : '#2f7fb0';
+    });
+  }
+  updateCaps();
+
+  function probe(c, x, y, w, h, vertical) {
+    c.fillStyle = '#2f2f33'; c.fillRect(x, y, w, h);
+    c.strokeStyle = '#8d8d95'; c.lineWidth = 1; c.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    c.fillStyle = UP;
+    if (vertical) c.fillRect(x, y + h - 3, w, 3); else c.fillRect(x + w - 3, y, 3, h);
+  }
+  function ascanBase(c) {
+    c.strokeStyle = 'rgba(255,255,255,0.12)'; c.lineWidth = 1;
+    for (let x = 20; x <= 280; x += 26) { c.beginPath(); c.moveTo(x, 10); c.lineTo(x, 100); c.stroke(); }
+    c.strokeStyle = 'rgba(255,255,255,0.35)'; c.beginPath(); c.moveTo(14, 100); c.lineTo(290, 100); c.stroke();
+  }
+  function peak(x, h, w, X) { const d = (X - x) / w; return h * Math.exp(-d * d * 2); }
+  function tracePath(c, fn, color) {
+    c.strokeStyle = color; c.lineWidth = 2; c.lineJoin = 'round'; c.beginPath();
+    for (let X = 14; X <= 290; X += 1) { const y = 100 - fn(X); X === 14 ? c.moveTo(X, y) : c.lineTo(X, y); }
+    c.stroke();
+  }
+  function marker(c, x, text, color) {
+    c.setLineDash([3, 4]); c.strokeStyle = color; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(x, 100); c.lineTo(x, 108); c.stroke(); c.setLineDash([]);
+    c.fillStyle = color; c.font = '10px "JetBrains Mono", monospace'; c.textAlign = 'center'; c.fillText(text, x, 118);
+  }
+
+  const DRAW = {
+    F(c, t) { // wave train, cycles inside a fixed window
+      probe(c, 8, 40, 24, 40, false);
+      const lam = 90 - 68 * us, k = 2 * Math.PI / lam, w = 2 * Math.PI * (0.8 + 1.8 * us);
+      c.strokeStyle = TRACE; c.lineWidth = 2; c.beginPath();
+      for (let x = 34; x <= 292; x++) { const y = 60 + 20 * Math.sin(k * x - w * t); x === 34 ? c.moveTo(x, y) : c.lineTo(x, y); }
+      c.stroke();
+      c.strokeStyle = UP; c.setLineDash([4, 4]); c.strokeRect(120.5, 30.5, 120, 60); c.setLineDash([]);
+      c.fillStyle = UP; c.font = '10px "JetBrains Mono", monospace'; c.textAlign = 'center';
+      const n = Math.round(120 / lam); c.fillText(`${n} cycle${n === 1 ? '' : 's'} in the same time`, 180, 108);
+    },
+    P(c) { // beam reaching into a block
+      c.fillStyle = '#4b5663'; c.fillRect(40, 18, 250, 96);
+      probe(c, 60, 4, 34, 14, true);
+      const reach = 96 * (1 - 0.78 * us);
+      const g = c.createLinearGradient(0, 18, 0, 18 + reach);
+      g.addColorStop(0, 'rgba(255,179,71,0.9)'); g.addColorStop(1, 'rgba(255,179,71,0)');
+      c.fillStyle = g; c.fillRect(62, 18, 30, reach);
+      c.setLineDash([3, 4]); c.strokeStyle = UP; c.beginPath(); c.moveTo(100, 18 + reach); c.lineTo(280, 18 + reach); c.stroke(); c.setLineDash([]);
+      c.fillStyle = UP; c.font = '10px "JetBrains Mono", monospace'; c.textAlign = 'right'; c.fillText('reaches here', 280, 14 + reach);
+    },
+    A(c) { // back-wall echoes dying off
+      ascanBase(c);
+      const r = 0.88 - 0.62 * us;
+      tracePath(c, X => { let y = peak(24, 80, 4, X); for (let k = 1; k <= 5; k++) y += peak(24 + k * 50, 70 * Math.pow(r, k), 4, X); return y; }, TRACE);
+      c.fillStyle = DIM; c.font = '10px "JetBrains Mono", monospace'; c.textAlign = 'right'; c.fillText('repeat echoes', 288, 118);
+    },
+    D(c) { // beam cone
+      probe(c, 8, 44, 24, 32, false);
+      const half = (20 - 17 * us) * Math.PI / 180, L = 258;
+      c.fillStyle = 'rgba(255,179,71,0.28)'; c.beginPath();
+      c.moveTo(32, 46); c.lineTo(32, 74); c.lineTo(32 + L, 74 + L * Math.tan(half)); c.lineTo(32 + L, 46 - L * Math.tan(half)); c.closePath(); c.fill();
+      c.strokeStyle = UP; c.lineWidth = 1.5; c.beginPath(); c.moveTo(32, 46); c.lineTo(32 + L, 46 - L * Math.tan(half)); c.moveTo(32, 74); c.lineTo(32 + L, 74 + L * Math.tan(half)); c.stroke();
+      c.setLineDash([3, 5]); c.strokeStyle = DIM; c.beginPath(); c.moveTo(32, 60); c.lineTo(292, 60); c.stroke(); c.setLineDash([]);
+    },
+    S(c, t) { // small flaw echo appears at high frequency
+      ascanBase(c);
+      const small = 62 * Math.pow(us, 1.6);
+      tracePath(c, X => peak(24, 80, 4, X) + peak(150, small, 3.5, X) + peak(262, 66, 4, X) + 2.5 * Math.sin(X * 0.9 + t * 7) * Math.sin(X * 0.23 - t * 3), TRACE);
+      marker(c, 150, 'small flaw', UP); marker(c, 262, 'back wall', DIM);
+    },
+    C(c) { // crystal slab thickness
+      c.strokeStyle = '#8d8d95'; c.lineWidth = 1.5; c.strokeRect(70.5, 10.5, 160, 100);
+      c.fillStyle = '#2f2f33'; c.fillRect(72, 12, 157, 97);
+      const th = 52 - 42 * us;
+      c.fillStyle = UP; c.fillRect(90, 108 - th, 120, th);
+      c.strokeStyle = '#fff'; c.lineWidth = 1; c.beginPath(); c.moveTo(240, 108 - th); c.lineTo(240, 108); c.stroke();
+      c.beginPath(); c.moveTo(236, 108 - th); c.lineTo(244, 108 - th); c.moveTo(236, 108); c.lineTo(244, 108); c.stroke();
+      c.fillStyle = DIM; c.font = '10px "JetBrains Mono", monospace'; c.textAlign = 'left'; c.fillText('crystal', 248, 108 - th / 2 + 4);
+    },
+    R(c) { // two close flaws: one blob or two peaks
+      ascanBase(c);
+      const w = 30 - 25.5 * us;
+      tracePath(c, X => peak(24, 80, 4, X) + peak(146, 58, w, X) + peak(184, 58, w, X), TRACE);
+      marker(c, 146, '1', UP); marker(c, 184, '2', UP);
+      c.fillStyle = DIM; c.font = '10px "JetBrains Mono", monospace'; c.textAlign = 'right'; c.fillText('two close flaws', 288, 118);
+    },
+    Y(c, t) { // wavelength bracket between crests
+      const lam = 96 - 74 * us, k = 2 * Math.PI / lam, w = 2 * Math.PI * 0.9;
+      c.strokeStyle = TRACE; c.lineWidth = 2; c.beginPath();
+      for (let x = 10; x <= 292; x++) { const y = 58 + 22 * Math.sin(k * x - w * t); x === 10 ? c.moveTo(x, y) : c.lineTo(x, y); }
+      c.stroke();
+      // crest positions: k x - w t = π/2 + 2πn
+      const n = Math.ceil((k * 110 - w * t - Math.PI / 2) / (2 * Math.PI));
+      const x1 = (Math.PI / 2 + 2 * Math.PI * n + w * t) / k, x2 = x1 + lam;
+      c.strokeStyle = UP; c.lineWidth = 1.5; c.beginPath();
+      c.moveTo(x1, 26); c.lineTo(x1, 34); c.moveTo(x1, 30); c.lineTo(x2, 30); c.moveTo(x2, 26); c.lineTo(x2, 34); c.stroke();
+      c.fillStyle = UP; c.font = '700 12px "JetBrains Mono", monospace'; c.textAlign = 'center'; c.fillText('λ', (x1 + x2) / 2, 18);
+      c.fillStyle = DIM; c.font = '10px "JetBrains Mono", monospace'; c.fillText('one wavelength', 150, 112);
+    },
+    N(c) { // near field zone then spread
+      probe(c, 8, 44, 24, 32, false);
+      const L = 60 + 160 * us, half = 9 * Math.PI / 180;
+      c.fillStyle = 'rgba(255,179,71,0.45)'; c.fillRect(32, 46, L, 28);
+      const rest = 292 - 32 - L;
+      c.fillStyle = 'rgba(255,179,71,0.18)'; c.beginPath();
+      c.moveTo(32 + L, 46); c.lineTo(32 + L, 74); c.lineTo(292, 74 + rest * Math.tan(half)); c.lineTo(292, 46 - rest * Math.tan(half)); c.closePath(); c.fill();
+      c.strokeStyle = UP; c.lineWidth = 1.5; c.beginPath(); c.moveTo(32, 30); c.lineTo(32, 38); c.moveTo(32, 34); c.lineTo(32 + L, 34); c.moveTo(32 + L, 30); c.lineTo(32 + L, 38); c.stroke();
+      c.fillStyle = UP; c.font = '10px "JetBrains Mono", monospace'; c.textAlign = 'left'; c.fillText('near field', 36, 24);
+    }
+  };
+
+  let last = null;
+  function frame(now) {
+    if (last === null) last = now;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    us += (u - us) * Math.min(1, dt * 6);
+    if (!document.getElementById('explore').hidden) {
+      drawStrip();
+      const t = now / 1000;
+      tiles.forEach(tl => { tl.c.clearRect(0, 0, 300, 120); DRAW[tl.it.L](tl.c, t); });
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // ---- Tabs
+  const exploreEl = document.getElementById('explore'), drillEl = document.getElementById('drill');
+  document.getElementById('tabExplore').addEventListener('click', () => switchTab(true));
+  document.getElementById('tabDrill').addEventListener('click', () => switchTab(false));
+  function switchTab(explore) {
+    exploreEl.hidden = !explore; drillEl.hidden = explore;
+    document.getElementById('tabExplore').classList.toggle('active', explore);
+    document.getElementById('tabDrill').classList.toggle('active', !explore);
+    if (!explore && !drillStarted) startDrill();
+  }
+
+  // ---- Drill
+  const box = document.getElementById('drillBox');
+  let drillStarted = false, total = 0;
+  function startDrill() { drillStarted = true; total = 0; arrowRound(true); }
+
+  function arrowRound(goingUp) {
+    const rest = LETTERS.slice(1);
+    const picks = {};
+    box.innerHTML = `
+      <h2>Frequency goes <span class="dir">${goingUp ? 'UP ▲' : 'DOWN ▼'}</span>. Which way does each one go?</h2>
+      <div class="sub">▲ = more, longer, better &nbsp;·&nbsp; ▼ = less, shorter, worse</div>
+      <div class="cards" id="cards"></div>
+      <div class="row"><button class="primary" id="check" type="button" disabled>Check</button><button id="next" type="button" hidden>Next round →</button><span class="score" id="sc">Round ${goingUp ? 1 : 2} of 3</span></div>`;
+    const cards = document.getElementById('cards');
+    rest.forEach(it => {
+      const el = document.createElement('div'); el.className = 'card'; el.setAttribute('data-l', it.L);
+      el.innerHTML = `<div class="L">${it.L}</div><div class="w">${it.word}</div><div class="ud"><button type="button" data-v="up">▲</button><button type="button" data-v="down">▼</button></div><div class="ans"></div>`;
+      el.querySelectorAll('.ud button').forEach(b => b.addEventListener('click', () => {
+        picks[it.L] = b.dataset.v;
+        el.querySelectorAll('.ud button').forEach(x => x.classList.toggle('sel', x === b));
+        document.getElementById('check').disabled = Object.keys(picks).length < rest.length;
+      }));
+      cards.appendChild(el);
+    });
+    document.getElementById('check').addEventListener('click', () => {
+      let score = 0;
+      rest.forEach(it => {
+        const correct = (it.rises === goingUp) ? 'up' : 'down';
+        const el = cards.querySelector(`[data-l="${it.L}"]`);
+        const ok = picks[it.L] === correct; if (ok) score++;
+        el.classList.add(ok ? 'right' : 'wrong');
+        el.querySelector('.ans').textContent = ok ? '✓' : `✗ goes ${correct === 'up' ? '▲' : '▼'}`;
+        el.querySelectorAll('.ud button').forEach(b => b.disabled = true);
+      });
+      total += score;
+      document.getElementById('sc').textContent = `${score} of 8 · Round ${goingUp ? 1 : 2} of 3`;
+      document.getElementById('check').hidden = true;
+      document.getElementById('next').hidden = false;
+    });
+    document.getElementById('next').addEventListener('click', () => goingUp ? arrowRound(false) : acronymRound());
+  }
+
+  function acronymRound() {
+    const bank = LETTERS.slice(1).map(it => it.L).sort(() => Math.random() - 0.5);
+    const filled = [ 'F' ];
+    box.innerHTML = `
+      <h2>Spell the mnemonic</h2>
+      <div class="sub">Tap the letters in order. Tap a slot to take a letter back.</div>
+      <div class="slots" id="slots"></div>
+      <div class="bank" id="bank"></div>
+      <div class="words" id="words" hidden></div>
+      <div class="row"><button class="primary" id="check" type="button" disabled>Check</button><button id="finish" type="button" hidden>See score →</button><span class="score" id="sc">Round 3 of 3</span></div>`;
+    const slots = document.getElementById('slots'), bankEl = document.getElementById('bank');
+    function render() {
+      slots.innerHTML = '';
+      for (let i = 0; i < 9; i++) {
+        const d = document.createElement('div');
+        d.className = 'slot' + (i === 0 ? ' fixed' : filled[i] ? ' filled' : '');
+        d.textContent = filled[i] || '';
+        if (i > 0 && filled[i]) d.addEventListener('click', () => { if (checked) return; filled.splice(i, 1); render(); });
+        slots.appendChild(d);
+      }
+      bankEl.querySelectorAll('button').forEach(b => { b.disabled = filled.includes(b.textContent); });
+      document.getElementById('check').disabled = filled.length < 9;
+    }
+    let checked = false;
+    bank.forEach(L => {
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = L;
+      b.addEventListener('click', () => { if (checked || filled.length >= 9) return; filled.push(L); render(); });
+      bankEl.appendChild(b);
+    });
+    render();
+    document.getElementById('check').addEventListener('click', () => {
+      checked = true; let score = 0;
+      slots.querySelectorAll('.slot').forEach((d, i) => {
+        if (i === 0) return;
+        const ok = filled[i] === LETTERS[i].L; if (ok) score++;
+        d.classList.add(ok ? 'right' : 'wrong');
+        if (!ok) { d.innerHTML = `${filled[i]}<small>→ ${LETTERS[i].L}</small>`; }
+      });
+      total += score;
+      const words = document.getElementById('words');
+      words.innerHTML = LETTERS.map(it => `<div><b>${it.L}</b>${it.word}</div>`).join('');
+      words.hidden = false;
+      document.getElementById('sc').textContent = `${score} of 8 · Round 3 of 3`;
+      document.getElementById('check').hidden = true;
+      document.getElementById('finish').hidden = false;
+    });
+    document.getElementById('finish').addEventListener('click', () => {
+      box.innerHTML = `<div class="final"><div class="big">${total} / 24</div><p>${total === 24 ? 'Perfect. You own the zigzag.' : total >= 18 ? 'Solid. Replay the ones you missed in Explore.' : 'Go back to Explore, slide it a few more times, then try again.'}</p>
+        <div class="row" style="justify-content:center"><button class="primary" id="again" type="button">Try again</button><button id="back" type="button">Back to Explore</button></div></div>`;
+      document.getElementById('again').addEventListener('click', startDrill);
+      document.getElementById('back').addEventListener('click', () => switchTab(true));
+    });
+  }
+})();
+</script>
+</body>
+</html>
