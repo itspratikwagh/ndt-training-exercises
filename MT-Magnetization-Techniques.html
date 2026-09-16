@@ -136,7 +136,16 @@
   .flowslow { stroke-dasharray: 6 9; animation: dashflow 1.5s linear infinite; }
   svg .egroup { opacity: 0; transition: opacity .6s; }
   svg.on .egroup { opacity: 1; }
-  svg .ind { transition: opacity .6s; }
+  svg .ind {
+    transition: opacity .6s;
+    stroke: #ff2323;
+    filter: blur(0.5px) drop-shadow(0 0 6px rgba(255,45,45,0.95));
+  }
+  svg.on .ind { animation: indpulse 0.85s ease-in-out infinite; }
+  @keyframes indpulse {
+    0%, 100% { opacity: 1; stroke-width: 9; }
+    50% { opacity: 0.6; stroke-width: 7; }
+  }
   .dropzone {
     fill: rgba(181,69,21,0.05); stroke: var(--amber); stroke-width: 1.6;
     stroke-dasharray: 6 5; animation: dzpulse 1.6s ease-in-out infinite;
@@ -145,7 +154,30 @@
   .dropzone.hidden { display: none; }
   @media (prefers-reduced-motion: reduce) {
     .flow, .flowslow, .dropzone { animation: none; }
+    svg.on .ind { animation: none; }
   }
+
+  /* prediction question */
+  .predict {
+    display: none; margin-top: 12px; padding: 12px 16px;
+    background: var(--flux-tint); border-left: 3px solid var(--flux); border-radius: 2px;
+    align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .predict.show { display: flex; }
+  .predict .q { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .predict button {
+    font-family: var(--sans); font-weight: 700; font-size: 13px;
+    background: #fff; border: 1.5px solid var(--rule); border-radius: 2px;
+    padding: 9px 16px; cursor: pointer; color: var(--ink);
+  }
+  .predict button:hover:not(:disabled) { border-color: var(--flux); color: var(--flux); }
+  .predict button.sel { background: var(--flux); border-color: var(--flux); color: #fff; }
+  .predict button:disabled { opacity: .55; cursor: default; }
+  .predict button.sel:disabled { opacity: 1; }
+  .predict .pfb { font-size: 13.5px; font-weight: 700; }
+  .predict .pfb.ok { color: var(--good); }
+  .predict .pfb.bad { color: var(--bad); }
+  body.review .predict { display: none; }
 
   /* instruction + controls */
   .ctlrow { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 12px; }
@@ -823,9 +855,18 @@ let coilDx = 0, coilEnergized = false;
    projects usable longitudinal flux roughly ±110 from its center */
 function updateCoilIndication() {
   const visible = coilEnergized && Math.abs(372 - (330 + coilDx)) <= 110;
-  $('c_ind2').setAttribute('opacity', visible ? 0.85 : 0);
+  $('c_ind2').style.display = visible ? '' : 'none';
   $('c_field').setAttribute('transform', `translate(${coilDx} 0)`);
 }
+
+/* the right prediction for each technique, plus what actually happens */
+const PREDICT = {
+  svg_yoke:    { correct: '1', hitDesc: '① lights up red — it lies across the pole-to-pole flux; ② runs along it and stays dark.' },
+  svg_coil:    { correct: '2', hitDesc: '② lights up red — the transverse crack cuts the longitudinal field; the seam ① runs with it and stays dark.' },
+  svg_head:    { correct: '1', hitDesc: '① lights up red — the seam cuts the circular hoops; the transverse crack ② runs with them and stays dark.' },
+  svg_prods:   { correct: '1', hitDesc: '① lights up red — it lies across the surface flux between the tips; ② stays dark.' },
+  svg_central: { correct: '1', hitDesc: '① lights up red — the seam cuts the circular field in the pipe wall; ② stays dark.' }
+};
 
 const SCENES = [
   { svg: 'svg_yoke',    items: [{ g: 'y_yoke', dz: 'y_dz', home: [40, -60], tol: 46 }] },
@@ -846,6 +887,25 @@ SCENES.forEach((scene, i) => {
   const instr = section.querySelector('[data-role=instr]');
   let placedCount = 0;
 
+  /* prediction panel — appears once everything is placed, gates the energize button */
+  const predict = document.createElement('div');
+  predict.className = 'predict';
+  predict.innerHTML = `<span class="q">Before you energize — which flaw will collect particles?</span>
+    <button type="button" data-g="1">① only</button>
+    <button type="button" data-g="2">② only</button>
+    <button type="button" data-g="both">Both ① and ②</button>
+    <span class="pfb"></span>`;
+  section.querySelector('.ctlrow').before(predict);
+  let guess = null;
+  predict.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    if (guess) return;
+    guess = b.dataset.g;
+    b.classList.add('sel');
+    predict.querySelectorAll('button').forEach(x => x.disabled = true);
+    energizeBtn.disabled = false;
+    instr.textContent = '⚡ Prediction locked in — press Energize to find out.';
+  }));
+
   scene.items.forEach(item => {
     makeDraggable(svg, $(item.g), {
       home: item.home, tol: item.tol, dz: $(item.dz),
@@ -853,8 +913,8 @@ SCENES.forEach((scene, i) => {
       onPlace: () => {
         placedCount++;
         if (placedCount === scene.items.length) {
-          energizeBtn.disabled = false;
-          instr.textContent = '✓ In position. Now press Energize.';
+          predict.classList.add('show');
+          instr.textContent = '✓ In position. Make your prediction below — then you can energize.';
         } else {
           instr.textContent = '✓ One placed — now the other prod.';
         }
@@ -865,11 +925,18 @@ SCENES.forEach((scene, i) => {
   energizeBtn.addEventListener('click', () => {
     svg.classList.add('on');
     energizeBtn.disabled = true;
+    const pc = PREDICT[scene.svg];
+    const fbEl = predict.querySelector('.pfb');
+    const ok = guess === pc.correct;
+    fbEl.textContent = ok
+      ? '✓ Called it — ' + pc.hitDesc
+      : '✗ You guessed ' + (guess === 'both' ? 'both' : '“' + (guess === '1' ? '①' : '②') + ' only”') + '. Watch the part: ' + pc.hitDesc;
+    fbEl.className = 'pfb ' + (ok ? 'ok' : 'bad');
     section.querySelector('.resultstrip').classList.add('show');
     nextBtn.classList.add('show');
     instr.textContent = scene.svg === 'svg_coil'
       ? '⚡ Energized. Try sliding the coil along the bar.'
-      : '⚡ Energized. Watch the two colors — then read the verdict below.';
+      : '⚡ Energized. The pulsing red flaw is the one this field catches — read why below.';
     if (scene.svg === 'svg_coil') { coilEnergized = true; updateCoilIndication(); }
     stepEls[i].classList.add('done');
   });
