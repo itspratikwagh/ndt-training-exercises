@@ -77,6 +77,18 @@
   .popcard button.primary { background: var(--amber); border-color: var(--amber); color: #fff; }
   .popcard button:hover { border-color: var(--amber); }
   .popcard button.primary:hover { background: #9a3a12; }
+  .popcard.quiz { text-align: left; max-width: 490px; }
+  .popcard.quiz .qtag { font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--amber); margin-bottom: 8px; text-align: center; }
+  .popcard.quiz .qtext { font-size: 16px; font-weight: 700; color: var(--ink); margin-bottom: 16px; text-align: center; }
+  #quizRow { justify-content: center; margin-bottom: 4px; }
+  #quizRow button.sel.right { background: var(--good); border-color: var(--good); color: #fff; opacity: 1; }
+  #quizRow button.sel.wrong { background: var(--bad); border-color: var(--bad); color: #fff; opacity: 1; }
+  #quizRow button:disabled { opacity: .45; cursor: default; }
+  .qexplain { display: none; margin-top: 16px; font-size: 13.5px; color: var(--ink-soft); line-height: 1.5; }
+  .qexplain p { margin-bottom: 9px; }
+  .qexplain b { color: var(--ink); }
+  .qexplain .qref { font-family: var(--mono); font-size: 11px; color: var(--amber); letter-spacing: .03em; margin-top: 2px; }
+  #quizDone { margin-top: 8px; }
 
   .veil { position: fixed; inset: 0; background: rgba(26,24,20,.55); backdrop-filter: blur(2px); display: flex; align-items: flex-start; justify-content: center; z-index: 100; padding: 28px 24px; overflow-y: auto; }
   .veil.hidden { display: none; }
@@ -109,7 +121,7 @@
     <canvas id="cv" width="940" height="430"></canvas>
   </div>
 
-  <footer>MT Coil · Shot = one burst, part stays · Demag = AC, part leaves · Accept ≤ 3 G</footer>
+  <footer>MT Coil · Continuous wet shot · AC demag · Accept ≤ 3 G</footer>
 </div>
 
 <div class="pop" id="pop">
@@ -123,13 +135,26 @@
   </div>
 </div>
 
+<div class="pop" id="quiz">
+  <div class="popcard quiz">
+    <div class="qtag">One last question</div>
+    <p class="qtext">You wet the part first, then fired the shots. Which magnetizing technique was that?</p>
+    <div class="row" id="quizRow">
+      <button id="quizCont" type="button">Continuous</button>
+      <button id="quizResid" type="button">Residual</button>
+    </div>
+    <div class="qexplain" id="quizExplain"></div>
+    <button class="primary" id="quizDone" type="button" style="display:none">Run again →</button>
+  </div>
+</div>
+
 <div class="veil" id="intro">
   <div class="card">
     <div class="eyebrow">MT · One Coil, Two Jobs</div>
     <h2>Make a magnet — <em>then unmake it</em></h2>
     <p>The same bench coil magnetizes and demagnetizes. The difference is the current, and what the part does:</p>
     <ol>
-      <li><b>SHOT:</b> part inside the coil, wet it with bath, two ½-second shots — one steady burst. The particles pile up at the ends: it's a magnet now.</li>
+      <li><b>SHOT · continuous wet method:</b> wet the part, stop the flow, then two ½-second shots <i>while it's still wet</i>. Particles pile up at the ends — it's a magnet now.</li>
       <li><b>DEMAG:</b> flip the selector — continuous AC. Coil on, <b>pull the part through and past the line</b>, coil off.</li>
       <li><b>Check</b> with the field indicator — under <b>3 G</b> passes.</li>
     </ol>
@@ -177,7 +202,7 @@ function setPhase(p){
   stage.classList.toggle('grab', p !== 'done');
   if (p === 'load')       stepText.innerHTML = 'Fresh part. <b>Drag it into the coil.</b>';
   else if (p === 'bath')  stepText.innerHTML = 'Mode: <b>SHOT</b>. Hold <b>BATH</b> — wet the part with fluorescent particles.';
-  else if (p === 'shot')  stepText.innerHTML = 'Now magnetize: <b>hold SHOT about ½ second — twice.</b>';
+  else if (p === 'shot')  stepText.innerHTML = 'Bath flow off. Now <b>hold SHOT about ½ second — twice</b>, while it’s still wet.';
   else if (p === 'check1'){
     state.indParked = false; state.ind = { ...IND_HOME };
     state.seenPlus = false; state.seenMinus = false;
@@ -316,10 +341,11 @@ function popVerdict(accepted){
     $('popQ').innerHTML = (right ? '✓ Correct — ' : '✗ Don’t reject it — ') +
       g.toFixed(1) + ' G is under the <b>3 G limit</b>. This part is done.';
     setTimeout(() => {
-      $('pop').classList.remove('show'); state.popOpen = false;
-      state.phase = 'done';
-      stepText.innerHTML = `<b>PASS — ${g.toFixed(1)} G.</b> Magnet made, magnet unmade. <button id="againBtn" type="button">Run again →</button>`;
-      $('againBtn').addEventListener('click', reset);
+      $('pop').classList.remove('show');
+      state.phase = 'quiz';
+      stage.classList.remove('grab');
+      stepText.innerHTML = `<b>PASS — ${g.toFixed(1)} G.</b> Magnet made, magnet unmade — one last question.`;
+      openQuiz();
     }, 2000);
   } else {
     $('popQ').innerHTML = (right ? '✓ Correct — ' : '✗ Never accept this — ') +
@@ -332,6 +358,39 @@ function popVerdict(accepted){
 }
 $('popAccept').addEventListener('click', () => popVerdict(true));
 $('popReject').addEventListener('click', () => popVerdict(false));
+
+/* ---------------- continuous-vs-residual quiz ---------------- */
+const EXPLAIN =
+  '<p><b>Continuous</b> — the particles are on the part and still mobile <i>while it is being magnetized</i>, so they gather at a flaw at full field strength. That is what you did — and it is the more sensitive, more common method.</p>' +
+  '<p><b>Residual</b> — magnetize <i>first</i>, remove the current, <i>then</i> apply the particles, relying on the field the part retains. It only works on high-retentivity steels and is less sensitive.</p>' +
+  '<p><b>Why stop the bath before the shot?</b> A flowing stream during the shot would wash the indication away as it forms — so you flood the part, cut the flow, then shoot while the film is still wet.</p>' +
+  '<p class="qref">You’ll try the residual technique in a later exercise. · per ASNT / ASTM E1444 &amp; E709</p>';
+
+function openQuiz(){
+  $('quizExplain').style.display = 'none';
+  $('quizExplain').innerHTML = '';
+  $('quizDone').style.display = 'none';
+  ['quizCont', 'quizResid'].forEach(id => { const b = $(id); b.disabled = false; b.className = ''; });
+  $('quiz').classList.add('show');
+  state.popOpen = true;
+}
+function answerQuiz(pick){
+  ['quizCont', 'quizResid'].forEach(id => $(id).disabled = true);
+  const btn = pick === 'cont' ? $('quizCont') : $('quizResid');
+  btn.classList.add('sel', pick === 'cont' ? 'right' : 'wrong');
+  const head = pick === 'cont'
+    ? '<p><b>✓ Correct — this was the continuous method.</b></p>'
+    : '<p><b>✗ Not quite — this was the continuous method, not residual.</b></p>';
+  $('quizExplain').innerHTML = head + EXPLAIN;
+  $('quizExplain').style.display = 'block';
+  $('quizDone').style.display = 'inline-block';
+}
+$('quizCont').addEventListener('click', () => answerQuiz('cont'));
+$('quizResid').addEventListener('click', () => answerQuiz('resid'));
+$('quizDone').addEventListener('click', () => {
+  $('quiz').classList.remove('show'); state.popOpen = false;
+  reset();
+});
 
 function reset(){
   state.mode = 'SHOT'; state.part.x = 170;
