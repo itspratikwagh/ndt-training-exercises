@@ -37,22 +37,15 @@
   .instr {
     background: var(--ink); color: var(--paper); border-radius: 2px; padding: 16px 22px;
     margin-bottom: 14px; box-shadow: var(--shadow);
-    display: grid; grid-template-columns: 1fr auto; gap: 8px 24px; align-items: center;
-    min-height: 72px; position: relative;
+    display: flex; align-items: center; min-height: 72px; position: relative;
   }
   .instr::before { content: ''; position: absolute; inset: 4px; border: 1px solid rgba(232,168,124,0.18); border-radius: 2px; pointer-events: none; }
   .instr .text { font-size: 17px; font-weight: 600; }
   .instr .text b { color: var(--amber-soft); }
-  .instr .chip {
-    font-family: var(--mono); font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums;
-    color: var(--amber-soft); text-align: right; line-height: 1.1;
-  }
-  .instr .chip small { display: block; font-size: 9px; letter-spacing: .16em; color: #b9b4aa; }
-  .instr .chip.pass { color: #6fce9a; }
   .instr button {
     font-family: var(--sans); font-weight: 700; font-size: 14px;
     background: var(--amber); color: #fff; border: none; border-radius: 2px;
-    padding: 11px 22px; cursor: pointer;
+    padding: 10px 20px; cursor: pointer; margin-left: 12px; position: relative;
   }
   .instr button:hover { background: #9a3a12; }
 
@@ -62,8 +55,29 @@
     touch-action: none; user-select: none; -webkit-user-select: none; background: #262320;
   }
   .stage canvas { display: block; width: 100%; height: auto; }
-  .stage.point { cursor: pointer; }
   .stage.grab { cursor: grab; }
+
+  /* accept/reject popup */
+  .pop {
+    position: fixed; inset: 0; background: rgba(26,24,20,.5); backdrop-filter: blur(1px);
+    display: none; align-items: center; justify-content: center; z-index: 90; padding: 24px;
+  }
+  .pop.show { display: flex; }
+  .popcard {
+    background: var(--paper); border-radius: 3px; box-shadow: 0 24px 80px -20px rgba(0,0,0,.5);
+    max-width: 430px; width: 100%; padding: 26px 30px; text-align: center;
+  }
+  .popcard .big { font-family: var(--mono); font-size: 34px; font-weight: 600; margin-bottom: 6px; }
+  .popcard .big.ok { color: var(--good); } .popcard .big.no { color: var(--bad); }
+  .popcard p { font-size: 15.5px; font-weight: 600; color: var(--ink-soft); margin-bottom: 18px; }
+  .popcard .row { display: flex; gap: 10px; justify-content: center; }
+  .popcard button {
+    font-family: var(--sans); font-weight: 700; font-size: 14.5px; border-radius: 2px;
+    padding: 12px 24px; cursor: pointer; border: 1.5px solid var(--rule); background: #fff; color: var(--ink);
+  }
+  .popcard button.primary { background: var(--amber); border-color: var(--amber); color: #fff; }
+  .popcard button:hover { border-color: var(--amber); }
+  .popcard button.primary:hover { background: #9a3a12; }
 
   .veil { position: fixed; inset: 0; background: rgba(26,24,20,.55); backdrop-filter: blur(2px); display: flex; align-items: flex-start; justify-content: center; z-index: 100; padding: 28px 24px; overflow-y: auto; }
   .veil.hidden { display: none; }
@@ -90,27 +104,35 @@
     <a class="back" href="index.html" target="_top">← Exercise Hub</a>
   </header>
 
-  <div class="instr">
-    <div class="text" id="stepText">…</div>
-    <div class="chip" id="chip"><small>FIELD IN PART</small><span id="chipVal">—</span></div>
-  </div>
+  <div class="instr"><div class="text" id="stepText">…</div></div>
 
   <div class="stage" id="stage">
     <canvas id="cv" width="940" height="430"></canvas>
   </div>
 
-  <footer>MT Demagnetization · AC yoke · Pass ≤ 3 G</footer>
+  <footer>MT Demagnetization · AC yoke · Accept ≤ 3 G</footer>
+</div>
+
+<div class="pop" id="pop">
+  <div class="popcard">
+    <div class="big" id="popG">1.0 G</div>
+    <p id="popQ">Accept this demagnetization?</p>
+    <div class="row" id="popRow">
+      <button class="primary" id="popAccept" type="button">✓ Accept</button>
+      <button id="popReject" type="button">✗ Reject</button>
+    </div>
+  </div>
 </div>
 
 <div class="veil" id="intro">
   <div class="card">
     <div class="eyebrow">MT · After the Inspection</div>
     <h2>Take the magnetism <em>back out</em></h2>
-    <p>A part leaves MT still magnetized — bad for welding, machining and bearings. The fix takes one slow move:</p>
+    <p>A part leaves MT still magnetized — bad for welding, machining and bearings. Three moves:</p>
     <ol>
-      <li><b>Check</b> the part with the field indicator.</li>
-      <li><b>Hold</b> the yoke's trigger, touch the part, <b>pull away slowly</b> — let go only past the line.</li>
-      <li><b>Check again.</b> Under <b>3 G</b> passes.</li>
+      <li><b>Check:</b> slide the field indicator to each end — the needle kicks <b>+</b> at one pole, <b>−</b> at the other.</li>
+      <li><b>Demag:</b> hold the yoke's trigger, touch the part, pull away slowly, let go past the line.</li>
+      <li><b>Check again</b> — and make the call.</li>
     </ol>
     <button class="primary" id="beginBtn">Start →</button>
   </div>
@@ -122,43 +144,69 @@
 const W = 940, H = 430;
 const $ = id => document.getElementById(id);
 const stage = $('stage'), cv = $('cv'), ctx = cv.getContext('2d');
-const stepText = $('stepText'), chip = $('chip'), chipVal = $('chipVal');
+const stepText = $('stepText');
 
 /* ---------------- layout ---------------- */
-const BAR = { x: 110, y: 285, w: 300, h: 52 };                 // steel part
-const METER = { x: 205, y: 120 };                              // gauge above the part
-const LINE_X = 760;                                            // release line
-const YOKE_HOME = { x: 640, y: 250 };
+const BAR = { x: 110, y: 285, w: 300, h: 52 };
+const ENDS = [
+  { x: BAR.x + 10,        y: BAR.y + BAR.h / 2, sign: -1 },   // south pole end
+  { x: BAR.x + BAR.w - 10, y: BAR.y + BAR.h / 2, sign: 1 }    // north pole end
+];
+const LINE_X = 760;
+const YOKE_HOME = { x: 640, y: 240 };
+const IND_HOME = { x: 545, y: 150 };
+const IND_PARK = { x: 92, y: 105 };
 
 /* ---------------- state ---------------- */
 const state = {
   phase: 'intro',            // check1 → demag → check2 → done
-  residual: 0, shown: 0,     // actual G / needle (spring-damped)
-  meterOn: false,
+  residual: 0,
+  ind: { x: IND_HOME.x, y: IND_HOME.y },
+  shown: 0,                  // needle value, spring-damped, signed
+  indDrag: false, indParked: false,
+  seenPlus: false, seenMinus: false,
   yoke: { x: YOKE_HOME.x, y: YOKE_HOME.y },
   held: false, contact: false, grabOff: null,
+  readT: 0, popOpen: false,
   passes: 0
 };
 function newPart(){
-  state.residual = 15 + Math.random() * 7;                     // 15–22 G
-  state.meterOn = false; state.contact = false; state.held = false;
+  state.residual = 15 + Math.random() * 7;
+  state.seenPlus = false; state.seenMinus = false;
+  state.contact = false; state.held = false; state.readT = 0;
   state.yoke = { x: YOKE_HOME.x, y: YOKE_HOME.y };
   state.passes = 0;
 }
+function parkIndicator(park){
+  state.indParked = park;
+  state.ind = park ? { ...IND_PARK } : { ...IND_PARK };
+}
 function setPhase(p){
   state.phase = p;
-  stage.classList.toggle('point', p === 'check1' || p === 'check2');
-  stage.classList.toggle('grab', p === 'demag');
-  if (p === 'check1') stepText.innerHTML = 'Tap the <b>field indicator</b>.';
-  else if (p === 'demag') stepText.innerHTML = '<b>Press &amp; hold</b> the yoke — touch it to the part.';
-  else if (p === 'check2') stepText.innerHTML = 'Tap the <b>field indicator</b> again.';
+  stage.classList.toggle('grab', p === 'check1' || p === 'check2' || p === 'demag');
+  if (p === 'check1') stepText.innerHTML = 'Drag the <b>field indicator</b> to <b>both ends</b> of the part.';
+  else if (p === 'demag'){
+    parkIndicator(true);
+    stepText.innerHTML = '<b>Press &amp; hold</b> the yoke — touch the part, pull away past the line, let go.';
+  }
+  else if (p === 'check2'){
+    state.indParked = false; state.readT = 0;
+    stepText.innerHTML = 'Did it work? <b>Bring the indicator back to the part.</b>';
+  }
 }
 
-/* distance from yoke poles to the part (px) */
+/* signed reading: + near the north end, − near the south end */
+function rawReading(){
+  let r = 0;
+  for (const e of ENDS){
+    const d = Math.hypot(state.ind.x - e.x, (state.ind.y + 40) - e.y);
+    r += e.sign * state.residual * Math.exp(-d / 70);
+  }
+  return r;
+}
 function yokeDist(){
   const px = Math.max(BAR.x, Math.min(BAR.x + BAR.w, state.yoke.x));
-  const py = BAR.y;
-  return Math.hypot(state.yoke.x - px, (state.yoke.y + 62) - py);
+  return Math.hypot(state.yoke.x - px, (state.yoke.y + 62) - BAR.y);
 }
 
 /* ---------------- interaction ---------------- */
@@ -166,33 +214,16 @@ function pos(e){
   const r = cv.getBoundingClientRect();
   return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
 }
-function onMeter(p){ return Math.hypot(p.x - METER.x, p.y - METER.y) < 95; }
-function onYoke(p){ return Math.abs(p.x - state.yoke.x) < 75 && Math.abs(p.y - state.yoke.y) < 75; }
+const onInd = p => Math.hypot(p.x - state.ind.x, p.y - state.ind.y) < 62;
+const onYoke = p => Math.abs(p.x - state.yoke.x) < 75 && Math.abs(p.y - state.yoke.y) < 75;
 
 stage.addEventListener('pointerdown', e => {
+  if (state.popOpen) return;
   const p = pos(e);
-  if (state.phase === 'check1' && onMeter(p)){
-    state.meterOn = true;
-    setTimeout(() => setPhase('demag'), 1300);
-  } else if (state.phase === 'check2' && onMeter(p)){
-    const g = state.residual;
-    if (g <= 3){
-      state.phase = 'done';
-      stage.classList.remove('point');
-      stepText.innerHTML = `<b>${g.toFixed(1)} G — PASS.</b> Demagnetized in ${state.passes} pass${state.passes === 1 ? '' : 'es'}. <button id="againBtn" type="button">Run again →</button>`;
-      chip.classList.add('pass');
-      $('againBtn').addEventListener('click', () => {
-        chip.classList.remove('pass');
-        newPart(); state.meterOn = true;
-        setPhase('demag');
-      });
-    } else {
-      /* keep the reading on screen — re-enter demag without overwriting it */
-      stepText.innerHTML = `<b>${g.toFixed(1)} G</b> — another pass. Hold, touch, pull past the line.`;
-      state.phase = 'demag';
-      stage.classList.remove('point');
-      stage.classList.add('grab');
-    }
+  if ((state.phase === 'check1' || state.phase === 'check2') && onInd(p)){
+    state.indDrag = true;
+    state.grabOff = { x: state.ind.x - p.x, y: state.ind.y - p.y };
+    stage.setPointerCapture(e.pointerId);
   } else if (state.phase === 'demag' && onYoke(p)){
     state.held = true;
     state.grabOff = { x: state.yoke.x - p.x, y: state.yoke.y - p.y };
@@ -200,33 +231,70 @@ stage.addEventListener('pointerdown', e => {
   }
 });
 window.addEventListener('pointermove', e => {
-  if (!state.held) return;
   const p = pos(e);
-  state.yoke.x = Math.max(60, Math.min(W - 50, p.x + state.grabOff.x));
-  state.yoke.y = Math.max(90, Math.min(H - 130, p.y + state.grabOff.y));
-  if (!state.contact && yokeDist() < 34){
-    state.contact = true;
-    stepText.innerHTML = 'Now <b>pull away slowly</b> — let go past the line.';
+  if (state.indDrag){
+    state.ind.x = Math.max(60, Math.min(W - 60, p.x + state.grabOff.x));
+    state.ind.y = Math.max(70, Math.min(H - 60, p.y + state.grabOff.y));
+  } else if (state.held){
+    state.yoke.x = Math.max(60, Math.min(W - 50, p.x + state.grabOff.x));
+    state.yoke.y = Math.max(90, Math.min(H - 130, p.y + state.grabOff.y));
+    if (!state.contact && yokeDist() < 34){
+      state.contact = true;
+      stepText.innerHTML = 'Now <b>pull away slowly</b> — let go past the line.';
+    }
   }
 });
 window.addEventListener('pointerup', () => {
-  if (!state.held) return;
-  state.held = false;
-  if (state.contact){
-    state.contact = false;
-    state.passes++;
-    setPhase('check2');
+  state.indDrag = false;
+  if (state.held){
+    state.held = false;
+    if (state.contact){
+      state.contact = false;
+      state.passes++;
+      /* what's left in the part when the field collapses at this distance */
+      state.residual = Math.max(1.0, 22 * Math.exp(-yokeDist() / 95));
+      setPhase('check2');
+    }
   }
 });
 
-/* ---------------- drawing ---------------- */
-let filings = [];
-{ let s = 977; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
-  for (let i = 0; i < 60; i++){
-    const end = i % 2 ? BAR.x + 14 : BAR.x + BAR.w - 14;
-    filings.push({ x: end + (rnd() - 0.5) * 46, y: BAR.y - 3 - rnd() * 14, r: 0.8 + rnd() * 1.3, a: 0.4 + rnd() * 0.5 });
+/* ---------------- accept / reject popup ---------------- */
+function openPop(){
+  state.popOpen = true;
+  const g = state.residual;
+  $('popG').textContent = g.toFixed(1) + ' G';
+  $('popG').className = 'big';
+  $('popQ').textContent = 'Accept this demagnetization?';
+  $('popRow').style.display = '';
+  $('pop').classList.add('show');
+}
+function popVerdict(accepted){
+  const g = state.residual, pass = g <= 3;
+  const right = accepted === pass;
+  $('popG').className = 'big ' + (right ? 'ok' : 'no');
+  $('popRow').style.display = 'none';
+  if (pass){
+    $('popQ').innerHTML = (right ? '✓ Correct — ' : '✗ Don’t reject it — ') +
+      g.toFixed(1) + ' G is under the <b>3 G limit</b>. This part is done.';
+    setTimeout(() => {
+      $('pop').classList.remove('show'); state.popOpen = false;
+      state.phase = 'done';
+      stepText.innerHTML = `<b>PASS — ${g.toFixed(1)} G</b> in ${state.passes} pass${state.passes === 1 ? '' : 'es'}. <button id="againBtn" type="button">Run again →</button>`;
+      $('againBtn').addEventListener('click', () => { newPart(); state.indParked = false; state.ind = { ...IND_HOME }; setPhase('check1'); });
+    }, 2000);
+  } else {
+    $('popQ').innerHTML = (right ? '✓ Correct — ' : '✗ Never accept this — ') +
+      g.toFixed(1) + ' G is over the <b>3 G limit</b>. Demag again.';
+    setTimeout(() => {
+      $('pop').classList.remove('show'); state.popOpen = false;
+      setPhase('demag');
+    }, 2000);
   }
 }
+$('popAccept').addEventListener('click', () => popVerdict(true));
+$('popReject').addEventListener('click', () => popVerdict(false));
+
+/* ---------------- drawing ---------------- */
 function bench(g){
   g.fillStyle = '#2b2723'; g.fillRect(0, 0, W, H);
   g.strokeStyle = 'rgba(255,255,255,.03)';
@@ -243,83 +311,69 @@ function drawPart(g){
   g.fillStyle = grad; g.fillRect(BAR.x, BAR.y, BAR.w, BAR.h);
   g.strokeStyle = '#6f6c66'; g.lineWidth = 1.4; g.strokeRect(BAR.x, BAR.y, BAR.w, BAR.h);
   label(g, 'STEEL PART', BAR.x + BAR.w / 2, BAR.y + BAR.h + 22);
-  /* clinging filings — fewer as the field drops */
-  const n = Math.min(60, Math.round(state.shown * 3));
-  g.fillStyle = '#1c1a17';
-  for (let i = 0; i < n; i++){
-    const f = filings[i];
-    g.globalAlpha = f.a;
-    g.beginPath(); g.arc(f.x, f.y, f.r, 0, Math.PI * 2); g.fill();
-  }
-  g.globalAlpha = 1;
 }
-function drawMeter(g, now){
-  const { x, y } = METER;
-  /* body + dial */
-  g.fillStyle = '#3a3f45'; g.beginPath(); g.roundRect(x - 92, y - 62, 184, 116, 8); g.fill();
-  g.strokeStyle = '#555b62'; g.lineWidth = 2; g.stroke();
-  g.fillStyle = '#f4f1ea'; g.beginPath(); g.roundRect(x - 80, y - 50, 160, 84, 5); g.fill();
-  /* scale: 0..30 G over 120° */
-  const a0 = Math.PI * 1.17, a1 = Math.PI * 1.83, R = 62;
-  const ang = v => a0 + (v / 30) * (a1 - a0);
-  /* green pass wedge 0–3 */
-  g.strokeStyle = 'rgba(46,125,79,.85)'; g.lineWidth = 9;
-  g.beginPath(); g.arc(x, y + 26, R - 5, ang(0), ang(3)); g.stroke();
-  g.strokeStyle = '#2a2f38'; g.lineWidth = 1.4;
-  for (let v = 0; v <= 30; v += 5){
-    const a = ang(v);
+/* circular zero-center field indicator */
+function drawIndicator(g, now){
+  const { x, y } = state.ind;
+  g.save(); g.translate(x, y);
+  /* body */
+  g.fillStyle = '#3a3f45'; g.beginPath(); g.arc(0, 0, 52, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = '#555b62'; g.lineWidth = 3; g.stroke();
+  g.fillStyle = '#f4f1ea'; g.beginPath(); g.arc(0, 0, 43, 0, Math.PI * 2); g.fill();
+  /* scale: −10 … 0 … +10 over ±60° around straight-up */
+  const ang = v => -Math.PI / 2 + (Math.max(-10, Math.min(10, v)) / 10) * (Math.PI / 3);
+  /* green accept band ±3 */
+  g.strokeStyle = 'rgba(46,125,79,.8)'; g.lineWidth = 7;
+  g.beginPath(); g.arc(0, 6, 33, ang(-3), ang(3)); g.stroke();
+  g.strokeStyle = '#2a2f38';
+  for (let v = -10; v <= 10; v += 2){
+    const a = ang(v), major = v % 10 === 0;
+    g.lineWidth = major ? 1.8 : 1;
     g.beginPath();
-    g.moveTo(x + Math.cos(a) * (R - 10), y + 26 + Math.sin(a) * (R - 10));
-    g.lineTo(x + Math.cos(a) * R, y + 26 + Math.sin(a) * R);
+    g.moveTo(Math.cos(a) * (major ? 28 : 32) , 6 + Math.sin(a) * (major ? 28 : 32));
+    g.lineTo(Math.cos(a) * 38, 6 + Math.sin(a) * 38);
     g.stroke();
-    g.fillStyle = '#2a2f38'; g.font = '600 9px "JetBrains Mono", monospace'; g.textAlign = 'center';
-    g.fillText(String(v), x + Math.cos(a) * (R + 10), y + 30 + Math.sin(a) * (R + 10));
   }
+  g.fillStyle = '#2a2f38'; g.font = '700 11px "JetBrains Mono", monospace'; g.textAlign = 'center';
+  g.fillText('0', 0, -24);
+  g.font = '700 15px "JetBrains Mono", monospace';
+  g.fillText('−', -30, -8); g.fillText('+', 30, -8);
+  g.font = '600 7.5px "JetBrains Mono", monospace';
+  g.fillText('GAUSS', 0, 30);
   /* needle */
-  const na = ang(Math.min(30, state.meterOn ? state.shown : 0));
-  g.strokeStyle = '#c8102e'; g.lineWidth = 2.6;
-  g.beginPath(); g.moveTo(x, y + 26); g.lineTo(x + Math.cos(na) * (R - 14), y + 26 + Math.sin(na) * (R - 14)); g.stroke();
-  g.fillStyle = '#2a2f38'; g.beginPath(); g.arc(x, y + 26, 4.5, 0, Math.PI * 2); g.fill();
-  g.font = '600 9px "JetBrains Mono", monospace'; g.textAlign = 'center'; g.fillStyle = '#8a8a85';
-  g.fillText('GAUSS', x, y + 30);
-  label(g, 'FIELD INDICATOR', x, y - 74);
-  /* pulse ring when it wants a tap */
-  if (state.phase === 'check1' || state.phase === 'check2'){
+  const a = ang(state.shown);
+  g.strokeStyle = '#c8102e'; g.lineWidth = 2.4;
+  g.beginPath(); g.moveTo(0, 6); g.lineTo(Math.cos(a) * 36, 6 + Math.sin(a) * 36); g.stroke();
+  g.fillStyle = '#2a2f38'; g.beginPath(); g.arc(0, 6, 4, 0, Math.PI * 2); g.fill();
+  g.restore();
+  label(g, 'FIELD INDICATOR', x, y + 74);
+  if ((state.phase === 'check1' || state.phase === 'check2') && !state.indDrag){
     const pulse = 0.5 + 0.5 * Math.sin(now / 320);
     g.strokeStyle = `rgba(232,168,124,${0.35 + 0.55 * pulse})`;
     g.setLineDash([7, 6]); g.lineWidth = 2;
-    g.beginPath(); g.roundRect(x - 100, y - 88, 200, 152, 10); g.stroke();
-    g.setLineDash([]);
+    g.beginPath(); g.arc(x, y, 60, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
   }
 }
 function drawYoke(g, now){
   const { x, y } = state.yoke;
   g.save(); g.translate(x, y);
-  /* legs + bridge (horseshoe, poles down) */
-  g.fillStyle = '#3a3a38';
-  g.beginPath(); g.roundRect(-58, -34, 116, 30, 8); g.fill();
-  g.fillStyle = '#4a4a47';
-  g.fillRect(-56, -8, 26, 68); g.fillRect(30, -8, 26, 68);
-  /* winding */
+  g.fillStyle = '#3a3a38'; g.beginPath(); g.roundRect(-58, -34, 116, 30, 8); g.fill();
+  g.fillStyle = '#4a4a47'; g.fillRect(-56, -8, 26, 68); g.fillRect(30, -8, 26, 68);
   g.strokeStyle = '#c98a4b'; g.lineWidth = 4;
   for (let i = -30; i <= 30; i += 12){ g.beginPath(); g.ellipse(i, -19, 4.5, 15, 0, 0, Math.PI * 2); g.stroke(); }
-  /* trigger handle */
   g.fillStyle = '#2e2e2c'; g.beginPath(); g.roundRect(-14, -62, 28, 30, 6); g.fill();
   label(g, 'HOLD', 0, -42, state.held ? '#ffd9a8' : '#8a8a85');
   if (state.held){
-    /* AC alternation: pole labels swap fast, glow */
     const flip = Math.floor(now / 90) % 2 === 0;
     g.fillStyle = '#ffdf9e'; g.font = '700 13px "JetBrains Mono", monospace'; g.textAlign = 'center';
     g.fillText(flip ? 'N' : 'S', -43, 48); g.fillText(flip ? 'S' : 'N', 43, 48);
     g.strokeStyle = 'rgba(232,168,124,.8)'; g.lineWidth = 2.5;
     const wob = Math.sin(now / 60) * 4;
-    g.beginPath(); g.moveTo(-43, 62);
-    g.quadraticCurveTo(0, 78 + wob, 43, 62); g.stroke();
-    g.beginPath(); g.moveTo(-43, 66);
-    g.quadraticCurveTo(0, 86 - wob, 43, 66); g.stroke();
+    g.beginPath(); g.moveTo(-43, 62); g.quadraticCurveTo(0, 78 + wob, 43, 62); g.stroke();
+    g.beginPath(); g.moveTo(-43, 66); g.quadraticCurveTo(0, 86 - wob, 43, 66); g.stroke();
   }
   g.restore();
-  if (state.phase === 'demag' && !state.held && !state.contact){
+  if (state.phase === 'demag' && !state.held){
     const pulse = 0.5 + 0.5 * Math.sin(now / 320);
     g.strokeStyle = `rgba(232,168,124,${0.35 + 0.55 * pulse})`;
     g.setLineDash([7, 6]); g.lineWidth = 2;
@@ -336,29 +390,52 @@ function drawLine(g){
 let last = performance.now();
 function frame(now){
   const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
-  /* physics: while energized and coupled, the part tracks the yoke's AC envelope */
-  if (state.held && state.contact){
-    const env = 22 * Math.exp(-yokeDist() / 95);
-    state.residual = Math.min(Math.max(state.residual, 0), 30);
-    state.residual = env > state.residual ? Math.min(env, 22) : env;
+
+  /* the indicator reads only when it's out on the bench near the part */
+  const reading = (state.phase === 'check1' || state.phase === 'check1done' || state.phase === 'check2') && !state.indParked ? rawReading() : 0;
+  state.shown += (reading + Math.sin(now / 130) * 0.12 - state.shown) * Math.min(1, dt * 7);
+
+  if (state.phase === 'check1'){
+    if (state.shown > 6)  state.seenPlus = true;
+    if (state.shown < -6) state.seenMinus = true;
+    if (state.seenPlus && state.seenMinus){
+      state.phase = 'check1done';
+      stepText.innerHTML = '<b>+ at one end, − at the other</b> — the part is magnetized.';
+      setTimeout(() => setPhase('demag'), 1600);
+    }
   }
-  /* needle spring */
-  const target = state.meterOn ? state.residual : 0;
-  state.shown += (target - state.shown) * Math.min(1, dt * 6);
-  chipVal.textContent = state.meterOn ? state.shown.toFixed(1) + ' G' : '—';
+  if (state.phase === 'check2' && !state.popOpen){
+    if (Math.abs(reading) > 0.4){
+      state.readT += dt;
+      if (state.readT > 0.7){ state.indDrag = false; openPop(); }
+    } else state.readT = 0;
+  }
 
   bench(ctx);
   drawLine(ctx);
   drawPart(ctx);
-  drawMeter(ctx, now);
-  drawYoke(ctx, now);
+  if (state.phase === 'demag' || state.held) drawYoke(ctx, now);
+  else if (state.phase !== 'intro') drawYoke(ctx, now);
+  if (!state.indParked) drawIndicator(ctx, now);
+  else {
+    /* parked small in the corner */
+    ctx.save(); ctx.globalAlpha = 0.45; ctx.translate(IND_PARK.x, IND_PARK.y); ctx.scale(0.55, 0.55); ctx.translate(-state.ind.x, -state.ind.y);
+    ctx.translate(state.ind.x, state.ind.y); drawIndicatorParked(ctx); ctx.restore();
+    label(ctx, 'SET ASIDE', IND_PARK.x, IND_PARK.y + 48, 'rgba(200,195,180,.5)');
+  }
   requestAnimationFrame(frame);
+}
+function drawIndicatorParked(g){
+  g.fillStyle = '#3a3f45'; g.beginPath(); g.arc(0, 0, 52, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = '#555b62'; g.lineWidth = 3; g.stroke();
+  g.fillStyle = '#f4f1ea'; g.beginPath(); g.arc(0, 0, 43, 0, Math.PI * 2); g.fill();
 }
 requestAnimationFrame(frame);
 
 $('beginBtn').addEventListener('click', () => {
   $('intro').classList.add('hidden');
   newPart();
+  state.ind = { ...IND_HOME }; state.indParked = false;
   setPhase('check1');
 });
 
