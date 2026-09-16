@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MT — Coil: Shot &amp; Demag</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #faf7f2; --paper-deep: #f1ece2; --ink: #1a1a1a; --ink-soft: #4a4a47;
+    --ink-faded: #8a8a85; --rule: #d9d2c4; --amber: #b54515; --amber-soft: #e8a87c;
+    --amber-tint: #fdf2e6; --good: #2e7d4f; --bad: #c8102e; --fluor: #9adb2c;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px -12px rgba(60,40,20,0.12);
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'Manrope', -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--paper); }
+  body {
+    font-family: var(--sans); background: var(--paper); color: var(--ink);
+    line-height: 1.55; min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(181,69,21,0.04), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(154,219,44,0.04), transparent 50%);
+  }
+  .container { max-width: 1000px; margin: 0 auto; padding: 36px 28px 72px; }
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+  .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--amber); margin-bottom: 8px; font-weight: 500; }
+  h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(26px,4vw,38px); line-height: 1.05; letter-spacing: -.02em; font-variation-settings: 'opsz' 144; }
+  h1 em { font-style: italic; color: var(--amber); font-weight: 500; }
+  a.back { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faded); text-decoration: none; padding-bottom: 6px; }
+  a.back:hover { color: var(--amber); }
+
+  .instr {
+    background: var(--ink); color: var(--paper); border-radius: 2px; padding: 16px 22px;
+    margin-bottom: 14px; box-shadow: var(--shadow);
+    display: flex; align-items: center; min-height: 72px; position: relative;
+  }
+  .instr::before { content: ''; position: absolute; inset: 4px; border: 1px solid rgba(232,168,124,0.18); border-radius: 2px; pointer-events: none; }
+  .instr .text { font-size: 17px; font-weight: 600; }
+  .instr .text b { color: var(--amber-soft); }
+  .instr button {
+    font-family: var(--sans); font-weight: 700; font-size: 14px;
+    background: var(--amber); color: #fff; border: none; border-radius: 2px;
+    padding: 10px 20px; cursor: pointer; margin-left: 12px; position: relative;
+  }
+  .instr button:hover { background: #9a3a12; }
+
+  .stage {
+    position: relative; border-radius: 2px; overflow: hidden;
+    box-shadow: var(--shadow); border: 1px solid var(--rule);
+    touch-action: none; user-select: none; -webkit-user-select: none; background: #262320;
+  }
+  .stage canvas { display: block; width: 100%; height: auto; }
+  .stage.grab { cursor: grab; }
+
+  .pop {
+    position: fixed; inset: 0; background: rgba(26,24,20,.5); backdrop-filter: blur(1px);
+    display: none; align-items: center; justify-content: center; z-index: 90; padding: 24px;
+  }
+  .pop.show { display: flex; }
+  .popcard {
+    background: var(--paper); border-radius: 3px; box-shadow: 0 24px 80px -20px rgba(0,0,0,.5);
+    max-width: 430px; width: 100%; padding: 26px 30px; text-align: center;
+  }
+  .popcard .big { font-family: var(--mono); font-size: 34px; font-weight: 600; margin-bottom: 6px; }
+  .popcard .big.ok { color: var(--good); } .popcard .big.no { color: var(--bad); }
+  .popcard p { font-size: 15.5px; font-weight: 600; color: var(--ink-soft); margin-bottom: 18px; }
+  .popcard .row { display: flex; gap: 10px; justify-content: center; }
+  .popcard button {
+    font-family: var(--sans); font-weight: 700; font-size: 14.5px; border-radius: 2px;
+    padding: 12px 24px; cursor: pointer; border: 1.5px solid var(--rule); background: #fff; color: var(--ink);
+  }
+  .popcard button.primary { background: var(--amber); border-color: var(--amber); color: #fff; }
+  .popcard button:hover { border-color: var(--amber); }
+  .popcard button.primary:hover { background: #9a3a12; }
+
+  .veil { position: fixed; inset: 0; background: rgba(26,24,20,.55); backdrop-filter: blur(2px); display: flex; align-items: flex-start; justify-content: center; z-index: 100; padding: 28px 24px; overflow-y: auto; }
+  .veil.hidden { display: none; }
+  .card { background: var(--paper); border-radius: 3px; box-shadow: 0 24px 80px -20px rgba(0,0,0,.5); max-width: 560px; width: 100%; padding: 32px 38px; }
+  .card h2 { font-family: var(--serif); font-weight: 600; font-size: 27px; margin-bottom: 12px; }
+  .card h2 em { font-style: italic; color: var(--amber); }
+  .card p { font-size: 14.5px; color: var(--ink-soft); margin-bottom: 12px; }
+  .card ol { margin: 0 0 16px 20px; font-size: 15px; color: var(--ink-soft); }
+  .card ol li { margin-bottom: 7px; }
+  .card ol li b { color: var(--amber); }
+  .card button.primary { font-family: var(--sans); font-weight: 700; font-size: 15px; background: var(--amber); color: #fff; border: none; border-radius: 2px; padding: 13px 28px; cursor: pointer; }
+  .card button.primary:hover { background: #9a3a12; }
+  footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--rule); font-size: 12px; color: var(--ink-faded); font-family: var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+  @media (prefers-reduced-motion: reduce){ * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <div class="eyebrow">Magnetic Particle Testing · MT</div>
+      <h1>The Coil — <em>Shot &amp; Demag</em></h1>
+    </div>
+    <a class="back" href="index.html" target="_top">← Exercise Hub</a>
+  </header>
+
+  <div class="instr"><div class="text" id="stepText">…</div></div>
+
+  <div class="stage" id="stage">
+    <canvas id="cv" width="940" height="430"></canvas>
+  </div>
+
+  <footer>MT Coil · Shot = one burst, part stays · Demag = AC, part leaves · Accept ≤ 3 G</footer>
+</div>
+
+<div class="pop" id="pop">
+  <div class="popcard">
+    <div class="big" id="popG">1.0 G</div>
+    <p id="popQ">Accept this demagnetization?</p>
+    <div class="row" id="popRow">
+      <button class="primary" id="popAccept" type="button">✓ Accept</button>
+      <button id="popReject" type="button">✗ Reject</button>
+    </div>
+  </div>
+</div>
+
+<div class="veil" id="intro">
+  <div class="card">
+    <div class="eyebrow">MT · One Coil, Two Jobs</div>
+    <h2>Make a magnet — <em>then unmake it</em></h2>
+    <p>The same bench coil magnetizes and demagnetizes. The difference is the current, and what the part does:</p>
+    <ol>
+      <li><b>SHOT:</b> part inside the coil, wet it with bath, two ½-second shots — one steady burst. The particles pile up at the ends: it's a magnet now.</li>
+      <li><b>DEMAG:</b> flip the selector — continuous AC. Coil on, <b>pull the part through and past the line</b>, coil off.</li>
+      <li><b>Check</b> with the field indicator — under <b>3 G</b> passes.</li>
+    </ol>
+    <button class="primary" id="beginBtn">Start →</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+const W = 940, H = 430;
+const $ = id => document.getElementById(id);
+const stage = $('stage'), cv = $('cv'), ctx = cv.getContext('2d');
+const stepText = $('stepText');
+
+/* ---------------- layout ---------------- */
+const RAIL_Y = 218;                                 // bar centerline
+const PART = { w: 190, h: 46 };
+const COIL_X = 430;                                 // coil center
+const LINE_X = 800;
+const IND_HOME = { x: 790, y: 115 };
+const IND_PARK = { x: 88, y: 100 };
+/* unit panel + controls */
+const PANEL = { x: 64, y: 316, w: 300, h: 96 };
+const SEL   = { x: 84,  y: 332, w: 150, h: 26 };    // SHOT | DEMAG rocker
+const BATH  = { x: 84,  y: 370, w: 70,  h: 30 };
+const SHOT  = { x: 164, y: 370, w: 70,  h: 30 };
+const POWER = { x: 244, y: 370, w: 100, h: 30 };    // ON / OFF in demag mode
+
+/* ---------------- state ---------------- */
+const state = {
+  phase: 'intro',   // load → bath → shot → check1 → switch → demag → check2 → done
+  mode: 'SHOT',
+  part: { x: 170 }, partDrag: false, grabOff: 0,
+  wet: 0, bathHold: false,
+  shotHold: 0, shots: 0, lastShot: 0,
+  residual: 0.4, clump: 0,
+  acOn: false, coupled: false,
+  ind: { x: IND_HOME.x, y: IND_HOME.y }, indDrag: false, indParked: true,
+  shown: 0, seenPlus: false, seenMinus: false,
+  readT: 0, popOpen: false, passes: 0
+};
+function setPhase(p){
+  state.phase = p;
+  stage.classList.toggle('grab', p !== 'done');
+  if (p === 'load')       stepText.innerHTML = 'Fresh part. <b>Drag it into the coil.</b>';
+  else if (p === 'bath')  stepText.innerHTML = 'Mode: <b>SHOT</b>. Hold <b>BATH</b> — wet the part with fluorescent particles.';
+  else if (p === 'shot')  stepText.innerHTML = 'Now magnetize: <b>hold SHOT about ½ second — twice.</b>';
+  else if (p === 'check1'){
+    state.indParked = false; state.ind = { ...IND_HOME };
+    state.seenPlus = false; state.seenMinus = false;
+    stepText.innerHTML = 'Particles cling at the ends — poles. <b>Drag the field indicator to both ends.</b>';
+  }
+  else if (p === 'switch') stepText.innerHTML = 'Pegged both ways — it’s a magnet. <b>Flip the selector to DEMAG.</b>';
+  else if (p === 'demag'){
+    state.indParked = true;
+    stepText.innerHTML = 'Mode: <b>DEMAG · AC</b>. Switch <b>ON</b>, pull the part <b>past the line</b>, then <b>OFF</b>.';
+  }
+  else if (p === 'check2'){
+    state.indParked = false; state.ind = { ...IND_HOME }; state.readT = 0;
+    stepText.innerHTML = 'Did it work? <b>Drag the field indicator</b> back onto the part.';
+  }
+}
+
+/* part-end positions (move with the part) */
+function ends(){
+  return [
+    { x: state.part.x - PART.w / 2 + 8, y: RAIL_Y, sign: -1 },
+    { x: state.part.x + PART.w / 2 - 8, y: RAIL_Y, sign: 1 }
+  ];
+}
+function rawReading(){
+  let r = 0;
+  for (const e of ends()){
+    const d = Math.hypot(state.ind.x - e.x, (state.ind.y + 52) - e.y);
+    r += e.sign * state.residual * Math.exp(-d / 70);
+  }
+  return r;
+}
+
+/* ---------------- interaction ---------------- */
+function pos(e){
+  const r = cv.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
+}
+const inBox = (p, b) => p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
+const onPart = p => Math.abs(p.x - state.part.x) < PART.w / 2 + 14 && Math.abs(p.y - RAIL_Y) < PART.h / 2 + 16;
+const onInd = p => !state.indParked && Math.hypot(p.x - state.ind.x, p.y - state.ind.y) < 72;
+
+stage.addEventListener('pointerdown', e => {
+  if (state.popOpen) return;
+  const p = pos(e);
+  const ph = state.phase;
+  if ((ph === 'check1' || ph === 'check2') && onInd(p)){
+    state.indDrag = true;
+    state.grabOff = { x: state.ind.x - p.x, y: state.ind.y - p.y };
+    stage.setPointerCapture(e.pointerId);
+  } else if ((ph === 'load' || ph === 'demag') && onPart(p)){
+    state.partDrag = true;
+    state.grabOff = state.part.x - p.x;
+    stage.setPointerCapture(e.pointerId);
+  } else if (ph === 'bath' && inBox(p, BATH)){
+    state.bathHold = true;
+    stage.setPointerCapture(e.pointerId);
+  } else if (ph === 'shot'){
+    if (inBox(p, SHOT)){
+      state.shotHold = performance.now();
+      stage.setPointerCapture(e.pointerId);
+    } else if (inBox(p, BATH)){
+      state.bathHold = true;  /* topping up is harmless */
+      stage.setPointerCapture(e.pointerId);
+    }
+  } else if (ph === 'switch' && inBox(p, SEL)){
+    state.mode = 'DEMAG';
+    setPhase('demag');
+  } else if (ph === 'demag' && inBox(p, POWER)){
+    if (!state.acOn){
+      state.acOn = true; state.coupled = Math.abs(state.part.x - COIL_X) < 60;
+    } else {
+      state.acOn = false;
+      if (state.coupled){
+        state.coupled = false;
+        state.passes++;
+        const d = Math.max(0, Math.abs(state.part.x - COIL_X) - 60);
+        state.residual = Math.max(1.0, 20 * Math.exp(-d / 95));
+        state.clump = state.residual;                        /* particles let go if the field is gone */
+        setPhase('check2');
+      } else {
+        stepText.innerHTML = 'The part never went through. <b>ON — pull it through — then OFF.</b>';
+      }
+    }
+  }
+});
+window.addEventListener('pointermove', e => {
+  const p = pos(e);
+  if (state.indDrag){
+    state.ind.x = Math.max(60, Math.min(W - 60, p.x + state.grabOff.x));
+    state.ind.y = Math.max(70, Math.min(H - 60, p.y + state.grabOff.y));
+  } else if (state.partDrag){
+    state.part.x = Math.max(110, Math.min(W - 110, p.x + state.grabOff));
+    if (state.phase === 'demag' && state.acOn && Math.abs(state.part.x - COIL_X) < 60) state.coupled = true;
+  }
+});
+window.addEventListener('pointerup', () => {
+  state.indDrag = false; state.bathHold = false;
+  if (state.partDrag){
+    state.partDrag = false;
+    if (state.phase === 'load' && Math.abs(state.part.x - COIL_X) < 46){
+      state.part.x = COIL_X;
+      setPhase('bath');
+    }
+  }
+  if (state.shotHold){
+    const dur = (performance.now() - state.shotHold) / 1000;
+    state.shotHold = 0;
+    if (dur >= 0.2){
+      state.shots++;
+      state.lastShot = dur;
+      if (state.shots >= 2){
+        state.residual = 16 + Math.random() * 5;
+        state.clump = state.residual;
+        setPhase('check1');
+      } else {
+        stepText.innerHTML = `Shot 1 — ${dur.toFixed(1)} s. <b>One more.</b>`;
+      }
+    }
+  }
+});
+
+/* ---------------- popup ---------------- */
+function openPop(){
+  state.popOpen = true;
+  $('popG').textContent = state.residual.toFixed(1) + ' G';
+  $('popG').className = 'big';
+  $('popQ').textContent = 'Accept this demagnetization?';
+  $('popRow').style.display = '';
+  $('pop').classList.add('show');
+}
+function popVerdict(accepted){
+  const g = state.residual, pass = g <= 3, right = accepted === pass;
+  $('popG').className = 'big ' + (right ? 'ok' : 'no');
+  $('popRow').style.display = 'none';
+  if (pass){
+    $('popQ').innerHTML = (right ? '✓ Correct — ' : '✗ Don’t reject it — ') +
+      g.toFixed(1) + ' G is under the <b>3 G limit</b>. This part is done.';
+    setTimeout(() => {
+      $('pop').classList.remove('show'); state.popOpen = false;
+      state.phase = 'done';
+      stepText.innerHTML = `<b>PASS — ${g.toFixed(1)} G.</b> Magnet made, magnet unmade. <button id="againBtn" type="button">Run again →</button>`;
+      $('againBtn').addEventListener('click', reset);
+    }, 2000);
+  } else {
+    $('popQ').innerHTML = (right ? '✓ Correct — ' : '✗ Never accept this — ') +
+      g.toFixed(1) + ' G is over the <b>3 G limit</b>. Demag again.';
+    setTimeout(() => {
+      $('pop').classList.remove('show'); state.popOpen = false;
+      setPhase('demag');
+    }, 2000);
+  }
+}
+$('popAccept').addEventListener('click', () => popVerdict(true));
+$('popReject').addEventListener('click', () => popVerdict(false));
+
+function reset(){
+  state.mode = 'SHOT'; state.part.x = 170;
+  state.wet = 0; state.shots = 0; state.residual = 0.4; state.clump = 0;
+  state.acOn = false; state.coupled = false; state.passes = 0;
+  state.indParked = true; state.shown = 0;
+  setPhase('load');
+}
+
+/* ---------------- drawing ---------------- */
+function bench(g){
+  g.fillStyle = '#2b2723'; g.fillRect(0, 0, W, H);
+  g.strokeStyle = 'rgba(255,255,255,.03)';
+  for (let y = 0; y < H; y += 7){ g.beginPath(); g.moveTo(0, y); g.lineTo(W, y + 2); g.stroke(); }
+  /* rail */
+  g.fillStyle = '#3a352e'; g.fillRect(60, RAIL_Y + PART.h / 2 + 8, W - 120, 10);
+}
+function label(g, t, x, y, c){
+  g.fillStyle = c || '#c9c2b2'; g.font = '600 10px "JetBrains Mono", monospace'; g.textAlign = 'center';
+  g.fillText(t, x, y);
+}
+function drawPart(g, now){
+  const x = state.part.x - PART.w / 2, y = RAIL_Y - PART.h / 2;
+  const grad = g.createLinearGradient(0, y, 0, y + PART.h);
+  grad.addColorStop(0, '#dedbd4'); grad.addColorStop(1, '#918e87');
+  g.fillStyle = grad; g.fillRect(x, y, PART.w, PART.h);
+  g.strokeStyle = '#6f6c66'; g.lineWidth = 1.4; g.strokeRect(x, y, PART.w, PART.h);
+  /* wet fluorescent sheen */
+  if (state.wet > 0){
+    g.fillStyle = `rgba(154,219,44,${0.16 * state.wet})`;
+    g.fillRect(x + 2, y + 2, PART.w - 4, PART.h - 4);
+  }
+  /* particle buildup at the poles */
+  if (state.clump > 0.5){
+    const a = Math.min(1, state.clump / 10);
+    for (const e of ends()){
+      const glow = g.createRadialGradient(e.x, e.y, 0, e.x, e.y, 26);
+      glow.addColorStop(0, `rgba(200,255,110,${0.85 * a})`);
+      glow.addColorStop(0.5, `rgba(160,235,70,${0.4 * a})`);
+      glow.addColorStop(1, 'rgba(120,200,50,0)');
+      g.fillStyle = glow;
+      g.beginPath(); g.arc(e.x, e.y, 26, 0, Math.PI * 2); g.fill();
+    }
+  }
+  /* flux arrows in the bar: SHOT = one steady direction, DEMAG = flipping */
+  const shotFiring = state.shotHold > 0;
+  if (shotFiring || (state.acOn && state.phase === 'demag')){
+    const flip = shotFiring ? 1 : (Math.floor(now / 110) % 2 ? 1 : -1);
+    g.strokeStyle = shotFiring ? 'rgba(232,168,124,.95)' : 'rgba(125,184,221,.9)';
+    g.fillStyle = g.strokeStyle;
+    g.lineWidth = 2.2;
+    for (const yy of [RAIL_Y - 10, RAIL_Y + 10]){
+      g.beginPath(); g.moveTo(x + 22, yy); g.lineTo(x + PART.w - 22, yy); g.stroke();
+      const ax = flip > 0 ? x + PART.w - 22 : x + 22;
+      g.beginPath();
+      g.moveTo(ax, yy);
+      g.lineTo(ax - flip * 9, yy - 4.5); g.lineTo(ax - flip * 9, yy + 4.5);
+      g.closePath(); g.fill();
+    }
+  }
+}
+function drawCoil(g, now){
+  const firing = state.shotHold > 0;
+  const humming = state.acOn && state.phase === 'demag';
+  for (let i = -2; i <= 2; i++){
+    const cx = COIL_X + i * 20;
+    g.strokeStyle = firing ? '#ffb45e' : humming ? (Math.floor(now / 110 + i) % 2 ? '#e8a87c' : '#c98a4b') : '#c98a4b';
+    g.lineWidth = firing ? 8 : 6;
+    g.beginPath(); g.ellipse(cx, RAIL_Y, 9, 74, 0, 0, Math.PI * 2); g.stroke();
+  }
+  if (firing){
+    g.strokeStyle = 'rgba(255,180,94,.5)'; g.lineWidth = 2;
+    g.beginPath(); g.ellipse(COIL_X, RAIL_Y, 58, 96, 0, 0, Math.PI * 2); g.stroke();
+  }
+  label(g, humming ? 'DEMAG COIL · AC ON' : 'BENCH COIL', COIL_X, RAIL_Y + 108, humming ? '#a8d4ee' : '#c9c2b2');
+  /* bath curtain while held */
+  if (state.bathHold && state.wet < 1.2){
+    g.strokeStyle = 'rgba(154,219,44,.55)'; g.lineWidth = 2;
+    for (let i = 0; i < 7; i++){
+      const bx = state.part.x - 60 + i * 20 + (now / 30 % 8);
+      g.beginPath(); g.moveTo(bx, 96); g.lineTo(bx - 6, RAIL_Y - 30); g.stroke();
+    }
+    label(g, 'BATH', state.part.x, 88, '#9adb2c');
+  }
+}
+function btn(g, b, text, active, lit){
+  g.fillStyle = lit ? '#b54515' : active ? '#4a4a47' : '#373735';
+  g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 4); g.fill();
+  g.strokeStyle = active ? '#8a8a85' : '#4a4a47'; g.lineWidth = 1.4; g.stroke();
+  g.fillStyle = lit ? '#fff' : active ? '#e8e4da' : '#6f6c66';
+  g.font = '700 11px "JetBrains Mono", monospace'; g.textAlign = 'center';
+  g.fillText(text, b.x + b.w / 2, b.y + b.h / 2 + 4);
+}
+function drawPanel(g, now){
+  g.fillStyle = '#31302c'; g.beginPath(); g.roundRect(PANEL.x, PANEL.y, PANEL.w, PANEL.h, 6); g.fill();
+  g.strokeStyle = '#4a4a47'; g.lineWidth = 1.6; g.stroke();
+  /* selector rocker */
+  g.fillStyle = '#22211e'; g.beginPath(); g.roundRect(SEL.x, SEL.y, SEL.w, SEL.h, 13); g.fill();
+  const demag = state.mode === 'DEMAG';
+  g.fillStyle = '#b54515';
+  g.beginPath(); g.roundRect(demag ? SEL.x + SEL.w / 2 : SEL.x, SEL.y, SEL.w / 2, SEL.h, 13); g.fill();
+  g.font = '700 10px "JetBrains Mono", monospace'; g.textAlign = 'center';
+  g.fillStyle = demag ? '#6f6c66' : '#fff'; g.fillText('SHOT', SEL.x + SEL.w * 0.25, SEL.y + 17);
+  g.fillStyle = demag ? '#fff' : '#6f6c66'; g.fillText('DEMAG', SEL.x + SEL.w * 0.75, SEL.y + 17);
+  g.fillStyle = '#8a8a85'; g.font = '600 9px "JetBrains Mono", monospace'; g.textAlign = 'left';
+  g.fillText(demag ? 'CONTINUOUS AC' : 'HWDC · 1800 A', SEL.x + SEL.w + 12, SEL.y + 17);
+  /* buttons */
+  btn(g, BATH, 'BATH', state.phase === 'bath' || state.phase === 'shot', state.bathHold);
+  btn(g, SHOT, 'SHOT', state.phase === 'shot', state.shotHold > 0);
+  btn(g, POWER, state.acOn ? 'OFF' : 'ON', state.phase === 'demag', state.acOn);
+  /* shot counter */
+  if (state.mode === 'SHOT'){
+    g.font = '700 12px "JetBrains Mono", monospace'; g.textAlign = 'left';
+    g.fillStyle = '#e8a87c';
+    g.fillText('●'.repeat(state.shots) + '○'.repeat(Math.max(0, 2 - state.shots)), SHOT.x + 4, SHOT.y - 8);
+  }
+  /* selector pulse when it's time to flip */
+  if (state.phase === 'switch'){
+    const pulse = 0.5 + 0.5 * Math.sin(now / 320);
+    g.strokeStyle = `rgba(232,168,124,${0.35 + 0.55 * pulse})`;
+    g.setLineDash([6, 5]); g.lineWidth = 2;
+    g.beginPath(); g.roundRect(SEL.x - 6, SEL.y - 6, SEL.w + 12, SEL.h + 12, 15); g.stroke();
+    g.setLineDash([]);
+  }
+  label(g, 'BENCH UNIT', PANEL.x + PANEL.w / 2, PANEL.y - 8);
+}
+function drawIndicator(g, now){
+  const { x, y } = state.ind;
+  g.save(); g.translate(x, y);
+  g.fillStyle = '#3a3f45'; g.beginPath(); g.arc(0, 0, 64, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = '#555b62'; g.lineWidth = 3.5; g.stroke();
+  g.fillStyle = '#f6f3ec'; g.beginPath(); g.arc(0, 0, 55, 0, Math.PI * 2); g.fill();
+  const ang = v => -Math.PI / 2 + (Math.max(-10, Math.min(10, v)) / 10) * (Math.PI / 3);
+  g.strokeStyle = 'rgba(46,125,79,.8)'; g.lineWidth = 8;
+  g.beginPath(); g.arc(0, 10, 42, ang(-3), ang(3)); g.stroke();
+  g.strokeStyle = '#2a2f38';
+  for (let v = -10; v <= 10; v += 1){
+    const a = ang(v), major = v % 5 === 0;
+    g.lineWidth = major ? 2 : 1;
+    g.beginPath();
+    g.moveTo(Math.cos(a) * (major ? 38 : 43), 10 + Math.sin(a) * (major ? 38 : 43));
+    g.lineTo(Math.cos(a) * 49, 10 + Math.sin(a) * 49);
+    g.stroke();
+  }
+  g.fillStyle = '#1a1a1a'; g.font = '700 12px "JetBrains Mono", monospace'; g.textAlign = 'center';
+  for (const v of [-10, -5, 0, 5, 10]){
+    const a = ang(v);
+    g.fillText(v === 0 ? '0' : (v > 0 ? '+' + v : String(v)), Math.cos(a) * 29, 14 + Math.sin(a) * 29);
+  }
+  g.font = '700 17px "JetBrains Mono", monospace'; g.fillStyle = '#b54515';
+  g.fillText('−', -38, 40); g.fillText('+', 38, 40);
+  g.fillStyle = '#8a8a85'; g.font = '600 8px "JetBrains Mono", monospace';
+  g.fillText('GAUSS', 0, 44);
+  const a = ang(state.shown);
+  g.strokeStyle = '#c8102e'; g.lineWidth = 3;
+  g.beginPath(); g.moveTo(0, 10); g.lineTo(Math.cos(a) * 47, 10 + Math.sin(a) * 47); g.stroke();
+  g.fillStyle = '#2a2f38'; g.beginPath(); g.arc(0, 10, 4.5, 0, Math.PI * 2); g.fill();
+  g.restore();
+  label(g, 'FIELD INDICATOR', x, y + 86);
+  if ((state.phase === 'check1' || state.phase === 'check2') && !state.indDrag){
+    const pulse = 0.5 + 0.5 * Math.sin(now / 320);
+    g.strokeStyle = `rgba(232,168,124,${0.35 + 0.55 * pulse})`;
+    g.setLineDash([7, 6]); g.lineWidth = 2;
+    g.beginPath(); g.arc(x, y, 72, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
+  }
+}
+function drawLine(g){
+  g.strokeStyle = 'rgba(154,219,44,.55)'; g.lineWidth = 2; g.setLineDash([9, 8]);
+  g.beginPath(); g.moveTo(LINE_X, 60); g.lineTo(LINE_X, RAIL_Y + 40); g.stroke();
+  g.setLineDash([]);
+  label(g, 'PAST HERE BEFORE OFF · ≈ 3 FT', LINE_X + 2, 46, 'rgba(190,235,120,.8)');
+}
+let last = performance.now();
+function frame(now){
+  const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
+  /* bath fill */
+  if (state.bathHold && state.wet < 1){
+    state.wet = Math.min(1, state.wet + dt / 1.2);
+    if (state.wet >= 1 && state.phase === 'bath') setPhase('shot');
+  }
+  /* indicator */
+  const reading = (state.phase === 'check1' || state.phase === 'switch' || state.phase === 'check2') && !state.indParked ? rawReading() : 0;
+  state.shown += (reading + Math.sin(now / 130) * 0.12 - state.shown) * Math.min(1, dt * 7);
+  if (state.phase === 'check1'){
+    if (state.shown > 6)  state.seenPlus = true;
+    if (state.shown < -6) state.seenMinus = true;
+    if (state.seenPlus && state.seenMinus) setPhase('switch');
+  }
+  if (state.phase === 'check2' && !state.popOpen){
+    if (Math.abs(reading) > 0.4){
+      state.readT += dt;
+      if (state.readT > 0.7){ state.indDrag = false; openPop(); }
+    } else state.readT = 0;
+  }
+
+  bench(ctx);
+  drawLine(ctx);
+  drawCoil(ctx, now);
+  drawPart(ctx, now);
+  drawPanel(ctx, now);
+  if (!state.indParked) drawIndicator(ctx, now);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+$('beginBtn').addEventListener('click', () => {
+  $('intro').classList.add('hidden');
+  reset();
+});
+
+})();
+</script>
+</body>
+</html>
