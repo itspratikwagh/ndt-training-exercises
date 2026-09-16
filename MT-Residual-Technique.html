@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MT — Residual Technique</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #faf7f2; --paper-deep: #f1ece2; --ink: #1a1a1a; --ink-soft: #4a4a47;
+    --ink-faded: #8a8a85; --rule: #d9d2c4; --amber: #b54515; --amber-soft: #e8a87c;
+    --amber-tint: #fdf2e6; --good: #2e7d4f; --bad: #c8102e; --fluor: #9adb2c;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px -12px rgba(60,40,20,0.12);
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'Manrope', -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--paper); }
+  body {
+    font-family: var(--sans); background: var(--paper); color: var(--ink);
+    line-height: 1.55; min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(181,69,21,0.04), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(154,219,44,0.04), transparent 50%);
+  }
+  .container { max-width: 1000px; margin: 0 auto; padding: 36px 28px 72px; }
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+  .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--amber); margin-bottom: 8px; font-weight: 500; }
+  h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(26px,4vw,38px); line-height: 1.05; letter-spacing: -.02em; font-variation-settings: 'opsz' 144; }
+  h1 em { font-style: italic; color: var(--amber); font-weight: 500; }
+  a.back { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faded); text-decoration: none; padding-bottom: 6px; }
+  a.back:hover { color: var(--amber); }
+
+  .instr {
+    background: var(--ink); color: var(--paper); border-radius: 2px; padding: 16px 22px;
+    margin-bottom: 14px; box-shadow: var(--shadow);
+    display: flex; align-items: center; min-height: 72px; position: relative;
+  }
+  .instr::before { content: ''; position: absolute; inset: 4px; border: 1px solid rgba(232,168,124,0.18); border-radius: 2px; pointer-events: none; }
+  .instr .text { font-size: 17px; font-weight: 600; }
+  .instr .text b { color: var(--amber-soft); }
+  .instr button {
+    font-family: var(--sans); font-weight: 700; font-size: 14px;
+    background: var(--amber); color: #fff; border: none; border-radius: 2px;
+    padding: 10px 20px; cursor: pointer; margin-left: 12px;
+  }
+  .instr button:hover { background: #9a3a12; }
+
+  .stage {
+    position: relative; border-radius: 2px; overflow: hidden;
+    box-shadow: var(--shadow); border: 1px solid var(--rule);
+    touch-action: none; user-select: none; -webkit-user-select: none; background: #262320;
+  }
+  .stage canvas { display: block; width: 100%; height: auto; }
+  .stage.grab { cursor: grab; }
+  .stage.point { cursor: pointer; }
+
+  .pop {
+    position: fixed; inset: 0; background: rgba(26,24,20,.5); backdrop-filter: blur(1px);
+    display: none; align-items: center; justify-content: center; z-index: 90; padding: 24px;
+  }
+  .pop.show { display: flex; }
+  .popcard {
+    background: var(--paper); border-radius: 3px; box-shadow: 0 24px 80px -20px rgba(0,0,0,.5);
+    max-width: 480px; width: 100%; padding: 26px 30px; text-align: left;
+  }
+  .popcard .qtag { font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--amber); margin-bottom: 8px; text-align: center; }
+  .popcard .qtext { font-size: 16px; font-weight: 700; color: var(--ink); margin-bottom: 12px; text-align: center; }
+  .qexplain { font-size: 13.5px; color: var(--ink-soft); line-height: 1.5; }
+  .qexplain p { margin-bottom: 9px; }
+  .qexplain b { color: var(--ink); }
+  .qexplain .qref { font-family: var(--mono); font-size: 11px; color: var(--amber); letter-spacing: .03em; }
+  .popcard button.primary {
+    font-family: var(--sans); font-weight: 700; font-size: 14.5px; border-radius: 2px;
+    padding: 12px 24px; cursor: pointer; border: none; background: var(--amber); color: #fff; margin-top: 12px;
+  }
+  .popcard button.primary:hover { background: #9a3a12; }
+
+  .veil { position: fixed; inset: 0; background: rgba(26,24,20,.55); backdrop-filter: blur(2px); display: flex; align-items: flex-start; justify-content: center; z-index: 100; padding: 28px 24px; overflow-y: auto; }
+  .veil.hidden { display: none; }
+  .card { background: var(--paper); border-radius: 3px; box-shadow: 0 24px 80px -20px rgba(0,0,0,.5); max-width: 560px; width: 100%; padding: 32px 38px; }
+  .card h2 { font-family: var(--serif); font-weight: 600; font-size: 27px; margin-bottom: 12px; }
+  .card h2 em { font-style: italic; color: var(--amber); }
+  .card p { font-size: 14.5px; color: var(--ink-soft); margin-bottom: 12px; }
+  .card ol { margin: 0 0 16px 20px; font-size: 15px; color: var(--ink-soft); }
+  .card ol li { margin-bottom: 7px; }
+  .card ol li b { color: var(--amber); }
+  .card button.primary { font-family: var(--sans); font-weight: 700; font-size: 15px; background: var(--amber); color: #fff; border: none; border-radius: 2px; padding: 13px 28px; cursor: pointer; }
+  .card button.primary:hover { background: #9a3a12; }
+  footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--rule); font-size: 12px; color: var(--ink-faded); font-family: var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+  @media (prefers-reduced-motion: reduce){ * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <div class="eyebrow">Magnetic Particle Testing · MT</div>
+      <h1>The <em>Residual</em> Technique</h1>
+    </div>
+    <a class="back" href="index.html" target="_top">← Exercise Hub</a>
+  </header>
+
+  <div class="instr"><div class="text" id="stepText">…</div></div>
+
+  <div class="stage" id="stage">
+    <canvas id="cv" width="940" height="430"></canvas>
+  </div>
+
+  <footer>MT Residual · Magnetize → remove current → then apply particles · Hardened steel only</footer>
+</div>
+
+<!-- soft-part correction -->
+<div class="pop" id="softpop">
+  <div class="popcard">
+    <div class="qtag">Wrong part</div>
+    <div class="qtext">Mild steel won’t hold a field</div>
+    <div class="qexplain">
+      <p><b>Mild (low-carbon) steel is soft — low retentivity.</b> It loses almost all of its field the instant the current stops, so there’s no residual field left to gather particles.</p>
+      <p>The residual technique needs a <b>hardened, high-retentivity</b> part. Pick the tool-steel part.</p>
+    </div>
+    <button class="primary" id="softOk" type="button">Pick again →</button>
+  </div>
+</div>
+
+<!-- closing recap -->
+<div class="pop" id="donepop">
+  <div class="popcard">
+    <div class="qtag">Residual technique</div>
+    <div class="qtext">An indication — with the current already off</div>
+    <div class="qexplain">
+      <p><b>Order:</b> you magnetized the part, <i>removed the current</i>, and only <b>then</b> applied the particles. The leakage field the hardened part <i>retained</i> pulled them into the crack.</p>
+      <p><b>Only on high-retentivity steel.</b> A soft part would have lost the field before you reached the bath.</p>
+      <p><b>Less sensitive than continuous</b>, where the field is at full strength while particles are mobile — so residual is used when the material holds a strong field and the convenience is worth it (magnetize a batch, inspect after).</p>
+      <p class="qref">per ASNT / ASTM E1444 &amp; E709</p>
+    </div>
+    <button class="primary" id="doneOk" type="button">Run again →</button>
+  </div>
+</div>
+
+<div class="veil" id="intro">
+  <div class="card">
+    <div class="eyebrow">MT · Magnetize First, Inspect After</div>
+    <h2>The <em>residual</em> technique</h2>
+    <p>The opposite order from continuous: magnetize the part, <b>switch the current off</b>, and <b>then</b> apply the particles — the field the part keeps does the work.</p>
+    <ol>
+      <li><b>Pick a hardened part</b> — only high-retentivity steel holds its field.</li>
+      <li><b>Shoot</b> the current, then it switches off. <b>Prove</b> the field stayed with the indicator.</li>
+      <li><b>Apply the bath</b> — no current — and the crack still shows.</li>
+    </ol>
+    <button class="primary" id="beginBtn">Start →</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+const W = 940, H = 430;
+const $ = id => document.getElementById(id);
+const stage = $('stage'), cv = $('cv'), ctx = cv.getContext('2d');
+const stepText = $('stepText');
+
+/* ---------------- layout ---------------- */
+const RAIL_Y = 220;
+const PART = { w: 200, h: 48 };
+const COIL_X = 430;
+const IND_HOME = { x: 790, y: 112 };
+/* pick-phase part slots */
+const PICK = {
+  soft: { x: 270, y: 150 },
+  hard: { x: 640, y: 150 }
+};
+/* panel */
+const PANEL = { x: 70, y: 320, w: 250, h: 90 };
+const SHOT  = { x: 92,  y: 350, w: 90, h: 34 };
+const BATH  = { x: 200, y: 350, w: 90, h: 34 };
+const SHOT_MS = 950;
+
+/* ---------------- state ---------------- */
+const state = {
+  phase: 'intro',   // pick → load → shot → prove → bath → done
+  part: { x: 170 }, partDrag: false, grabOff: 0,
+  shotAnim: 0, current: false, residual: 0,
+  wet: 0, bathHold: false, ind: 0,          // ind = crack indication strength 0..1
+  indicator: { x: IND_HOME.x, y: IND_HOME.y }, indDrag: false, indShow: false,
+  shown: 0, readT: 0, popOpen: false
+};
+function reset(){
+  state.part.x = 170; state.shotAnim = 0; state.current = false; state.residual = 0;
+  state.wet = 0; state.ind = 0; state.shown = 0; state.readT = 0;
+  state.indShow = false; state.popOpen = false;
+  setPhase('pick');
+}
+function setPhase(p){
+  state.phase = p;
+  stage.classList.toggle('grab', p === 'load' || p === 'prove');
+  stage.classList.toggle('point', p === 'pick');
+  if (p === 'pick')       stepText.innerHTML = 'Residual needs a part that <b>holds its field</b>. Which one can you inspect this way?';
+  else if (p === 'load')  stepText.innerHTML = 'Tool steel — hardened, high retentivity. <b>Drag it into the coil.</b>';
+  else if (p === 'shot')  stepText.innerHTML = 'Magnetize it: <b>press SHOT</b>. The current switches off after the pulse.';
+  else if (p === 'prove'){ state.indShow = true; state.indicator = { ...IND_HOME }; stepText.innerHTML = 'Current’s OFF. <b>Drag the field indicator to the part</b> — did the field stay?'; }
+  else if (p === 'bath')  stepText.innerHTML = 'It held the field. <b>Now apply the bath</b> — particles, no current.';
+  else if (p === 'done')  stepText.innerHTML = 'The crack shows — <b>with the current off.</b>';
+}
+
+/* part-end poles (move with the part) */
+function ends(){
+  return [
+    { x: state.part.x - PART.w / 2 + 10, y: RAIL_Y, sign: -1 },
+    { x: state.part.x + PART.w / 2 - 10, y: RAIL_Y, sign: 1 }
+  ];
+}
+function rawReading(){
+  let r = 0;
+  for (const e of ends()){
+    const d = Math.hypot(state.indicator.x - e.x, (state.indicator.y + 52) - e.y);
+    r += e.sign * state.residual * Math.exp(-d / 70);
+  }
+  return r;
+}
+const CRACK_DX = -18;   // crack sits just left of center on the top face
+
+/* ---------------- interaction ---------------- */
+function pos(e){
+  const r = cv.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
+}
+const inBox = (p, b) => p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
+const onPart = p => Math.abs(p.x - state.part.x) < PART.w / 2 + 14 && Math.abs(p.y - RAIL_Y) < PART.h / 2 + 16;
+const onInd = p => state.indShow && Math.hypot(p.x - state.indicator.x, p.y - state.indicator.y) < 72;
+const onPick = (p, slot) => Math.abs(p.x - slot.x) < PART.w / 2 + 6 && Math.abs(p.y - slot.y) < 50;
+
+stage.addEventListener('pointerdown', e => {
+  if (state.popOpen) return;
+  const p = pos(e);
+  const ph = state.phase;
+  if (ph === 'pick'){
+    if (onPick(p, PICK.hard)){ state.part.x = 170; setPhase('load'); }
+    else if (onPick(p, PICK.soft)){ state.popOpen = true; $('softpop').classList.add('show'); }
+  } else if (ph === 'prove' && onInd(p)){
+    state.indDrag = true; state.grabOff = { x: state.indicator.x - p.x, y: state.indicator.y - p.y };
+    stage.setPointerCapture(e.pointerId);
+  } else if (ph === 'load' && onPart(p)){
+    state.partDrag = true; state.grabOff = state.part.x - p.x;
+    stage.setPointerCapture(e.pointerId);
+  } else if (ph === 'shot' && inBox(p, SHOT) && !state.shotAnim){
+    state.shotAnim = performance.now(); state.current = true;
+  } else if (ph === 'bath' && inBox(p, BATH)){
+    state.bathHold = true; stage.setPointerCapture(e.pointerId);
+  }
+});
+window.addEventListener('pointermove', e => {
+  const p = pos(e);
+  if (state.indDrag){
+    state.indicator.x = Math.max(60, Math.min(W - 60, p.x + state.grabOff.x));
+    state.indicator.y = Math.max(70, Math.min(H - 60, p.y + state.grabOff.y));
+  } else if (state.partDrag){
+    state.part.x = Math.max(110, Math.min(W - 110, p.x + state.grabOff));
+  }
+});
+window.addEventListener('pointerup', () => {
+  state.indDrag = false; state.bathHold = false;
+  if (state.partDrag){
+    state.partDrag = false;
+    if (state.phase === 'load' && Math.abs(state.part.x - COIL_X) < 50){
+      state.part.x = COIL_X; setPhase('shot');
+    }
+  }
+});
+
+$('softOk').addEventListener('click', () => { $('softpop').classList.remove('show'); state.popOpen = false; });
+$('doneOk').addEventListener('click', () => { $('donepop').classList.remove('show'); reset(); });
+
+/* ---------------- drawing ---------------- */
+function bench(g){
+  g.fillStyle = '#2b2723'; g.fillRect(0, 0, W, H);
+  g.strokeStyle = 'rgba(255,255,255,.03)';
+  for (let y = 0; y < H; y += 7){ g.beginPath(); g.moveTo(0, y); g.lineTo(W, y + 2); g.stroke(); }
+  g.fillStyle = '#3a352e'; g.fillRect(60, RAIL_Y + PART.h / 2 + 8, W - 120, 10);
+}
+function label(g, t, x, y, c){
+  g.fillStyle = c || '#c9c2b2'; g.font = '600 10px "JetBrains Mono", monospace'; g.textAlign = 'center';
+  g.fillText(t, x, y);
+}
+function partBody(g, cx, cy, hard){
+  const x = cx - PART.w / 2, y = cy - PART.h / 2;
+  const grad = g.createLinearGradient(0, y, 0, y + PART.h);
+  if (hard){ grad.addColorStop(0, '#e6e3dc'); grad.addColorStop(1, '#9a978f'); }
+  else { grad.addColorStop(0, '#d3cfc6'); grad.addColorStop(1, '#8f8b83'); }
+  g.fillStyle = grad; g.fillRect(x, y, PART.w, PART.h);
+  g.strokeStyle = '#6f6c66'; g.lineWidth = 1.4; g.strokeRect(x, y, PART.w, PART.h);
+}
+function drawCrack(g, cx, cy, glow){
+  const gx = cx + CRACK_DX, gy = cy - PART.h / 2 + 3;
+  if (glow > 0.02){
+    g.save();
+    const grd = g.createRadialGradient(gx, gy + 10, 0, gx, gy + 10, 24);
+    grd.addColorStop(0, `rgba(200,255,110,${0.9 * glow})`);
+    grd.addColorStop(0.5, `rgba(160,235,70,${0.4 * glow})`);
+    grd.addColorStop(1, 'rgba(120,200,50,0)');
+    g.fillStyle = grd;
+    g.beginPath(); g.ellipse(gx, gy + 12, 14, 20, 0, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = `rgba(220,255,150,${0.95 * glow})`; g.lineWidth = 4; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(gx, gy + 2); g.lineTo(gx + 3, gy + 24); g.stroke();
+    g.restore();
+  } else {
+    g.strokeStyle = 'rgba(60,57,52,.9)'; g.lineWidth = 1.4;
+    g.beginPath(); g.moveTo(gx, gy + 3); g.lineTo(gx + 3, gy + 22); g.stroke();
+  }
+}
+function drawChosenPart(g, now){
+  partBody(g, state.part.x, RAIL_Y, true);
+  /* wet sheen */
+  if (state.wet > 0){
+    g.fillStyle = `rgba(154,219,44,${0.14 * state.wet})`;
+    g.fillRect(state.part.x - PART.w / 2 + 2, RAIL_Y - PART.h / 2 + 2, PART.w - 4, PART.h - 4);
+  }
+  /* residual pole buildup (light) once wet */
+  if (state.residual > 1 && state.wet > 0.2){
+    const a = Math.min(0.5, state.wet * 0.5);
+    for (const e of ends()){
+      const glow = g.createRadialGradient(e.x, e.y, 0, e.x, e.y, 20);
+      glow.addColorStop(0, `rgba(180,235,90,${a})`);
+      glow.addColorStop(1, 'rgba(120,200,50,0)');
+      g.fillStyle = glow; g.beginPath(); g.arc(e.x, e.y, 20, 0, Math.PI * 2); g.fill();
+    }
+  }
+  drawCrack(g, state.part.x, RAIL_Y, state.ind);
+  /* flux arrows while the shot fires (steady, one direction) */
+  if (state.shotAnim){
+    const x = state.part.x - PART.w / 2;
+    g.strokeStyle = 'rgba(232,168,124,.95)'; g.fillStyle = g.strokeStyle; g.lineWidth = 2.2;
+    for (const yy of [RAIL_Y - 11, RAIL_Y + 11]){
+      g.beginPath(); g.moveTo(x + 24, yy); g.lineTo(x + PART.w - 24, yy); g.stroke();
+      const ax = x + PART.w - 24;
+      g.beginPath(); g.moveTo(ax, yy); g.lineTo(ax - 9, yy - 4.5); g.lineTo(ax - 9, yy + 4.5); g.closePath(); g.fill();
+    }
+  }
+  label(g, 'TOOL STEEL · HARDENED', state.part.x, RAIL_Y + PART.h / 2 + 24);
+}
+function drawCoil(g, now){
+  const firing = state.shotAnim > 0;
+  for (let i = -2; i <= 2; i++){
+    const cx = COIL_X + i * 20;
+    g.strokeStyle = firing ? '#ffb45e' : '#c98a4b';
+    g.lineWidth = firing ? 8 : 6;
+    g.beginPath(); g.ellipse(cx, RAIL_Y, 9, 76, 0, 0, Math.PI * 2); g.stroke();
+  }
+  if (firing){
+    g.strokeStyle = 'rgba(255,180,94,.5)'; g.lineWidth = 2;
+    g.beginPath(); g.ellipse(COIL_X, RAIL_Y, 58, 98, 0, 0, Math.PI * 2); g.stroke();
+  }
+  g.font = '600 10px "JetBrains Mono", monospace'; g.textAlign = 'center';
+  g.fillStyle = firing ? '#ffb45e' : '#c9c2b2';
+  g.fillText(firing ? 'COIL · CURRENT ON' : (state.residual > 1 ? 'COIL · CURRENT OFF' : 'BENCH COIL'), COIL_X, RAIL_Y + 112);
+  /* bath curtain */
+  if (state.bathHold && state.wet < 1.1){
+    g.strokeStyle = 'rgba(154,219,44,.55)'; g.lineWidth = 2;
+    for (let i = 0; i < 7; i++){
+      const bx = state.part.x - 60 + i * 20 + (now / 30 % 8);
+      g.beginPath(); g.moveTo(bx, 100); g.lineTo(bx - 6, RAIL_Y - 28); g.stroke();
+    }
+    label(g, 'BATH · NO CURRENT', state.part.x, 92, '#9adb2c');
+  }
+}
+function btn(g, b, text, active, lit){
+  g.fillStyle = lit ? '#b54515' : active ? '#4a4a47' : '#373735';
+  g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 4); g.fill();
+  g.strokeStyle = active ? '#8a8a85' : '#4a4a47'; g.lineWidth = 1.4; g.stroke();
+  g.fillStyle = lit ? '#fff' : active ? '#e8e4da' : '#6f6c66';
+  g.font = '700 12px "JetBrains Mono", monospace'; g.textAlign = 'center';
+  g.fillText(text, b.x + b.w / 2, b.y + b.h / 2 + 4);
+  if (active){
+    const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 320);
+    g.strokeStyle = `rgba(232,168,124,${0.3 + 0.5 * pulse})`;
+    g.setLineDash([5, 4]); g.lineWidth = 2;
+    g.beginPath(); g.roundRect(b.x - 5, b.y - 5, b.w + 10, b.h + 10, 6); g.stroke();
+    g.setLineDash([]);
+  }
+}
+function drawPanel(g){
+  g.fillStyle = '#31302c'; g.beginPath(); g.roundRect(PANEL.x, PANEL.y, PANEL.w, PANEL.h, 6); g.fill();
+  g.strokeStyle = '#4a4a47'; g.lineWidth = 1.6; g.stroke();
+  btn(g, SHOT, 'SHOT', state.phase === 'shot', state.shotAnim > 0);
+  btn(g, BATH, 'BATH', state.phase === 'bath', state.bathHold);
+  g.fillStyle = '#8a8a85'; g.font = '600 9px "JetBrains Mono", monospace'; g.textAlign = 'left';
+  g.fillText('HWDC · 1800 A', SHOT.x, PANEL.y + PANEL.h - 8);
+  label(g, 'BENCH UNIT', PANEL.x + PANEL.w / 2, PANEL.y - 8);
+}
+function drawIndicator(g, now){
+  const { x, y } = state.indicator;
+  g.save(); g.translate(x, y);
+  g.fillStyle = '#3a3f45'; g.beginPath(); g.arc(0, 0, 64, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = '#555b62'; g.lineWidth = 3.5; g.stroke();
+  g.fillStyle = '#f6f3ec'; g.beginPath(); g.arc(0, 0, 55, 0, Math.PI * 2); g.fill();
+  const ang = v => -Math.PI / 2 + (Math.max(-10, Math.min(10, v)) / 10) * (Math.PI / 3);
+  g.strokeStyle = 'rgba(46,125,79,.8)'; g.lineWidth = 8;
+  g.beginPath(); g.arc(0, 10, 42, ang(-3), ang(3)); g.stroke();
+  g.strokeStyle = '#2a2f38';
+  for (let v = -10; v <= 10; v += 1){
+    const a = ang(v), major = v % 5 === 0;
+    g.lineWidth = major ? 2 : 1;
+    g.beginPath();
+    g.moveTo(Math.cos(a) * (major ? 38 : 43), 10 + Math.sin(a) * (major ? 38 : 43));
+    g.lineTo(Math.cos(a) * 49, 10 + Math.sin(a) * 49);
+    g.stroke();
+  }
+  g.fillStyle = '#1a1a1a'; g.font = '700 12px "JetBrains Mono", monospace'; g.textAlign = 'center';
+  for (const v of [-10, -5, 0, 5, 10]){
+    const a = ang(v);
+    g.fillText(v === 0 ? '0' : (v > 0 ? '+' + v : String(v)), Math.cos(a) * 29, 14 + Math.sin(a) * 29);
+  }
+  g.font = '700 17px "JetBrains Mono", monospace'; g.fillStyle = '#b54515';
+  g.fillText('−', -38, 40); g.fillText('+', 38, 40);
+  g.fillStyle = '#8a8a85'; g.font = '600 8px "JetBrains Mono", monospace'; g.fillText('GAUSS', 0, 44);
+  const a = ang(state.shown);
+  g.strokeStyle = '#c8102e'; g.lineWidth = 3;
+  g.beginPath(); g.moveTo(0, 10); g.lineTo(Math.cos(a) * 47, 10 + Math.sin(a) * 47); g.stroke();
+  g.fillStyle = '#2a2f38'; g.beginPath(); g.arc(0, 10, 4.5, 0, Math.PI * 2); g.fill();
+  g.restore();
+  label(g, 'FIELD INDICATOR', x, y + 86);
+  if (state.phase === 'prove' && !state.indDrag){
+    const pulse = 0.5 + 0.5 * Math.sin(now / 320);
+    g.strokeStyle = `rgba(232,168,124,${0.35 + 0.55 * pulse})`;
+    g.setLineDash([7, 6]); g.lineWidth = 2;
+    g.beginPath(); g.arc(x, y, 72, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
+  }
+}
+function drawPick(g, now){
+  const pulse = 0.5 + 0.5 * Math.sin(now / 320);
+  for (const [key, slot] of Object.entries(PICK)){
+    partBody(g, slot.x, slot.y, key === 'hard');
+    g.strokeStyle = `rgba(232,168,124,${0.3 + 0.5 * pulse})`;
+    g.setLineDash([7, 6]); g.lineWidth = 2;
+    g.strokeRect(slot.x - PART.w / 2 - 8, slot.y - PART.h / 2 - 8, PART.w + 16, PART.h + 16);
+    g.setLineDash([]);
+    label(g, key === 'hard' ? 'TOOL STEEL · HARDENED' : 'MILD STEEL · SOFT', slot.x, slot.y + PART.h / 2 + 24);
+  }
+  label(g, 'CLICK A PART', W / 2, 340, 'rgba(200,195,180,.6)');
+}
+let last = performance.now();
+function frame(now){
+  const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
+  /* shot pulse */
+  if (state.shotAnim && now - state.shotAnim > SHOT_MS){
+    state.shotAnim = 0; state.current = false;
+    state.residual = 13;                       /* hardened part keeps a strong field */
+    setPhase('prove');
+  }
+  /* bath fill + indication growth */
+  if (state.bathHold && state.wet < 1){
+    state.wet = Math.min(1, state.wet + dt / 1.4);
+  }
+  if (state.wet > 0.15 && state.residual > 1) state.ind = Math.min(1, state.ind + dt / 1.6);
+  if (state.phase === 'bath' && state.ind >= 0.98 && !state.popOpen){
+    setPhase('done');
+    setTimeout(() => { state.popOpen = true; $('donepop').classList.add('show'); }, 900);
+  }
+  /* indicator reading */
+  const reading = state.phase === 'prove' && state.indShow ? rawReading() : 0;
+  state.shown += (reading + Math.sin(now / 130) * 0.12 - state.shown) * Math.min(1, dt * 7);
+  if (state.phase === 'prove' && !state.popOpen){
+    if (Math.abs(reading) > 4){
+      state.readT += dt;
+      if (state.readT > 0.8){
+        state.indDrag = false;
+        setPhase('bath');
+      }
+    } else state.readT = 0;
+  }
+
+  bench(ctx);
+  if (state.phase === 'pick'){ drawPick(ctx, now); }
+  else {
+    drawCoil(ctx, now);
+    drawChosenPart(ctx, now);
+    drawPanel(ctx);
+    if (state.indShow) drawIndicator(ctx, now);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+$('beginBtn').addEventListener('click', () => { $('intro').classList.add('hidden'); reset(); });
+
+})();
+</script>
+</body>
+</html>
