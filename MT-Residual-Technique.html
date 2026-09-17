@@ -42,12 +42,6 @@
   .instr::before { content: ''; position: absolute; inset: 4px; border: 1px solid rgba(232,168,124,0.18); border-radius: 2px; pointer-events: none; }
   .instr .text { font-size: 17px; font-weight: 600; }
   .instr .text b { color: var(--amber-soft); }
-  .instr button {
-    font-family: var(--sans); font-weight: 700; font-size: 14px;
-    background: var(--amber); color: #fff; border: none; border-radius: 2px;
-    padding: 10px 20px; cursor: pointer; margin-left: 12px;
-  }
-  .instr button:hover { background: #9a3a12; }
 
   .stage {
     position: relative; border-radius: 2px; overflow: hidden;
@@ -86,6 +80,12 @@
   }
   .recap.show { display: block; }
   .recap h4 { font-family: var(--serif); font-size: 19px; font-weight: 600; margin-bottom: 10px; }
+  .orders {
+    background: #fff; border: 1px solid var(--rule); border-radius: 2px;
+    padding: 12px 16px; margin: 4px 0 12px;
+    font-family: var(--mono); font-size: 13.5px; color: var(--ink); line-height: 1.9;
+  }
+  .orders b { color: var(--amber); }
 
   .veil { position: fixed; inset: 0; background: rgba(26,24,20,.55); backdrop-filter: blur(2px); display: flex; align-items: flex-start; justify-content: center; z-index: 100; padding: 28px 24px; overflow-y: auto; }
   .veil.hidden { display: none; }
@@ -120,17 +120,22 @@
 
   <div class="recap" id="recap">
     <h4>An indication — with the current already off</h4>
+    <div class="orders">
+      Continuous: <b>flood → stop → shoot</b><br>
+      Residual: &nbsp;&nbsp;<b>shoot → stop → dip</b>
+    </div>
     <div class="qexplain">
-      <p><b>Order:</b> you magnetized the part, <i>removed the current</i>, and only <b>then</b> applied the particles. The leakage field the hardened part <i>retained</i> pulled them into the crack.</p>
-      <p><b>Only on high-retentivity steel.</b> A soft part would have lost the field before you reached the bath.</p>
-      <p><b>Less sensitive than continuous</b>, where the field is at full strength while particles are mobile — so residual is used when the material holds a strong field and the convenience is worth it (magnetize a batch, inspect after).</p>
-      <p><b>Why only one shot here?</b> E1444’s “at least ½ second, minimum two shots” rule is written for the wet <i>continuous</i> application — the second shot exists to build indications <i>after the suspension flow has been interrupted</i>. In residual there is no bath flowing during magnetization, so what matters is that the shot leaves an <b>adequate retained field</b> — proven on reference parts with QQIs, not by a formula.</p>
+      <p>Both orders obey one rule: <b>the particles must be free to move while a field is present.</b> The only difference is whether that field is still being applied, or is the one the part kept.</p>
+      <p><b>Why dip instead of pour?</b> With the current off, only the retained field holds the particles — so the bath is applied gently, by immersion or a low-velocity flood. Indications build while the part is <i>in</i> the bath, and the drain clears the background off the rest of the surface.</p>
+      <p><b>Lift it out slowly.</b> The classic residual mistake is pulling the part out fast — on a smooth surface that strips the indication straight back off.</p>
+      <p><b>Only on high-retentivity steel</b>, and <b>less sensitive than continuous</b>: the retained field is weaker than an applied one, so fine indications can be lost. A soft, high-permeability part keeps almost no leakage field once the current stops.</p>
+      <p><b>Why only one shot here?</b> E1444’s “at least ½ second, minimum two shots” rule is written for the wet <i>continuous</i> application — the second shot exists to build indications <i>after the suspension flow has been interrupted</i>. In residual what matters is that the shot leaves an adequate retained field, proven on reference parts with QQIs, not by a formula.</p>
       <p class="qref">per ASTM E1444 / E709 — verify against the edition and spec your shop invokes</p>
     </div>
     <button class="primary" id="recapAgain" type="button">Run again →</button>
   </div>
 
-  <footer>MT Residual · Magnetize → remove current → then apply particles · Hardened steel only</footer>
+  <footer>MT Residual · Shoot → stop → dip · Hardened steel only</footer>
 </div>
 
 <!-- soft-part correction -->
@@ -150,11 +155,11 @@
   <div class="card">
     <div class="eyebrow">MT · Magnetize First, Inspect After</div>
     <h2>The <em>residual</em> technique</h2>
-    <p>The opposite order from continuous: magnetize the part, <b>switch the current off</b>, and <b>then</b> apply the particles — the field the part keeps does the work.</p>
+    <p>The opposite order from continuous — <b>shoot → stop → dip</b>. Magnetize the part, switch the current off, and <b>then</b> put it in the bath; the field the part keeps does the work.</p>
     <ol>
       <li><b>Pick a hardened part</b> — only high-retentivity steel holds its field.</li>
-      <li><b>Shoot</b> the current, then it switches off. <b>Prove</b> the field stayed with the indicator.</li>
-      <li><b>Apply the bath</b> — no current — and the crack still shows.</li>
+      <li><b>Shoot</b>, then the current switches off. <b>Prove</b> the field stayed with the indicator.</li>
+      <li><b>Dip it</b> in the bath — no current — and <b>lift it out slowly</b> to let it drain.</li>
     </ol>
     <button class="primary" id="beginBtn">Start →</button>
   </div>
@@ -169,57 +174,56 @@ const stage = $('stage'), cv = $('cv'), ctx = cv.getContext('2d');
 const stepText = $('stepText');
 
 /* ---------------- layout ---------------- */
-const RAIL_Y = 220;
-const PART = { w: 200, h: 48 };
-const COIL_X = 430;
-const IND_HOME = { x: 790, y: 112 };
-/* pick-phase part slots */
-const PICK = {
-  soft: { x: 270, y: 150 },
-  hard: { x: 640, y: 150 }
-};
-/* panel */
-const PANEL = { x: 70, y: 320, w: 250, h: 90 };
-const SHOT  = { x: 92,  y: 350, w: 90, h: 34 };
-const BATH  = { x: 200, y: 350, w: 90, h: 34 };
+const RAIL_Y = 190;                                   // part centerline on the rail
+const PART = { w: 190, h: 46 };
+const COIL_X = 360;
+const RAIL_END = 500;
+const TANK = { x: 560, y: 244, w: 300, h: 126 };
+const SURF = TANK.y + 16;                             // liquid surface
+const IND_HOME = { x: 800, y: 96 };
+const IND_PARK = { x: 106, y: 96 };
+const PICK = { soft: { x: 268, y: 150 }, hard: { x: 650, y: 150 } };
+const PANEL = { x: 66, y: 316, w: 178, h: 82 };
+const SHOT  = { x: 90, y: 344, w: 96, h: 34 };
 const SHOT_MS = 950;
+const LIFT_FAST = 1200;                               // px/s — forgiving: only a real yank trips it
 
 /* ---------------- state ---------------- */
 const state = {
-  phase: 'intro',   // pick → load → shot → prove → bath → done
-  part: { x: 170 }, partDrag: false, grabOff: 0,
-  shotAnim: 0, current: false, residual: 0,
-  wet: 0, bathHold: false, ind: 0,          // ind = crack indication strength 0..1
+  phase: 'intro',   // pick → load → shot → prove → dip → drain → done
+  part: { x: 170, y: RAIL_Y }, partDrag: false, grabOff: { x: 0, y: 0 },
+  shotAnim: 0, residual: 0,
+  wet: 0, ind: 0,
+  dipped: false, maxRise: 0, prevY: RAIL_Y, dipMsg: '',
   indicator: { x: IND_HOME.x, y: IND_HOME.y }, indDrag: false, indShow: false, indTarget: null,
-  shown: 0, readT: 0, popOpen: false, bathed: false,
-  seenPlus: false, seenMinus: false, bothEnds: false
+  shown: 0, seenPlus: false, seenMinus: false, bothEnds: false,
+  popOpen: false, drainT: 0
 };
-const IND_PARK = { x: 112, y: 106 };
 function reset(){
-  state.part.x = 170; state.shotAnim = 0; state.current = false; state.residual = 0;
-  state.wet = 0; state.ind = 0; state.shown = 0; state.readT = 0;
-  state.indShow = false; state.popOpen = false; state.indTarget = null; state.bathed = false;
-  state.seenPlus = false; state.seenMinus = false; state.bothEnds = false;
+  state.part = { x: 170, y: RAIL_Y }; state.shotAnim = 0; state.residual = 0;
+  state.wet = 0; state.ind = 0; state.dipped = false; state.maxRise = 0; state.prevY = RAIL_Y; state.dipMsg = '';
+  state.indShow = false; state.popOpen = false; state.indTarget = null; state.drainT = 0;
+  state.shown = 0; state.seenPlus = false; state.seenMinus = false; state.bothEnds = false;
   $('recap').classList.remove('show');
   setPhase('pick');
 }
 function setPhase(p){
   state.phase = p;
-  stage.classList.toggle('grab', p === 'load' || p === 'prove');
+  stage.classList.toggle('grab', p === 'load' || p === 'prove' || p === 'dip');
   stage.classList.toggle('point', p === 'pick');
   if (p === 'pick')       stepText.innerHTML = 'Residual needs a part that <b>holds its field</b>. Which one can you inspect this way?';
   else if (p === 'load')  stepText.innerHTML = 'Tool steel — hardened, high retentivity. <b>Drag it into the coil.</b>';
   else if (p === 'shot')  stepText.innerHTML = 'Magnetize it: <b>press SHOT</b>. The current switches off after the pulse.';
   else if (p === 'prove'){ state.indShow = true; state.indicator = { ...IND_HOME }; stepText.innerHTML = 'Current’s OFF. <b>Drag the field indicator to both ends</b> — did the field stay?'; }
-  else if (p === 'bath'){ stepText.innerHTML = 'It held the field. Now <b>press and hold the BATH button</b> — particles, no current.'; }
-  else if (p === 'done')  stepText.innerHTML = 'The crack shows — <b>with the current off.</b>';
+  else if (p === 'dip')   stepText.innerHTML = 'It held the field. Now <b>drag the part down into the bath</b> — no current.';
+  else if (p === 'drain') stepText.innerHTML = 'Lifted clean. <b>Watch it drain</b> — the background clears, the crack stays.';
+  else if (p === 'done')  stepText.innerHTML = 'The crack shows — <b>with the current off the whole time.</b>';
 }
 
-/* part-end poles (move with the part) */
 function ends(){
   return [
-    { x: state.part.x - PART.w / 2 + 10, y: RAIL_Y, sign: -1 },
-    { x: state.part.x + PART.w / 2 - 10, y: RAIL_Y, sign: 1 }
+    { x: state.part.x - PART.w / 2 + 10, y: state.part.y, sign: -1 },
+    { x: state.part.x + PART.w / 2 - 10, y: state.part.y, sign: 1 }
   ];
 }
 function rawReading(){
@@ -230,7 +234,10 @@ function rawReading(){
   }
   return r;
 }
-const CRACK_DX = -18;   // crack sits just left of center on the top face
+const submerged = () =>
+  state.part.x > TANK.x + 30 && state.part.x < TANK.x + TANK.w - 30 && state.part.y > SURF + 26;
+const clearOfBath = () => state.part.y + PART.h / 2 < SURF - 4;
+const CRACK_DX = -18;
 
 /* ---------------- interaction ---------------- */
 function pos(e){
@@ -238,27 +245,24 @@ function pos(e){
   return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
 }
 const inBox = (p, b) => p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
-const onPart = p => Math.abs(p.x - state.part.x) < PART.w / 2 + 14 && Math.abs(p.y - RAIL_Y) < PART.h / 2 + 16;
+const onPart = p => Math.abs(p.x - state.part.x) < PART.w / 2 + 14 && Math.abs(p.y - state.part.y) < PART.h / 2 + 16;
 const onInd = p => state.indShow && Math.hypot(p.x - state.indicator.x, p.y - state.indicator.y) < 72;
 const onPick = (p, slot) => Math.abs(p.x - slot.x) < PART.w / 2 + 6 && Math.abs(p.y - slot.y) < 50;
 
 stage.addEventListener('pointerdown', e => {
   if (state.popOpen) return;
-  const p = pos(e);
-  const ph = state.phase;
+  const p = pos(e); const ph = state.phase;
   if (ph === 'pick'){
-    if (onPick(p, PICK.hard)){ state.part.x = 170; setPhase('load'); }
+    if (onPick(p, PICK.hard)){ state.part = { x: 170, y: RAIL_Y }; setPhase('load'); }
     else if (onPick(p, PICK.soft)){ state.popOpen = true; $('softpop').classList.add('show'); }
-  } else if (ph === 'prove' && onInd(p)){
+  } else if ((ph === 'prove') && onInd(p)){
     state.indDrag = true; state.grabOff = { x: state.indicator.x - p.x, y: state.indicator.y - p.y };
     stage.setPointerCapture(e.pointerId);
-  } else if (ph === 'load' && onPart(p)){
-    state.partDrag = true; state.grabOff = state.part.x - p.x;
+  } else if ((ph === 'load' || ph === 'dip') && onPart(p)){
+    state.partDrag = true; state.grabOff = { x: state.part.x - p.x, y: state.part.y - p.y };
     stage.setPointerCapture(e.pointerId);
   } else if (ph === 'shot' && inBox(p, SHOT) && !state.shotAnim){
-    state.shotAnim = performance.now(); state.current = true;
-  } else if (ph === 'bath' && inBox(p, BATH)){
-    state.bathHold = true; stage.setPointerCapture(e.pointerId);
+    state.shotAnim = performance.now();
   }
 });
 window.addEventListener('pointermove', e => {
@@ -267,23 +271,24 @@ window.addEventListener('pointermove', e => {
     state.indicator.x = Math.max(60, Math.min(W - 60, p.x + state.grabOff.x));
     state.indicator.y = Math.max(70, Math.min(H - 60, p.y + state.grabOff.y));
   } else if (state.partDrag){
-    state.part.x = Math.max(110, Math.min(W - 110, p.x + state.grabOff));
+    state.part.x = Math.max(110, Math.min(W - 110, p.x + state.grabOff.x));
+    if (state.phase === 'dip') state.part.y = Math.max(140, Math.min(TANK.y + TANK.h - 40, p.y + state.grabOff.y));
   }
 });
 window.addEventListener('pointerup', () => {
   const wasIndDrag = state.indDrag;
-  state.indDrag = false; state.bathHold = false;
+  state.indDrag = false;
   /* once both ends have been read, the student sets the indicator down themselves */
   if (wasIndDrag && state.phase === 'prove' && state.bothEnds){
     const nearPark = Math.hypot(state.indicator.x - IND_PARK.x, state.indicator.y - IND_PARK.y) < 95;
-    const clearOfPart = Math.hypot(state.indicator.x - state.part.x, state.indicator.y - RAIL_Y) > 230;
-    if (nearPark){ state.indTarget = { ...IND_PARK }; setPhase('bath'); }
-    else if (clearOfPart) setPhase('bath');
+    const clearOfPart = Math.hypot(state.indicator.x - state.part.x, state.indicator.y - state.part.y) > 230;
+    if (nearPark){ state.indTarget = { ...IND_PARK }; setPhase('dip'); }
+    else if (clearOfPart) setPhase('dip');
   }
   if (state.partDrag){
     state.partDrag = false;
     if (state.phase === 'load' && Math.abs(state.part.x - COIL_X) < 50){
-      state.part.x = COIL_X; setPhase('shot');
+      state.part.x = COIL_X; state.part.y = RAIL_Y; setPhase('shot');
     }
   }
 });
@@ -296,7 +301,7 @@ function bench(g){
   g.fillStyle = '#2b2723'; g.fillRect(0, 0, W, H);
   g.strokeStyle = 'rgba(255,255,255,.03)';
   for (let y = 0; y < H; y += 7){ g.beginPath(); g.moveTo(0, y); g.lineTo(W, y + 2); g.stroke(); }
-  g.fillStyle = '#3a352e'; g.fillRect(60, RAIL_Y + PART.h / 2 + 8, W - 120, 10);
+  g.fillStyle = '#3a352e'; g.fillRect(60, RAIL_Y + PART.h / 2 + 8, RAIL_END - 60, 10);
 }
 function label(g, t, x, y, c){
   g.fillStyle = c || '#c9c2b2'; g.font = '600 10px "JetBrains Mono", monospace'; g.textAlign = 'center';
@@ -319,69 +324,96 @@ function drawCrack(g, cx, cy, glow){
     grd.addColorStop(0.5, `rgba(160,235,70,${0.4 * glow})`);
     grd.addColorStop(1, 'rgba(120,200,50,0)');
     g.fillStyle = grd;
-    g.beginPath(); g.ellipse(gx, gy + 12, 14, 20, 0, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.ellipse(gx, gy + 11, 14, 19, 0, 0, Math.PI * 2); g.fill();
     g.strokeStyle = `rgba(220,255,150,${0.95 * glow})`; g.lineWidth = 4; g.lineCap = 'round';
-    g.beginPath(); g.moveTo(gx, gy + 2); g.lineTo(gx + 3, gy + 24); g.stroke();
+    g.beginPath(); g.moveTo(gx, gy + 2); g.lineTo(gx + 3, gy + 23); g.stroke();
     g.restore();
   } else {
     g.strokeStyle = 'rgba(60,57,52,.9)'; g.lineWidth = 1.4;
-    g.beginPath(); g.moveTo(gx, gy + 3); g.lineTo(gx + 3, gy + 22); g.stroke();
+    g.beginPath(); g.moveTo(gx, gy + 3); g.lineTo(gx + 3, gy + 21); g.stroke();
   }
 }
-function drawChosenPart(g, now){
-  partBody(g, state.part.x, RAIL_Y, true);
-  /* wet sheen */
-  if (state.wet > 0){
-    g.fillStyle = `rgba(154,219,44,${0.14 * state.wet})`;
-    g.fillRect(state.part.x - PART.w / 2 + 2, RAIL_Y - PART.h / 2 + 2, PART.w - 4, PART.h - 4);
+function drawTankBack(g){
+  g.fillStyle = '#31302c'; g.fillRect(TANK.x - 8, TANK.y - 8, TANK.w + 16, TANK.h + 16);
+  g.strokeStyle = '#4a4a47'; g.lineWidth = 1.6; g.strokeRect(TANK.x - 8, TANK.y - 8, TANK.w + 16, TANK.h + 16);
+  g.fillStyle = '#20201d'; g.fillRect(TANK.x, TANK.y, TANK.w, TANK.h);
+  /* suspension */
+  const grad = g.createLinearGradient(0, SURF, 0, TANK.y + TANK.h);
+  grad.addColorStop(0, 'rgba(120,170,60,.55)');
+  grad.addColorStop(1, 'rgba(70,110,40,.75)');
+  g.fillStyle = grad;
+  g.fillRect(TANK.x, SURF, TANK.w, TANK.y + TANK.h - SURF);
+}
+function drawTankFront(g, now){
+  /* translucent liquid over whatever is submerged + surface line */
+  const topOfLiquid = SURF;
+  g.save();
+  g.beginPath(); g.rect(TANK.x, topOfLiquid, TANK.w, TANK.y + TANK.h - topOfLiquid); g.clip();
+  g.fillStyle = 'rgba(110,165,55,.34)';
+  g.fillRect(TANK.x, topOfLiquid, TANK.w, TANK.y + TANK.h - topOfLiquid);
+  g.restore();
+  g.strokeStyle = 'rgba(190,235,120,.8)'; g.lineWidth = 2;
+  g.beginPath();
+  for (let x = TANK.x; x <= TANK.x + TANK.w; x += 6){
+    const y = topOfLiquid + Math.sin((x + now / 18) / 22) * 1.6;
+    x === TANK.x ? g.moveTo(x, y) : g.lineTo(x, y);
   }
-  /* residual pole buildup (light) once wet */
+  g.stroke();
+  label(g, 'WET BATH · SUSPENSION', TANK.x + TANK.w / 2, TANK.y + TANK.h + 28);
+}
+function drawDrips(g, now){
+  g.strokeStyle = 'rgba(160,215,80,.6)'; g.lineWidth = 2;
+  for (let i = 0; i < 5; i++){
+    const dx = state.part.x - 60 + i * 30;
+    const t = ((now / 420) + i * 0.27) % 1;
+    const y0 = state.part.y + PART.h / 2;
+    g.globalAlpha = 1 - t;
+    g.beginPath(); g.moveTo(dx, y0 + t * 34); g.lineTo(dx, y0 + t * 34 + 7); g.stroke();
+  }
+  g.globalAlpha = 1;
+}
+function drawChosenPart(g, now){
+  partBody(g, state.part.x, state.part.y, true);
+  if (state.wet > 0){
+    g.fillStyle = `rgba(154,219,44,${0.13 * state.wet})`;
+    g.fillRect(state.part.x - PART.w / 2 + 2, state.part.y - PART.h / 2 + 2, PART.w - 4, PART.h - 4);
+  }
+  /* light pole buildup once wetted */
   if (state.residual > 1 && state.wet > 0.2){
-    const a = Math.min(0.5, state.wet * 0.5);
+    const a = Math.min(0.45, state.wet * 0.45);
     for (const e of ends()){
-      const glow = g.createRadialGradient(e.x, e.y, 0, e.x, e.y, 20);
+      const glow = g.createRadialGradient(e.x, e.y, 0, e.x, e.y, 19);
       glow.addColorStop(0, `rgba(180,235,90,${a})`);
       glow.addColorStop(1, 'rgba(120,200,50,0)');
-      g.fillStyle = glow; g.beginPath(); g.arc(e.x, e.y, 20, 0, Math.PI * 2); g.fill();
+      g.fillStyle = glow; g.beginPath(); g.arc(e.x, e.y, 19, 0, Math.PI * 2); g.fill();
     }
   }
-  drawCrack(g, state.part.x, RAIL_Y, state.ind);
-  /* flux arrows while the shot fires (steady, one direction) */
+  drawCrack(g, state.part.x, state.part.y, state.ind);
   if (state.shotAnim){
     const x = state.part.x - PART.w / 2;
     g.strokeStyle = 'rgba(232,168,124,.95)'; g.fillStyle = g.strokeStyle; g.lineWidth = 2.2;
-    for (const yy of [RAIL_Y - 11, RAIL_Y + 11]){
+    for (const yy of [state.part.y - 11, state.part.y + 11]){
       g.beginPath(); g.moveTo(x + 24, yy); g.lineTo(x + PART.w - 24, yy); g.stroke();
       const ax = x + PART.w - 24;
       g.beginPath(); g.moveTo(ax, yy); g.lineTo(ax - 9, yy - 4.5); g.lineTo(ax - 9, yy + 4.5); g.closePath(); g.fill();
     }
   }
-  label(g, 'TOOL STEEL · HARDENED', state.part.x, RAIL_Y + PART.h / 2 + 24);
+  label(g, 'TOOL STEEL · HARDENED', state.part.x, state.part.y + PART.h / 2 + 22);
 }
-function drawCoil(g, now){
+function drawCoil(g){
   const firing = state.shotAnim > 0;
   for (let i = -2; i <= 2; i++){
-    const cx = COIL_X + i * 20;
     g.strokeStyle = firing ? '#ffb45e' : '#c98a4b';
     g.lineWidth = firing ? 8 : 6;
-    g.beginPath(); g.ellipse(cx, RAIL_Y, 9, 76, 0, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.ellipse(COIL_X + i * 19, RAIL_Y, 8.5, 66, 0, 0, Math.PI * 2); g.stroke();
   }
   if (firing){
     g.strokeStyle = 'rgba(255,180,94,.5)'; g.lineWidth = 2;
-    g.beginPath(); g.ellipse(COIL_X, RAIL_Y, 58, 98, 0, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.ellipse(COIL_X, RAIL_Y, 54, 88, 0, 0, Math.PI * 2); g.stroke();
   }
   g.font = '600 10px "JetBrains Mono", monospace'; g.textAlign = 'center';
   g.fillStyle = firing ? '#ffb45e' : '#c9c2b2';
-  g.fillText(firing ? 'COIL · CURRENT ON' : (state.residual > 1 ? 'COIL · CURRENT OFF' : 'BENCH COIL'), COIL_X, RAIL_Y + 112);
-  /* bath curtain */
-  if (state.bathHold && state.wet < 1.1){
-    g.strokeStyle = 'rgba(154,219,44,.55)'; g.lineWidth = 2;
-    for (let i = 0; i < 7; i++){
-      const bx = state.part.x - 60 + i * 20 + (now / 30 % 8);
-      g.beginPath(); g.moveTo(bx, 100); g.lineTo(bx - 6, RAIL_Y - 28); g.stroke();
-    }
-    label(g, 'BATH · NO CURRENT', state.part.x, 92, '#9adb2c');
-  }
+  g.fillText(firing ? 'COIL · CURRENT ON' : (state.residual > 1 ? 'COIL · CURRENT OFF' : 'BENCH COIL'), COIL_X, RAIL_Y + 100);
 }
 function btn(g, b, text, active, lit){
   g.fillStyle = lit ? '#b54515' : active ? '#4a4a47' : '#373735';
@@ -402,63 +434,63 @@ function drawPanel(g){
   g.fillStyle = '#31302c'; g.beginPath(); g.roundRect(PANEL.x, PANEL.y, PANEL.w, PANEL.h, 6); g.fill();
   g.strokeStyle = '#4a4a47'; g.lineWidth = 1.6; g.stroke();
   btn(g, SHOT, 'SHOT', state.phase === 'shot', state.shotAnim > 0);
-  btn(g, BATH, 'BATH', state.phase === 'bath', state.bathHold);
   g.fillStyle = '#8a8a85'; g.font = '600 9px "JetBrains Mono", monospace'; g.textAlign = 'left';
-  g.fillText('HWDC · 1800 A', SHOT.x, PANEL.y + PANEL.h - 8);
-  /* spell out that the bath button is a hold, not a click */
-  if (state.phase === 'bath'){
-    g.fillStyle = state.bathHold ? '#9adb2c' : '#e8a87c';
-    g.font = '700 9px "JetBrains Mono", monospace'; g.textAlign = 'center';
-    g.fillText(state.bathHold ? 'POURING…' : 'PRESS & HOLD', BATH.x + BATH.w / 2, PANEL.y + PANEL.h - 8);
-  }
+  g.fillText('HWDC · 1800 A', SHOT.x, PANEL.y + PANEL.h - 10);
   label(g, 'BENCH UNIT', PANEL.x + PANEL.w / 2, PANEL.y - 8);
 }
 function drawIndicator(g, now){
   const { x, y } = state.indicator;
   g.save(); g.translate(x, y);
-  g.fillStyle = '#3a3f45'; g.beginPath(); g.arc(0, 0, 64, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#3a3f45'; g.beginPath(); g.arc(0, 0, 60, 0, Math.PI * 2); g.fill();
   g.strokeStyle = '#555b62'; g.lineWidth = 3.5; g.stroke();
-  g.fillStyle = '#f6f3ec'; g.beginPath(); g.arc(0, 0, 55, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#f6f3ec'; g.beginPath(); g.arc(0, 0, 51, 0, Math.PI * 2); g.fill();
   const ang = v => -Math.PI / 2 + (Math.max(-10, Math.min(10, v)) / 10) * (Math.PI / 3);
   g.strokeStyle = 'rgba(46,125,79,.8)'; g.lineWidth = 8;
-  g.beginPath(); g.arc(0, 10, 42, ang(-3), ang(3)); g.stroke();
+  g.beginPath(); g.arc(0, 9, 39, ang(-3), ang(3)); g.stroke();
   g.strokeStyle = '#2a2f38';
   for (let v = -10; v <= 10; v += 1){
     const a = ang(v), major = v % 5 === 0;
     g.lineWidth = major ? 2 : 1;
     g.beginPath();
-    g.moveTo(Math.cos(a) * (major ? 38 : 43), 10 + Math.sin(a) * (major ? 38 : 43));
-    g.lineTo(Math.cos(a) * 49, 10 + Math.sin(a) * 49);
+    g.moveTo(Math.cos(a) * (major ? 35 : 40), 9 + Math.sin(a) * (major ? 35 : 40));
+    g.lineTo(Math.cos(a) * 46, 9 + Math.sin(a) * 46);
     g.stroke();
   }
-  g.fillStyle = '#1a1a1a'; g.font = '700 12px "JetBrains Mono", monospace'; g.textAlign = 'center';
+  g.fillStyle = '#1a1a1a'; g.font = '700 11.5px "JetBrains Mono", monospace'; g.textAlign = 'center';
   for (const v of [-10, -5, 0, 5, 10]){
     const a = ang(v);
-    g.fillText(v === 0 ? '0' : (v > 0 ? '+' + v : String(v)), Math.cos(a) * 29, 14 + Math.sin(a) * 29);
+    g.fillText(v === 0 ? '0' : (v > 0 ? '+' + v : String(v)), Math.cos(a) * 27, 13 + Math.sin(a) * 27);
   }
-  g.font = '700 17px "JetBrains Mono", monospace'; g.fillStyle = '#b54515';
-  g.fillText('−', -38, 40); g.fillText('+', 38, 40);
-  g.fillStyle = '#8a8a85'; g.font = '600 8px "JetBrains Mono", monospace'; g.fillText('GAUSS', 0, 44);
+  g.font = '700 16px "JetBrains Mono", monospace'; g.fillStyle = '#b54515';
+  g.fillText('−', -35, 37); g.fillText('+', 35, 37);
+  g.fillStyle = '#8a8a85'; g.font = '600 8px "JetBrains Mono", monospace'; g.fillText('GAUSS', 0, 41);
   const a = ang(state.shown);
   g.strokeStyle = '#c8102e'; g.lineWidth = 3;
-  g.beginPath(); g.moveTo(0, 10); g.lineTo(Math.cos(a) * 47, 10 + Math.sin(a) * 47); g.stroke();
-  g.fillStyle = '#2a2f38'; g.beginPath(); g.arc(0, 10, 4.5, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.moveTo(0, 9); g.lineTo(Math.cos(a) * 44, 9 + Math.sin(a) * 44); g.stroke();
+  g.fillStyle = '#2a2f38'; g.beginPath(); g.arc(0, 9, 4.5, 0, Math.PI * 2); g.fill();
   g.restore();
-  label(g, 'FIELD INDICATOR', x, y + 86);
+  label(g, 'FIELD INDICATOR', x, y + 80);
   if (state.phase === 'prove' && !state.indDrag){
     const pulse = 0.5 + 0.5 * Math.sin(now / 320);
     g.strokeStyle = `rgba(232,168,124,${0.35 + 0.55 * pulse})`;
     g.setLineDash([7, 6]); g.lineWidth = 2;
-    g.beginPath(); g.arc(x, y, 72, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
+    g.beginPath(); g.arc(x, y, 68, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
   }
 }
 function drawParkZone(g, now){
   const pulse = 0.5 + 0.5 * Math.sin(now / 320);
   g.strokeStyle = `rgba(232,168,124,${0.3 + 0.5 * pulse})`;
   g.setLineDash([8, 7]); g.lineWidth = 2;
-  g.beginPath(); g.arc(IND_PARK.x, IND_PARK.y, 66, 0, Math.PI * 2); g.stroke();
+  g.beginPath(); g.arc(IND_PARK.x, IND_PARK.y, 64, 0, Math.PI * 2); g.stroke();
   g.setLineDash([]);
-  label(g, 'SET IT DOWN HERE', IND_PARK.x, IND_PARK.y + 84, 'rgba(232,168,124,.85)');
+  label(g, 'SET IT DOWN HERE', IND_PARK.x, IND_PARK.y + 80, 'rgba(232,168,124,.85)');
+}
+function drawDipHint(g, now){
+  const pulse = 0.5 + 0.5 * Math.sin(now / 320);
+  g.strokeStyle = `rgba(232,168,124,${0.3 + 0.5 * pulse})`;
+  g.setLineDash([8, 7]); g.lineWidth = 2;
+  g.strokeRect(TANK.x + 24, SURF + 18, TANK.w - 48, 76);
+  g.setLineDash([]);
 }
 function drawPick(g, now){
   const pulse = 0.5 + 0.5 * Math.sin(now / 320);
@@ -470,18 +502,18 @@ function drawPick(g, now){
     g.setLineDash([]);
     label(g, key === 'hard' ? 'TOOL STEEL · HARDENED' : 'MILD STEEL · SOFT', slot.x, slot.y + PART.h / 2 + 24);
   }
-  label(g, 'CLICK A PART', W / 2, 340, 'rgba(200,195,180,.6)');
+  label(g, 'CLICK A PART', W / 2, 330, 'rgba(200,195,180,.6)');
 }
 let last = performance.now();
 function frame(now){
   const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
-  /* shot pulse */
+
+  /* shot pulse → current off → residual field remains */
   if (state.shotAnim && now - state.shotAnim > SHOT_MS){
-    state.shotAnim = 0; state.current = false;
-    state.residual = 13;                       /* hardened part keeps a strong field */
+    state.shotAnim = 0; state.residual = 13;
     setPhase('prove');
   }
-  /* indicator glides back out of the way once its job is done */
+  /* indicator glides to its parked spot when asked */
   if (state.indTarget && !state.indDrag){
     state.indicator.x += (state.indTarget.x - state.indicator.x) * Math.min(1, dt * 6);
     state.indicator.y += (state.indTarget.y - state.indicator.y) * Math.min(1, dt * 6);
@@ -489,23 +521,48 @@ function frame(now){
       state.indicator = { ...state.indTarget }; state.indTarget = null;
     }
   }
-  /* bath fill + indication bloom (slow enough to watch) */
-  if (state.bathHold && state.wet < 1){
-    state.wet = Math.min(1, state.wet + dt / 1.4);
-    if (state.wet >= 1 && state.phase === 'bath' && !state.bathed){
-      state.bathed = true;
-      stepText.innerHTML = 'Particles are on. <b>Watch the crack.</b>';
+  /* --- the dip --- */
+  const rise = (state.prevY - state.part.y) / Math.max(dt, 0.001);   // +ve = coming up
+  state.prevY = state.part.y;
+  if (state.phase === 'dip'){
+    if (submerged()){
+      if (!state.dipped){ state.dipped = true; state.maxRise = 0; }
+      state.wet = Math.min(1, state.wet + dt / 1.1);
+      if (state.residual > 1) state.ind = Math.min(1, state.ind + dt / 2.2);
+      if (state.ind > 0.5 && !state.dipMsg){
+        state.dipMsg = 'x';
+        stepText.innerHTML = 'Particles are gathering. <b>Lift it out slowly</b> and let it drain.';
+      }
+    } else if (state.dipped){
+      /* sample the whole exit — a single-frame jump must not slip through */
+      state.maxRise = Math.max(state.maxRise, rise);
+      if (clearOfBath()){
+        state.dipped = false;
+        if (state.maxRise > LIFT_FAST){
+          state.ind *= 0.2; state.dipMsg = '';
+          stepText.innerHTML = 'Pulled out too fast — that stripped it. <b>Dip it again</b> and lift slowly.';
+        } else if (state.ind < 0.5){
+          state.dipMsg = '';
+          stepText.innerHTML = 'Not long enough in the bath. <b>Dip it again</b> and give it a moment.';
+        } else {
+          setPhase('drain');
+        }
+      }
     }
   }
-  if (state.wet > 0.15 && state.residual > 1) state.ind = Math.min(1, state.ind + dt / 2.6);
-  if (state.phase === 'bath' && state.ind >= 0.98){
-    setPhase('done');
-    setTimeout(() => {
-      $('recap').classList.add('show');
-      $('recap').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 2400);
+  /* --- drain: background clears, indication finishes --- */
+  if (state.phase === 'drain'){
+    state.ind = Math.min(1, state.ind + dt / 1.8);
+    state.drainT += dt;
+    if (state.ind >= 0.99 && state.drainT > 2.2){
+      setPhase('done');
+      setTimeout(() => {
+        $('recap').classList.add('show');
+        $('recap').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 1800);
+    }
   }
-  /* indicator reading */
+  /* indicator reading (prove only) */
   const reading = state.phase === 'prove' && state.indShow ? rawReading() : 0;
   state.shown += (reading + Math.sin(now / 130) * 0.12 - state.shown) * Math.min(1, dt * 7);
   if (state.phase === 'prove'){
@@ -517,11 +574,16 @@ function frame(now){
     }
   }
 
+  /* ---- draw ---- */
   bench(ctx);
   if (state.phase === 'pick'){ drawPick(ctx, now); }
   else {
-    drawCoil(ctx, now);
+    drawCoil(ctx);
+    drawTankBack(ctx);
+    if (state.phase === 'dip' && !state.dipped) drawDipHint(ctx, now);
     drawChosenPart(ctx, now);
+    drawTankFront(ctx, now);
+    if ((state.phase === 'drain' || (state.phase === 'dip' && !submerged() && state.wet > 0.3)) && state.part.y < SURF) drawDrips(ctx, now);
     drawPanel(ctx);
     if (state.phase === 'prove' && state.bothEnds) drawParkZone(ctx, now);
     if (state.indShow) drawIndicator(ctx, now);

@@ -88,6 +88,12 @@
   .qexplain p { margin-bottom: 9px; }
   .qexplain b { color: var(--ink); }
   .qexplain .qref { font-family: var(--mono); font-size: 11px; color: var(--amber); letter-spacing: .03em; margin-top: 2px; }
+  .qexplain .orders {
+    background: #fff; border: 1px solid var(--rule); border-radius: 2px;
+    padding: 11px 14px; margin: 2px 0 11px;
+    font-family: var(--mono); font-size: 13px; color: var(--ink); line-height: 1.9;
+  }
+  .qexplain .orders b { color: var(--amber); }
   #quizDone { margin-top: 8px; }
 
   .veil { position: fixed; inset: 0; background: rgba(26,24,20,.55); backdrop-filter: blur(2px); display: flex; align-items: flex-start; justify-content: center; z-index: 100; padding: 28px 24px; overflow-y: auto; }
@@ -361,6 +367,7 @@ $('popReject').addEventListener('click', () => popVerdict(false));
 
 /* ---------------- continuous-vs-residual quiz ---------------- */
 const EXPLAIN =
+  '<div class="orders">Continuous: <b>flood → stop → shoot</b><br>Residual: &nbsp;&nbsp;<b>shoot → stop → dip</b></div>' +
   '<p><b>Continuous</b> — the particles are on the part and still mobile <i>while it is being magnetized</i>, so they gather at a flaw at full field strength. That is what you did — and it is the more sensitive, more common method.</p>' +
   '<p><b>Residual</b> — magnetize <i>first</i>, remove the current, <i>then</i> apply the particles, relying on the field the part retains. It only works on high-retentivity steels and is less sensitive.</p>' +
   '<p><b>Why stop the bath before the shot?</b> A flowing stream during the shot would wash the indication away as it forms — so you flood the part, cut the flow, then shoot while the film is still wet.</p>' +
