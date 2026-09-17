@@ -191,13 +191,15 @@ const state = {
   shotAnim: 0, current: false, residual: 0,
   wet: 0, bathHold: false, ind: 0,          // ind = crack indication strength 0..1
   indicator: { x: IND_HOME.x, y: IND_HOME.y }, indDrag: false, indShow: false, indTarget: null,
-  shown: 0, readT: 0, popOpen: false, bathed: false
+  shown: 0, readT: 0, popOpen: false, bathed: false,
+  seenPlus: false, seenMinus: false, bothEnds: false
 };
 const IND_PARK = { x: 112, y: 106 };
 function reset(){
   state.part.x = 170; state.shotAnim = 0; state.current = false; state.residual = 0;
   state.wet = 0; state.ind = 0; state.shown = 0; state.readT = 0;
   state.indShow = false; state.popOpen = false; state.indTarget = null; state.bathed = false;
+  state.seenPlus = false; state.seenMinus = false; state.bothEnds = false;
   $('recap').classList.remove('show');
   setPhase('pick');
 }
@@ -208,8 +210,8 @@ function setPhase(p){
   if (p === 'pick')       stepText.innerHTML = 'Residual needs a part that <b>holds its field</b>. Which one can you inspect this way?';
   else if (p === 'load')  stepText.innerHTML = 'Tool steel — hardened, high retentivity. <b>Drag it into the coil.</b>';
   else if (p === 'shot')  stepText.innerHTML = 'Magnetize it: <b>press SHOT</b>. The current switches off after the pulse.';
-  else if (p === 'prove'){ state.indShow = true; state.indicator = { ...IND_HOME }; stepText.innerHTML = 'Current’s OFF. <b>Drag the field indicator to the part</b> — did the field stay?'; }
-  else if (p === 'bath'){ state.indTarget = { ...IND_PARK }; stepText.innerHTML = 'It held the field. Now <b>press and hold the BATH button</b> — particles, no current.'; }
+  else if (p === 'prove'){ state.indShow = true; state.indicator = { ...IND_HOME }; stepText.innerHTML = 'Current’s OFF. <b>Drag the field indicator to both ends</b> — did the field stay?'; }
+  else if (p === 'bath'){ stepText.innerHTML = 'It held the field. Now <b>press and hold the BATH button</b> — particles, no current.'; }
   else if (p === 'done')  stepText.innerHTML = 'The crack shows — <b>with the current off.</b>';
 }
 
@@ -269,7 +271,15 @@ window.addEventListener('pointermove', e => {
   }
 });
 window.addEventListener('pointerup', () => {
+  const wasIndDrag = state.indDrag;
   state.indDrag = false; state.bathHold = false;
+  /* once both ends have been read, the student sets the indicator down themselves */
+  if (wasIndDrag && state.phase === 'prove' && state.bothEnds){
+    const nearPark = Math.hypot(state.indicator.x - IND_PARK.x, state.indicator.y - IND_PARK.y) < 95;
+    const clearOfPart = Math.hypot(state.indicator.x - state.part.x, state.indicator.y - RAIL_Y) > 230;
+    if (nearPark){ state.indTarget = { ...IND_PARK }; setPhase('bath'); }
+    else if (clearOfPart) setPhase('bath');
+  }
   if (state.partDrag){
     state.partDrag = false;
     if (state.phase === 'load' && Math.abs(state.part.x - COIL_X) < 50){
@@ -442,6 +452,14 @@ function drawIndicator(g, now){
     g.beginPath(); g.arc(x, y, 72, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
   }
 }
+function drawParkZone(g, now){
+  const pulse = 0.5 + 0.5 * Math.sin(now / 320);
+  g.strokeStyle = `rgba(232,168,124,${0.3 + 0.5 * pulse})`;
+  g.setLineDash([8, 7]); g.lineWidth = 2;
+  g.beginPath(); g.arc(IND_PARK.x, IND_PARK.y, 66, 0, Math.PI * 2); g.stroke();
+  g.setLineDash([]);
+  label(g, 'SET IT DOWN HERE', IND_PARK.x, IND_PARK.y + 84, 'rgba(232,168,124,.85)');
+}
 function drawPick(g, now){
   const pulse = 0.5 + 0.5 * Math.sin(now / 320);
   for (const [key, slot] of Object.entries(PICK)){
@@ -490,14 +508,13 @@ function frame(now){
   /* indicator reading */
   const reading = state.phase === 'prove' && state.indShow ? rawReading() : 0;
   state.shown += (reading + Math.sin(now / 130) * 0.12 - state.shown) * Math.min(1, dt * 7);
-  if (state.phase === 'prove' && !state.popOpen){
-    if (Math.abs(reading) > 4){
-      state.readT += dt;
-      if (state.readT > 0.8){
-        state.indDrag = false;
-        setPhase('bath');
-      }
-    } else state.readT = 0;
+  if (state.phase === 'prove'){
+    if (state.shown > 4)  state.seenPlus = true;
+    if (state.shown < -4) state.seenMinus = true;
+    if (state.seenPlus && state.seenMinus && !state.bothEnds){
+      state.bothEnds = true;
+      stepText.innerHTML = 'Both ends read — <b>the field stayed with the current off.</b> Now drag the indicator clear of the part.';
+    }
   }
 
   bench(ctx);
@@ -506,6 +523,7 @@ function frame(now){
     drawCoil(ctx, now);
     drawChosenPart(ctx, now);
     drawPanel(ctx);
+    if (state.phase === 'prove' && state.bothEnds) drawParkZone(ctx, now);
     if (state.indShow) drawIndicator(ctx, now);
   }
   requestAnimationFrame(frame);
