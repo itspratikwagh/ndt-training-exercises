@@ -73,11 +73,19 @@
   .qexplain p { margin-bottom: 9px; }
   .qexplain b { color: var(--ink); }
   .qexplain .qref { font-family: var(--mono); font-size: 11px; color: var(--amber); letter-spacing: .03em; }
-  .popcard button.primary {
+  .popcard button.primary, .recap button.primary {
     font-family: var(--sans); font-weight: 700; font-size: 14.5px; border-radius: 2px;
     padding: 12px 24px; cursor: pointer; border: none; background: var(--amber); color: #fff; margin-top: 12px;
   }
-  .popcard button.primary:hover { background: #9a3a12; }
+  .popcard button.primary:hover, .recap button.primary:hover { background: #9a3a12; }
+
+  /* closing recap — sits BELOW the scene so nothing covers the part */
+  .recap {
+    display: none; background: var(--paper-deep); border: 1px solid var(--rule);
+    border-left: 3px solid var(--amber); border-radius: 2px; padding: 18px 22px; margin-top: 14px;
+  }
+  .recap.show { display: block; }
+  .recap h4 { font-family: var(--serif); font-size: 19px; font-weight: 600; margin-bottom: 10px; }
 
   .veil { position: fixed; inset: 0; background: rgba(26,24,20,.55); backdrop-filter: blur(2px); display: flex; align-items: flex-start; justify-content: center; z-index: 100; padding: 28px 24px; overflow-y: auto; }
   .veil.hidden { display: none; }
@@ -110,6 +118,17 @@
     <canvas id="cv" width="940" height="430"></canvas>
   </div>
 
+  <div class="recap" id="recap">
+    <h4>An indication — with the current already off</h4>
+    <div class="qexplain">
+      <p><b>Order:</b> you magnetized the part, <i>removed the current</i>, and only <b>then</b> applied the particles. The leakage field the hardened part <i>retained</i> pulled them into the crack.</p>
+      <p><b>Only on high-retentivity steel.</b> A soft part would have lost the field before you reached the bath.</p>
+      <p><b>Less sensitive than continuous</b>, where the field is at full strength while particles are mobile — so residual is used when the material holds a strong field and the convenience is worth it (magnetize a batch, inspect after).</p>
+      <p class="qref">per ASNT / ASTM E1444 &amp; E709</p>
+    </div>
+    <button class="primary" id="recapAgain" type="button">Run again →</button>
+  </div>
+
   <footer>MT Residual · Magnetize → remove current → then apply particles · Hardened steel only</footer>
 </div>
 
@@ -123,21 +142,6 @@
       <p>The residual technique needs a <b>hardened, high-retentivity</b> part. Pick the tool-steel part.</p>
     </div>
     <button class="primary" id="softOk" type="button">Pick again →</button>
-  </div>
-</div>
-
-<!-- closing recap -->
-<div class="pop" id="donepop">
-  <div class="popcard">
-    <div class="qtag">Residual technique</div>
-    <div class="qtext">An indication — with the current already off</div>
-    <div class="qexplain">
-      <p><b>Order:</b> you magnetized the part, <i>removed the current</i>, and only <b>then</b> applied the particles. The leakage field the hardened part <i>retained</i> pulled them into the crack.</p>
-      <p><b>Only on high-retentivity steel.</b> A soft part would have lost the field before you reached the bath.</p>
-      <p><b>Less sensitive than continuous</b>, where the field is at full strength while particles are mobile — so residual is used when the material holds a strong field and the convenience is worth it (magnetize a batch, inspect after).</p>
-      <p class="qref">per ASNT / ASTM E1444 &amp; E709</p>
-    </div>
-    <button class="primary" id="doneOk" type="button">Run again →</button>
   </div>
 </div>
 
@@ -185,13 +189,15 @@ const state = {
   part: { x: 170 }, partDrag: false, grabOff: 0,
   shotAnim: 0, current: false, residual: 0,
   wet: 0, bathHold: false, ind: 0,          // ind = crack indication strength 0..1
-  indicator: { x: IND_HOME.x, y: IND_HOME.y }, indDrag: false, indShow: false,
-  shown: 0, readT: 0, popOpen: false
+  indicator: { x: IND_HOME.x, y: IND_HOME.y }, indDrag: false, indShow: false, indTarget: null,
+  shown: 0, readT: 0, popOpen: false, bathed: false
 };
+const IND_PARK = { x: 112, y: 106 };
 function reset(){
   state.part.x = 170; state.shotAnim = 0; state.current = false; state.residual = 0;
   state.wet = 0; state.ind = 0; state.shown = 0; state.readT = 0;
-  state.indShow = false; state.popOpen = false;
+  state.indShow = false; state.popOpen = false; state.indTarget = null; state.bathed = false;
+  $('recap').classList.remove('show');
   setPhase('pick');
 }
 function setPhase(p){
@@ -202,7 +208,7 @@ function setPhase(p){
   else if (p === 'load')  stepText.innerHTML = 'Tool steel — hardened, high retentivity. <b>Drag it into the coil.</b>';
   else if (p === 'shot')  stepText.innerHTML = 'Magnetize it: <b>press SHOT</b>. The current switches off after the pulse.';
   else if (p === 'prove'){ state.indShow = true; state.indicator = { ...IND_HOME }; stepText.innerHTML = 'Current’s OFF. <b>Drag the field indicator to the part</b> — did the field stay?'; }
-  else if (p === 'bath')  stepText.innerHTML = 'It held the field. <b>Now apply the bath</b> — particles, no current.';
+  else if (p === 'bath'){ state.indTarget = { ...IND_PARK }; stepText.innerHTML = 'It held the field. Now <b>press and hold the BATH button</b> — particles, no current.'; }
   else if (p === 'done')  stepText.innerHTML = 'The crack shows — <b>with the current off.</b>';
 }
 
@@ -272,7 +278,7 @@ window.addEventListener('pointerup', () => {
 });
 
 $('softOk').addEventListener('click', () => { $('softpop').classList.remove('show'); state.popOpen = false; });
-$('doneOk').addEventListener('click', () => { $('donepop').classList.remove('show'); reset(); });
+$('recapAgain').addEventListener('click', () => { reset(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
 
 /* ---------------- drawing ---------------- */
 function bench(g){
@@ -388,6 +394,12 @@ function drawPanel(g){
   btn(g, BATH, 'BATH', state.phase === 'bath', state.bathHold);
   g.fillStyle = '#8a8a85'; g.font = '600 9px "JetBrains Mono", monospace'; g.textAlign = 'left';
   g.fillText('HWDC · 1800 A', SHOT.x, PANEL.y + PANEL.h - 8);
+  /* spell out that the bath button is a hold, not a click */
+  if (state.phase === 'bath'){
+    g.fillStyle = state.bathHold ? '#9adb2c' : '#e8a87c';
+    g.font = '700 9px "JetBrains Mono", monospace'; g.textAlign = 'center';
+    g.fillText(state.bathHold ? 'POURING…' : 'PRESS & HOLD', BATH.x + BATH.w / 2, PANEL.y + PANEL.h - 8);
+  }
   label(g, 'BENCH UNIT', PANEL.x + PANEL.w / 2, PANEL.y - 8);
 }
 function drawIndicator(g, now){
@@ -450,14 +462,29 @@ function frame(now){
     state.residual = 13;                       /* hardened part keeps a strong field */
     setPhase('prove');
   }
-  /* bath fill + indication growth */
+  /* indicator glides back out of the way once its job is done */
+  if (state.indTarget && !state.indDrag){
+    state.indicator.x += (state.indTarget.x - state.indicator.x) * Math.min(1, dt * 6);
+    state.indicator.y += (state.indTarget.y - state.indicator.y) * Math.min(1, dt * 6);
+    if (Math.hypot(state.indTarget.x - state.indicator.x, state.indTarget.y - state.indicator.y) < 1.5){
+      state.indicator = { ...state.indTarget }; state.indTarget = null;
+    }
+  }
+  /* bath fill + indication bloom (slow enough to watch) */
   if (state.bathHold && state.wet < 1){
     state.wet = Math.min(1, state.wet + dt / 1.4);
+    if (state.wet >= 1 && state.phase === 'bath' && !state.bathed){
+      state.bathed = true;
+      stepText.innerHTML = 'Particles are on. <b>Watch the crack.</b>';
+    }
   }
-  if (state.wet > 0.15 && state.residual > 1) state.ind = Math.min(1, state.ind + dt / 1.6);
-  if (state.phase === 'bath' && state.ind >= 0.98 && !state.popOpen){
+  if (state.wet > 0.15 && state.residual > 1) state.ind = Math.min(1, state.ind + dt / 2.6);
+  if (state.phase === 'bath' && state.ind >= 0.98){
     setPhase('done');
-    setTimeout(() => { state.popOpen = true; $('donepop').classList.add('show'); }, 900);
+    setTimeout(() => {
+      $('recap').classList.add('show');
+      $('recap').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 2400);
   }
   /* indicator reading */
   const reading = state.phase === 'prove' && state.indShow ? rawReading() : 0;
