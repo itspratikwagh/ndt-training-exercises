@@ -136,6 +136,14 @@
   .criteria-item:last-child { border-bottom:none; }
   .criteria-item .cl { color:var(--text-dim); }
   .criteria-item .cv { font-family:'JetBrains Mono',monospace; font-weight:600; color:var(--text-bright); text-align:right; }
+  .criteria-group { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--text-bright); padding:12px 0 4px; }
+  .criteria-group:first-child { padding-top:0; }
+  .criteria-item.band { display:grid; grid-template-columns:9.4em 1fr; gap:10px; align-items:baseline; }
+  .criteria-item.band .cl { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-bright); }
+  .criteria-item.band .cv { font-family:'Inter',sans-serif; text-align:left; font-size:12.5px; line-height:1.4; }
+  .criteria-item.band .cv.ok { color:var(--success); }
+  .criteria-item.band .cv.cond { color:var(--warning); }
+  .criteria-item.band .cv.rej { color:var(--error); }
   .criteria-note { font-size:11.5px; color:var(--text-dim); line-height:1.5; margin-top:8px; }
   .howto-card { background:rgba(34,197,94,0.05); border:1px solid rgba(34,197,94,0.15); border-radius:10px; padding:16px; }
   .howto-card h4 { color:var(--success); }
@@ -248,12 +256,17 @@ const BEAD_X0 = 30, BEAD_X1 = 730, BEAD_Y0 = 70, BEAD_Y1 = 180;
 // ============================================================
 // ROUNDS
 // ============================================================
+// Undercut is judged by depth band; the middle band on thin material also depends on length.
 const UNDERCUT_CRITERIA = [
-  ['Material < 1" thick', '≤ 1/32"'],
-  ['  exception (< 1")', '≤ 1/16" for 2" in any 12"'],
-  ['Material ≥ 1" thick', '≤ 1/16" any length'],
+  { group: 'Material under 1" thick' },
+  { depth: 'up to 1/32"', verdict: 'OK — any length', kind: 'ok' },
+  { depth: 'over 1/32" to 1/16"', verdict: 'OK only if its total length is 2" or less in any 12" of weld', kind: 'cond' },
+  { depth: 'over 1/16"', verdict: 'Reject', kind: 'rej' },
+  { group: 'Material 1" and thicker' },
+  { depth: 'up to 1/16"', verdict: 'OK — any length', kind: 'ok' },
+  { depth: 'over 1/16"', verdict: 'Reject', kind: 'rej' },
 ];
-const UNDERCUT_NOTE = 'AWS D1.1 Table 8.1, statically loaded nontubular. "Shall not exceed" — a reading exactly at the limit is acceptable.';
+const UNDERCUT_NOTE = 'AWS D1.1 Table 8.1, statically loaded nontubular. A reading exactly at a limit is acceptable ("shall not exceed"). Example: 3/64" deep on 1/2" plate is in the middle band — measure how long it runs before you decide.';
 const UNDERCUT_HOWTO = [
   'Stand the gauge on its straight bottom edge on the base metal, tooth toward the weld.',
   'Drag the gauge left/right until the tooth is over the undercut.',
@@ -896,7 +909,10 @@ function loadRound() {
   document.getElementById('promptText').textContent = r.prompt;
   document.getElementById('jobCard').innerHTML = r.job.map(([k, v]) => `<span class="job-chip">${k}: <b>${v}</b></span>`).join('');
   document.getElementById('criteriaTitle').textContent = r.type === 'depth' && r.mode === 'crown' ? 'Reinforcement Criteria' : r.type === 'depth' ? 'Undercut Criteria' : 'Porosity Criteria';
-  document.getElementById('criteriaList').innerHTML = r.criteria.map(([k, v]) => `<div class="criteria-item"><span class="cl">${k}</span><span class="cv">${v}</span></div>`).join('');
+  document.getElementById('criteriaList').innerHTML = r.criteria.map(c =>
+    c.group ? `<div class="criteria-group">${c.group}</div>`
+    : c.depth ? `<div class="criteria-item band"><span class="cl">${c.depth}</span><span class="cv ${c.kind}">${c.verdict}</span></div>`
+    : `<div class="criteria-item"><span class="cl">${c[0]}</span><span class="cv">${c[1]}</span></div>`).join('');
   document.getElementById('criteriaNote').textContent = r.note;
   document.getElementById('howtoList').innerHTML = r.howto.map(s => `<li>${s}</li>`).join('');
   document.getElementById('tipText').textContent = r.tip;
