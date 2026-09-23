@@ -52,7 +52,7 @@
 
   .viewport {
     background:#1e2130; border:1px solid var(--panel-border); border-radius:12px;
-    width:100%; max-width:750px; aspect-ratio:750/520; overflow:hidden; position:relative;
+    width:100%; max-width:750px; aspect-ratio:750/600; overflow:hidden; position:relative;
     box-shadow:inset 0 2px 8px rgba(0,0,0,0.3);
   }
   .viewport svg { width:100%; height:100%; display:block; touch-action:none; }
@@ -169,7 +169,7 @@
     <div class="job-card" id="jobCard"></div>
 
     <div class="viewport">
-      <svg id="scene" viewBox="0 0 750 520" xmlns="http://www.w3.org/2000/svg"></svg>
+      <svg id="scene" viewBox="0 0 750 600" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
 
     <div class="controls" id="controls"></div>
@@ -202,32 +202,48 @@
 
 <script>
 // ============================================================
-// CONFIG
+// GAUGE GEOMETRY — traced from a G.A.L.-style V-WAC gage, in inches.
+// Origin = top-left corner of the plate, y down. Plate is 4" × 1-1/4".
+// The pointer arm swings on the knurled screw: the tooth at the left
+// end touches the work, the needle at the right end reads the fan scale.
+// Tooth down (undercut) swings the needle ABOVE 0; tooth up (crown)
+// swings it BELOW 0.
 // ============================================================
 const NS = 'http://www.w3.org/2000/svg';
+const G_W = 4.0, G_H = 1.25;
+const PIVOT = { x: 1.41, y: 0.55 };          // knurled screw
+const V_TIP = { x: -1.36, y: 0.70 };          // pivot → tooth tip (tip level with the bottom edge at 0)
+const V_NEEDLE = { x: 2.0, y: 0.06 };         // pivot → needle point
+const FAN_R = 2.03;                           // radius of the tick arc
+const HOLE_18 = { x: 3.34, y: 0.10, r: 1 / 16 };
+const HOLE_116 = { x: 3.28, y: 1.15, r: 1 / 32 };
+const EDGE_SCALE_Y0 = 0.11;                   // first mark of the 1" edge scale
+const BOTTOM_PROFILE = [[0.16, 0.98], [0.56, 1.25], [4.0, 1.25]]; // chamfer + straight bottom edge
 
-// Side (cross-section) view: magnified so 1/64" is readable on the pointer scale
-const SIDE_PPI = 640;          // 1/64" = 10 px
-const STEP64 = SIDE_PPI / 64;  // 10 px
-const SURF_Y = 400;            // base metal surface
-const PLATE_BOTTOM = 520;
-const TIP_MIN = SURF_Y - 12 * STEP64;  // pointer fully raised: 3/16" crown
-const TIP_MAX = SURF_Y + 8 * STEP64;   // pointer fully extended: 1/8" undercut
-const SHAFT_LEN = 240;         // index mark sits this far above the pointer tip
-const RELIEF = 230;            // gap between foot and pointer (clears the crown)
-const FOOT_W = 60;
-const BRIDGE_TOP = 30, BRIDGE_BOTTOM = 250;
+function rot(v, a) { return { x: v.x * Math.cos(a) - v.y * Math.sin(a), y: v.x * Math.sin(a) + v.y * Math.cos(a) }; }
+function tipAt(a) { const d = rot(V_TIP, a); return { x: PIVOT.x + d.x, y: PIVOT.y + d.y }; }
+function needleAt(a) { const d = rot(V_NEEDLE, a); return { x: PIVOT.x + d.x, y: PIVOT.y + d.y }; }
+function readingIn(a) { return tipAt(a).y - G_H; }   // + undercut (below edge), − crown (above edge)
+function phiFor(r) {                                  // arm angle that puts the tooth r inches below the edge
+  let lo = -0.5, hi = 0.5;
+  for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; if (readingIn(m) > r) lo = m; else hi = m; }
+  return (lo + hi) / 2;
+}
+const PHI_DOWN = phiFor(0.25), PHI_UP = phiFor(-0.25);   // ±1/4" stops
 
-// Butt weld crown geometry (side view)
-const CROWN_CX = 520, CROWN_HALF = 192;
-const TOE_L = CROWN_CX - CROWN_HALF;   // 328
-const TOE_R = CROWN_CX + CROWN_HALF;   // 712
-const GROOVE_W = 45;                   // undercut groove width at the left toe
-
-// Plan (top) view for porosity
-const PLAN_PPI = 300;          // 1/16" = 18.75 px
-const BEAD_X0 = 30, BEAD_X1 = 730, BEAD_Y0 = 290, BEAD_Y1 = 400;
-const GAUGE_W = 400, GAUGE_H = 170;
+// ============================================================
+// SCENE CONSTANTS
+// ============================================================
+// Side view: we look straight at the gauge face; the gauge stands on the plate.
+const PPI = 160;
+const STEP64 = PPI / 64;
+const SURF_Y = 330;
+const G_TOP = SURF_Y - G_H * PPI;
+const CROWN_HALF = 0.30 * PPI;
+const GROOVE_W = 0.10 * PPI;
+// Plan view: looking down on the weld, gauge laid flat with its 1/16" scale edge along the bead.
+const PLAN_PPI = 300;
+const BEAD_X0 = 30, BEAD_X1 = 730, BEAD_Y0 = 70, BEAD_Y1 = 180;
 
 // ============================================================
 // ROUNDS
@@ -239,10 +255,10 @@ const UNDERCUT_CRITERIA = [
 ];
 const UNDERCUT_NOTE = 'AWS D1.1 Table 8.1, statically loaded nontubular. "Shall not exceed" — a reading exactly at the limit is acceptable.';
 const UNDERCUT_HOWTO = [
-  'Rest the gauge foot flat on the base metal next to the weld.',
-  'Drag the gauge body sideways until the pointer sits over the undercut.',
-  'Drag the pointer down until its tip bottoms out. Slide along to find the <b>deepest</b> point.',
-  'Read the red index on the UNDERCUT scale (1/64" per mark).',
+  'Stand the gauge on its straight bottom edge on the base metal, tooth toward the weld.',
+  'Drag the gauge left/right until the tooth is over the undercut.',
+  'Drag the tooth (or the needle) to swing the arm until the tip bottoms out. Slide along to find the <b>deepest</b> point.',
+  'Read the needle on the fan scale — <b>above 0 = undercut</b>, 1/64" per mark. Use the SCALE loupe.',
 ];
 const CROWN_CRITERIA = [
   ['Groove weld reinforcement', '≤ 1/8"'],
@@ -251,10 +267,10 @@ const CROWN_CRITERIA = [
 ];
 const CROWN_NOTE = 'AWS D1.1 weld profile requirements for butt-joint groove welds (reinforcement R ≤ 1/8" / 3 mm).';
 const CROWN_HOWTO = [
-  'Set the gauge foot on the base metal beside the weld.',
-  'Position the pointer over the top center of the crown — the highest point.',
-  'Lower the pointer until its tip touches the crown.',
-  'Read the red index on the CROWN scale (1/64" per mark).',
+  'Stand the gauge on its straight bottom edge on the base metal beside the weld — the chamfered corner clears the crown.',
+  'Drag the gauge so the tooth is over the top center of the crown.',
+  'Swing the arm until the tooth tip rests on the crown.',
+  'Read the needle on the fan scale — <b>below 0 = crown height</b>, 1/64" per mark.',
 ];
 const POROSITY_CRITERIA = [
   ['Counted pores', '≥ 1/32" dia.'],
@@ -262,21 +278,27 @@ const POROSITY_CRITERIA = [
   ['Sum of diameters', '≤ 3/4" in any 12"'],
 ];
 const POROSITY_NOTE = 'AWS D1.1 Table 8.1, statically loaded — fillet welds and groove welds not transverse to tensile stress (visible piping porosity).';
+const PERINCH_HOWTO = [
+  'Lay the gauge flat with its <b>1/16\'\' SCALE</b> edge along the weld.',
+  'The red dashed lines extend the 0 and 1" marks across the bead — slide them to catch the densest cluster.',
+  'Size each pore inside the window against the 1/16" marks.',
+  'Add the diameters and compare the total to 3/8" (6/16").',
+];
 
 const ROUNDS = [
   {
-    type: 'depth', mode: 'undercut',
+    type: 'depth', mode: 'undercut', plateT: 0.5,
     title: 'Round 1 — Undercut Depth',
-    prompt: 'There is undercut at the left toe of this butt weld. Use the V-WAC pointer to find the deepest point, read the depth, and make the call.',
+    prompt: 'There is undercut at the toe of this butt weld. Stand the V-WAC on the plate, swing the tooth down into the undercut at its deepest point, read the needle, and make the call.',
     job: [['Plate', '1/2"'], ['Undercut length', '3" continuous'], ['Loading', 'Static']],
     depth64: 2, crown64: 6,
     correctDisp: 'accept',
     explain: 'Deepest reading is 1/32" on 1/2" plate. The limit for material under 1" is 1/32" — "shall not exceed" means a reading exactly at the limit is acceptable. Accept.',
     criteria: UNDERCUT_CRITERIA, note: UNDERCUT_NOTE, howto: UNDERCUT_HOWTO,
-    tip: 'Undercut is rarely uniform. Walk the pointer along the groove and keep lowering it — the gauge only tells you what is under the tip, so a reading taken off the bottom will always be too small.',
+    tip: 'Undercut is rarely uniform. Walk the tooth along the groove and keep lowering it — the gauge only reads what is under the tip, so a reading taken off the bottom is always too small.',
   },
   {
-    type: 'depth', mode: 'undercut',
+    type: 'depth', mode: 'undercut', plateT: 0.5,
     title: 'Round 2 — Undercut Depth',
     prompt: 'Same joint, different spot. Measure the deepest undercut and check the job card — the length of the undercut matters.',
     job: [['Plate', '1/2"'], ['Undercut length', '4" continuous'], ['Loading', 'Static']],
@@ -287,7 +309,7 @@ const ROUNDS = [
     tip: 'When a reading lands between 1/32" and 1/16" on thin material, the answer depends on length. Measure how long the undercut runs before you make the call.',
   },
   {
-    type: 'depth', mode: 'undercut',
+    type: 'depth', mode: 'undercut', plateT: 0.5,
     title: 'Round 3 — Undercut Depth',
     prompt: 'Measure the undercut. This time the undercut is short — read the job card before you decide.',
     job: [['Plate', '1/2"'], ['Undercut length', '1-1/2" total in 12"'], ['Loading', 'Static']],
@@ -298,7 +320,7 @@ const ROUNDS = [
     tip: 'Same depth as Round 2, opposite call. Always record undercut depth and length — the disposition needs both.',
   },
   {
-    type: 'depth', mode: 'undercut',
+    type: 'depth', mode: 'undercut', plateT: 1.25,
     title: 'Round 4 — Undercut Depth (Heavy Plate)',
     prompt: 'This is heavy plate, so a different limit applies. Measure the deepest undercut and make the call.',
     job: [['Plate', '1-1/4"'], ['Undercut length', '6" continuous'], ['Loading', 'Static']],
@@ -309,18 +331,18 @@ const ROUNDS = [
     tip: 'Know your fraction ladder in 64ths: 1/32 = 2/64, 3/64, 1/16 = 4/64, 5/64, 3/32 = 6/64, 1/8 = 8/64.',
   },
   {
-    type: 'depth', mode: 'crown',
+    type: 'depth', mode: 'crown', plateT: 0.75,
     title: 'Round 5 — Crown Height (Reinforcement)',
-    prompt: 'Measure the reinforcement on this butt weld. Put the pointer on the highest point of the crown and read the CROWN scale.',
+    prompt: 'Measure the reinforcement on this butt weld. Rest the tooth on the highest point of the crown and read the needle below 0.',
     job: [['Joint', 'CJP butt, 3/4" plate'], ['Loading', 'Static']],
     depth64: 0, crown64: 6,
     correctDisp: 'accept',
     explain: 'Crown height reads 3/32" (6/64"). The maximum reinforcement is 1/8" (8/64"). Accept.',
     criteria: CROWN_CRITERIA, note: CROWN_NOTE, howto: CROWN_HOWTO,
-    tip: 'Reinforcement is measured from the base metal surface to the highest point of the weld face. If the foot is not flat on the base metal, every reading is wrong.',
+    tip: 'Reinforcement is measured from the base metal surface to the highest point of the weld face. If the bottom edge is not flat on the base metal, every reading is wrong.',
   },
   {
-    type: 'depth', mode: 'crown',
+    type: 'depth', mode: 'crown', plateT: 0.75,
     title: 'Round 6 — Crown Height (Reinforcement)',
     prompt: 'Measure the reinforcement on this butt weld and make the call.',
     job: [['Joint', 'CJP butt, 3/4" plate'], ['Loading', 'Static']],
@@ -333,60 +355,48 @@ const ROUNDS = [
   {
     type: 'size',
     title: 'Round 7 — Porosity Size Comparison',
-    prompt: 'Top view of a weld bead with three surface pores. Drag the gauge so its 1/16" and 1/8" holes sit next to each pore and compare sizes. Classify each pore.',
+    prompt: 'Top view of a weld bead with three surface pores. Lay the gauge flat and slide it so the 1/8\'\' POR and 1/16\'\' POR holes sit right beside each pore. Classify each pore.',
     job: [['View', 'Top of weld (plan)'], ['Magnification', '≈ 4×']],
     pores: [
-      { x: 0.35, d: 1/32, label: 'A', answer: 'small' },
-      { x: 0.95, d: 3/32, label: 'B', answer: 'mid' },
-      { x: 1.65, d: 5/32, label: 'C', answer: 'large' },
+      { x: 0.35, d: 1 / 32, label: 'A', answer: 'small' },
+      { x: 1.05, d: 3 / 32, label: 'B', answer: 'mid' },
+      { x: 1.80, d: 5 / 32, label: 'C', answer: 'large' },
     ],
     explain: 'A is smaller than the 1/16" hole (1/32"). B falls between the holes (3/32"). C is larger than the 1/8" hole (5/32").',
     criteria: POROSITY_CRITERIA, note: POROSITY_NOTE,
     howto: [
-      'Drag the gauge over the weld.',
-      'Set the 1/16" hole, then the 1/8" hole, right beside the pore.',
+      'Drag the gauge up over the weld — the holes are see-through.',
+      'Set the 1/16\'\' POR hole, then the 1/8\'\' POR hole, right beside the pore.',
       'Decide: smaller than 1/16", between the two, or larger than 1/8".',
     ],
-    tip: 'Holes give you a quick go/no-go comparison. For an actual diameter, lay the 1/16" linear scale across the pore and count increments.',
+    tip: 'The holes give a quick go/no-go comparison. For an actual diameter, lay the 1/16" edge scale across the pore and count marks.',
   },
   {
-    type: 'perinch', mode: 'reject',
+    type: 'perinch',
     title: 'Round 8 — Porosity per Linear Inch',
-    prompt: 'Fillet weld with scattered porosity. Slide the gauge\'s 1" scale along the weld to find the worst 1" length. Size each pore in that inch, add the diameters, and make the call.',
+    prompt: 'Fillet weld with scattered porosity. Slide the gauge\'s 1/16\'\' SCALE edge along the weld to find the worst 1" length. Size each pore in that inch, add the diameters, and make the call.',
     job: [['Weld', '5/16" fillet, 12" long'], ['Rest of weld', 'No porosity'], ['Loading', 'Static']],
     pores: [
-      { x: 0.25, d: 2/16 }, { x: 0.50, d: 1/16 }, { x: 0.75, d: 2/16 },
-      { x: 1.00, d: 2/16 }, { x: 1.60, d: 1/16 }, { x: 2.00, d: 1/16 },
+      { x: 0.25, d: 2 / 16 }, { x: 0.50, d: 1 / 16 }, { x: 0.75, d: 2 / 16 },
+      { x: 1.00, d: 2 / 16 }, { x: 1.60, d: 1 / 16 }, { x: 2.00, d: 1 / 16 },
     ],
     worst16: 7, correctDisp: 'reject',
     explain: 'The worst inch holds four pores: 1/8" + 1/16" + 1/8" + 1/8" = 7/16". The limit is 3/8" (6/16") in any linear inch. Reject — even though the whole 12" weld only totals 9/16", which is under the 3/4" limit.',
-    criteria: POROSITY_CRITERIA, note: POROSITY_NOTE,
-    howto: [
-      'Drag the gauge so its 1" linear scale (1/16" marks) runs along the weld.',
-      'The red dashed lines mark the 0 and 1" ends — slide them to catch the densest cluster.',
-      'Size each pore inside the window against the 1/16" marks.',
-      'Add the diameters and compare the total to 3/8" (6/16").',
-    ],
+    criteria: POROSITY_CRITERIA, note: POROSITY_NOTE, howto: PERINCH_HOWTO,
     tip: 'Work in sixteenths: 1/8" = 2/16", 3/8" = 6/16", 3/4" = 12/16". The "any 1 inch" window is wherever you put it — you have to find the worst one.',
   },
   {
-    type: 'perinch', mode: 'accept',
+    type: 'perinch',
     title: 'Round 9 — Porosity per Linear Inch',
     prompt: 'Another fillet weld. Find the worst 1" length, total the pore diameters, and make the call.',
     job: [['Weld', '5/16" fillet, 12" long'], ['Rest of weld', 'No porosity'], ['Loading', 'Static']],
     pores: [
-      { x: 0.30, d: 2/16 }, { x: 0.70, d: 1/16 }, { x: 1.05, d: 2/16 },
-      { x: 1.50, d: 1/16 }, { x: 1.90, d: 2/16 },
+      { x: 0.30, d: 2 / 16 }, { x: 0.70, d: 1 / 16 }, { x: 1.05, d: 2 / 16 },
+      { x: 1.50, d: 1 / 16 }, { x: 1.90, d: 2 / 16 },
     ],
     worst16: 5, correctDisp: 'accept',
     explain: 'No 1" window catches more than three pores. The worst inch totals 1/8" + 1/16" + 1/8" = 5/16" (either end of the weld), under the 3/8" limit. The full length totals 1/2", under 3/4" in 12". Accept.',
-    criteria: POROSITY_CRITERIA, note: POROSITY_NOTE,
-    howto: [
-      'Drag the gauge so its 1" linear scale runs along the weld.',
-      'Slide the 0–1" window along the weld and check every cluster.',
-      'Size each pore inside the window against the 1/16" marks.',
-      'Add the diameters and compare the total to 3/8" (6/16").',
-    ],
+    criteria: POROSITY_CRITERIA, note: POROSITY_NOTE, howto: PERINCH_HOWTO,
     tip: 'Check more than one window. Try the window that starts at each pore — the worst inch is always one of those.',
   },
 ];
@@ -398,13 +408,17 @@ let currentRound = 0;
 let results = [];          // per round: true (first try correct) / false
 let attempted = false;
 let st = {};               // per-round interactive state
+let gxRange = [0, 0];
 
 function freshState() {
   const r = ROUNDS[currentRound];
   if (r.type === 'depth') {
-    return { gx: r.mode === 'undercut' ? 440 : 420, tipY: TIP_MIN, answer: null, disp: null };
+    gxRange = computeGxRange(r);
+    const s = { gx: gxRange[1], phi: phiFor(-12 / 64), answer: null, disp: null }; // tooth parked 3/16" up
+    s.phi = Math.max(s.phi, contactPhi(s.gx, r));
+    return s;
   }
-  return { bx: 200, by: 70, answer: null, disp: null, sizes: {} };
+  return { bx: 60, ey: 205, answer: null, disp: null, sizes: {} };
 }
 
 // ============================================================
@@ -418,26 +432,48 @@ function frac(n, d) {
 }
 
 // ============================================================
-// SIDE VIEW GEOMETRY
+// SIDE VIEW GEOMETRY (world px)
 // ============================================================
+function crownCx(r) { return r.mode === 'undercut' ? 20 : 88; }
 function surfaceY(x, r) {
-  // Undercut groove at the left toe (base metal side)
-  if (r.depth64 > 0 && x > TOE_L - GROOVE_W && x < TOE_L) {
-    const t = (x - (TOE_L - GROOVE_W)) / GROOVE_W;
-    // deepest point sits about 2/3 of the way toward the toe
-    const shape = Math.sin(Math.PI * Math.pow(t, 1.8));
-    return SURF_Y + r.depth64 * STEP64 * shape;
+  const cx = crownCx(r), toeR = cx + CROWN_HALF;
+  if (r.depth64 > 0 && x > toeR && x < toeR + GROOVE_W) {
+    const t = (x - toeR) / GROOVE_W;
+    // deepest point sits close to the weld toe
+    return SURF_Y + r.depth64 * STEP64 * Math.sin(Math.PI * Math.pow(t, 0.6));
   }
-  if (x >= TOE_L && x <= TOE_R) {
-    const u = (x - CROWN_CX) / CROWN_HALF;
-    return SURF_Y - r.crown64 * STEP64 * (1 - u * u);
-  }
+  const u = (x - cx) / CROWN_HALF;
+  if (Math.abs(u) <= 1) return SURF_Y - r.crown64 * STEP64 * (1 - u * u);
   return SURF_Y;
 }
-function flatEnd(r) { return r.depth64 > 0 ? TOE_L - GROOVE_W : TOE_L; }
-function gxLimits(r) { return [RELIEF + FOOT_W, Math.min(720, flatEnd(r) + RELIEF)]; }
-function tipLimit(x, r) { return Math.min(TIP_MAX, surfaceY(x, r)); }
-function readingOf(tipY) { return Math.round((tipY - SURF_Y) / STEP64); } // +undercut, −crown, in 64ths
+function toWorld(gx, p) { return { x: gx + p.x * PPI, y: G_TOP + p.y * PPI }; }
+
+// Where the gauge can stand: its bottom edge and chamfer must not dig into the weld
+function bodyClear(gx, r) {
+  for (let i = 0; i < BOTTOM_PROFILE.length - 1; i++) {
+    const [u0, v0] = BOTTOM_PROFILE[i], [u1, v1] = BOTTOM_PROFILE[i + 1];
+    for (let t = 0; t <= 1; t += 0.02) {
+      const w = toWorld(gx, { x: u0 + (u1 - u0) * t, y: v0 + (v1 - v0) * t });
+      if (w.y > surfaceY(w.x, r) + 0.01) return false;
+    }
+  }
+  return true;
+}
+function computeGxRange(r) {
+  const hi = 750 - G_W * PPI - 4;
+  let lo = hi;
+  while (lo - 0.5 >= -20 && bodyClear(lo - 0.5, r)) lo -= 0.5;
+  return [lo, hi];
+}
+// Lowest arm angle (tooth furthest down) before the tip hits metal
+function tipGap(gx, a, r) { const w = toWorld(gx, tipAt(a)); return w.y - surfaceY(w.x, r); }
+function contactPhi(gx, r) {
+  if (tipGap(gx, PHI_DOWN, r) <= 0) return PHI_DOWN;
+  let lo = PHI_DOWN, hi = PHI_UP;           // gap > 0 at lo (buried), ≤ 0 at hi (clear)
+  for (let i = 0; i < 50; i++) { const m = (lo + hi) / 2; if (tipGap(gx, m, r) > 0) lo = m; else hi = m; }
+  return hi;
+}
+function gaugeReading64() { return Math.round(readingIn(st.phi) * 64); }
 
 // ============================================================
 // DRAWING HELPERS
@@ -461,177 +497,176 @@ function addDefs(svg) {
   };
   grad('baseMetal', [[0, '#5a6577'], [0.3, '#4a5567'], [0.6, '#3d4859'], [1, '#333d4d']], 0, 1);
   grad('weldFill', [[0, '#8a9ab0'], [0.4, '#6b7a8e'], [0.7, '#5a6978'], [1, '#4a5866']], 1, 1);
-  grad('gaugeMetal', [[0, '#e5e7eb'], [0.45, '#b4bac4'], [1, '#8b929e']], 0, 1);
   grad('beadTop', [[0, '#5d6b7d'], [0.5, '#8a9ab0'], [1, '#5d6b7d']], 0, 1);
+  // brushed stainless: plate a touch darker than the arm, with a soft sheen band
+  grad('plateSteel', [[0, '#c9ced6'], [0.35, '#e4e7ec'], [0.55, '#d3d8df'], [1, '#aeb4bd']], 1, 1);
+  grad('armSteel', [[0, '#dfe3e9'], [0.5, '#f1f3f6'], [1, '#c3c9d1']], 0, 1);
   const rg = el('radialGradient', { id: 'pore', cx: '45%', cy: '40%', r: '60%' }, defs);
   [[0, '#05070b'], [0.7, '#141922'], [1, '#2c3441']].forEach(([o, c]) => el('stop', { offset: o, 'stop-color': c }, rg));
-  const f = el('filter', { id: 'shadow', x: '-10%', y: '-10%', width: '130%', height: '130%' }, defs);
-  el('feDropShadow', { dx: 0, dy: 3, stdDeviation: 3, 'flood-opacity': 0.45 }, f);
+  const f = el('filter', { id: 'gShadow', x: '-5%', y: '-5%', width: '115%', height: '125%' }, defs);
+  el('feDropShadow', { dx: 0, dy: 0.02, stdDeviation: 0.02, 'flood-opacity': 0.5 }, f);
+  const f2 = el('filter', { id: 'aShadow', x: '-5%', y: '-10%', width: '115%', height: '130%' }, defs);
+  el('feDropShadow', { dx: 0.006, dy: 0.012, stdDeviation: 0.008, 'flood-opacity': 0.45 }, f2);
+}
+const NSS = { 'vector-effect': 'non-scaling-stroke' };
+const INK = '#2b2f36';
+
+// ============================================================
+// THE GAUGE (drawn in inch units inside a transformed group)
+// ============================================================
+function circlePath(h) { return `M ${h.x - h.r} ${h.y} a ${h.r} ${h.r} 0 1 0 ${2 * h.r} 0 a ${h.r} ${h.r} 0 1 0 ${-2 * h.r} 0 Z`; }
+
+function drawGauge(g, phi) {
+  // Plate, with the two see-through porosity holes
+  el('path', Object.assign({
+    class: 'g-body',
+    d: `M 0 0 L ${G_W - 0.06} 0 Q ${G_W} 0 ${G_W} 0.06 L ${G_W} ${G_H - 0.06} Q ${G_W} ${G_H} ${G_W - 0.06} ${G_H}
+        L 0.56 ${G_H} L 0.16 0.98 L 0.21 0.62 L 0 0.62 Z ` + circlePath(HOLE_18) + ' ' + circlePath(HOLE_116),
+    'fill-rule': 'evenodd', fill: 'url(#plateSteel)', stroke: '#6b7280', 'stroke-width': 1,
+  }, NSS), g);
+
+  // Engraving
+  txt(g, 0.13, 0.30, 'V—WAC  GAGE', { fill: INK, 'font-size': 0.165, 'font-style': 'italic', 'font-family': '"Times New Roman", Times, serif', 'xml:space': 'preserve' });
+  txt(g, 0.70, 1.07, 'STAINLESS', { fill: INK, 'font-size': 0.062, 'font-weight': 600, 'letter-spacing': 0.008 });
+  txt(g, 3.21, 0.125, "1/8'' POR →", { fill: INK, 'font-size': 0.07, 'font-weight': 600, 'text-anchor': 'end' });
+  txt(g, 3.19, 1.175, "1/16'' POR →", { fill: INK, 'font-size': 0.07, 'font-weight': 600, 'text-anchor': 'end' });
+  const sl = txt(g, 3.80, 0.63, "1/16'' SCALE", { fill: INK, 'font-size': 0.085, 'font-weight': 700, 'text-anchor': 'middle' });
+  sl.setAttribute('transform', 'rotate(90 3.80 0.63)');
+
+  // Fan scale: one mark per 1/64" of tooth travel, 0 → 1/4" each way
+  const fanArc = [];
+  for (let k = -16; k <= 16; k++) {
+    const a = phiFor(k / 64);
+    const d = rot(V_NEEDLE, a), len = Math.hypot(d.x, d.y), ux = d.x / len, uy = d.y / len;
+    const major = k % 4 === 0, mid = k % 2 === 0;
+    const r0 = FAN_R - (major ? 0.17 : mid ? 0.13 : 0.10), r1 = FAN_R + (major ? 0.05 : 0);
+    el('line', Object.assign({ x1: PIVOT.x + ux * r0, y1: PIVOT.y + uy * r0, x2: PIVOT.x + ux * r1, y2: PIVOT.y + uy * r1, stroke: INK, 'stroke-width': 0.9 }, NSS), g);
+    fanArc.push(`${PIVOT.x + ux * FAN_R} ${PIVOT.y + uy * FAN_R}`);
+    if (major) {
+      const lbl = k === 0 ? '0' : frac(Math.abs(k), 64).replace('"', "''");
+      txt(g, PIVOT.x + ux * (FAN_R + 0.08), PIVOT.y + uy * (FAN_R + 0.08) + 0.024, lbl, { fill: INK, 'font-size': 0.068, 'font-weight': 600 });
+    }
+  }
+  el('polyline', Object.assign({ points: fanArc.join(' '), fill: 'none', stroke: INK, 'stroke-width': 0.5, opacity: 0.5 }, NSS), g);
+
+  // 1" edge scale in 1/16" along the right end
+  for (let k = 0; k <= 16; k++) {
+    const y = EDGE_SCALE_Y0 + k / 16;
+    const len = k % 8 === 0 ? 0.13 : k % 4 === 0 ? 0.11 : k % 2 === 0 ? 0.09 : 0.07;
+    el('line', Object.assign({ x1: G_W - len, y1: y, x2: G_W, y2: y, stroke: INK, 'stroke-width': 0.9 }, NSS), g);
+  }
+
+  // Pointer arm: tooth, bar, round lobe, needle — swings on the knurled screw
+  const arm = el('g', { id: 'arm', transform: `rotate(${phi * 180 / Math.PI} ${PIVOT.x} ${PIVOT.y})`, filter: 'url(#aShadow)', style: 'cursor:grab' }, g);
+  el('path', Object.assign({
+    d: `M 0 0.47 L 2.42 0.47 L 3.41 0.605 L 2.47 0.635 A 0.45 0.45 0 0 1 1.57 0.635
+        L 0.21 0.635 L 0.15 0.98 L 0.05 ${G_H} L 0 0.95 Z`,
+    fill: 'url(#armSteel)', stroke: '#6b7280', 'stroke-width': 1,
+  }, NSS), arm);
+  el('circle', Object.assign({ cx: 2.02, cy: 0.59, r: 0.115, fill: '#232733', stroke: '#6b7280', 'stroke-width': 1 }, NSS), arm);
+  // wider invisible grab zone along the thin tooth and needle
+  el('path', { d: `M 0.06 0.55 L 0.05 ${G_H} M 2.5 0.56 L 3.41 0.605`, fill: 'none', stroke: 'transparent', 'stroke-width': 0.14, 'stroke-linecap': 'round' }, arm);
+
+  // Knurled screw (pivot + lock)
+  el('circle', Object.assign({ cx: PIVOT.x, cy: PIVOT.y, r: 0.118, fill: '#9aa1ab', stroke: '#4b5563', 'stroke-width': 1 }, NSS), g);
+  for (let i = 0; i < 28; i++) {
+    const a = i / 28 * Math.PI * 2;
+    el('line', Object.assign({ x1: PIVOT.x + Math.cos(a) * 0.085, y1: PIVOT.y + Math.sin(a) * 0.085, x2: PIVOT.x + Math.cos(a) * 0.116, y2: PIVOT.y + Math.sin(a) * 0.116, stroke: '#4b5563', 'stroke-width': 0.7 }, NSS), g);
+  }
+  el('circle', Object.assign({ cx: PIVOT.x, cy: PIVOT.y, r: 0.082, fill: '#d6dae0', stroke: '#6b7280', 'stroke-width': 0.8 }, NSS), g);
+  [0.055, 0.03].forEach(rr => el('circle', Object.assign({ cx: PIVOT.x, cy: PIVOT.y, r: rr, fill: 'none', stroke: '#9ca3af', 'stroke-width': 0.6 }, NSS), g));
 }
 
 // ============================================================
-// SIDE VIEW (undercut / crown)
+// SIDE VIEW (undercut / crown): looking at the gauge face, weld in section
 // ============================================================
 function drawSide(svg) {
   const r = ROUNDS[currentRound];
+  const world = el('g', { id: 'world' }, svg);
+  el('rect', { x: 0, y: 0, width: 750, height: 600, fill: '#1e2130' }, world);
 
-  // Base metal following the surface profile
-  let d = `M 0 ${PLATE_BOTTOM} L 0 ${SURF_Y}`;
-  for (let x = 0; x <= 750; x += 1.5) d += ` L ${x} ${surfaceY(x, r).toFixed(2)}`;
-  d += ` L 750 ${PLATE_BOTTOM} Z`;
-  el('path', { d, fill: 'url(#baseMetal)', stroke: '#2a3040', 'stroke-width': 1 }, svg);
+  const plateBottom = SURF_Y + Math.min(r.plateT, 1.6) * PPI;
+  let d = `M 0 ${plateBottom} L 0 ${surfaceY(0, r)}`;
+  for (let x = 0; x <= 750; x += 0.5) d += ` L ${x} ${surfaceY(x, r).toFixed(2)}`;
+  d += ` L 750 ${plateBottom} Z`;
+  el('path', { d, fill: 'url(#baseMetal)', stroke: '#2a3040', 'stroke-width': 1 }, world);
 
-  // Weld metal (crown + V below surface)
-  let w = `M ${TOE_L} ${SURF_Y}`;
-  for (let x = TOE_L; x <= TOE_R; x += 2) w += ` L ${x} ${surfaceY(x, r).toFixed(2)}`;
-  w += ` L ${TOE_R} ${SURF_Y} L ${CROWN_CX + 30} ${PLATE_BOTTOM} L ${CROWN_CX - 30} ${PLATE_BOTTOM} Z`;
-  el('path', { d: w, fill: 'url(#weldFill)', stroke: '#6b7280', 'stroke-width': 0.6, 'stroke-dasharray': '3,2' }, svg);
-  // redraw the top face of the weld solid
-  let face = `M ${TOE_L} ${SURF_Y}`;
-  for (let x = TOE_L; x <= TOE_R; x += 2) face += ` L ${x} ${surfaceY(x, r).toFixed(2)}`;
-  el('path', { d: face, fill: 'none', stroke: '#9aa7b8', 'stroke-width': 1.2 }, svg);
+  // Weld metal (crown + groove through the plate)
+  const cx = crownCx(r), toeL = cx - CROWN_HALF, toeR = cx + CROWN_HALF;
+  let w = `M ${toeL} ${SURF_Y}`;
+  for (let x = toeL; x <= toeR; x += 1) w += ` L ${x} ${surfaceY(x, r).toFixed(2)}`;
+  w += ` L ${toeR} ${SURF_Y} L ${cx + 6} ${plateBottom} L ${cx - 6} ${plateBottom} Z`;
+  el('path', { d: w, fill: 'url(#weldFill)', stroke: '#6b7280', 'stroke-width': 0.6, 'stroke-dasharray': '3,2' }, world);
+  let face = `M ${toeL} ${SURF_Y}`;
+  for (let x = toeL; x <= toeR; x += 1) face += ` L ${x} ${surfaceY(x, r).toFixed(2)}`;
+  el('path', { d: face, fill: 'none', stroke: '#9aa7b8', 'stroke-width': 1.2 }, world);
 
-  txt(svg, 20, 505, 'BASE METAL', { fill: 'rgba(255,255,255,0.35)', 'font-size': 11, 'font-weight': 600, 'letter-spacing': 1.5 });
-  txt(svg, CROWN_CX, 480, 'WELD', { fill: 'rgba(255,255,255,0.45)', 'font-size': 11, 'font-weight': 600, 'letter-spacing': 1.5, 'text-anchor': 'middle' });
-  if (r.depth64 > 0) {
-    txt(svg, TOE_L - GROOVE_W / 2, 470, 'undercut', { fill: 'rgba(245,158,11,0.7)', 'font-size': 11, 'font-weight': 600, 'text-anchor': 'middle' });
-    el('line', { x1: TOE_L - GROOVE_W / 2, y1: 458, x2: TOE_L - GROOVE_W / 2 + 6, y2: SURF_Y + 12, stroke: 'rgba(245,158,11,0.5)', 'stroke-width': 1 }, svg);
-  }
-  txt(svg, 740, 510, 'cross-section · magnified ≈ 8×', { fill: 'rgba(255,255,255,0.3)', 'font-size': 10, 'text-anchor': 'end' });
+  txt(world, 740, SURF_Y + 22, 'BASE METAL', { fill: 'rgba(255,255,255,0.35)', 'font-size': 11, 'font-weight': 600, 'letter-spacing': 1.5, 'text-anchor': 'end' });
+  txt(world, Math.max(cx, 24), SURF_Y + 44, 'WELD', { fill: 'rgba(255,255,255,0.5)', 'font-size': 10, 'font-weight': 600, 'letter-spacing': 1.5, 'text-anchor': 'middle' });
 
-  drawSideGauge(svg, r);
+  // The gauge, standing on its bottom edge
+  const g = el('g', { id: 'gauge', transform: `translate(${st.gx} ${G_TOP}) scale(${PPI})`, filter: 'url(#gShadow)', style: 'cursor:ew-resize' }, world);
+  drawGauge(g, st.phi);
+
+  const tipW = toWorld(st.gx, tipAt(st.phi));
+  const touching = Math.abs(st.phi - contactPhi(st.gx, r)) < 1e-4 && st.phi > PHI_DOWN + 1e-4;
+  if (touching) el('circle', { cx: tipW.x, cy: tipW.y, r: 3, fill: 'none', stroke: '#22c55e', 'stroke-width': 1 }, world);
+
+  // Loupes
+  const nW = toWorld(st.gx, needleAt(st.phi));
+  loupe(svg, { x: 16, y: 422, w: 170, h: 160 }, 4, tipW.x, tipW.y - 4, 'TIP ×4');
+  loupe(svg, { x: 474, y: 422, w: 260, h: 160 }, 3, nW.x + 0.13 * PPI, nW.y, 'SCALE ×3');
 }
 
-function drawSideGauge(svg, r) {
-  const gx = st.gx, tipY = st.tipY;
-  const x0 = gx - RELIEF - FOOT_W, x1 = gx - RELIEF;
-  const indexY = tipY - SHAFT_LEN;
-  const zeroIndexY = SURF_Y - SHAFT_LEN;
-
-  const g = el('g', { id: 'gaugeBody', filter: 'url(#shadow)', style: 'cursor:grab' }, svg);
-  el('path', {
-    d: `M ${x0 + 4} ${BRIDGE_TOP} L ${gx + 26} ${BRIDGE_TOP} Q ${gx + 30} ${BRIDGE_TOP} ${gx + 30} ${BRIDGE_TOP + 4}
-        L ${gx + 30} ${BRIDGE_BOTTOM} L ${x1} ${BRIDGE_BOTTOM} L ${x1} ${SURF_Y} L ${x0} ${SURF_Y}
-        L ${x0} ${BRIDGE_TOP + 4} Q ${x0} ${BRIDGE_TOP} ${x0 + 4} ${BRIDGE_TOP} Z`,
-    fill: 'url(#gaugeMetal)', stroke: '#4b5563', 'stroke-width': 1.5, opacity: 0.96,
-  }, g);
-
-  // Engraving
-  txt(g, x0 + 14, BRIDGE_TOP + 26, 'V-WAC', { fill: '#1f2937', 'font-size': 18, 'font-weight': 800, 'letter-spacing': 2 });
-  txt(g, x0 + 14, BRIDGE_TOP + 42, 'WELD GAUGE · 1/64" TOL', { fill: '#374151', 'font-size': 8.5, 'font-weight': 600, 'letter-spacing': 0.8 });
-  txt(g, x0 + 30, SURF_Y - 20, 'FOOT', { fill: '#4b5563', 'font-size': 8, 'font-weight': 700, 'text-anchor': 'middle', 'letter-spacing': 1 });
-
-  // Pointer slot
-  el('rect', { x: gx - 6, y: BRIDGE_TOP + 6, width: 12, height: BRIDGE_BOTTOM - BRIDGE_TOP - 6, fill: '#6b7280', opacity: 0.5 }, g);
-
-  // Scale: zero where the tip is level with the foot
-  for (let v = -12; v <= 8; v++) {
-    const y = zeroIndexY + v * STEP64;
-    const a = Math.abs(v);
-    const len = a % 4 === 0 ? 22 : a % 2 === 0 ? 14 : 8;
-    el('line', { x1: gx - 8 - len, y1: y, x2: gx - 8, y2: y, stroke: v === 0 ? '#111827' : '#1f2937', 'stroke-width': v === 0 ? 1.8 : 1 }, g);
-    if (a % 4 === 0) {
-      const lbl = a === 0 ? '0' : frac(a, 64).replace('"', '');
-      txt(g, gx - 34, y + 3.5, lbl, { fill: '#111827', 'font-size': 10, 'font-weight': 700, 'text-anchor': 'end', 'font-family': 'JetBrains Mono, monospace' });
-    }
-  }
-  txt(g, gx - 84, zeroIndexY - 60, 'CROWN ▲', { fill: '#1e3a8a', 'font-size': 9, 'font-weight': 800, 'text-anchor': 'end', 'letter-spacing': 1 });
-  txt(g, gx - 84, zeroIndexY + 44, 'UNDERCUT ▼', { fill: '#7c2d12', 'font-size': 9, 'font-weight': 800, 'text-anchor': 'end', 'letter-spacing': 1 });
-
-  // Locking screw (decorative)
-  el('circle', { cx: gx + 18, cy: BRIDGE_BOTTOM - 22, r: 6, fill: '#9ca3af', stroke: '#4b5563', 'stroke-width': 1 }, g);
-  el('line', { x1: gx + 14, y1: BRIDGE_BOTTOM - 22, x2: gx + 22, y2: BRIDGE_BOTTOM - 22, stroke: '#374151', 'stroke-width': 1.5 }, g);
-
-  // Pointer (slides vertically)
-  const p = el('g', { id: 'pointer', style: 'cursor:ns-resize' }, svg);
-  el('rect', { x: gx - 11, y: indexY - 34, width: 22, height: 16, rx: 3, fill: '#d1d5db', stroke: '#4b5563', 'stroke-width': 1.2 }, p);
-  for (let k = -7; k <= 7; k += 3.5) el('line', { x1: gx + k, y1: indexY - 32, x2: gx + k, y2: indexY - 20, stroke: '#6b7280', 'stroke-width': 1 }, p);
-  el('path', {
-    d: `M ${gx - 4} ${indexY - 18} L ${gx + 4} ${indexY - 18} L ${gx + 4} ${tipY - 16} L ${gx} ${tipY} L ${gx - 4} ${tipY - 16} Z`,
-    fill: '#e5e7eb', stroke: '#4b5563', 'stroke-width': 1.2,
-  }, p);
-  // Index mark
-  el('line', { x1: gx - 30, y1: indexY, x2: gx + 4, y2: indexY, stroke: '#dc2626', 'stroke-width': 2 }, p);
-  el('polygon', { points: `${gx - 30},${indexY} ${gx - 24},${indexY - 3.5} ${gx - 24},${indexY + 3.5}`, fill: '#dc2626' }, p);
-  // Wider invisible grab target
-  el('rect', { x: gx - 16, y: indexY - 38, width: 32, height: tipY - indexY + 38, fill: 'transparent' }, p);
-
-  // Contact cue
-  const touching = Math.abs(tipY - tipLimit(gx, r)) < 0.5;
-  if (touching) el('circle', { cx: gx, cy: tipY, r: 4, fill: 'none', stroke: '#22c55e', 'stroke-width': 1.5 }, svg);
+function loupe(svg, box, zoom, fx, fy, label) {
+  const id = 'clip' + label.replace(/\W/g, '');
+  const cp = el('clipPath', { id }, svg);
+  el('rect', { x: box.x, y: box.y, width: box.w, height: box.h, rx: 10 }, cp);
+  const g = el('g', { 'pointer-events': 'none' }, svg);
+  const inner = el('g', { 'clip-path': `url(#${id})` }, g);
+  el('rect', { x: box.x, y: box.y, width: box.w, height: box.h, fill: '#1e2130' }, inner);
+  const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
+  el('use', { href: '#world', transform: `translate(${cx} ${cy}) scale(${zoom}) translate(${-fx} ${-fy})` }, inner);
+  el('rect', { x: box.x, y: box.y, width: box.w, height: box.h, rx: 10, fill: 'none', stroke: '#3b82f6', 'stroke-width': 2 }, g);
+  el('rect', { x: box.x + 8, y: box.y + 8, width: label.length * 6.6 + 10, height: 18, rx: 4, fill: 'rgba(15,17,23,0.8)' }, g);
+  txt(g, box.x + 13, box.y + 21, label, { fill: '#93c5fd', 'font-size': 10.5, 'font-weight': 700, 'letter-spacing': 0.8 });
 }
 
 // ============================================================
-// PLAN VIEW (porosity)
+// PLAN VIEW (porosity): looking down on the weld, gauge laid flat
 // ============================================================
 function drawPlan(svg) {
   const r = ROUNDS[currentRound];
+  el('rect', { x: 0, y: 0, width: 750, height: 600, fill: 'url(#baseMetal)' }, svg);
+  txt(svg, 740, 590, 'top view · ≈ 4× actual size', { fill: 'rgba(255,255,255,0.35)', 'font-size': 10, 'text-anchor': 'end' });
 
-  el('rect', { x: 0, y: 250, width: 750, height: 270, fill: 'url(#baseMetal)' }, svg);
-  el('rect', { x: 0, y: 0, width: 750, height: 250, fill: '#3a4455' }, svg);
-  el('line', { x1: 0, y1: 250, x2: 750, y2: 250, stroke: '#2a3040', 'stroke-width': 2 }, svg);
-  txt(svg, 740, 20, 'top view · magnified ≈ 4×', { fill: 'rgba(255,255,255,0.3)', 'font-size': 10, 'text-anchor': 'end' });
-
-  // Bead with ripples
   el('rect', { x: BEAD_X0, y: BEAD_Y0, width: BEAD_X1 - BEAD_X0, height: BEAD_Y1 - BEAD_Y0, rx: 18, fill: 'url(#beadTop)', stroke: '#4a5866', 'stroke-width': 1 }, svg);
   for (let x = BEAD_X0 + 16; x < BEAD_X1 - 10; x += 11) {
     el('path', { d: `M ${x} ${BEAD_Y0 + 6} Q ${x + 14} ${(BEAD_Y0 + BEAD_Y1) / 2} ${x} ${BEAD_Y1 - 6}`, fill: 'none', stroke: 'rgba(255,255,255,0.07)', 'stroke-width': 1 }, svg);
   }
-  txt(svg, BEAD_X0 + 4, BEAD_Y1 + 22, 'WELD START', { fill: 'rgba(255,255,255,0.4)', 'font-size': 10, 'font-weight': 600, 'letter-spacing': 1 });
+  txt(svg, BEAD_X0 + 2, BEAD_Y0 - 10, 'WELD START', { fill: 'rgba(255,255,255,0.45)', 'font-size': 10, 'font-weight': 600, 'letter-spacing': 1 });
 
   const cy = (BEAD_Y0 + BEAD_Y1) / 2;
   r.pores.forEach((p, i) => {
     const px = BEAD_X0 + p.x * PLAN_PPI;
     const py = cy + (i % 2 ? 9 : -7);
     el('circle', { cx: px, cy: py, r: p.d * PLAN_PPI / 2, fill: 'url(#pore)', stroke: '#1b2130', 'stroke-width': 0.8 }, svg);
-    if (p.label) txt(svg, px, BEAD_Y1 + 24, p.label, { fill: '#f59e0b', 'font-size': 15, 'font-weight': 800, 'text-anchor': 'middle', 'font-family': 'JetBrains Mono, monospace' });
+    if (p.label) txt(svg, px, BEAD_Y0 - 10, p.label, { fill: '#f59e0b', 'font-size': 15, 'font-weight': 800, 'text-anchor': 'middle', 'font-family': 'JetBrains Mono, monospace' });
   });
 
-  drawPlanGauge(svg, r);
-}
+  // Gauge laid flat, rotated so the 1/16'' SCALE edge runs along the weld
+  const g = el('g', { id: 'gauge', transform: `translate(${st.bx} ${st.ey + G_W * PLAN_PPI}) scale(${PLAN_PPI}) rotate(-90)`, filter: 'url(#gShadow)', style: 'cursor:grab' }, svg);
+  drawGauge(g, 0);
 
-function drawPlanGauge(svg, r) {
-  const bx = st.bx, by = st.by;
-  const scaleX0 = bx + 20;                 // 0 mark
-  const scaleY = by + GAUGE_H;             // scale runs along the bottom edge
-  const h8 = { cx: bx + 350, cy: by + 60, r: (1 / 8) * PLAN_PPI / 2 };
-  const h16 = { cx: bx + 350, cy: by + 118, r: (1 / 16) * PLAN_PPI / 2 };
-
-  // Projection lines for the 0 and 1" ends (per-inch rounds)
   if (r.type === 'perinch') {
-    [0, 1].forEach(k => {
-      const x = scaleX0 + k * PLAN_PPI;
-      el('line', { x1: x, y1: scaleY, x2: x, y2: 515, stroke: '#ef4444', 'stroke-width': 1.5, 'stroke-dasharray': '5,4', opacity: 0.8 }, svg);
+    [0, 16].forEach(k => {
+      const x = st.bx + (EDGE_SCALE_Y0 + k / 16) * PLAN_PPI;
+      el('line', { x1: x, y1: st.ey, x2: x, y2: BEAD_Y0 - 24, stroke: '#ef4444', 'stroke-width': 1.5, 'stroke-dasharray': '5,4', opacity: 0.85, 'pointer-events': 'none' }, svg);
     });
-    el('rect', { x: scaleX0, y: scaleY, width: PLAN_PPI, height: 515 - scaleY, fill: 'rgba(239,68,68,0.06)' }, svg);
+    const x0 = st.bx + EDGE_SCALE_Y0 * PLAN_PPI;
+    el('rect', { x: x0, y: Math.min(st.ey, BEAD_Y0 - 24), width: PLAN_PPI, height: Math.max(0, st.ey - BEAD_Y0 + 24), fill: 'rgba(239,68,68,0.07)', 'pointer-events': 'none' }, svg);
+    txt(svg, x0 + PLAN_PPI / 2, BEAD_Y0 - 30, '1" window', { fill: '#fca5a5', 'font-size': 11, 'font-weight': 700, 'text-anchor': 'middle', 'pointer-events': 'none' });
   }
-
-  const g = el('g', { id: 'gaugeBody', filter: 'url(#shadow)', style: 'cursor:grab' }, svg);
-  const circ = h => `M ${h.cx - h.r} ${h.cy} a ${h.r} ${h.r} 0 1 0 ${2 * h.r} 0 a ${h.r} ${h.r} 0 1 0 ${-2 * h.r} 0 Z`;
-  el('path', {
-    d: `M ${bx + 6} ${by} L ${bx + GAUGE_W - 6} ${by} Q ${bx + GAUGE_W} ${by} ${bx + GAUGE_W} ${by + 6}
-        L ${bx + GAUGE_W} ${by + GAUGE_H} L ${bx} ${by + GAUGE_H} L ${bx} ${by + 6} Q ${bx} ${by} ${bx + 6} ${by} Z ` + circ(h8) + ' ' + circ(h16),
-    'fill-rule': 'evenodd', fill: 'url(#gaugeMetal)', stroke: '#4b5563', 'stroke-width': 1.5, opacity: 0.94,
-  }, g);
-  // Hole rims
-  [h8, h16].forEach(h => el('circle', { cx: h.cx, cy: h.cy, r: h.r, fill: 'none', stroke: '#374151', 'stroke-width': 1.2 }, g));
-  txt(g, h8.cx - h8.r - 8, h8.cy + 4, '1/8', { fill: '#111827', 'font-size': 11, 'font-weight': 700, 'text-anchor': 'end', 'font-family': 'JetBrains Mono, monospace' });
-  txt(g, h16.cx - h16.r - 8, h16.cy + 4, '1/16', { fill: '#111827', 'font-size': 11, 'font-weight': 700, 'text-anchor': 'end', 'font-family': 'JetBrains Mono, monospace' });
-  txt(g, h8.cx, by + 20, 'PORE', { fill: '#374151', 'font-size': 8, 'font-weight': 700, 'text-anchor': 'middle', 'letter-spacing': 1 });
-
-  txt(g, bx + 16, by + 30, 'V-WAC', { fill: '#1f2937', 'font-size': 18, 'font-weight': 800, 'letter-spacing': 2 });
-  txt(g, bx + 16, by + 46, 'WELD GAUGE', { fill: '#374151', 'font-size': 8.5, 'font-weight': 600, 'letter-spacing': 1 });
-  txt(g, bx + 16, by + 110, 'POROSITY / LINEAR INCH', { fill: '#374151', 'font-size': 8.5, 'font-weight': 700, 'letter-spacing': 0.8 });
-
-  // 1" linear scale in 1/16" increments
-  for (let k = 0; k <= 16; k++) {
-    const x = scaleX0 + k * PLAN_PPI / 16;
-    const len = k % 16 === 0 ? 28 : k % 8 === 0 ? 24 : k % 4 === 0 ? 18 : k % 2 === 0 ? 12 : 8;
-    el('line', { x1: x, y1: scaleY, x2: x, y2: scaleY - len, stroke: '#111827', 'stroke-width': k % 4 === 0 ? 1.4 : 1 }, g);
-  }
-  [[0, '0'], [4, '1/4'], [8, '1/2'], [12, '3/4'], [16, '1"']].forEach(([k, s]) => {
-    txt(g, scaleX0 + k * PLAN_PPI / 16, scaleY - 32, s, { fill: '#111827', 'font-size': 10, 'font-weight': 700, 'text-anchor': 'middle', 'font-family': 'JetBrains Mono, monospace' });
-  });
 }
 
 // ============================================================
@@ -655,16 +690,21 @@ function svgPoint(e) {
   pt.x = e.clientX; pt.y = e.clientY;
   return pt.matrixTransform(svg.getScreenCTM().inverse());
 }
+function pivotWorld() { return toWorld(st.gx, PIVOT); }
 function initDrag() {
   const svg = document.getElementById('scene');
   svg.addEventListener('pointerdown', e => {
     if (document.getElementById('feedback').classList.contains('visible')) return;
     const p = svgPoint(e);
-    const onPointer = e.target.closest && e.target.closest('#pointer');
-    const onBody = e.target.closest && e.target.closest('#gaugeBody');
-    if (onPointer) drag = { kind: 'pointer', y0: p.y, tip0: st.tipY };
-    else if (onBody) drag = { kind: 'body', x0: p.x, y0: p.y, gx0: st.gx, bx0: st.bx, by0: st.by };
-    else return;
+    const r = ROUNDS[currentRound];
+    const onArm = e.target.closest && e.target.closest('#arm');
+    const onGauge = e.target.closest && e.target.closest('#gauge');
+    if (r.type === 'depth' && onArm) {
+      const pv = pivotWorld();
+      drag = { kind: 'arm', a0: Math.atan2(p.y - pv.y, p.x - pv.x), phi0: st.phi };
+    } else if (onGauge) {
+      drag = { kind: 'body', x0: p.x, y0: p.y, gx0: st.gx, bx0: st.bx, ey0: st.ey };
+    } else return;
     svg.setPointerCapture(e.pointerId);
     e.preventDefault();
   });
@@ -673,17 +713,20 @@ function initDrag() {
     const p = svgPoint(e);
     const r = ROUNDS[currentRound];
     if (r.type === 'depth') {
-      if (drag.kind === 'pointer') {
-        st.tipY = Math.max(TIP_MIN, Math.min(tipLimit(st.gx, r), drag.tip0 + (p.y - drag.y0)));
+      if (drag.kind === 'arm') {
+        const pv = pivotWorld();
+        let da = Math.atan2(p.y - pv.y, p.x - pv.x) - drag.a0;
+        if (da > Math.PI) da -= 2 * Math.PI;
+        if (da < -Math.PI) da += 2 * Math.PI;
+        st.phi = Math.min(PHI_UP, Math.max(contactPhi(st.gx, r), drag.phi0 + da));
       } else {
-        const [lo, hi] = gxLimits(r);
-        st.gx = Math.max(lo, Math.min(hi, drag.gx0 + (p.x - drag.x0)));
-        // sliding sideways drags the tip up out of anything it hits
-        st.tipY = Math.min(st.tipY, tipLimit(st.gx, r));
+        st.gx = Math.max(gxRange[0], Math.min(gxRange[1], drag.gx0 + (p.x - drag.x0)));
+        // sliding sideways lifts the tooth out of anything it runs into
+        st.phi = Math.max(st.phi, contactPhi(st.gx, r));
       }
     } else {
-      st.bx = Math.max(-GAUGE_W + 60, Math.min(750 - 60, drag.bx0 + (p.x - drag.x0)));
-      st.by = Math.max(-GAUGE_H + 40, Math.min(480, drag.by0 + (p.y - drag.y0)));
+      st.bx = Math.max(-340, Math.min(700, drag.bx0 + (p.x - drag.x0)));
+      st.ey = Math.max(-250, Math.min(560, drag.ey0 + (p.y - drag.y0)));
     }
     drawScene();
   });
@@ -704,7 +747,7 @@ function renderControls() {
     html += `<div class="ctrl-row" id="answerRow"><span class="ctrl-label">${label}</span>
       <div class="stepper"><button onclick="step(-1)" aria-label="decrease">−</button>
       <div class="val" id="answerVal"></div><button onclick="step(1)" aria-label="increase">+</button></div>
-      <span style="font-size:12px;color:var(--text-dim)">1/64" steps — enter what the gauge reads</span></div>`;
+      <span style="font-size:12px;color:var(--text-dim)">1/64" steps — enter what the needle reads</span></div>`;
     html += dispRow();
   } else if (r.type === 'size') {
     r.pores.forEach(p => {
@@ -802,12 +845,11 @@ function submit() {
 
   let detail = r.explain;
   if (!correct && r.type === 'depth') {
-    const gaugeNow = readingOf(st.tipY);
     const truth = r.mode === 'undercut' ? r.depth64 : r.crown64;
-    const shown = r.mode === 'undercut' ? gaugeNow : -gaugeNow;
-    const touching = Math.abs(st.tipY - tipLimit(st.gx, r)) < 0.5;
-    if (!touching) detail = 'Your pointer tip was not touching the metal when you submitted — lower it until it bottoms out. ' + detail;
-    else if (shown >= 0 && shown < truth) detail = `Your gauge was reading ${frac(shown, 64)} — that spot is not the ${r.mode === 'undercut' ? 'deepest' : 'highest'} point. ` + detail;
+    const shown = r.mode === 'undercut' ? gaugeReading64() : -gaugeReading64();
+    const touching = Math.abs(st.phi - contactPhi(st.gx, r)) < 1e-4;
+    if (!touching) detail = 'The tooth was not touching the metal when you submitted — swing it down until it bottoms out. ' + detail;
+    else if (shown >= 0 && shown < truth) detail = `Your needle was reading ${frac(shown, 64)} — that spot is not the ${r.mode === 'undercut' ? 'deepest' : 'highest'} point. ` + detail;
   }
 
   document.getElementById('fbIcon').className = 'fb-icon ' + (correct ? 'correct' : 'incorrect');
