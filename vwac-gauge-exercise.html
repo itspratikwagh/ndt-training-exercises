@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>V-WAC Gauge Exercise</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0f1117; --panel: #1a1d27; --panel-border: #2a2d3a;
+    --accent: #3b82f6; --accent-glow: rgba(59,130,246,0.3);
+    --success: #22c55e; --error: #ef4444; --warning: #f59e0b;
+    --text: #e2e8f0; --text-dim: #94a3b8; --text-bright: #f8fafc;
+  }
+  body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; user-select:none; }
+
+  .exercise-header {
+    background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);
+    border-bottom:1px solid var(--panel-border); padding:20px 32px;
+    display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  }
+  .exercise-title { font-size:18px; font-weight:700; color:var(--text-bright); }
+  .exercise-subtitle { font-size:13px; color:var(--text-dim); margin-top:2px; }
+  .header-right { display:flex; align-items:center; gap:20px; }
+  a.back { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--text-dim); text-decoration:none; }
+  a.back:hover { color:var(--warning); }
+
+  .exercise-body { display:grid; grid-template-columns:1fr 310px; min-height:calc(100vh - 72px); }
+  @media (max-width: 1000px) { .exercise-body { grid-template-columns:1fr; } .sidebar { border-left:none; border-top:1px solid var(--panel-border); } }
+
+  .main-area { padding:24px 32px; display:flex; flex-direction:column; align-items:center; position:relative; }
+  @media (max-width: 600px) { .main-area { padding:16px; } .exercise-header { padding:16px; } }
+
+  .prompt-box {
+    background:var(--panel); border:1px solid var(--panel-border);
+    border-radius:10px; padding:16px 24px; margin-bottom:12px;
+    max-width:750px; width:100%;
+  }
+  .prompt-box h3 { font-size:14px; font-weight:600; color:var(--accent); margin-bottom:6px; }
+  .prompt-box p { font-size:14px; color:var(--text); line-height:1.5; }
+
+  .job-card {
+    max-width:750px; width:100%; margin-bottom:12px;
+    display:flex; flex-wrap:wrap; gap:8px;
+  }
+  .job-chip {
+    font-family:'JetBrains Mono',monospace; font-size:12px; padding:5px 10px; border-radius:6px;
+    background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); color:var(--warning);
+  }
+  .job-chip b { color:var(--text-bright); font-weight:600; }
+
+  .viewport {
+    background:#1e2130; border:1px solid var(--panel-border); border-radius:12px;
+    width:100%; max-width:750px; aspect-ratio:750/600; overflow:hidden; position:relative;
+    box-shadow:inset 0 2px 8px rgba(0,0,0,0.3);
+  }
+  .viewport svg { width:100%; height:100%; display:block; touch-action:none; }
+
+  .controls { margin-top:14px; max-width:750px; width:100%; display:flex; flex-direction:column; gap:12px; }
+  .ctrl-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .ctrl-label { font-size:13px; color:var(--text-dim); font-weight:600; min-width:120px; }
+
+  .stepper { display:inline-flex; align-items:center; border:2px solid var(--panel-border); border-radius:8px; overflow:hidden; background:var(--panel); }
+  .stepper button {
+    width:40px; height:42px; border:none; background:transparent; color:var(--text);
+    font-size:18px; font-weight:700; cursor:pointer;
+  }
+  .stepper button:hover { background:rgba(59,130,246,0.12); color:var(--accent); }
+  .stepper .val {
+    min-width:96px; text-align:center; font-family:'JetBrains Mono',monospace;
+    font-size:17px; font-weight:600; color:var(--text-bright);
+    border-left:1px solid var(--panel-border); border-right:1px solid var(--panel-border); padding:9px 6px;
+  }
+  .stepper .val.unset { color:var(--text-dim); }
+
+  .disp-btn, .opt-btn {
+    padding:10px 24px; border-radius:8px; border:2px solid var(--panel-border);
+    background:var(--panel); color:var(--text); font-family:'Inter',sans-serif;
+    font-size:14px; font-weight:600; cursor:pointer; transition:all .2s;
+  }
+  .opt-btn { padding:8px 14px; font-family:'JetBrains Mono',monospace; font-size:13px; }
+  .disp-btn:hover, .opt-btn:hover { border-color:var(--accent); }
+  .disp-btn.sel-accept { border-color:var(--success); background:rgba(34,197,94,0.15); color:var(--success); }
+  .disp-btn.sel-reject { border-color:var(--error); background:rgba(239,68,68,0.15); color:var(--error); }
+  .opt-btn.selected { border-color:var(--accent); background:rgba(59,130,246,0.12); color:var(--accent); }
+  .pore-tag {
+    font-family:'JetBrains Mono',monospace; font-weight:700; color:var(--warning);
+    min-width:120px; font-size:13px;
+  }
+
+  .submit-btn {
+    padding:10px 32px; border-radius:10px; border:none; background:var(--accent);
+    color:white; font-family:'Inter',sans-serif; font-size:14px; font-weight:600;
+    cursor:pointer; margin-left:auto; transition:all .2s;
+  }
+  .submit-btn:hover { background:#2563eb; }
+  .submit-btn:disabled { opacity:.4; cursor:not-allowed; }
+  .flash { outline:2px solid var(--error); outline-offset:4px; border-radius:8px; }
+
+  .feedback {
+    display:none; position:absolute; inset:0; background:rgba(15,17,23,0.95);
+    z-index:10; flex-direction:column; align-items:center; justify-content:center;
+    padding:40px; text-align:center; animation:fadeIn .3s;
+  }
+  .feedback.visible { display:flex; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  .fb-icon { width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; margin-bottom:20px; }
+  .fb-icon.correct { background:rgba(34,197,94,0.15); color:var(--success); }
+  .fb-icon.incorrect { background:rgba(239,68,68,0.15); color:var(--error); }
+  .fb-title { font-size:22px; font-weight:700; margin-bottom:12px; }
+  .fb-title.correct { color:var(--success); }
+  .fb-title.incorrect { color:var(--error); }
+  .fb-detail { font-size:14px; color:var(--text); line-height:1.6; max-width:560px; }
+  .fb-values { font-family:'JetBrains Mono',monospace; font-size:14px; margin:12px 0; display:flex; gap:20px; justify-content:center; flex-wrap:wrap; }
+  .fb-values span { color:var(--text-dim); }
+  .fb-values strong { color:var(--text-bright); }
+  .fb-buttons { display:flex; gap:12px; margin-top:24px; }
+  .fb-btn { padding:10px 32px; border-radius:10px; border:none; font-family:'Inter',sans-serif; font-size:14px; font-weight:600; cursor:pointer; transition:all .2s; }
+  .fb-btn-retry { background:var(--panel); color:var(--text); border:2px solid var(--panel-border); }
+  .fb-btn-retry:hover { border-color:var(--accent); }
+  .fb-btn-proceed { background:var(--accent); color:white; }
+  .fb-btn-proceed:hover { background:#2563eb; }
+
+  .round-progress { display:flex; gap:6px; align-items:center; }
+  .round-dot { width:10px; height:10px; border-radius:50%; background:var(--panel-border); border:1.5px solid var(--text-dim); }
+  .round-dot.active { background:var(--accent); border-color:var(--accent); }
+  .round-dot.done { background:var(--success); border-color:var(--success); }
+  .round-dot.missed { background:var(--warning); border-color:var(--warning); }
+
+  .sidebar { background:var(--panel); border-left:1px solid var(--panel-border); padding:24px; display:flex; flex-direction:column; gap:20px; }
+  .sidebar h4 { font-size:11px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text-dim); margin-bottom:10px; }
+  .criteria-panel { background:rgba(59,130,246,0.06); border:1px solid rgba(59,130,246,0.15); border-radius:10px; padding:16px; }
+  .criteria-panel h4 { color:var(--accent); }
+  .criteria-item { display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.04); font-size:13px; }
+  .criteria-item:last-child { border-bottom:none; }
+  .criteria-item .cl { color:var(--text-dim); }
+  .criteria-item .cv { font-family:'JetBrains Mono',monospace; font-weight:600; color:var(--text-bright); text-align:right; }
+  .criteria-group { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--text-bright); padding:12px 0 4px; }
+  .criteria-group:first-child { padding-top:0; }
+  .criteria-item.band { display:grid; grid-template-columns:9.4em 1fr; gap:10px; align-items:baseline; }
+  .criteria-item.band .cl { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-bright); }
+  .criteria-item.band .cv { font-family:'Inter',sans-serif; text-align:left; font-size:12.5px; line-height:1.4; }
+  .criteria-item.band .cv.ok { color:var(--success); }
+  .criteria-item.band .cv.cond { color:var(--warning); }
+  .criteria-item.band .cv.rej { color:var(--error); }
+  .criteria-note { font-size:11.5px; color:var(--text-dim); line-height:1.5; margin-top:8px; }
+  .howto-card { background:rgba(34,197,94,0.05); border:1px solid rgba(34,197,94,0.15); border-radius:10px; padding:16px; }
+  .howto-card h4 { color:var(--success); }
+  .howto-card ol { padding-left:18px; font-size:13px; line-height:1.55; }
+  .howto-card li { margin-bottom:4px; }
+  .tip-card { background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.15); border-radius:10px; padding:16px; }
+  .tip-card h4 { color:var(--warning); }
+  .tip-card p { font-size:13px; color:var(--text); line-height:1.5; }
+</style>
+</head>
+<body>
+
+<div class="exercise-header">
+  <div>
+    <div class="exercise-title">V-WAC Gauge — Visual Weld Acceptance</div>
+    <div class="exercise-subtitle">Undercut · crown height · porosity — AWS D1.1 visual criteria (statically loaded)</div>
+  </div>
+  <div class="header-right">
+    <div class="round-progress" id="roundProgress"></div>
+    <a class="back" href="index.html" target="_top">← Exercise Hub</a>
+  </div>
+</div>
+
+<div class="exercise-body">
+  <div class="main-area">
+    <div class="prompt-box">
+      <h3 id="promptTitle"></h3>
+      <p id="promptText"></p>
+    </div>
+
+    <div class="job-card" id="jobCard"></div>
+
+    <div class="viewport">
+      <svg id="scene" viewBox="0 0 750 600" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <div class="controls" id="controls"></div>
+
+    <div class="feedback" id="feedback">
+      <div class="fb-icon" id="fbIcon"></div>
+      <div class="fb-title" id="fbTitle"></div>
+      <div class="fb-values" id="fbValues"></div>
+      <div class="fb-detail" id="fbDetail"></div>
+      <div class="fb-buttons" id="fbButtons"></div>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <div class="criteria-panel">
+      <h4 id="criteriaTitle">Acceptance Criteria</h4>
+      <div id="criteriaList"></div>
+      <div class="criteria-note" id="criteriaNote"></div>
+    </div>
+    <div class="howto-card">
+      <h4>Using the V-WAC</h4>
+      <ol id="howtoList"></ol>
+    </div>
+    <div class="tip-card">
+      <h4>Inspector's Tip</h4>
+      <p id="tipText"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// GAUGE GEOMETRY — traced from a G.A.L.-style V-WAC gage, in inches.
+// Origin = top-left corner of the plate, y down. Plate is 4" × 1-1/4".
+// The pointer arm swings on the knurled screw: the tooth at the left
+// end touches the work, the needle at the right end reads the fan scale.
+// Tooth down (undercut) swings the needle ABOVE 0; tooth up (crown)
+// swings it BELOW 0.
+// ============================================================
+const NS = 'http://www.w3.org/2000/svg';
+const G_W = 4.0, G_H = 1.25;
+const PIVOT = { x: 1.41, y: 0.55 };          // knurled screw
+const V_TIP = { x: -1.36, y: 0.70 };          // pivot → tooth tip (tip level with the bottom edge at 0)
+const V_NEEDLE = { x: 2.0, y: 0.06 };         // pivot → needle point
+const FAN_R = 2.03;                           // radius of the tick arc
+const HOLE_18 = { x: 3.34, y: 0.10, r: 1 / 16 };
+const HOLE_116 = { x: 3.28, y: 1.15, r: 1 / 32 };
+const EDGE_SCALE_Y0 = 0.11;                   // first mark of the 1" edge scale
+const BOTTOM_PROFILE = [[0.16, 0.98], [0.56, 1.25], [4.0, 1.25]]; // chamfer + straight bottom edge
+
+function rot(v, a) { return { x: v.x * Math.cos(a) - v.y * Math.sin(a), y: v.x * Math.sin(a) + v.y * Math.cos(a) }; }
+function tipAt(a) { const d = rot(V_TIP, a); return { x: PIVOT.x + d.x, y: PIVOT.y + d.y }; }
+function needleAt(a) { const d = rot(V_NEEDLE, a); return { x: PIVOT.x + d.x, y: PIVOT.y + d.y }; }
+function readingIn(a) { return tipAt(a).y - G_H; }   // + undercut (below edge), − crown (above edge)
+function phiFor(r) {                                  // arm angle that puts the tooth r inches below the edge
+  let lo = -0.5, hi = 0.5;
+  for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; if (readingIn(m) > r) lo = m; else hi = m; }
+  return (lo + hi) / 2;
+}
+const PHI_DOWN = phiFor(0.25), PHI_UP = phiFor(-0.25);   // ±1/4" stops
+
+// ============================================================
+// SCENE CONSTANTS
+// ============================================================
+// Side view: we look straight at the gauge face; the gauge stands on the plate.
+const PPI = 160;
+const STEP64 = PPI / 64;
+const SURF_Y = 330;
+const G_TOP = SURF_Y - G_H * PPI;
+const CROWN_HALF = 0.30 * PPI;
+const GROOVE_W = 0.10 * PPI;
+// Plan view: looking down on the weld, gauge laid flat with its 1/16" scale edge along the bead.
+const PLAN_PPI = 300;
+const BEAD_X0 = 30, BEAD_X1 = 730, BEAD_Y0 = 70, BEAD_Y1 = 180;
+
+// ============================================================
+// ROUNDS
+// ============================================================
+// Undercut is judged by depth band; the middle band on thin material also depends on length.
+const UNDERCUT_CRITERIA = [
+  { group: 'Material under 1" thick' },
+  { depth: 'up to 1/32"', verdict: 'OK — any length', kind: 'ok' },
+  { depth: 'over 1/32" to 1/16"', verdict: 'OK only if its total length is 2" or less in any 12" of weld', kind: 'cond' },
+  { depth: 'over 1/16"', verdict: 'Reject', kind: 'rej' },
+  { group: 'Material 1" and thicker' },
+  { depth: 'up to 1/16"', verdict: 'OK — any length', kind: 'ok' },
+  { depth: 'over 1/16"', verdict: 'Reject', kind: 'rej' },
+];
+const UNDERCUT_NOTE = 'AWS D1.1 Table 8.1, statically loaded nontubular. A reading exactly at a limit is acceptable ("shall not exceed"). Example: 3/64" deep on 1/2" plate is in the middle band — measure how long it runs before you decide.';
+const UNDERCUT_HOWTO = [
+  'Stand the gauge on its straight bottom edge on the base metal, tooth toward the weld.',
+  'Drag the gauge left/right until the tooth is over the undercut.',
+  'Drag the tooth (or the needle) to swing the arm until the tip bottoms out. Slide along to find the <b>deepest</b> point.',
+  'Read the needle on the fan scale — <b>above 0 = undercut</b>, 1/64" per mark. Use the SCALE loupe.',
+];
+const CROWN_CRITERIA = [
+  ['Groove weld reinforcement', '≤ 1/8"'],
+  ['Crown must be', 'Flush or convex'],
+  ['Underfill', 'Not permitted'],
+];
+const CROWN_NOTE = 'AWS D1.1 weld profile requirements for butt-joint groove welds (reinforcement R ≤ 1/8" / 3 mm).';
+const CROWN_HOWTO = [
+  'Stand the gauge on its straight bottom edge on the base metal beside the weld — the chamfered corner clears the crown.',
+  'Drag the gauge so the tooth is over the top center of the crown.',
+  'Swing the arm until the tooth tip rests on the crown.',
+  'Read the needle on the fan scale — <b>below 0 = crown height</b>, 1/64" per mark.',
+];
+const POROSITY_CRITERIA = [
+  ['Counted pores', '≥ 1/32" dia.'],
+  ['Sum of diameters', '≤ 3/8" in any 1"'],
+  ['Sum of diameters', '≤ 3/4" in any 12"'],
+];
+const POROSITY_NOTE = 'AWS D1.1 Table 8.1, statically loaded — fillet welds and groove welds not transverse to tensile stress (visible piping porosity).';
+const PERINCH_HOWTO = [
+  'Lay the gauge flat with its <b>1/16\'\' SCALE</b> edge along the weld.',
+  'The red dashed lines extend the 0 and 1" marks across the bead — slide them to catch the densest cluster.',
+  'Size each pore inside the window against the 1/16" marks.',
+  'Add the diameters and compare the total to 3/8" (6/16").',
+];
+
+const ROUNDS = [
+  {
+    type: 'depth', mode: 'undercut', plateT: 0.5,
+    title: 'Round 1 — Undercut Depth',
+    prompt: 'There is undercut at the toe of this butt weld. Stand the V-WAC on the plate, swing the tooth down into the undercut at its deepest point, read the needle, and make the call.',
+    job: [['Plate', '1/2"'], ['Undercut length', '3" continuous'], ['Loading', 'Static']],
+    depth64: 2, crown64: 6,
+    correctDisp: 'accept',
+    explain: 'Deepest reading is 1/32" on 1/2" plate. The limit for material under 1" is 1/32" — "shall not exceed" means a reading exactly at the limit is acceptable. Accept.',
+    criteria: UNDERCUT_CRITERIA, note: UNDERCUT_NOTE, howto: UNDERCUT_HOWTO,
+    tip: 'Undercut is rarely uniform. Walk the tooth along the groove and keep lowering it — the gauge only reads what is under the tip, so a reading taken off the bottom is always too small.',
+  },
+  {
+    type: 'depth', mode: 'undercut', plateT: 0.5,
+    title: 'Round 2 — Undercut Depth',
+    prompt: 'Same joint, different spot. Measure the deepest undercut and check the job card — the length of the undercut matters.',
+    job: [['Plate', '1/2"'], ['Undercut length', '4" continuous'], ['Loading', 'Static']],
+    depth64: 3, crown64: 6,
+    correctDisp: 'reject',
+    explain: 'Deepest reading is 3/64" — over the 1/32" limit for material under 1". The 1/16" exception only covers an accumulated 2" in any 12" of weld, and this undercut runs 4" continuously. Reject.',
+    criteria: UNDERCUT_CRITERIA, note: UNDERCUT_NOTE, howto: UNDERCUT_HOWTO,
+    tip: 'When a reading lands between 1/32" and 1/16" on thin material, the answer depends on length. Measure how long the undercut runs before you make the call.',
+  },
+  {
+    type: 'depth', mode: 'undercut', plateT: 0.5,
+    title: 'Round 3 — Undercut Depth',
+    prompt: 'Measure the undercut. This time the undercut is short — read the job card before you decide.',
+    job: [['Plate', '1/2"'], ['Undercut length', '1-1/2" total in 12"'], ['Loading', 'Static']],
+    depth64: 3, crown64: 6,
+    correctDisp: 'accept',
+    explain: 'Deepest reading is 3/64" — more than 1/32", but not more than 1/16". For material under 1", undercut up to 1/16" is allowed for an accumulated length of 2" in any 12". This undercut totals 1-1/2" in 12", so the exception applies. Accept.',
+    criteria: UNDERCUT_CRITERIA, note: UNDERCUT_NOTE, howto: UNDERCUT_HOWTO,
+    tip: 'Same depth as Round 2, opposite call. Always record undercut depth and length — the disposition needs both.',
+  },
+  {
+    type: 'depth', mode: 'undercut', plateT: 1.25,
+    title: 'Round 4 — Undercut Depth (Heavy Plate)',
+    prompt: 'This is heavy plate, so a different limit applies. Measure the deepest undercut and make the call.',
+    job: [['Plate', '1-1/4"'], ['Undercut length', '6" continuous'], ['Loading', 'Static']],
+    depth64: 5, crown64: 6,
+    correctDisp: 'reject',
+    explain: 'Deepest reading is 5/64". On material 1" and thicker, undercut may be up to 1/16" (4/64") for any length — but 5/64" is past that. Reject.',
+    criteria: UNDERCUT_CRITERIA, note: UNDERCUT_NOTE, howto: UNDERCUT_HOWTO,
+    tip: 'Know your fraction ladder in 64ths: 1/32 = 2/64, 3/64, 1/16 = 4/64, 5/64, 3/32 = 6/64, 1/8 = 8/64.',
+  },
+  {
+    type: 'depth', mode: 'crown', plateT: 0.75,
+    title: 'Round 5 — Crown Height (Reinforcement)',
+    prompt: 'Measure the reinforcement on this butt weld. Rest the tooth on the highest point of the crown and read the needle below 0.',
+    job: [['Joint', 'CJP butt, 3/4" plate'], ['Loading', 'Static']],
+    depth64: 0, crown64: 6,
+    correctDisp: 'accept',
+    explain: 'Crown height reads 3/32" (6/64"). The maximum reinforcement is 1/8" (8/64"). Accept.',
+    criteria: CROWN_CRITERIA, note: CROWN_NOTE, howto: CROWN_HOWTO,
+    tip: 'Reinforcement is measured from the base metal surface to the highest point of the weld face. If the bottom edge is not flat on the base metal, every reading is wrong.',
+  },
+  {
+    type: 'depth', mode: 'crown', plateT: 0.75,
+    title: 'Round 6 — Crown Height (Reinforcement)',
+    prompt: 'Measure the reinforcement on this butt weld and make the call.',
+    job: [['Joint', 'CJP butt, 3/4" plate'], ['Loading', 'Static']],
+    depth64: 0, crown64: 10,
+    correctDisp: 'reject',
+    explain: 'Crown height reads 5/32" (10/64"). That is over the 1/8" (8/64") maximum — excessive reinforcement. Reject (it can usually be ground down and re-inspected).',
+    criteria: CROWN_CRITERIA, note: CROWN_NOTE, howto: CROWN_HOWTO,
+    tip: 'Excess reinforcement is not "extra strength" — it concentrates stress at the toes. It is a rejectable condition, usually repaired by grinding.',
+  },
+  {
+    type: 'size',
+    title: 'Round 7 — Porosity Size Comparison',
+    prompt: 'Top view of a weld bead with three surface pores. Lay the gauge flat and slide it so the 1/8\'\' POR and 1/16\'\' POR holes sit right beside each pore. Classify each pore.',
+    job: [['View', 'Top of weld (plan)'], ['Magnification', '≈ 4×']],
+    pores: [
+      { x: 0.35, d: 1 / 32, label: 'A', answer: 'small' },
+      { x: 1.05, d: 3 / 32, label: 'B', answer: 'mid' },
+      { x: 1.80, d: 5 / 32, label: 'C', answer: 'large' },
+    ],
+    explain: 'A is smaller than the 1/16" hole (1/32"). B falls between the holes (3/32"). C is larger than the 1/8" hole (5/32").',
+    criteria: POROSITY_CRITERIA, note: POROSITY_NOTE,
+    howto: [
+      'Drag the gauge up over the weld — the holes are see-through.',
+      'Set the 1/16\'\' POR hole, then the 1/8\'\' POR hole, right beside the pore.',
+      'Decide: smaller than 1/16", between the two, or larger than 1/8".',
+    ],
+    tip: 'The holes give a quick go/no-go comparison. For an actual diameter, lay the 1/16" edge scale across the pore and count marks.',
+  },
+  {
+    type: 'perinch',
+    title: 'Round 8 — Porosity per Linear Inch',
+    prompt: 'Fillet weld with scattered porosity. Slide the gauge\'s 1/16\'\' SCALE edge along the weld to find the worst 1" length. Size each pore in that inch, add the diameters, and make the call.',
+    job: [['Weld', '5/16" fillet, 12" long'], ['Rest of weld', 'No porosity'], ['Loading', 'Static']],
+    pores: [
+      { x: 0.25, d: 2 / 16 }, { x: 0.50, d: 1 / 16 }, { x: 0.75, d: 2 / 16 },
+      { x: 1.00, d: 2 / 16 }, { x: 1.60, d: 1 / 16 }, { x: 2.00, d: 1 / 16 },
+    ],
+    worst16: 7, correctDisp: 'reject',
+    explain: 'The worst inch holds four pores: 1/8" + 1/16" + 1/8" + 1/8" = 7/16". The limit is 3/8" (6/16") in any linear inch. Reject — even though the whole 12" weld only totals 9/16", which is under the 3/4" limit.',
+    criteria: POROSITY_CRITERIA, note: POROSITY_NOTE, howto: PERINCH_HOWTO,
+    tip: 'Work in sixteenths: 1/8" = 2/16", 3/8" = 6/16", 3/4" = 12/16". The "any 1 inch" window is wherever you put it — you have to find the worst one.',
+  },
+  {
+    type: 'perinch',
+    title: 'Round 9 — Porosity per Linear Inch',
+    prompt: 'Another fillet weld. Find the worst 1" length, total the pore diameters, and make the call.',
+    job: [['Weld', '5/16" fillet, 12" long'], ['Rest of weld', 'No porosity'], ['Loading', 'Static']],
+    pores: [
+      { x: 0.30, d: 2 / 16 }, { x: 0.70, d: 1 / 16 }, { x: 1.05, d: 2 / 16 },
+      { x: 1.50, d: 1 / 16 }, { x: 1.90, d: 2 / 16 },
+    ],
+    worst16: 5, correctDisp: 'accept',
+    explain: 'No 1" window catches more than three pores. The worst inch totals 1/8" + 1/16" + 1/8" = 5/16" (either end of the weld), under the 3/8" limit. The full length totals 1/2", under 3/4" in 12". Accept.',
+    criteria: POROSITY_CRITERIA, note: POROSITY_NOTE, howto: PERINCH_HOWTO,
+    tip: 'Check more than one window. Try the window that starts at each pore — the worst inch is always one of those.',
+  },
+];
+
+// ============================================================
+// STATE
+// ============================================================
+let currentRound = 0;
+let results = [];          // per round: true (first try correct) / false
+let attempted = false;
+let st = {};               // per-round interactive state
+let gxRange = [0, 0];
+
+function freshState() {
+  const r = ROUNDS[currentRound];
+  if (r.type === 'depth') {
+    gxRange = computeGxRange(r);
+    const s = { gx: gxRange[1], phi: phiFor(-12 / 64), answer: null, disp: null }; // tooth parked 3/16" up
+    s.phi = Math.max(s.phi, contactPhi(s.gx, r));
+    return s;
+  }
+  return { bx: 60, ey: 205, answer: null, disp: null, sizes: {} };
+}
+
+// ============================================================
+// FRACTIONS
+// ============================================================
+function gcd(a, b) { return b ? gcd(b, a % b) : a; }
+function frac(n, d) {
+  if (n === 0) return '0"';
+  const g = gcd(n, d);
+  return `${n / g}/${d / g}"`;
+}
+
+// ============================================================
+// SIDE VIEW GEOMETRY (world px)
+// ============================================================
+function crownCx(r) { return r.mode === 'undercut' ? 20 : 88; }
+function surfaceY(x, r) {
+  const cx = crownCx(r), toeR = cx + CROWN_HALF;
+  if (r.depth64 > 0 && x > toeR && x < toeR + GROOVE_W) {
+    const t = (x - toeR) / GROOVE_W;
+    // deepest point sits close to the weld toe
+    return SURF_Y + r.depth64 * STEP64 * Math.sin(Math.PI * Math.pow(t, 0.6));
+  }
+  const u = (x - cx) / CROWN_HALF;
+  if (Math.abs(u) <= 1) return SURF_Y - r.crown64 * STEP64 * (1 - u * u);
+  return SURF_Y;
+}
+function toWorld(gx, p) { return { x: gx + p.x * PPI, y: G_TOP + p.y * PPI }; }
+
+// Where the gauge can stand: its bottom edge and chamfer must not dig into the weld
+function bodyClear(gx, r) {
+  for (let i = 0; i < BOTTOM_PROFILE.length - 1; i++) {
+    const [u0, v0] = BOTTOM_PROFILE[i], [u1, v1] = BOTTOM_PROFILE[i + 1];
+    for (let t = 0; t <= 1; t += 0.02) {
+      const w = toWorld(gx, { x: u0 + (u1 - u0) * t, y: v0 + (v1 - v0) * t });
+      if (w.y > surfaceY(w.x, r) + 0.01) return false;
+    }
+  }
+  return true;
+}
+function computeGxRange(r) {
+  const hi = 750 - G_W * PPI - 4;
+  let lo = hi;
+  while (lo - 0.5 >= -20 && bodyClear(lo - 0.5, r)) lo -= 0.5;
+  return [lo, hi];
+}
+// Lowest arm angle (tooth furthest down) before the tip hits metal
+function tipGap(gx, a, r) { const w = toWorld(gx, tipAt(a)); return w.y - surfaceY(w.x, r); }
+function contactPhi(gx, r) {
+  if (tipGap(gx, PHI_DOWN, r) <= 0) return PHI_DOWN;
+  let lo = PHI_DOWN, hi = PHI_UP;           // gap > 0 at lo (buried), ≤ 0 at hi (clear)
+  for (let i = 0; i < 50; i++) { const m = (lo + hi) / 2; if (tipGap(gx, m, r) > 0) lo = m; else hi = m; }
+  return hi;
+}
+function gaugeReading64() { return Math.round(readingIn(st.phi) * 64); }
+
+// ============================================================
+// DRAWING HELPERS
+// ============================================================
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function txt(parent, x, y, s, attrs) {
+  const t = el('text', Object.assign({ x, y, 'font-family': 'Inter, sans-serif' }, attrs), parent);
+  t.textContent = s;
+  return t;
+}
+function addDefs(svg) {
+  const defs = el('defs', {}, svg);
+  const grad = (id, stops, x2, y2) => {
+    const g = el('linearGradient', { id, x1: 0, y1: 0, x2, y2 }, defs);
+    stops.forEach(([o, c]) => el('stop', { offset: o, 'stop-color': c }, g));
+  };
+  grad('baseMetal', [[0, '#5a6577'], [0.3, '#4a5567'], [0.6, '#3d4859'], [1, '#333d4d']], 0, 1);
+  grad('weldFill', [[0, '#8a9ab0'], [0.4, '#6b7a8e'], [0.7, '#5a6978'], [1, '#4a5866']], 1, 1);
+  grad('beadTop', [[0, '#5d6b7d'], [0.5, '#8a9ab0'], [1, '#5d6b7d']], 0, 1);
+  // brushed stainless: plate a touch darker than the arm, with a soft sheen band
+  grad('plateSteel', [[0, '#c9ced6'], [0.35, '#e4e7ec'], [0.55, '#d3d8df'], [1, '#aeb4bd']], 1, 1);
+  grad('armSteel', [[0, '#dfe3e9'], [0.5, '#f1f3f6'], [1, '#c3c9d1']], 0, 1);
+  const rg = el('radialGradient', { id: 'pore', cx: '45%', cy: '40%', r: '60%' }, defs);
+  [[0, '#05070b'], [0.7, '#141922'], [1, '#2c3441']].forEach(([o, c]) => el('stop', { offset: o, 'stop-color': c }, rg));
+  const f = el('filter', { id: 'gShadow', x: '-5%', y: '-5%', width: '115%', height: '125%' }, defs);
+  el('feDropShadow', { dx: 0, dy: 0.02, stdDeviation: 0.02, 'flood-opacity': 0.5 }, f);
+  const f2 = el('filter', { id: 'aShadow', x: '-5%', y: '-10%', width: '115%', height: '130%' }, defs);
+  el('feDropShadow', { dx: 0.006, dy: 0.012, stdDeviation: 0.008, 'flood-opacity': 0.45 }, f2);
+}
+const NSS = { 'vector-effect': 'non-scaling-stroke' };
+const INK = '#2b2f36';
+
+// ============================================================
+// THE GAUGE (drawn in inch units inside a transformed group)
+// ============================================================
+function circlePath(h) { return `M ${h.x - h.r} ${h.y} a ${h.r} ${h.r} 0 1 0 ${2 * h.r} 0 a ${h.r} ${h.r} 0 1 0 ${-2 * h.r} 0 Z`; }
+
+function drawGauge(g, phi) {
+  // Plate, with the two see-through porosity holes
+  el('path', Object.assign({
+    class: 'g-body',
+    d: `M 0 0 L ${G_W - 0.06} 0 Q ${G_W} 0 ${G_W} 0.06 L ${G_W} ${G_H - 0.06} Q ${G_W} ${G_H} ${G_W - 0.06} ${G_H}
+        L 0.56 ${G_H} L 0.16 0.98 L 0.21 0.62 L 0 0.62 Z ` + circlePath(HOLE_18) + ' ' + circlePath(HOLE_116),
+    'fill-rule': 'evenodd', fill: 'url(#plateSteel)', stroke: '#6b7280', 'stroke-width': 1,
+  }, NSS), g);
+
+  // Engraving
+  txt(g, 0.13, 0.30, 'V—WAC  GAGE', { fill: INK, 'font-size': 0.165, 'font-style': 'italic', 'font-family': '"Times New Roman", Times, serif', 'xml:space': 'preserve' });
+  txt(g, 0.70, 1.07, 'STAINLESS', { fill: INK, 'font-size': 0.062, 'font-weight': 600, 'letter-spacing': 0.008 });
+  txt(g, 3.21, 0.125, "1/8'' POR →", { fill: INK, 'font-size': 0.07, 'font-weight': 600, 'text-anchor': 'end' });
+  txt(g, 3.19, 1.175, "1/16'' POR →", { fill: INK, 'font-size': 0.07, 'font-weight': 600, 'text-anchor': 'end' });
+  const sl = txt(g, 3.80, 0.63, "1/16'' SCALE", { fill: INK, 'font-size': 0.085, 'font-weight': 700, 'text-anchor': 'middle' });
+  sl.setAttribute('transform', 'rotate(90 3.80 0.63)');
+
+  // Fan scale: one mark per 1/64" of tooth travel, 0 → 1/4" each way
+  const fanArc = [];
+  for (let k = -16; k <= 16; k++) {
+    const a = phiFor(k / 64);
+    const d = rot(V_NEEDLE, a), len = Math.hypot(d.x, d.y), ux = d.x / len, uy = d.y / len;
+    const major = k % 4 === 0, mid = k % 2 === 0;
+    const r0 = FAN_R - (major ? 0.17 : mid ? 0.13 : 0.10), r1 = FAN_R + (major ? 0.05 : 0);
+    el('line', Object.assign({ x1: PIVOT.x + ux * r0, y1: PIVOT.y + uy * r0, x2: PIVOT.x + ux * r1, y2: PIVOT.y + uy * r1, stroke: INK, 'stroke-width': 0.9 }, NSS), g);
+    fanArc.push(`${PIVOT.x + ux * FAN_R} ${PIVOT.y + uy * FAN_R}`);
+    if (major) {
+      const lbl = k === 0 ? '0' : frac(Math.abs(k), 64).replace('"', "''");
+      txt(g, PIVOT.x + ux * (FAN_R + 0.08), PIVOT.y + uy * (FAN_R + 0.08) + 0.024, lbl, { fill: INK, 'font-size': 0.068, 'font-weight': 600 });
+    }
+  }
+  el('polyline', Object.assign({ points: fanArc.join(' '), fill: 'none', stroke: INK, 'stroke-width': 0.5, opacity: 0.5 }, NSS), g);
+
+  // 1" edge scale in 1/16" along the right end
+  for (let k = 0; k <= 16; k++) {
+    const y = EDGE_SCALE_Y0 + k / 16;
+    const len = k % 8 === 0 ? 0.13 : k % 4 === 0 ? 0.11 : k % 2 === 0 ? 0.09 : 0.07;
+    el('line', Object.assign({ x1: G_W - len, y1: y, x2: G_W, y2: y, stroke: INK, 'stroke-width': 0.9 }, NSS), g);
+  }
+
+  // Pointer arm: tooth, bar, round lobe, needle — swings on the knurled screw
+  const arm = el('g', { id: 'arm', transform: `rotate(${phi * 180 / Math.PI} ${PIVOT.x} ${PIVOT.y})`, filter: 'url(#aShadow)', style: 'cursor:grab' }, g);
+  el('path', Object.assign({
+    d: `M 0 0.47 L 2.42 0.47 L 3.41 0.605 L 2.47 0.635 A 0.45 0.45 0 0 1 1.57 0.635
+        L 0.21 0.635 L 0.15 0.98 L 0.05 ${G_H} L 0 0.95 Z`,
+    fill: 'url(#armSteel)', stroke: '#6b7280', 'stroke-width': 1,
+  }, NSS), arm);
+  el('circle', Object.assign({ cx: 2.02, cy: 0.59, r: 0.115, fill: '#232733', stroke: '#6b7280', 'stroke-width': 1 }, NSS), arm);
+  // wider invisible grab zone along the thin tooth and needle
+  el('path', { d: `M 0.06 0.55 L 0.05 ${G_H} M 2.5 0.56 L 3.41 0.605`, fill: 'none', stroke: 'transparent', 'stroke-width': 0.14, 'stroke-linecap': 'round' }, arm);
+
+  // Knurled screw (pivot + lock)
+  el('circle', Object.assign({ cx: PIVOT.x, cy: PIVOT.y, r: 0.118, fill: '#9aa1ab', stroke: '#4b5563', 'stroke-width': 1 }, NSS), g);
+  for (let i = 0; i < 28; i++) {
+    const a = i / 28 * Math.PI * 2;
+    el('line', Object.assign({ x1: PIVOT.x + Math.cos(a) * 0.085, y1: PIVOT.y + Math.sin(a) * 0.085, x2: PIVOT.x + Math.cos(a) * 0.116, y2: PIVOT.y + Math.sin(a) * 0.116, stroke: '#4b5563', 'stroke-width': 0.7 }, NSS), g);
+  }
+  el('circle', Object.assign({ cx: PIVOT.x, cy: PIVOT.y, r: 0.082, fill: '#d6dae0', stroke: '#6b7280', 'stroke-width': 0.8 }, NSS), g);
+  [0.055, 0.03].forEach(rr => el('circle', Object.assign({ cx: PIVOT.x, cy: PIVOT.y, r: rr, fill: 'none', stroke: '#9ca3af', 'stroke-width': 0.6 }, NSS), g));
+}
+
+// ============================================================
+// SIDE VIEW (undercut / crown): looking at the gauge face, weld in section
+// ============================================================
+function drawSide(svg) {
+  const r = ROUNDS[currentRound];
+  const world = el('g', { id: 'world' }, svg);
+  el('rect', { x: 0, y: 0, width: 750, height: 600, fill: '#1e2130' }, world);
+
+  const plateBottom = SURF_Y + Math.min(r.plateT, 1.6) * PPI;
+  let d = `M 0 ${plateBottom} L 0 ${surfaceY(0, r)}`;
+  for (let x = 0; x <= 750; x += 0.5) d += ` L ${x} ${surfaceY(x, r).toFixed(2)}`;
+  d += ` L 750 ${plateBottom} Z`;
+  el('path', { d, fill: 'url(#baseMetal)', stroke: '#2a3040', 'stroke-width': 1 }, world);
+
+  // Weld metal (crown + groove through the plate)
+  const cx = crownCx(r), toeL = cx - CROWN_HALF, toeR = cx + CROWN_HALF;
+  let w = `M ${toeL} ${SURF_Y}`;
+  for (let x = toeL; x <= toeR; x += 1) w += ` L ${x} ${surfaceY(x, r).toFixed(2)}`;
+  w += ` L ${toeR} ${SURF_Y} L ${cx + 6} ${plateBottom} L ${cx - 6} ${plateBottom} Z`;
+  el('path', { d: w, fill: 'url(#weldFill)', stroke: '#6b7280', 'stroke-width': 0.6, 'stroke-dasharray': '3,2' }, world);
+  let face = `M ${toeL} ${SURF_Y}`;
+  for (let x = toeL; x <= toeR; x += 1) face += ` L ${x} ${surfaceY(x, r).toFixed(2)}`;
+  el('path', { d: face, fill: 'none', stroke: '#9aa7b8', 'stroke-width': 1.2 }, world);
+
+  txt(world, 740, SURF_Y + 22, 'BASE METAL', { fill: 'rgba(255,255,255,0.35)', 'font-size': 11, 'font-weight': 600, 'letter-spacing': 1.5, 'text-anchor': 'end' });
+  txt(world, Math.max(cx, 24), SURF_Y + 44, 'WELD', { fill: 'rgba(255,255,255,0.5)', 'font-size': 10, 'font-weight': 600, 'letter-spacing': 1.5, 'text-anchor': 'middle' });
+
+  // The gauge, standing on its bottom edge
+  const g = el('g', { id: 'gauge', transform: `translate(${st.gx} ${G_TOP}) scale(${PPI})`, filter: 'url(#gShadow)', style: 'cursor:ew-resize' }, world);
+  drawGauge(g, st.phi);
+
+  const tipW = toWorld(st.gx, tipAt(st.phi));
+  const touching = Math.abs(st.phi - contactPhi(st.gx, r)) < 1e-4 && st.phi > PHI_DOWN + 1e-4;
+  if (touching) el('circle', { cx: tipW.x, cy: tipW.y, r: 3, fill: 'none', stroke: '#22c55e', 'stroke-width': 1 }, world);
+
+  // Loupes
+  const nW = toWorld(st.gx, needleAt(st.phi));
+  loupe(svg, { x: 16, y: 422, w: 170, h: 160 }, 4, tipW.x, tipW.y - 4, 'TIP ×4');
+  loupe(svg, { x: 474, y: 422, w: 260, h: 160 }, 3, nW.x + 0.13 * PPI, nW.y, 'SCALE ×3');
+}
+
+function loupe(svg, box, zoom, fx, fy, label) {
+  const id = 'clip' + label.replace(/\W/g, '');
+  const cp = el('clipPath', { id }, svg);
+  el('rect', { x: box.x, y: box.y, width: box.w, height: box.h, rx: 10 }, cp);
+  const g = el('g', { 'pointer-events': 'none' }, svg);
+  const inner = el('g', { 'clip-path': `url(#${id})` }, g);
+  el('rect', { x: box.x, y: box.y, width: box.w, height: box.h, fill: '#1e2130' }, inner);
+  const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
+  el('use', { href: '#world', transform: `translate(${cx} ${cy}) scale(${zoom}) translate(${-fx} ${-fy})` }, inner);
+  el('rect', { x: box.x, y: box.y, width: box.w, height: box.h, rx: 10, fill: 'none', stroke: '#3b82f6', 'stroke-width': 2 }, g);
+  el('rect', { x: box.x + 8, y: box.y + 8, width: label.length * 6.6 + 10, height: 18, rx: 4, fill: 'rgba(15,17,23,0.8)' }, g);
+  txt(g, box.x + 13, box.y + 21, label, { fill: '#93c5fd', 'font-size': 10.5, 'font-weight': 700, 'letter-spacing': 0.8 });
+}
+
+// ============================================================
+// PLAN VIEW (porosity): looking down on the weld, gauge laid flat
+// ============================================================
+function drawPlan(svg) {
+  const r = ROUNDS[currentRound];
+  el('rect', { x: 0, y: 0, width: 750, height: 600, fill: 'url(#baseMetal)' }, svg);
+  txt(svg, 740, 590, 'top view · ≈ 4× actual size', { fill: 'rgba(255,255,255,0.35)', 'font-size': 10, 'text-anchor': 'end' });
+
+  el('rect', { x: BEAD_X0, y: BEAD_Y0, width: BEAD_X1 - BEAD_X0, height: BEAD_Y1 - BEAD_Y0, rx: 18, fill: 'url(#beadTop)', stroke: '#4a5866', 'stroke-width': 1 }, svg);
+  for (let x = BEAD_X0 + 16; x < BEAD_X1 - 10; x += 11) {
+    el('path', { d: `M ${x} ${BEAD_Y0 + 6} Q ${x + 14} ${(BEAD_Y0 + BEAD_Y1) / 2} ${x} ${BEAD_Y1 - 6}`, fill: 'none', stroke: 'rgba(255,255,255,0.07)', 'stroke-width': 1 }, svg);
+  }
+  txt(svg, BEAD_X0 + 2, BEAD_Y0 - 10, 'WELD START', { fill: 'rgba(255,255,255,0.45)', 'font-size': 10, 'font-weight': 600, 'letter-spacing': 1 });
+
+  const cy = (BEAD_Y0 + BEAD_Y1) / 2;
+  r.pores.forEach((p, i) => {
+    const px = BEAD_X0 + p.x * PLAN_PPI;
+    const py = cy + (i % 2 ? 9 : -7);
+    el('circle', { cx: px, cy: py, r: p.d * PLAN_PPI / 2, fill: 'url(#pore)', stroke: '#1b2130', 'stroke-width': 0.8 }, svg);
+    if (p.label) txt(svg, px, BEAD_Y0 - 10, p.label, { fill: '#f59e0b', 'font-size': 15, 'font-weight': 800, 'text-anchor': 'middle', 'font-family': 'JetBrains Mono, monospace' });
+  });
+
+  // Gauge laid flat, rotated so the 1/16'' SCALE edge runs along the weld
+  const g = el('g', { id: 'gauge', transform: `translate(${st.bx} ${st.ey + G_W * PLAN_PPI}) scale(${PLAN_PPI}) rotate(-90)`, filter: 'url(#gShadow)', style: 'cursor:grab' }, svg);
+  drawGauge(g, 0);
+
+  if (r.type === 'perinch') {
+    [0, 16].forEach(k => {
+      const x = st.bx + (EDGE_SCALE_Y0 + k / 16) * PLAN_PPI;
+      el('line', { x1: x, y1: st.ey, x2: x, y2: BEAD_Y0 - 24, stroke: '#ef4444', 'stroke-width': 1.5, 'stroke-dasharray': '5,4', opacity: 0.85, 'pointer-events': 'none' }, svg);
+    });
+    const x0 = st.bx + EDGE_SCALE_Y0 * PLAN_PPI;
+    el('rect', { x: x0, y: Math.min(st.ey, BEAD_Y0 - 24), width: PLAN_PPI, height: Math.max(0, st.ey - BEAD_Y0 + 24), fill: 'rgba(239,68,68,0.07)', 'pointer-events': 'none' }, svg);
+    txt(svg, x0 + PLAN_PPI / 2, BEAD_Y0 - 30, '1" window', { fill: '#fca5a5', 'font-size': 11, 'font-weight': 700, 'text-anchor': 'middle', 'pointer-events': 'none' });
+  }
+}
+
+// ============================================================
+// SCENE
+// ============================================================
+function drawScene() {
+  const svg = document.getElementById('scene');
+  svg.innerHTML = '';
+  addDefs(svg);
+  if (ROUNDS[currentRound].type === 'depth') drawSide(svg);
+  else drawPlan(svg);
+}
+
+// ============================================================
+// DRAGGING
+// ============================================================
+let drag = null;
+function svgPoint(e) {
+  const svg = document.getElementById('scene');
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX; pt.y = e.clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+function pivotWorld() { return toWorld(st.gx, PIVOT); }
+function initDrag() {
+  const svg = document.getElementById('scene');
+  svg.addEventListener('pointerdown', e => {
+    if (document.getElementById('feedback').classList.contains('visible')) return;
+    const p = svgPoint(e);
+    const r = ROUNDS[currentRound];
+    const onArm = e.target.closest && e.target.closest('#arm');
+    const onGauge = e.target.closest && e.target.closest('#gauge');
+    if (r.type === 'depth' && onArm) {
+      const pv = pivotWorld();
+      drag = { kind: 'arm', a0: Math.atan2(p.y - pv.y, p.x - pv.x), phi0: st.phi };
+    } else if (onGauge) {
+      drag = { kind: 'body', x0: p.x, y0: p.y, gx0: st.gx, bx0: st.bx, ey0: st.ey };
+    } else return;
+    svg.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  svg.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const p = svgPoint(e);
+    const r = ROUNDS[currentRound];
+    if (r.type === 'depth') {
+      if (drag.kind === 'arm') {
+        const pv = pivotWorld();
+        let da = Math.atan2(p.y - pv.y, p.x - pv.x) - drag.a0;
+        if (da > Math.PI) da -= 2 * Math.PI;
+        if (da < -Math.PI) da += 2 * Math.PI;
+        st.phi = Math.min(PHI_UP, Math.max(contactPhi(st.gx, r), drag.phi0 + da));
+      } else {
+        st.gx = Math.max(gxRange[0], Math.min(gxRange[1], drag.gx0 + (p.x - drag.x0)));
+        // sliding sideways lifts the tooth out of anything it runs into
+        st.phi = Math.max(st.phi, contactPhi(st.gx, r));
+      }
+    } else {
+      st.bx = Math.max(-340, Math.min(700, drag.bx0 + (p.x - drag.x0)));
+      st.ey = Math.max(-250, Math.min(560, drag.ey0 + (p.y - drag.y0)));
+    }
+    drawScene();
+  });
+  const end = () => { drag = null; };
+  svg.addEventListener('pointerup', end);
+  svg.addEventListener('pointercancel', end);
+}
+
+// ============================================================
+// CONTROLS
+// ============================================================
+function renderControls() {
+  const r = ROUNDS[currentRound];
+  const c = document.getElementById('controls');
+  let html = '';
+  if (r.type === 'depth') {
+    const label = r.mode === 'undercut' ? 'Undercut depth:' : 'Crown height:';
+    html += `<div class="ctrl-row" id="answerRow"><span class="ctrl-label">${label}</span>
+      <div class="stepper"><button onclick="step(-1)" aria-label="decrease">−</button>
+      <div class="val" id="answerVal"></div><button onclick="step(1)" aria-label="increase">+</button></div>
+      <span style="font-size:12px;color:var(--text-dim)">1/64" steps — enter what the needle reads</span></div>`;
+    html += dispRow();
+  } else if (r.type === 'size') {
+    r.pores.forEach(p => {
+      html += `<div class="ctrl-row sizeRow"><span class="pore-tag">Pore ${p.label}</span>
+        ${[['small', 'smaller than 1/16"'], ['mid', 'between 1/16" & 1/8"'], ['large', 'larger than 1/8"']]
+          .map(([k, s]) => `<button class="opt-btn" id="sz-${p.label}-${k}" onclick="setSize('${p.label}','${k}')">${s}</button>`).join('')}
+      </div>`;
+    });
+    html += `<div class="ctrl-row"><button class="submit-btn" id="submitBtn" onclick="submit()">Submit</button></div>`;
+  } else {
+    html += `<div class="ctrl-row" id="answerRow"><span class="ctrl-label">Worst 1" total:</span>
+      <div class="stepper"><button onclick="step(-1)" aria-label="decrease">−</button>
+      <div class="val" id="answerVal"></div><button onclick="step(1)" aria-label="increase">+</button></div>
+      <span style="font-size:12px;color:var(--text-dim)">sum of pore diameters, 1/16" steps</span></div>`;
+    html += dispRow();
+  }
+  c.innerHTML = html;
+  updateControls();
+}
+function dispRow() {
+  return `<div class="ctrl-row" id="dispRow"><span class="ctrl-label">Disposition:</span>
+    <button class="disp-btn" id="acceptBtn" onclick="setDisp('accept')">ACCEPT</button>
+    <button class="disp-btn" id="rejectBtn" onclick="setDisp('reject')">REJECT</button>
+    <button class="submit-btn" id="submitBtn" onclick="submit()">Submit</button></div>`;
+}
+function answerDenom() { return ROUNDS[currentRound].type === 'depth' ? 64 : 16; }
+const ANSWER_MAX = 12; // 12/64 = 3/16" (depth) or 12/16 = 3/4" (porosity)
+function step(k) {
+  st.answer = st.answer === null ? 0 : Math.max(0, Math.min(ANSWER_MAX, st.answer + k));
+  updateControls();
+}
+function setDisp(v) { st.disp = v; updateControls(); }
+function setSize(label, k) { st.sizes[label] = k; updateControls(); }
+function updateControls() {
+  const r = ROUNDS[currentRound];
+  const av = document.getElementById('answerVal');
+  if (av) {
+    if (st.answer === null) { av.textContent = '—'; av.className = 'val unset'; }
+    else {
+      const n = st.answer, d = answerDenom();
+      av.textContent = n === 0 ? '0"' : `${frac(n, d)}` + (frac(n, d) !== `${n}/${d}"` ? ` (${n}/${d})` : '');
+      av.className = 'val';
+    }
+  }
+  const a = document.getElementById('acceptBtn'), rj = document.getElementById('rejectBtn');
+  if (a) a.className = 'disp-btn' + (st.disp === 'accept' ? ' sel-accept' : '');
+  if (rj) rj.className = 'disp-btn' + (st.disp === 'reject' ? ' sel-reject' : '');
+  if (r.type === 'size') {
+    r.pores.forEach(p => ['small', 'mid', 'large'].forEach(k => {
+      document.getElementById(`sz-${p.label}-${k}`).className = 'opt-btn' + (st.sizes[p.label] === k ? ' selected' : '');
+    }));
+  }
+}
+function flash(id) {
+  const e = document.getElementById(id);
+  if (!e) return;
+  e.classList.add('flash');
+  setTimeout(() => e.classList.remove('flash'), 1000);
+}
+
+// ============================================================
+// SUBMIT / FEEDBACK
+// ============================================================
+const SIZE_TEXT = { small: '< 1/16"', mid: '1/16"–1/8"', large: '> 1/8"' };
+
+function submit() {
+  const r = ROUNDS[currentRound];
+  let correct, valuesHtml = '';
+  const ok = b => `style="color:${b ? 'var(--success)' : 'var(--error)'}"`;
+
+  if (r.type === 'size') {
+    if (r.pores.some(p => !st.sizes[p.label])) {
+      document.querySelectorAll('.sizeRow').forEach((row, i) => {
+        if (!st.sizes[r.pores[i].label]) { row.classList.add('flash'); setTimeout(() => row.classList.remove('flash'), 1000); }
+      });
+      return;
+    }
+    correct = r.pores.every(p => st.sizes[p.label] === p.answer);
+    valuesHtml = r.pores.map(p => `<span>${p.label}: <strong ${ok(st.sizes[p.label] === p.answer)}>${SIZE_TEXT[st.sizes[p.label]]}</strong></span>`).join('');
+  } else {
+    if (st.answer === null) return flash('answerRow');
+    if (!st.disp) return flash('dispRow');
+    const d = answerDenom();
+    const truth = r.type === 'depth' ? (r.mode === 'undercut' ? r.depth64 : r.crown64) : r.worst16;
+    const valOk = st.answer === truth;
+    const dispOk = st.disp === r.correctDisp;
+    correct = valOk && dispOk;
+    const label = r.type === 'depth' ? 'Your reading' : 'Your worst inch';
+    valuesHtml = `<span>${label}: <strong ${ok(valOk)}>${frac(st.answer, d)}</strong></span>` +
+      `<span>Actual: <strong>${frac(truth, d)}</strong></span>` +
+      `<span>Disposition: <strong ${ok(dispOk)}>${st.disp.toUpperCase()}</strong></span>`;
+  }
+
+  if (!attempted) { results[currentRound] = correct; attempted = true; }
+
+  let detail = r.explain;
+  if (!correct && r.type === 'depth') {
+    const truth = r.mode === 'undercut' ? r.depth64 : r.crown64;
+    const shown = r.mode === 'undercut' ? gaugeReading64() : -gaugeReading64();
+    const touching = Math.abs(st.phi - contactPhi(st.gx, r)) < 1e-4;
+    if (!touching) detail = 'The tooth was not touching the metal when you submitted — swing it down until it bottoms out. ' + detail;
+    else if (shown >= 0 && shown < truth) detail = `Your needle was reading ${frac(shown, 64)} — that spot is not the ${r.mode === 'undercut' ? 'deepest' : 'highest'} point. ` + detail;
+  }
+
+  document.getElementById('fbIcon').className = 'fb-icon ' + (correct ? 'correct' : 'incorrect');
+  document.getElementById('fbIcon').textContent = correct ? '✓' : '✗';
+  document.getElementById('fbTitle').className = 'fb-title ' + (correct ? 'correct' : 'incorrect');
+  document.getElementById('fbTitle').textContent = correct ? 'Correct!' : 'Not quite';
+  document.getElementById('fbValues').innerHTML = valuesHtml;
+  document.getElementById('fbDetail').textContent = detail;
+  const last = currentRound >= ROUNDS.length - 1;
+  document.getElementById('fbButtons').innerHTML =
+    `<button class="fb-btn fb-btn-retry" onclick="tryAgain()">Try Again</button>` +
+    `<button class="fb-btn fb-btn-proceed" onclick="${last ? 'finish()' : 'proceed()'}">${last ? 'Finish' : 'Proceed →'}</button>`;
+  document.getElementById('feedback').classList.add('visible');
+  updateProgress();
+}
+
+function tryAgain() {
+  document.getElementById('feedback').classList.remove('visible');
+  st.answer = null; st.disp = null; st.sizes = {};
+  updateControls();
+}
+function proceed() { currentRound++; loadRound(); }
+
+function finish() {
+  const score = results.filter(Boolean).length;
+  document.getElementById('fbIcon').className = 'fb-icon correct';
+  document.getElementById('fbIcon').textContent = '★';
+  document.getElementById('fbTitle').className = 'fb-title correct';
+  document.getElementById('fbTitle').textContent = 'Exercise Complete';
+  document.getElementById('fbValues').innerHTML = `<span>First-try correct: <strong>${score} / ${ROUNDS.length}</strong></span>`;
+  document.getElementById('fbDetail').textContent =
+    'One gauge, four checks: undercut depth, crown height, pore size, and porosity per linear inch. Remember — the gauge gives you the number; the governing code, drawing, or procedure gives you the limit. Always check which applies before making the call.';
+  document.getElementById('fbButtons').innerHTML = `<button class="fb-btn fb-btn-proceed" onclick="resetExercise()">Restart Exercise</button>`;
+  document.getElementById('feedback').classList.add('visible');
+}
+function resetExercise() { currentRound = 0; results = []; loadRound(); }
+
+function loadRound() {
+  const r = ROUNDS[currentRound];
+  st = freshState();
+  attempted = false;
+  document.getElementById('feedback').classList.remove('visible');
+  document.getElementById('promptTitle').textContent = r.title;
+  document.getElementById('promptText').textContent = r.prompt;
+  document.getElementById('jobCard').innerHTML = r.job.map(([k, v]) => `<span class="job-chip">${k}: <b>${v}</b></span>`).join('');
+  document.getElementById('criteriaTitle').textContent = r.type === 'depth' && r.mode === 'crown' ? 'Reinforcement Criteria' : r.type === 'depth' ? 'Undercut Criteria' : 'Porosity Criteria';
+  document.getElementById('criteriaList').innerHTML = r.criteria.map(c =>
+    c.group ? `<div class="criteria-group">${c.group}</div>`
+    : c.depth ? `<div class="criteria-item band"><span class="cl">${c.depth}</span><span class="cv ${c.kind}">${c.verdict}</span></div>`
+    : `<div class="criteria-item"><span class="cl">${c[0]}</span><span class="cv">${c[1]}</span></div>`).join('');
+  document.getElementById('criteriaNote').textContent = r.note;
+  document.getElementById('howtoList').innerHTML = r.howto.map(s => `<li>${s}</li>`).join('');
+  document.getElementById('tipText').textContent = r.tip;
+  renderControls();
+  updateProgress();
+  drawScene();
+}
+
+function updateProgress() {
+  const c = document.getElementById('roundProgress');
+  c.innerHTML = '';
+  ROUNDS.forEach((_, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'round-dot';
+    if (i === currentRound) dot.classList.add('active');
+    else if (results[i] === true) dot.classList.add('done');
+    else if (results[i] === false) dot.classList.add('missed');
+    c.appendChild(dot);
+  });
+}
+
+initDrag();
+loadRound();
+</script>
+</body>
+</html>
