@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UT Probe Delay vs Display Delay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page: #f6f3ee; --panel: #fff; --ink: #1f1d1b; --ink-soft: #57524d; --ink-faded: #8f8882; --rule: #ddd6cc;
+    --red: #A82020; --red-deep: #7a1818; --navy: #0f1c2b;
+    --orange: #d9731a; --orange-tint: #fdf0e3; --blue: #2a6fdb; --blue-tint: #e8f0fc;
+    --good: #0d904f; --good-tint: #e6f4ea; --bad: #d93025;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Manrope', system-ui, sans-serif; background: var(--page); color: var(--ink); line-height: 1.5; min-height: 100vh; }
+  header { background: linear-gradient(135deg, var(--red-deep), var(--red)); color: #fff; padding: 1.4rem 1.5rem 1.2rem; }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  header .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; margin-bottom: 6px; }
+  header h1 { font-size: clamp(22px, 3.4vw, 30px); font-weight: 800; letter-spacing: -0.01em; line-height: 1.15; text-wrap: balance; }
+  header a.back { color: #fff; opacity: 0.8; font-size: 13px; text-decoration: none; display: inline-block; margin-top: 8px; }
+  header a.back:hover { opacity: 1; text-decoration: underline; }
+  main { padding: 1.25rem 1rem 3rem; }
+  h2 { font-size: 20px; font-weight: 800; margin: 2rem 0 0.4rem; }
+  .lede { color: var(--ink-soft); font-size: 15px; max-width: 760px; margin-bottom: 0.8rem; }
+  .cap { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faded); margin-bottom: 8px; }
+
+  .player, .sandbox, .card { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 10px; }
+  .stage-wrap { position: relative; }
+  canvas { display: block; width: 100%; height: auto; border-radius: 8px; background: var(--page); }
+  .bigplay { position: absolute; inset: 0; margin: auto; width: 96px; height: 96px; border-radius: 50%; border: none; background: rgba(168,32,32,0.92); color: #fff; font-size: 38px; cursor: pointer; box-shadow: 0 8px 30px rgba(0,0,0,0.25); }
+  .bigplay[hidden] { display: none; }
+  .controls { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+  .controls button, .chapters button, .knob button, .modes button, .sbx-actions button {
+    font: 700 14px 'Manrope', sans-serif; border-radius: 8px; border: 1px solid var(--rule); background: #fff; color: var(--ink); cursor: pointer; padding: 8px 12px; touch-action: manipulation;
+  }
+  .controls button:hover, .chapters button:hover, .modes button:hover, .sbx-actions button:hover { border-color: var(--red); }
+  .controls .play { background: var(--red); color: #fff; border-color: var(--red); min-width: 88px; }
+  .controls input[type=range] { flex: 1; min-width: 160px; accent-color: var(--red); }
+  .controls .time { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--ink-soft); }
+  .controls label { font-size: 13px; color: var(--ink-soft); display: flex; align-items: center; gap: 6px; }
+  .cc { margin-top: 10px; padding: 10px 14px; background: var(--orange-tint); border-left: 4px solid var(--orange); border-radius: 6px; font-size: 15px; color: var(--ink); min-height: 3.2em; }
+  .cc[hidden] { display: none; }
+  .chapters { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; margin-top: 10px; }
+  .chapters button { text-align: left; font-weight: 600; font-size: 13px; padding: 7px 10px; }
+  .chapters button .n { font-family: 'JetBrains Mono', monospace; color: var(--red); margin-right: 6px; }
+  .chapters button.on { background: var(--red); color: #fff; border-color: var(--red); }
+  .chapters button.on .n { color: #fff; }
+
+  .modes { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .modes button.on { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .knobs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .knob { background: #1c1a19; color: #fff; border-radius: 8px; padding: 10px 12px; }
+  .knob .name { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #c9c9cf; display: flex; justify-content: space-between; gap: 8px; }
+  .knob .name b { color: #fff; font-size: 17px; letter-spacing: 0; text-transform: none; }
+  .sbx-scroll { overflow-x: auto; }
+  .sbx-scroll canvas { min-width: 640px; }
+  .knob.zero { border-top: 4px solid var(--orange); } .knob.delay, .knob.range { border-top: 4px solid var(--blue); }
+  .knob .row { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+  .knob button { background: #2f2f33; color: #fff; border: 1px solid #555; padding: 7px 0; flex: 1; min-width: 46px; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+  .knob button:hover { background: #3a3a40; }
+  .knob select { margin-top: 8px; width: 100%; font: 600 15px 'JetBrains Mono', monospace; padding: 6px; border-radius: 6px; background: #2f2f33; color: #fff; border: 1px solid #555; }
+  .tasks { list-style: none; margin-top: 12px; display: grid; gap: 6px; }
+  .tasks li { padding: 9px 12px 9px 38px; border: 1px solid var(--rule); border-radius: 8px; position: relative; font-size: 15px; }
+  .tasks li::before { content: ''; position: absolute; left: 12px; top: 11px; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--ink-faded); }
+  .tasks li.ok { background: var(--good-tint); border-color: var(--good); }
+  .tasks li.ok::before { background: var(--good); border-color: var(--good); }
+  .tasks li.ok::after { content: '✓'; position: absolute; left: 15px; top: 7px; color: #fff; font-weight: 800; font-size: 13px; }
+  .sbx-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+  details.hint { margin-top: 8px; font-size: 14px; color: var(--ink-soft); }
+  details.hint summary { cursor: pointer; font-weight: 700; color: var(--ink); }
+
+  .keypoints { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .card h3 { font-size: 17px; font-weight: 800; margin-bottom: 4px; }
+  .card.zero { border-top: 5px solid var(--orange); } .card.delay { border-top: 5px solid var(--blue); }
+  .card ul { padding-left: 1.2em; font-size: 14.5px; color: var(--ink-soft); }
+  .card .tag { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faded); margin-bottom: 6px; }
+  .card.wide { grid-column: 1 / -1; }
+  @media (max-width: 720px) {
+    .knobs, .keypoints { grid-template-columns: 1fr; }
+    main { padding: 1rem 0.75rem 3rem; }
+  }
+
+  /* recording mode: nothing but the stage at 1920x1080 */
+  body.record { background: #f6f3ee; overflow: hidden; }
+  body.record > *:not(main) { display: none; }
+  body.record main > *:not(.player) { display: none; }
+  body.record main { padding: 0; max-width: none; }
+  body.record .player { border: 0; padding: 0; border-radius: 0; }
+  body.record .player > *:not(.stage-wrap) { display: none; }
+  body.record #stage { width: 1920px; height: 1080px; border-radius: 0; }
+  body.record .bigplay { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Ultrasonic Testing · Level 2 · Straight Beam</div>
+    <h1>Probe Delay vs Display Delay — Zero Offset and Delay on the Epoch</h1>
+    <a class="back" href="index.html">← Exercise Hub</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <p class="lede">Both controls slide echoes across the A-scan, but only one changes the reading. Watch the animation, then try it yourself in the sandbox below.</p>
+
+  <div class="player">
+    <div class="stage-wrap">
+      <canvas id="stage" width="1920" height="1080" aria-label="Animated lesson: probe delay versus display delay"></canvas>
+      <button class="bigplay" id="bigplay" aria-label="Play">▶</button>
+    </div>
+    <div class="controls">
+      <button class="play" id="play">▶ Play</button>
+      <input type="range" id="scrub" min="0" max="1000" value="0" step="1" aria-label="Seek">
+      <span class="time" id="time">0:00 / 0:00</span>
+      <label><input type="checkbox" id="ccToggle" checked> Narration text</label>
+    </div>
+    <div class="cc" id="cc"></div>
+    <div class="chapters" id="chapters"></div>
+  </div>
+
+  <h2>Try it — Epoch sandbox</h2>
+  <p class="lede">Gate A is parked on the reflector and reports its depth. Use <b>ZERO OFFSET</b>, <b>DELAY</b> and <b>RANGE</b> to finish each task. Velocity is fixed at 5920 m/s (steel).</p>
+  <div class="sandbox">
+    <div class="modes" id="modes"></div>
+    <div class="sbx-scroll"><canvas id="sbx" width="1920" height="930" aria-label="Sandbox: test piece and A-scan"></canvas></div>
+    <div class="knobs">
+      <div class="knob zero">
+        <div class="name">Zero offset (probe delay) <b id="zVal">0.00 µs</b></div>
+        <div class="row" id="zBtns"></div>
+      </div>
+      <div class="knob delay">
+        <div class="name">Delay (display delay) <b id="dVal">0.00 mm</b></div>
+        <div class="row" id="dBtns"></div>
+        <div class="name" style="margin-top:10px">Range <b id="rVal">60.00 mm</b></div>
+        <select id="rSel" aria-label="Range"></select>
+      </div>
+    </div>
+    <ul class="tasks" id="tasks"></ul>
+    <div class="sbx-actions">
+      <button id="reset">Reset this setup</button>
+    </div>
+    <details class="hint" id="hint"><summary>Hint</summary><p id="hintText"></p></details>
+  </div>
+
+  <h2>Key points</h2>
+  <div class="keypoints">
+    <div class="card zero">
+      <div class="tag">Epoch: ZERO OFFSET · µs</div>
+      <h3>Probe delay moves zero</h3>
+      <ul>
+        <li>Removes the time sound spends in the wear plate, delay line and couplant, so zero is the test surface.</li>
+        <li>Changes <b>every</b> reading by the same amount.</li>
+        <li>Always used. Set it in every calibration (CAL ZERO on the thin step, CAL VEL on the thick step).</li>
+        <li>Recheck when you change the probe, cable, delay line or couplant, and as the wear face wears.</li>
+      </ul>
+    </div>
+    <div class="card delay">
+      <div class="tag">Epoch: DELAY · mm</div>
+      <h3>Display delay moves the window</h3>
+      <ul>
+        <li>Slides the screen's left edge deeper into the part, like panning a camera.</li>
+        <li>Readings do <b>not</b> change. Only what you can see changes.</li>
+        <li>Used when needed: zooming into a depth band on thick parts, pushing the water path off-screen in immersion, spreading out the region near the back wall.</li>
+        <li>Set it back to 0 when you're done, or near-surface flaws on the next job will be off-screen.</li>
+      </ul>
+    </div>
+    <div class="card wide">
+      <div class="tag">Immersion</div>
+      <h3>Both controls can handle the water path</h3>
+      <ul>
+        <li>At steel velocity, water looks about 4× longer than it is: 50 mm of water shows up as about 200 mm.</li>
+        <li><b>DELAY</b> pushes the water path off-screen, but readings are still measured from the probe and include the water.</li>
+        <li><b>ZERO OFFSET</b> can absorb the water time, like a very long delay line. Depths then read from the front surface. Calibrating on a reference block in the tank at the same water path does this for you.</li>
+        <li>It only holds while the water path is fixed: 1 mm more water shifts every reading about 4 mm in steel. Re-standardize, or use an interface gate if your instrument has one.</li>
+        <li>Setup check: water path ≥ ¼ × steel thickness, so the 2nd interface echo lands beyond the back wall.</li>
+      </ul>
+    </div>
+  </div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  // ================= Physics =================
+  const V = 5.92;               // steel longitudinal velocity, mm/µs
+  const VW = 1.48;              // water velocity, mm/µs
+  const T0 = 0.81;              // true probe delay (wear plate + couplant), µs
+  const E = V * T0 / 2;         // probe delay expressed as steel depth: 2.40 mm
+  const WATER = 50;             // immersion water path, mm
+  const WATER_EQ = WATER * V / VW;   // 200 mm at steel velocity
+  const WT = 2 * WATER / VW;         // 67.57 µs round trip in water
+
+  // ================= Drawing kit =================
+  const C = {
+    page: '#f6f3ee', panel: '#ffffff', ink: '#1f1d1b', soft: '#57524d', faded: '#8f8882', rule: '#ddd6cc',
+    red: '#A82020', navy: '#0f1c2b', trace: '#7dffb0', gate: '#ff6b6b', gateB: '#ffd166',
+    orange: '#d9731a', blue: '#2a6fdb', good: '#0d904f', bad: '#d93025',
+    steelA: '#cfd5dd', steelB: '#9aa5b2', steelEdge: '#5f6b78', water: '#d7ecf8', waterLine: '#9fcbe6'
+  };
+  const SANS = "'Manrope', system-ui, sans-serif", MONO = "'JetBrains Mono', ui-monospace, monospace";
+  const COLK = { o: C.orange, b: C.blue, r: C.bad, g: C.good, k: C.ink };
+
+  const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const smooth = t => { t = clamp(t); return t * t * (3 - 2 * t); };
+  const ramp = (lt, a, b) => smooth((lt - a) / (b - a));
+  const lin = (lt, a, b) => clamp((lt - a) / (b - a));
+  const fade = (lt, a, b, f = 0.4) => clamp(Math.min((lt - a) / f, (b - lt) / f));
+
+  function font(ctx, size, weight = 600, mono = false) { ctx.font = `${weight} ${size}px ${mono ? MONO : SANS}`; }
+  function txt(ctx, s, x, y, o = {}) {
+    font(ctx, o.size || 16, o.weight || 600, o.mono);
+    ctx.fillStyle = o.color || C.ink; ctx.textAlign = o.align || 'left'; ctx.textBaseline = o.base || 'alphabetic';
+    if (o.alpha != null) { ctx.save(); ctx.globalAlpha *= o.alpha; ctx.fillText(s, x, y); ctx.restore(); }
+    else ctx.fillText(s, x, y);
+  }
+  function rrect(ctx, x, y, w, h, r) {
+    ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+  function withAlpha(ctx, a, fn) { if (a <= 0) return; ctx.save(); ctx.globalAlpha *= clamp(a); fn(); ctx.restore(); }
+  function panel(ctx, b, title) {
+    rrect(ctx, b.x, b.y, b.w, b.h, 10); ctx.fillStyle = C.panel; ctx.fill(); ctx.strokeStyle = C.rule; ctx.lineWidth = 1; ctx.stroke();
+    if (title) txt(ctx, title, b.x + 14, b.y + 22, { size: 11, mono: true, color: C.faded, weight: 600 });
+  }
+  function wrap(ctx, s, maxW) {
+    const words = s.split(' '), lines = []; let cur = '';
+    for (const w of words) { const t = cur ? cur + ' ' + w : w; if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t; }
+    if (cur) lines.push(cur); return lines;
+  }
+  function parseRich(s) {
+    const out = [], re = /\{(\w):([^}]*)\}/g; let last = 0, m;
+    while ((m = re.exec(s))) { if (m.index > last) out.push([s.slice(last, m.index), null]); out.push([m[2], COLK[m[1]]]); last = re.lastIndex; }
+    if (last < s.length) out.push([s.slice(last), null]); return out;
+  }
+  function drawRich(ctx, s, cx, y, size, maxW) {
+    const segs = parseRich(s);
+    const measure = sz => segs.reduce((w, [t, c]) => { font(ctx, sz, c ? 800 : 700); return w + ctx.measureText(t).width; }, 0);
+    let sz = size, W = measure(sz);
+    if (maxW && W > maxW) { sz = size * maxW / W; W = measure(sz); }
+    let x = cx - W / 2; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    for (const [t, c] of segs) { font(ctx, sz, c ? 800 : 700); ctx.fillStyle = c || C.ink; ctx.fillText(t, x, y); x += ctx.measureText(t).width; }
+  }
+  function arrow(ctx, x1, y1, x2, y2, color, w = 2, head = 9) {
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = w;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    const a = Math.atan2(y2 - y1, x2 - x1);
+    ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x2 - head * Math.cos(a - 0.45), y2 - head * Math.sin(a - 0.45));
+    ctx.lineTo(x2 - head * Math.cos(a + 0.45), y2 - head * Math.sin(a + 0.45)); ctx.closePath(); ctx.fill();
+  }
+  function dimLine(ctx, x1, x2, y, label, color) {
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x1, y - 8); ctx.lineTo(x1, y + 8); ctx.moveTo(x2, y - 8); ctx.lineTo(x2, y + 8); ctx.stroke();
+    arrow(ctx, (x1 + x2) / 2, y, x1 + 1, y, color, 1.5, 8); arrow(ctx, (x1 + x2) / 2, y, x2 - 1, y, color, 1.5, 8);
+    txt(ctx, label, (x1 + x2) / 2, y - 10, { size: 14, weight: 700, color, align: 'center' });
+  }
+
+  // ================= Echo model =================
+  const BANG = { p: 0, amp: 1.15, w: 1.1, id: 'bang' };
+  function echoList(kind, o = {}) {
+    if (kind === 'contact') return [BANG, { p: E + 25, amp: .62, w: .5, id: 'flaw' }, { p: E + 50, amp: .85, w: .55, id: 'bw' }, { p: E + 100, amp: .42, w: .55, id: 'bw2' }, { p: E + 150, amp: .2, w: .55 }];
+    if (kind === 'thick') return [BANG, { p: E + 180, amp: .55, w: .55, id: 'flaw' }, { p: E + 200, amp: .8, w: .6, id: 'bw' }, { p: E + 400, amp: .35, w: .6, id: 'bw2' }];
+    if (kind === 'near') return [BANG, { p: E + 3, amp: .5, w: .45, id: 'flaw' }, { p: E + 30, amp: .85, w: .55, id: 'bw' }, { p: E + 60, amp: .42, w: .55, id: 'bw2' }, { p: E + 90, amp: .2, w: .55 }];
+    if (kind === 'step10') return [BANG, { p: E + 10, amp: .9, w: .5, id: 'flaw' }, { p: E + 20, amp: .62, w: .5 }, { p: E + 30, amp: .42, w: .5 }, { p: E + 40, amp: .28, w: .5 }, { p: E + 50, amp: .18, w: .5 }];
+    if (kind === 'step25') return [BANG, { p: E + 25, amp: .85, w: .5, id: 'flaw' }, { p: E + 50, amp: .45, w: .5 }, { p: E + 75, amp: .22, w: .5 }];
+    if (kind === 'immersion') {
+      const w = o.waterEq != null ? o.waterEq : WATER_EQ, s = E + w;
+      return [BANG, { p: s, amp: 1.3, w: .7, id: 'if' }, { p: s + 12, amp: .5, w: .5, id: 'flaw' }, { p: s + 25, amp: .72, w: .55, id: 'bw' },
+        { p: s + 50, amp: .36, w: .55, id: 'bw2' }, { p: s + 75, amp: .18, w: .55 }, { p: E + 2 * w, amp: .6, w: .7, id: 'if2' }, { p: E + 2 * w + 25, amp: .3, w: .55 }];
+    }
+    return [BANG];
+  }
+  const GEOM = { contact: { T: 50, f: 25 }, thick: { T: 200, f: 180 }, near: { T: 30, f: 3 }, immersion: { T: 25, f: 12 } };
+  const screenPos = (p, Z) => p - V * Z / 2;          // screen depth (mm) of an event at time-equivalent p
+  function hash(i) { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+  function noise(p) { const i = Math.floor(p), f = p - i, u = f * f * (3 - 2 * f); return lerp(hash(i), hash(i + 1), u); }
+  function ampAt(s, echoes, Z, R, plotW) {
+    const p = s + V * Z / 2;
+    let a = 0.012 + 0.035 * noise(p * 2.7) * noise(p * 0.6 + 9);
+    for (const e of echoes) {
+      const s0 = screenPos(e.p, Z), dpx = (s - s0) / R * plotW;
+      const wpx = Math.max(e.w / R * plotW, 4.5), wu = dpx < 0 ? wpx * 0.55 : wpx;
+      if (Math.abs(dpx) > 4 * wu) continue;
+      a += e.amp * Math.exp(-(dpx / wu) * (dpx / wu)) * (0.45 + 0.55 * Math.abs(Math.sin(dpx * 0.9)));
+    }
+    return a;
+  }
+  function plotOf(b) {
+    const ml = b.ml != null ? b.ml : 110, mr = b.mr != null ? b.mr : 30, mt = b.mt != null ? b.mt : 46, mb = b.mb != null ? b.mb : 32;
+    return { x: b.x + ml, y: b.y + mt, w: b.w - ml - mr, h: b.h - mt - mb };
+  }
+
+  // ================= A-scan =================
+  // st: {kind, Z, D, R, echoes?, reveal?, chips?, hl?, tag?, band?, readouts?, labels?}
+  function drawAscan(ctx, box, st) {
+    const P = plotOf(box);
+    const echoes = st.echoes || echoList(st.kind, st);
+    const SX = s => P.x + (s - st.D) / st.R * P.w;
+    panel(ctx, box);
+    // header chips
+    const defs = {
+      zero: ['ZERO OFFSET', st.Z.toFixed(2) + ' µs', C.orange], vel: ['VELOCITY', '5920 m/s', C.soft],
+      range: ['RANGE', st.R.toFixed(2) + ' mm', C.blue], delay: ['DELAY', st.D.toFixed(2) + ' mm', C.blue]
+    };
+    let x = box.x + 14; const y = box.y + 9;
+    if (st.tag) { txt(ctx, st.tag, x, y + 20, { size: 15, weight: 800, color: st.tagColor || C.ink }); font(ctx, 15, 800); x += ctx.measureText(st.tag).width + 14; }
+    for (const k of (st.chips || ['zero', 'vel', 'range', 'delay'])) {
+      const [lab, val, col] = defs[k]; const hl = (st.hl && st.hl[k]) || 0;
+      font(ctx, 10, 600, true); const lw = ctx.measureText(lab).width; font(ctx, 14, 700, true); const vw = ctx.measureText(val).width;
+      const w = lw + vw + 26;
+      rrect(ctx, x, y, w, 28, 6);
+      ctx.fillStyle = hl > 0 ? col : '#f3f0ea'; ctx.save(); ctx.globalAlpha = hl > 0 ? 0.12 + 0.2 * hl : 1; ctx.fill(); ctx.restore();
+      ctx.strokeStyle = hl > 0 ? col : C.rule; ctx.lineWidth = hl > 0 ? 1 + 2 * hl : 1; ctx.stroke();
+      txt(ctx, lab, x + 9, y + 18, { size: 10, mono: true, color: hl > 0 ? col : C.faded });
+      txt(ctx, val, x + 17 + lw, y + 19, { size: 14, mono: true, weight: 700, color: C.ink });
+      x += w + 8;
+    }
+    // screen
+    rrect(ctx, P.x - 3, P.y - 3, P.w + 6, P.h + 6, 6); ctx.fillStyle = C.navy; ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.rect(P.x, P.y, P.w, P.h); ctx.clip();
+    ctx.strokeStyle = 'rgba(255,255,255,0.09)'; ctx.lineWidth = 1;
+    for (let i = 1; i < 10; i++) { const gx = P.x + i * P.w / 10; ctx.beginPath(); ctx.moveTo(gx, P.y); ctx.lineTo(gx, P.y + P.h); ctx.stroke(); }
+    for (let i = 1; i < 5; i++) { const gy = P.y + i * P.h / 5; ctx.beginPath(); ctx.moveTo(P.x, gy); ctx.lineTo(P.x + P.w, gy); ctx.stroke(); }
+    // probe-time band
+    if (st.band > 0) {
+      const sc = screenPos(0, st.Z), x1 = SX(sc), x2 = SX(sc + E);
+      withAlpha(ctx, st.band, () => {
+        ctx.fillStyle = 'rgba(217,115,26,0.30)'; ctx.fillRect(x1, P.y, x2 - x1, P.h);
+        ctx.strokeStyle = C.orange; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x2, P.y); ctx.lineTo(x2, P.y + P.h); ctx.stroke();
+        if (x2 > P.x + 6) txt(ctx, st.bandLabel || 'probe time', Math.max(x2 + 8, P.x + 8), P.y + P.h - 12, { size: 13, weight: 700, color: '#ffb36b' });
+      });
+    }
+    // trace
+    const reveal = st.reveal != null ? st.reveal : Infinity;
+    const bottom = P.y + P.h, H = P.h * 0.94;
+    ctx.beginPath(); let started = false;
+    for (let px = 0; px <= P.w; px += 1) {
+      const s = st.D + px / P.w * st.R; if (s > reveal) break;
+      const a = Math.min(ampAt(s, echoes, st.Z, st.R, P.w), 1.04);
+      const yy = bottom - a * H;
+      if (!started) { ctx.moveTo(P.x + px, yy); started = true; } else ctx.lineTo(P.x + px, yy);
+    }
+    ctx.strokeStyle = C.trace; ctx.lineWidth = 1.8; ctx.shadowColor = 'rgba(125,255,176,0.6)'; ctx.shadowBlur = 5; ctx.stroke(); ctx.shadowBlur = 0;
+    if (reveal < st.D + st.R) {
+      const rx = SX(reveal); ctx.strokeStyle = 'rgba(125,255,176,0.45)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(rx, P.y); ctx.lineTo(rx, bottom); ctx.stroke();
+    }
+    // gates
+    const byId = id => echoes.find(e => e.id === id);
+    const gcol = [C.gate, C.gateB];
+    (st.readouts || []).forEach((r, i) => {
+      if (r.gate === false) return;
+      const e = byId(r.id); if (!e) return;
+      const s = screenPos(e.p, st.Z), half = Math.max(0.045 * st.R, 0.8);
+      const gy = bottom - (i === 0 ? 0.3 : 0.45) * H;
+      withAlpha(ctx, r.alpha != null ? r.alpha : 1, () => {
+        ctx.strokeStyle = gcol[i % 2]; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(SX(s - half), gy); ctx.lineTo(SX(s + half), gy); ctx.stroke();
+        txt(ctx, i === 0 ? 'A' : 'B', SX(s - half) - 4, gy + 4, { size: 12, mono: true, weight: 700, color: gcol[i % 2], align: 'right' });
+      });
+    });
+    // echo labels
+    (st.labels || []).forEach(l => {
+      const e = byId(l.id); if (!e) return; const s = screenPos(e.p, st.Z);
+      if (s < st.D || s > st.D + st.R) return;
+      withAlpha(ctx, l.alpha != null ? l.alpha : 1, () => {
+        // pill beside the peak: right of it, or left when near the right edge
+        const lx = SX(s), peak = bottom - Math.min(e.amp, 1.04) * H;
+        font(ctx, 13, 700); const tw = ctx.measureText(l.text).width + 14;
+        const right = lx + 16 + tw < P.x + P.w - 4;
+        const bx = right ? lx + 16 : lx - 16 - tw, by = clamp(peak + 6, P.y + 6, bottom - 30);
+        rrect(ctx, bx, by, tw, 22, 5); ctx.fillStyle = 'rgba(8,14,22,0.85)'; ctx.fill();
+        txt(ctx, l.text, bx + 7, by + 16, { size: 13, weight: 700, color: l.color || '#ffffff' });
+      });
+    });
+    ctx.restore();
+    // axis labels
+    if ((box.ml != null ? box.ml : 110) >= 60) for (let i = 0; i <= 5; i++) txt(ctx, (i * 20) + '%', P.x - 10, bottom - i * P.h / 5 + 4, { size: 11, mono: true, color: C.faded, align: 'right' });
+    const dec = st.R < 20 ? 2 : st.R < 100 ? 1 : 0;
+    for (let i = 0; i <= 10; i += (P.w < 700 ? 2 : 1)) {
+      const v = st.D + i * st.R / 10;
+      txt(ctx, v.toFixed(dec), P.x + i * P.w / 10, bottom + 20, { size: 12, mono: true, color: C.soft, align: i === 0 ? 'left' : i === 10 ? 'right' : 'center' });
+    }
+    txt(ctx, 'mm', P.x + P.w + 6, bottom + 20, { size: 11, mono: true, color: C.faded });
+    // readouts
+    (st.readouts || []).forEach((r, i) => {
+      const e = byId(r.id); let val = r.value;
+      if (val == null) { if (!e) return; const s = screenPos(e.p, st.Z); val = (s >= st.D && s <= st.D + st.R) ? s.toFixed(2) : '---'; }
+      const w = r.w || 196, h = 36, rx = box.x + box.w - 12 - (i + 1) * w - i * 8, ry = box.y + 5;
+      withAlpha(ctx, r.alpha != null ? r.alpha : 1, () => {
+        rrect(ctx, rx, ry, w, h, 6); ctx.fillStyle = C.navy; ctx.fill();
+        const hl = r.hl || 0; ctx.strokeStyle = hl > 0 ? (r.color || C.gate) : C.navy; ctx.lineWidth = 1 + 2.5 * hl; ctx.stroke();
+        txt(ctx, r.label, rx + 10, ry + 23, { size: 10, mono: true, weight: 600, color: i === 0 ? '#ff9a9a' : '#ffe199' });
+        txt(ctx, val, rx + w - 10, ry + 27, { size: 22, mono: true, weight: 700, color: hl > 0.5 && r.color ? r.color : '#ffffff', align: 'right' });
+      });
+    });
+    return { P, SX };
+  }
+
+  // ================= Test piece =================
+  // st: {kind, Z, map:{x0,w,start,range}, waterEq?, P? (pulse path), zeroAlpha, zeroLabel, frame:{D,R,alpha}, title, plot (for connectors)}
+  function drawTop(ctx, box, st) {
+    panel(ctx, box, st.title);
+    const m = st.map, X = s => m.x0 + (s - m.start) / m.range * m.w;
+    const cy = box.y + box.h / 2 + 12, g = GEOM[st.kind];
+    const ph = 150;
+    const sc = screenPos(0, st.Z), sd = sc + E;
+    const wEq = st.kind === 'immersion' ? (st.waterEq != null ? st.waterEq : WATER_EQ) : 0;
+    const ss = sd + wEq, sb = ss + g.T, sf = ss + g.f;
+    ctx.save(); rrect(ctx, box.x + 1, box.y + 1, box.w - 2, box.h - 2, 9); ctx.clip();
+    if (st.kind === 'immersion') {
+      ctx.fillStyle = C.water; ctx.fillRect(box.x, box.y + 36, box.w, box.h - 36);
+      ctx.strokeStyle = C.waterLine; ctx.lineWidth = 1.5;
+      for (let k = 0; k < 3; k++) {
+        ctx.beginPath(); const yy = box.y + 36 + k * 5;
+        for (let xx = box.x; xx <= box.x + box.w; xx += 8) ctx.lineTo(xx, yy + Math.sin(xx * 0.05 + k) * 1.5);
+        ctx.stroke();
+      }
+    }
+    // beam
+    ctx.fillStyle = 'rgba(255,190,70,0.22)'; ctx.fillRect(X(sc), cy - 22, X(sb) - X(sc), 44);
+    // part
+    const grd = ctx.createLinearGradient(0, cy - ph / 2, 0, cy + ph / 2); grd.addColorStop(0, C.steelA); grd.addColorStop(1, C.steelB);
+    ctx.fillStyle = grd; ctx.fillRect(X(ss), cy - ph / 2, X(sb) - X(ss), ph);
+    ctx.fillStyle = 'rgba(255,190,70,0.28)'; ctx.fillRect(X(ss), cy - 22, X(sb) - X(ss), 44);
+    ctx.strokeStyle = C.steelEdge; ctx.lineWidth = 2; ctx.strokeRect(X(ss), cy - ph / 2, X(sb) - X(ss), ph);
+    // reflector
+    ctx.fillStyle = '#2b2f36'; ctx.beginPath(); ctx.arc(X(sf), cy - 6, 7, 0, Math.PI * 2); ctx.fill();
+    // probe
+    const xc = X(sc);
+    rrect(ctx, xc - 74, cy - 46, 68, 92, 6); ctx.fillStyle = '#3a3f47'; ctx.fill();
+    ctx.strokeStyle = '#3a3f47'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(xc - 74, cy - 20); ctx.quadraticCurveTo(xc - 110, cy - 30, xc - 130, cy - 80); ctx.stroke();
+    ctx.fillStyle = '#d4a017'; ctx.fillRect(xc - 6, cy - 36, 6, 72);
+    ctx.fillStyle = C.orange; ctx.fillRect(xc, cy - 36, Math.max(X(sd) - xc, 3), 72);
+    // pulse
+    if (st.P != null) {
+      const Pp = st.P, L = sb - sc;
+      const arcs = (x, dir, col, a) => withAlpha(ctx, a, () => {
+        ctx.strokeStyle = col; ctx.lineCap = 'round';
+        for (let k = 0; k < 3; k++) {
+          ctx.lineWidth = 3.5 - k; ctx.globalAlpha *= (k === 0 ? 1 : 0.65);
+          ctx.beginPath();
+          if (dir > 0) ctx.arc(x - 22 - k * 7, cy, 24, -0.75, 0.75); else ctx.arc(x + 22 + k * 7, cy, 24, Math.PI - 0.75, Math.PI + 0.75);
+          ctx.stroke();
+        }
+      });
+      if (Pp <= L) arcs(X(sc + Pp), 1, C.bad, 1);
+      const refl = [{ d: sf - sc, a: .8 }, { d: L, a: 1 }];
+      if (st.kind === 'immersion') refl.push({ d: ss - sc, a: 1 });
+      for (const r of refl) if (Pp > r.d && Pp < 2 * r.d) arcs(X(sc + 2 * r.d - Pp), -1, C.good, r.a);
+    }
+    // zero line
+    if (st.zeroAlpha > 0) withAlpha(ctx, st.zeroAlpha, () => {
+      const zx = X(0); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.setLineDash([7, 6]);
+      ctx.beginPath(); ctx.moveTo(zx, box.y + 42); ctx.lineTo(zx, box.y + box.h - 8); ctx.stroke(); ctx.setLineDash([]);
+      rrect(ctx, zx - 30, box.y + 30, 60, 22, 5); ctx.fillStyle = C.ink; ctx.fill();
+      txt(ctx, 'ZERO', zx, box.y + 46, { size: 12, mono: true, weight: 700, color: '#fff', align: 'center' });
+      if (st.zeroLabel) txt(ctx, st.zeroLabel, zx + 38, box.y + 46, { size: 14, weight: 700, color: C.ink });
+    });
+    // screen window
+    let fr = null;
+    if (st.frame && st.frame.alpha > 0) {
+      const x1 = X(st.frame.D), x2 = X(st.frame.D + st.frame.R), y1 = cy - ph / 2 - 16, y2 = cy + ph / 2 + 16;
+      fr = { x1, x2, y2 };
+      withAlpha(ctx, st.frame.alpha, () => {
+        ctx.fillStyle = 'rgba(42,111,219,0.10)'; ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+        ctx.strokeStyle = C.blue; ctx.lineWidth = 3; ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        txt(ctx, 'SCREEN WINDOW', Math.min(x2, box.x + box.w - 8) - 6, y1 - 6, { size: 11, mono: true, weight: 700, color: C.blue, align: 'right' });
+      });
+    }
+    ctx.restore();
+    return { X, cy, ph, sc, sd, ss, sb, sf, fr };
+  }
+  function connectors(ctx, fr, P, a) {
+    if (!fr || a <= 0) return;
+    withAlpha(ctx, a * 0.6, () => {
+      ctx.strokeStyle = C.blue; ctx.lineWidth = 1.5; ctx.setLineDash([5, 5]);
+      ctx.beginPath(); ctx.moveTo(fr.x1, fr.y2); ctx.lineTo(P.x, P.y); ctx.moveTo(fr.x2, fr.y2); ctx.lineTo(P.x + P.w, P.y); ctx.stroke();
+      ctx.setLineDash([]);
+    });
+  }
+
+  // ================= Layout =================
+  const TOP = { x: 40, y: 70, w: 1200, h: 250 };
+  const ASC = { x: 40, y: 334, w: 1200, h: 278 };
+  const PLOT = plotOf(ASC);
+  const ALIGNED = (D, R) => ({ x0: PLOT.x, w: PLOT.w, start: D, range: R });
+  const OVER = (start, range) => ({ x0: TOP.x + 20, w: TOP.w - 40, start, range });
+  const lerpMap = (a, b, t) => ({ x0: lerp(a.x0, b.x0, t), w: lerp(a.w, b.w, t), start: lerp(a.start, b.start, t), range: lerp(a.range, b.range, t) });
+  const LEFT = { x: 40, y: 334, w: 590, h: 278, ml: 50, mr: 16 };
+  const RIGHT = { x: 650, y: 334, w: 590, h: 278, ml: 50, mr: 16 };
+
+  function hlOf(lt, a, b) { return fade(lt, a, b, 0.5); }
+
+  // ================= Scenes =================
+  const SCENES = [
+    {
+      title: 'Two knobs, one question', dur: 12,
+      narr: "Probe delay and display delay. Both controls slide the echoes across the screen — but only one of them changes the number you write down. Let's see why.",
+      caps: [],
+      draw(ctx, lt) {
+        withAlpha(ctx, ramp(lt, 0, 1), () => {
+          txt(ctx, 'ULTRASONIC TESTING · LEVEL 2 · STRAIGHT BEAM', 640, 150, { size: 16, mono: true, weight: 600, color: C.red, align: 'center' });
+          drawRich(ctx, '{o:Probe Delay}  vs  {b:Display Delay}', 640, 222, 64);
+          txt(ctx, 'Two controls that both move the echo. Only one changes the reading.', 640, 292, { size: 24, weight: 600, color: C.soft, align: 'center' });
+        });
+        withAlpha(ctx, ramp(lt, 1.5, 2.5), () => {
+          const chip = (x, lab, col) => { font(ctx, 16, 700, true); const w = ctx.measureText(lab).width + 28; rrect(ctx, x - w / 2, 318, w, 34, 8); ctx.fillStyle = col; ctx.fill(); txt(ctx, lab, x, 341, { size: 16, mono: true, weight: 700, color: '#fff', align: 'center' }); };
+          chip(470, 'Epoch: ZERO OFFSET', C.orange); chip(810, 'Epoch: DELAY', C.blue);
+        });
+        withAlpha(ctx, ramp(lt, 3, 4.5), () => {
+          const D = 3 + 3 * Math.sin(lt * 0.9);
+          drawAscan(ctx, { x: 140, y: 380, w: 1000, h: 240, ml: 60, mr: 30 }, { kind: 'contact', Z: T0, D, R: 60, chips: ['zero', 'delay'], hl: { delay: 1 }, readouts: [{ id: 'flaw', label: 'A↓ DEPTH' }] });
+        });
+      }
+    },
+    {
+      title: 'Same probe, two answers', dur: 24,
+      narr: "Two technicians. Same Epoch, same probe, same test block. The reflector is twenty-five millimeters deep — we checked it with calipers. Technician A reads twenty-seven point four. Technician B reads twenty-five point zero. Velocity is set correctly on both instruments. So where did the extra two point four millimeters come from?",
+      caps: [[0, 5, 'Same Epoch. Same probe. Same block. Reflector at {b:25.0 mm}.'], [5, 11, 'Tech A reads {r:27.40 mm}'], [11, 16, 'Tech B reads {g:25.00 mm}'], [16, 24, 'Velocity is right on both. Where did the extra {o:2.40 mm} come from?']],
+      draw(ctx, lt) {
+        const t = drawTop(ctx, TOP, { kind: 'contact', Z: T0, map: ALIGNED(0, 60), title: 'TEST BLOCK · STEEL · 50 mm', zeroAlpha: 0 });
+        withAlpha(ctx, ramp(lt, 1, 2), () => {
+          dimLine(ctx, t.X(t.ss), t.X(t.sf), t.cy + 100, '25.0 mm (calipers)', C.blue);
+          txt(ctx, 'reflector', t.X(t.sf) + 12, t.cy - 14, { size: 13, weight: 700, color: C.ink });
+        });
+        withAlpha(ctx, ramp(lt, 4.5, 5.5), () => drawAscan(ctx, LEFT, { kind: 'contact', Z: 0, D: 0, R: 60, tag: 'TECH A', chips: ['vel', 'range'], readouts: [{ id: 'flaw', label: 'A↓ DEPTH', hl: ramp(lt, 6, 7), color: '#ff8a80' }] }));
+        withAlpha(ctx, ramp(lt, 10.5, 11.5), () => drawAscan(ctx, RIGHT, { kind: 'contact', Z: T0, D: 0, R: 60, tag: 'TECH B', chips: ['vel', 'range'], readouts: [{ id: 'flaw', label: 'A↓ DEPTH', hl: ramp(lt, 12, 13), color: '#7dffb0' }] }));
+        withAlpha(ctx, ramp(lt, 16, 17), () => {
+          rrect(ctx, 1000, 90, 220, 60, 8); ctx.fillStyle = '#fff4e8'; ctx.fill(); ctx.strokeStyle = C.orange; ctx.lineWidth = 2; ctx.stroke();
+          txt(ctx, 'Δ = 2.40 mm', 1110, 128, { size: 26, mono: true, weight: 700, color: C.orange, align: 'center' });
+        });
+      }
+    },
+    {
+      title: 'Where does time zero start?', dur: 32,
+      narr: "Watch what happens when the crystal fires. The Epoch starts its clock right then — at the crystal. But the sound isn't in the steel yet. First it has to cross the wear plate and the couplant, and that takes about eight-tenths of a microsecond. The instrument can't tell that this time wasn't spent in steel, so it adds it to every depth. On this probe, that's two point four millimeters.",
+      caps: [[0, 3.5, 'The Epoch starts its clock when the {k:crystal fires}'], [3.5, 10, '…but the sound is still crossing the {o:wear plate and couplant}'], [10, 19, 'Each echo is drawn when it gets back to the crystal (slow motion)'], [19, 32, 'That probe time is added to every depth: {r:+2.40 mm}']],
+      draw(ctx, lt) {
+        const Lend = 2 * (E + 50) + 3;
+        const Pp = lt < 3 ? 0 : lt < 7 ? lerp(0, E, (lt - 3) / 4) : lt < 18 ? lerp(E, Lend, (lt - 7) / 11) : null;
+        const reveal = Pp == null ? Infinity : Pp / 2;
+        const t = drawTop(ctx, TOP, { kind: 'contact', Z: 0, map: ALIGNED(0, 60), title: 'TEST BLOCK · STEEL · 50 mm', P: lt >= 3 && Pp != null ? Pp : null, zeroAlpha: ramp(lt, 0.5, 1.5), zeroLabel: 'clock starts at the crystal' });
+        if (Pp != null && lt >= 3) {
+          rrect(ctx, 960, 80, 268, 30, 6); ctx.fillStyle = C.ink; ctx.fill();
+          txt(ctx, 'SLOW MOTION · t = ' + (Pp / V).toFixed(2) + ' µs', 1094, 100, { size: 13, mono: true, weight: 700, color: '#fff', align: 'center' });
+        }
+        withAlpha(ctx, fade(lt, 3.5, 7.2), () => txt(ctx, 'still in the probe…', t.X(t.sd) + 10, t.cy - 56, { size: 15, weight: 800, color: C.orange }));
+        withAlpha(ctx, fade(lt, 7, 11), () => txt(ctx, 'enters the steel at 0.81 µs', t.X(t.ss) + 10, t.cy - 56, { size: 15, weight: 800, color: C.orange }));
+        drawAscan(ctx, ASC, {
+          kind: 'contact', Z: 0, D: 0, R: 60, reveal, band: ramp(lt, 19, 20.5), bandLabel: 'probe time 0.81 µs = 2.40 mm',
+          readouts: lt > 19 ? [{ id: 'flaw', label: 'A↓ DEPTH', hl: ramp(lt, 21, 22), color: '#ff8a80', alpha: ramp(lt, 19, 20) }] : []
+        });
+      }
+    },
+    {
+      title: 'Probe delay = ZERO OFFSET', dur: 36,
+      narr: "The fix is ZERO OFFSET — that's the Epoch's name for probe delay. We tell the instrument to ignore the first zero point eight one microseconds. Watch the orange probe time drop off the start of the time base. Zero moves from the crystal to the test surface. The echoes slide left, and the reading drops from twenty-seven point four to twenty-five point zero. The back wall corrects itself too — fifty-two point four becomes fifty. Zero offset shifts every reading by the same amount.",
+      caps: [[0, 5, 'The fix: {o:ZERO OFFSET} (the Epoch’s name for probe delay)'], [5, 15, 'Subtract 0.81 µs: zero moves from the crystal to the {o:test surface}'], [15, 25, 'Flaw {r:27.40} → {g:25.00}      Back wall {r:52.40} → {g:50.00}'], [25, 36, 'Zero offset shifts {o:every} reading by the same amount']],
+      draw(ctx, lt) {
+        const Z = lerp(0, T0, ramp(lt, 5, 15));
+        const done = Z > T0 - 0.005;
+        drawTop(ctx, TOP, { kind: 'contact', Z, map: ALIGNED(0, 60), title: 'TEST BLOCK · STEEL · 50 mm', zeroAlpha: 1, zeroLabel: done ? 'zero = test surface' : 'clock starts at the crystal' });
+        const col = done ? '#7dffb0' : '#ff8a80';
+        drawAscan(ctx, ASC, {
+          kind: 'contact', Z, D: 0, R: 60, band: 1, bandLabel: 'probe time', hl: { zero: hlOf(lt, 2, 17) },
+          readouts: [{ id: 'flaw', label: 'A↓ FLAW', hl: ramp(lt, 14, 15), color: col }, { id: 'bw', label: 'B↓ BACK WALL', hl: ramp(lt, 14, 15), color: col }]
+        });
+      }
+    },
+    {
+      title: 'Finding zero offset: two-point calibration', dur: 36,
+      narr: "You rarely type zero offset in by hand. You find it with a two-point calibration on a step block. On the Epoch, gate the echo from the thin step — ten millimeters — and use CAL ZERO. Then gate the thick step — twenty-five millimeters — and use CAL VEL. Plot time against depth and the two points make a straight line. Velocity sets the slope. Zero offset is where the line starts. Two known thicknesses pin down both.",
+      caps: [[0, 3.5, 'Find it with a two-point calibration on a step block'], [3.5, 12, 'Thin step (10 mm): gate the echo → {o:CAL ZERO}, enter 10.00'], [12, 21, 'Thick step (25 mm): gate the echo → {k:CAL VEL}, enter 25.00'], [21, 36, 'Velocity = {k:slope}   ·   Zero offset = {o:where the line starts}']],
+      draw(ctx, lt) {
+        panel(ctx, TOP, 'STEP BLOCK · STEEL');
+        const base = 300, sx = 5.2, yThin = base - 10 * sx, yThick = base - 25 * sx;
+        const grd = ctx.createLinearGradient(0, yThick, 0, base); grd.addColorStop(0, C.steelA); grd.addColorStop(1, C.steelB);
+        ctx.fillStyle = grd; ctx.beginPath(); ctx.moveTo(360, base); ctx.lineTo(360, yThin); ctx.lineTo(640, yThin); ctx.lineTo(640, yThick); ctx.lineTo(920, yThick); ctx.lineTo(920, base); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = C.steelEdge; ctx.lineWidth = 2; ctx.stroke();
+        dimLine2(ctx, 335, yThin, base, '10.00');
+        dimLine2(ctx, 950, yThick, base, '25.00');
+        const mv = ramp(lt, 12, 14);
+        const px = lerp(500, 780, mv), py = lerp(yThin, yThick, mv) - Math.sin(Math.PI * mv) * 34;
+        if (mv === 0 || mv === 1) {
+          const tri = Math.abs(((lt * 1.2) % 2) - 1);
+          ctx.strokeStyle = 'rgba(217,115,26,0.5)'; ctx.setLineDash([4, 5]); ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, base); ctx.stroke(); ctx.setLineDash([]);
+          ctx.fillStyle = C.bad; ctx.beginPath(); ctx.arc(px, lerp(py, base, 1 - tri), 5, 0, Math.PI * 2); ctx.fill();
+        }
+        rrect(ctx, px - 30, py - 62, 60, 56, 6); ctx.fillStyle = '#3a3f47'; ctx.fill();
+        ctx.fillStyle = '#d4a017'; ctx.fillRect(px - 26, py - 8, 52, 4); ctx.fillStyle = C.orange; ctx.fillRect(px - 26, py - 4, 52, 4);
+        ctx.strokeStyle = '#3a3f47'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(px, py - 62); ctx.quadraticCurveTo(px + 10, py - 90, px + 60, py - 100); ctx.stroke();
+        withAlpha(ctx, fade(lt, 5, 12.5), () => callout(ctx, 150, 120, 'Gate A on the 10 mm echo', 'CAL ZERO → 10.00', C.orange));
+        withAlpha(ctx, fade(lt, 15, 36), () => callout(ctx, 980, 120, 'Gate A on the 25 mm echo', 'CAL VEL → 25.00', C.ink));
+
+        const thick = lt >= 13;
+        drawAscan(ctx, LEFT, { kind: thick ? 'step25' : 'step10', Z: T0, D: 0, R: 60, tag: 'EPOCH', chips: ['range'], readouts: [{ id: 'flaw', label: 'ENTER', value: thick ? '25.00' : '10.00', hl: 1, color: thick ? '#ffffff' : '#ffb36b' }] });
+
+        // time vs depth graph
+        const G = RIGHT; panel(ctx, G, 'TIME vs DEPTH');
+        const gx = G.x + 70, gy = G.y + 36, gw = G.w - 100, gh = G.h - 90;
+        const GX = d => gx + d / 30 * gw, GY = t => gy + gh - t / 11 * gh;
+        ctx.strokeStyle = C.rule; ctx.lineWidth = 1;
+        for (let d = 0; d <= 30; d += 5) { ctx.beginPath(); ctx.moveTo(GX(d), gy); ctx.lineTo(GX(d), gy + gh); ctx.stroke(); txt(ctx, String(d), GX(d), gy + gh + 18, { size: 12, mono: true, color: C.soft, align: 'center' }); }
+        for (let t = 0; t <= 10; t += 2) { ctx.beginPath(); ctx.moveTo(gx, GY(t)); ctx.lineTo(gx + gw, GY(t)); ctx.stroke(); txt(ctx, String(t), gx - 8, GY(t) + 4, { size: 12, mono: true, color: C.soft, align: 'right' }); }
+        txt(ctx, 'depth (mm)', gx + gw, gy + gh + 38, { size: 12, mono: true, color: C.faded, align: 'right' });
+        ctx.save(); ctx.translate(gx - 44, gy + gh / 2); ctx.rotate(-Math.PI / 2); txt(ctx, 'time (µs)', 0, 0, { size: 12, mono: true, color: C.faded, align: 'center' }); ctx.restore();
+        ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx, gy + gh); ctx.lineTo(gx + gw, gy + gh); ctx.stroke();
+        const tOf = d => T0 + 2 * d / V;
+        const lp = ramp(lt, 21, 26);
+        if (lp > 0) {
+          const d0 = lerp(30, 0, lp);
+          ctx.strokeStyle = C.ink; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(GX(30), GY(tOf(30))); ctx.lineTo(GX(d0), GY(tOf(d0))); ctx.stroke();
+        }
+        const pt = (d, a, col, lab, dx) => withAlpha(ctx, a, () => {
+          ctx.fillStyle = col; ctx.beginPath(); ctx.arc(GX(d), GY(tOf(d)), 7, 0, Math.PI * 2); ctx.fill();
+          txt(ctx, lab, GX(d) + dx, GY(tOf(d)) + 5, { size: 13, mono: true, weight: 700, color: col, align: dx < 0 ? 'right' : 'left' });
+        });
+        pt(10, ramp(lt, 8, 9), C.orange, '10 mm → ' + tOf(10).toFixed(2) + ' µs', 14);
+        pt(25, ramp(lt, 18, 19), C.ink, '25 mm → ' + tOf(25).toFixed(2) + ' µs', -14);
+        withAlpha(ctx, ramp(lt, 25, 26), () => {
+          ctx.fillStyle = C.orange; ctx.beginPath(); ctx.arc(GX(0), GY(T0), 8, 0, Math.PI * 2); ctx.fill();
+          txt(ctx, 'ZERO OFFSET = 0.81 µs', GX(0) + 14, GY(T0) - 10, { size: 15, mono: true, weight: 800, color: C.orange });
+        });
+        withAlpha(ctx, ramp(lt, 27, 28), () => txt(ctx, 'slope → VELOCITY 5920 m/s', GX(4), GY(tOf(21)) + 4, { size: 14, mono: true, weight: 700, color: C.ink }));
+      }
+    },
+    {
+      title: 'Display delay = DELAY', dur: 52,
+      narr: "Now a different job: a two-hundred-millimeter block, and we care about the region near the back wall. At a range of two hundred ten, everything is squeezed into the right side of the screen. Shrink the range to fifty for a closer look — and now we only see the first fifty millimeters. So we turn up DELAY. The Epoch's DELAY is display delay. It slides the window deeper into the part, like panning a camera. At one fifty-five, the window runs from one fifty-five to two-oh-five, and the flaw and back wall are spread across the screen. Now watch the reading while the delay moves. The echo slides across the screen — the reading stays at one hundred eighty.",
+      caps: [[0, 4, 'New job: a {k:200 mm} block, flaw near the back wall'], [4, 12, 'RANGE 210: everything is squeezed to the right'], [12, 18, 'RANGE 50: a closer look… at the wrong place'], [18, 31, '{b:DELAY} slides the window deeper, like panning a camera'], [31, 47, 'The echo moves on screen. The reading stays {g:180.00 mm}'], [47, 52, 'DELAY moves the {b:window}, not zero']],
+      draw(ctx, lt) {
+        const R = lerp(210, 50, ramp(lt, 12, 16));
+        let D = lerp(0, 155, ramp(lt, 18, 30));
+        if (lt > 33) D = 155 + 15 * Math.sin((lt - 33) * 0.55) * fade(lt, 33, 46.5, 1.5);
+        const t = drawTop(ctx, TOP, { kind: 'thick', Z: T0, map: OVER(-25, 240), title: 'TEST BLOCK · STEEL · 200 mm', zeroAlpha: 0.9, zeroLabel: '', frame: { D, R, alpha: ramp(lt, 4, 5) } });
+        withAlpha(ctx, ramp(lt, 1, 2), () => txt(ctx, 'flaw at 180 mm', t.X(t.sf) - 14, t.cy - 16, { size: 13, weight: 700, color: C.ink, align: 'right' }));
+        connectors(ctx, t.fr, PLOT, ramp(lt, 4, 5));
+        withAlpha(ctx, ramp(lt, 4, 5), () => drawAscan(ctx, ASC, {
+          kind: 'thick', Z: T0, D, R, hl: { range: hlOf(lt, 11, 17), delay: hlOf(lt, 17, 47) },
+          readouts: [{ id: 'flaw', label: 'A↓ DEPTH', hl: hlOf(lt, 31, 47), color: '#7dffb0' }],
+          labels: [{ id: 'flaw', text: 'flaw', alpha: ramp(lt, 30, 31) }, { id: 'bw', text: 'back wall', alpha: ramp(lt, 30, 31) }]
+        }));
+      }
+    },
+    {
+      title: 'Side by side', dur: 24,
+      narr: "Here are both controls side by side. Each knob moves the echo the same distance to the left. On the left, zero offset — the reading changes. On the right, delay — the reading doesn't. Zero offset moves zero. Delay moves the window.",
+      caps: [[0, 6, 'Same job, two different knobs…'], [6, 14, '…and the echo moves the same distance on both screens'], [14, 24, '{o:Zero offset} moves ZERO → reading changes.   {b:Delay} moves the WINDOW → reading stays.']],
+      draw(ctx, lt) {
+        const k = ramp(lt, 6, 12), shift = V * 1.0 / 2;
+        panel(ctx, TOP);
+        const col = (x, head, sub, color) => { txt(ctx, head, x, 130, { size: 30, weight: 800, color, align: 'center' }); txt(ctx, sub, x, 166, { size: 17, mono: true, weight: 600, color: C.soft, align: 'center' }); };
+        col(335, 'ZERO OFFSET', '+1.00 µs', C.orange); col(945, 'DELAY', '+' + shift.toFixed(2) + ' mm', C.blue);
+        ctx.strokeStyle = C.rule; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(640, 90); ctx.lineTo(640, 300); ctx.stroke();
+        withAlpha(ctx, ramp(lt, 7, 8), () => { arrow(ctx, 400, 206, 270, 206, C.soft, 3, 12); arrow(ctx, 1010, 206, 880, 206, C.soft, 3, 12);
+          txt(ctx, 'echo moves ' + shift.toFixed(2) + ' mm', 335, 236, { size: 14, weight: 600, color: C.soft, align: 'center' }); txt(ctx, 'echo moves ' + shift.toFixed(2) + ' mm', 945, 236, { size: 14, weight: 600, color: C.soft, align: 'center' }); });
+        withAlpha(ctx, ramp(lt, 14, 15), () => {
+          txt(ctx, '✗ READING CHANGED: 25.00 → ' + (25 - shift).toFixed(2), 335, 285, { size: 19, weight: 800, color: C.bad, align: 'center' });
+          txt(ctx, '✓ READING UNCHANGED: 25.00', 945, 285, { size: 19, weight: 800, color: C.good, align: 'center' });
+        });
+        drawAscan(ctx, LEFT, { kind: 'contact', Z: T0 + k, D: 0, R: 60, chips: ['zero', 'delay'], hl: { zero: hlOf(lt, 5, 13) }, readouts: [{ id: 'flaw', label: 'A↓ DEPTH', hl: ramp(lt, 12, 13), color: '#ff8a80' }] });
+        drawAscan(ctx, RIGHT, { kind: 'contact', Z: T0, D: shift * k, R: 60, chips: ['zero', 'delay'], hl: { delay: hlOf(lt, 5, 13) }, readouts: [{ id: 'flaw', label: 'A↓ DEPTH', hl: ramp(lt, 12, 13), color: '#7dffb0' }] });
+      }
+    },
+    {
+      title: 'Immersion: the water path and DELAY', dur: 50,
+      narr: "What about immersion? Here the probe sits fifty millimeters above a twenty-five millimeter steel part, with water in between. Water carries sound at about a quarter of steel's velocity, so with the Epoch set to steel velocity, fifty millimeters of water looks like two hundred millimeters of steel. The water path takes up most of the screen. DELAY is the usual way to push it off-screen: put the interface echo at the left edge, and set the range to cover just the part. Now the part fills the screen. But look at the reading — two hundred twelve millimeters. DELAY only moved the view. The reading is still measured from the probe.",
+      caps: [[0, 8, 'Immersion: {b:50 mm} of water above a 25 mm steel part'], [8, 14, 'Water ≈ ¼ steel velocity → at steel velocity it looks like {r:200 mm}'], [14, 22, 'The water path takes up most of the screen'], [22, 34, '{b:DELAY} slides the window to the interface echo'], [34, 50, 'View fixed, but the reading still includes the water: {r:212.00 mm}']],
+      draw(ctx, lt) {
+        const wEq = lerp(WATER, WATER_EQ, ramp(lt, 8, 13));
+        const D = lerp(0, 195, ramp(lt, 22, 32)), R = lerp(260, 35, ramp(lt, 22, 32));
+        const t = drawTop(ctx, TOP, { kind: 'immersion', Z: T0, waterEq: wEq, map: OVER(-20, 275), title: lt < 8 ? 'IMMERSION TANK · TO SCALE' : 'WHAT THE EPOCH SEES · time drawn as steel distance', zeroAlpha: 0, frame: { D, R, alpha: ramp(lt, 14, 15) } });
+        withAlpha(ctx, ramp(lt, 1, 2), () => {
+          const y = t.cy + t.ph / 2 + 10;
+          dimLine(ctx, t.X(t.sd), t.X(t.ss), y, lt < 9 ? 'water 50 mm' : 'water: 50 mm looks like ' + (wEq).toFixed(0) + ' mm', C.blue);
+          txt(ctx, 'steel 25 mm', (t.X(t.ss) + t.X(t.sb)) / 2, t.cy + t.ph / 2 - 12, { size: 13, weight: 700, color: C.ink, align: 'center' });
+        });
+        connectors(ctx, t.fr, PLOT, ramp(lt, 14, 15));
+        withAlpha(ctx, ramp(lt, 14, 15), () => drawAscan(ctx, ASC, {
+          kind: 'immersion', Z: T0, D, R, hl: { delay: hlOf(lt, 21, 34), range: hlOf(lt, 21, 34) },
+          readouts: [{ id: 'flaw', label: 'A↓ DEPTH', hl: ramp(lt, 34, 35), color: '#ff8a80', alpha: ramp(lt, 32, 33) }],
+          labels: [{ id: 'if', text: 'interface echo' }, { id: 'bw', text: 'back wall', alpha: ramp(lt, 30, 31) }]
+        }));
+      }
+    },
+    {
+      title: 'Immersion: the water path and ZERO OFFSET', dur: 62,
+      narr: "To read depth from the part's front surface, treat the water column like a very long delay line and put it into ZERO OFFSET — here, sixty-seven point six microseconds more. Bring the delay back to zero. The interface echo is now at zero, and the flaw reads twelve millimeters. In practice, calibrating on a reference block in the tank, at the same water path, does this for you. The catch: it only holds while the water path stays the same. Change it by one millimeter and every reading moves by four, because the instrument turns water time into steel distance. If the water path varies, re-standardize — or use an interface gate if your instrument has one. And one setup check: make the water path at least a quarter of the steel thickness, so the second interface echo lands beyond the back wall.",
+      caps: [[0, 4, 'To read depth from the {k:front surface}…'], [4, 16, '…put the water time into {o:ZERO OFFSET} (+67.57 µs), like a long delay line'], [16, 24, 'DELAY back to 0: interface echo = zero, flaw reads {g:12.00 mm}'], [24, 32, 'In practice: calibrate on a reference block in the tank, same water path'], [32, 46, 'Catch: water path {r:+1 mm} → every reading {r:+4 mm}'], [46, 53, 'Water path varies? Re-standardize, or use an interface gate if you have one'], [53, 62, 'Setup check: water path ≥ ¼ × steel thickness → 2nd interface echo lands past the back wall']],
+      draw(ctx, lt) {
+        const Z = lerp(T0, T0 + WT, ramp(lt, 4, 15));
+        const D = lerp(195, 0, ramp(lt, 16, 22));
+        const R = lerp(35, 215, ramp(lt, 54, 58));
+        const dW = ramp(lt, 33, 36) * (1 - ramp(lt, 42, 45));     // extra water path, 0..1 mm
+        const wEq = WATER_EQ + dW * V / VW;
+        const f = ramp(lt, 16, 22);
+        const map = lerpMap(OVER(-20, 275), ALIGNED(D, R), f);
+        const t = drawTop(ctx, TOP, { kind: 'immersion', Z, waterEq: wEq, map, title: 'WHAT THE EPOCH SEES · time drawn as steel distance', zeroAlpha: 1, zeroLabel: Z > T0 + WT - 0.05 ? 'zero = front surface' : '', frame: { D, R, alpha: 1 - f } });
+        connectors(ctx, t.fr, PLOT, 1 - f);
+        withAlpha(ctx, dW, () => { rrect(ctx, 960, 80, 268, 30, 6); ctx.fillStyle = C.bad; ctx.fill(); txt(ctx, 'WATER PATH ' + (WATER + dW).toFixed(1) + ' mm', 1094, 100, { size: 13, mono: true, weight: 700, color: '#fff', align: 'center' }); });
+        const ok = Math.abs(dW) < 0.02;
+        drawAscan(ctx, ASC, {
+          kind: 'immersion', Z, D, R, waterEq: wEq, hl: { zero: hlOf(lt, 3, 16), delay: hlOf(lt, 15, 23), range: hlOf(lt, 53, 59) },
+          readouts: [{ id: 'flaw', label: 'A↓ DEPTH', hl: ramp(lt, 21, 22), color: ok ? '#7dffb0' : '#ff8a80' }],
+          labels: [{ id: 'if', text: 'interface' }, { id: 'bw', text: 'back wall' }, { id: 'if2', text: '2nd interface echo', color: C.gateB, alpha: ramp(lt, 57, 58) }]
+        });
+      }
+    },
+    {
+      title: 'When is each one used?', dur: 36,
+      narr: "So when do you use each one? Zero offset — always. You set it in every calibration, and you recheck it whenever you change the probe, the cable, the delay line or the couplant, and as the wear face wears. Display delay is optional. Use it to zoom into a depth band on thick parts, to push the water path off-screen in immersion, or to spread out the region near the back wall — and set it back to zero when you're done.",
+      caps: [[27, 36, 'Zero offset: {o:every calibration}.   Delay: {b:only when you need to zoom}.']],
+      draw(ctx, lt) {
+        const card = (x, col, head, sub, items, t0, step) => {
+          rrect(ctx, x, 80, 580, 530, 12); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = C.rule; ctx.lineWidth = 1; ctx.stroke();
+          ctx.fillStyle = col; rrect(ctx, x, 80, 580, 10, 5); ctx.fill();
+          txt(ctx, head, x + 32, 150, { size: 36, weight: 800, color: col });
+          txt(ctx, sub, x + 32, 186, { size: 17, mono: true, weight: 700, color: C.soft });
+          let y = 250;
+          items.forEach((s, i) => {
+            font(ctx, 22, 600); const lines = wrap(ctx, s, 480), yy = y;
+            withAlpha(ctx, ramp(lt, t0 + i * step, t0 + i * step + 0.8), () => {
+              ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x + 42, yy - 8, 6, 0, Math.PI * 2); ctx.fill();
+              lines.forEach((ln, j) => txt(ctx, ln, x + 62, yy + j * 30, { size: 22, weight: 600, color: C.ink }));
+            });
+            y += lines.length * 30 + 26;
+          });
+        };
+        withAlpha(ctx, ramp(lt, 0.5, 1.5), () => card(40, C.orange, 'ZERO OFFSET', 'probe delay · ALWAYS', [
+          'Set it in every calibration (two-point, step block)',
+          'Recheck when you change the probe, cable, delay line or couplant',
+          'Recheck as the wear face wears down',
+          'Immersion: can absorb a fixed water path'], 3, 3));
+        withAlpha(ctx, ramp(lt, 14, 15), () => card(660, C.blue, 'DELAY', 'display delay · WHEN NEEDED', [
+          'Zoom into a depth band on thick parts',
+          'Push the water path off-screen in immersion',
+          'Spread out the region near the back wall',
+          'Set it back to 0 when the job is done'], 16, 3));
+      }
+    },
+    {
+      title: 'Two classic mistakes', dur: 32,
+      narr: "Two classic mistakes. First: trying to calibrate with DELAY. The echo moves on the screen, but the reading still says twenty-seven point four. Only zero offset fixes the number. Second: leaving DELAY set from the last job. Here the first ten millimeters are off-screen. The back wall looks normal, and the flaw at three millimeters is never seen. Check DELAY before every scan.",
+      caps: [[0, 3, 'Mistake 1: “calibrating” with DELAY'], [3, 15, 'The echo moved… the reading {r:didn’t}. Only zero offset fixes the number.'], [15, 20, 'Mistake 2: DELAY left at {r:10 mm} from the last job'], [20, 26.5, 'The back wall looks fine. The flaw at 3 mm is {r:off-screen}.'], [26.5, 32, 'Check {b:DELAY} before every scan']],
+      draw(ctx, lt) {
+        if (lt < 15) {
+          const D = lerp(0, E, ramp(lt, 3, 9));
+          drawTop(ctx, TOP, { kind: 'contact', Z: 0, map: ALIGNED(D, 60), title: 'MISTAKE 1 · ZERO OFFSET = 0.00 (not calibrated)', zeroAlpha: 1, zeroLabel: 'still at the crystal' });
+          drawAscan(ctx, ASC, { kind: 'contact', Z: 0, D, R: 60, hl: { delay: hlOf(lt, 2, 10) }, readouts: [{ id: 'flaw', label: 'A↓ DEPTH', hl: ramp(lt, 9, 10), color: '#ff8a80' }] });
+          withAlpha(ctx, ramp(lt, 9.5, 10.5) * fade(lt, 0, 15, 0.4), () => stamp(ctx, 760, 470, 'READING STILL 27.40 ✗', C.bad));
+        } else {
+          const D = lerp(10, 0, ramp(lt, 26.5, 29));
+          const t = drawTop(ctx, TOP, { kind: 'near', Z: T0, map: OVER(-12, 66), title: 'MISTAKE 2 · 30 mm PLATE · flaw 3 mm below the surface', zeroAlpha: 1, frame: { D, R: 40, alpha: 1 } });
+          withAlpha(ctx, fade(lt, 20, 27.5), () => {
+            ctx.strokeStyle = C.bad; ctx.lineWidth = 3; ctx.setLineDash([6, 5]); ctx.beginPath(); ctx.arc(t.X(t.sf), t.cy - 6, 22, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+            txt(ctx, 'not on screen!', t.X(t.sf), t.cy - 40, { size: 15, weight: 800, color: C.bad, align: 'center' });
+          });
+          connectors(ctx, t.fr, PLOT, 1);
+          drawAscan(ctx, ASC, { kind: 'near', Z: T0, D, R: 40, hl: { delay: hlOf(lt, 15, 30) }, readouts: [{ id: 'flaw', label: 'A↓ FLAW', hl: ramp(lt, 29, 30), color: '#7dffb0' }], labels: [{ id: 'bw', text: 'back wall' }, { id: 'flaw', text: 'flaw', alpha: ramp(lt, 29, 30) }] });
+        }
+      }
+    },
+    {
+      title: 'Remember it this way', dur: 18,
+      narr: "Remember it this way. Zero offset is where the tape measure starts. Delay is where you point the camera. Zero offset changes the reading. Delay only changes what you see.",
+      caps: [[10, 18, 'Zero offset changes the {o:reading}.  Delay changes the {b:view}.']],
+      draw(ctx, lt) {
+        withAlpha(ctx, ramp(lt, 0.5, 1.5), () => {
+          rrect(ctx, 40, 80, 580, 530, 12); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = C.rule; ctx.stroke();
+          // tape measure
+          ctx.fillStyle = '#f2c230'; ctx.fillRect(110, 220, 460, 56); ctx.strokeStyle = '#a07c10'; ctx.lineWidth = 2; ctx.strokeRect(110, 220, 460, 56);
+          for (let i = 0; i <= 45; i++) { const x = 110 + i * 10; ctx.strokeStyle = '#3a2f08'; ctx.lineWidth = i % 5 ? 1 : 2; ctx.beginPath(); ctx.moveTo(x, 220); ctx.lineTo(x, 220 + (i % 5 ? 12 : 22)); ctx.stroke(); if (i % 10 === 0) txt(ctx, String(i / 10), x + 3, 266, { size: 13, mono: true, weight: 700, color: '#3a2f08' }); }
+          ctx.fillStyle = '#6b6f76'; ctx.fillRect(98, 206, 12, 84);
+          const nudge = 14 * Math.sin(lt * 1.3) * ramp(lt, 2, 3);
+          arrow(ctx, 104 + nudge, 170, 104 + nudge, 200, C.orange, 3, 12);
+          txt(ctx, 'zero starts here', 104 + nudge, 160, { size: 15, weight: 800, color: C.orange, align: 'center' });
+          txt(ctx, 'ZERO OFFSET', 80, 370, { size: 40, weight: 800, color: C.orange });
+          txt(ctx, 'where the tape measure starts', 80, 414, { size: 24, weight: 700, color: C.ink });
+          txt(ctx, '→ changes the reading', 80, 454, { size: 22, weight: 600, color: C.soft });
+        });
+        withAlpha(ctx, ramp(lt, 4, 5), () => {
+          rrect(ctx, 660, 80, 580, 530, 12); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = C.rule; ctx.stroke();
+          rrect(ctx, 700, 190, 500, 110, 8); ctx.fillStyle = C.navy; ctx.fill();
+          ctx.beginPath();
+          for (let x = 0; x <= 500; x++) { const s = x / 500 * 100; let a = 0.03 + 0.02 * noise(s * 3); for (const p of [20, 55, 80]) a += (p === 55 ? .5 : .8) * Math.exp(-Math.pow((s - p) / 1.3, 2)) * (0.45 + 0.55 * Math.abs(Math.sin(s * 9))); ctx.lineTo(700 + x, 292 - Math.min(a, 1) * 90); }
+          ctx.strokeStyle = C.trace; ctx.lineWidth = 1.6; ctx.stroke();
+          const cx = 950 + 120 * Math.sin(lt * 0.8) * ramp(lt, 5, 6), w = 170, y1 = 176, y2 = 314;
+          ctx.strokeStyle = C.blue; ctx.lineWidth = 4;
+          [[cx - w / 2, y1, 1, 1], [cx + w / 2, y1, -1, 1], [cx - w / 2, y2, 1, -1], [cx + w / 2, y2, -1, -1]].forEach(([x, y, sx, sy]) => { ctx.beginPath(); ctx.moveTo(x + sx * 26, y); ctx.lineTo(x, y); ctx.lineTo(x, y + sy * 26); ctx.stroke(); });
+          txt(ctx, 'DELAY', 700, 370, { size: 40, weight: 800, color: C.blue });
+          txt(ctx, 'where you point the camera', 700, 414, { size: 24, weight: 700, color: C.ink });
+          txt(ctx, '→ changes only what you see', 700, 454, { size: 22, weight: 600, color: C.soft });
+        });
+      }
+    },
+    {
+      title: 'Try it yourself', dur: 8,
+      narr: "Now try it yourself in the interactive sandbox on the training page.",
+      caps: [],
+      draw(ctx, lt) {
+        withAlpha(ctx, ramp(lt, 0.3, 1.3), () => {
+          txt(ctx, 'Now try it yourself', 640, 300, { size: 60, weight: 800, color: C.ink, align: 'center' });
+          txt(ctx, 'Interactive Epoch sandbox:', 640, 370, { size: 24, weight: 600, color: C.soft, align: 'center' });
+          txt(ctx, 'exercises.ndtvideolibrary.com/UT-Probe-Delay-vs-Display-Delay.html', 640, 420, { size: 22, mono: true, weight: 700, color: C.blue, align: 'center' });
+          txt(ctx, 'NDT TRAINING · EXERCISE HUB', 640, 520, { size: 14, mono: true, weight: 600, color: C.faded, align: 'center' });
+        });
+      }
+    }
+  ];
+
+  function dimLine2(ctx, x, yTop, yBot, label) {
+    ctx.strokeStyle = C.soft; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x - 8, yTop); ctx.lineTo(x + 8, yTop); ctx.moveTo(x - 8, yBot); ctx.lineTo(x + 8, yBot); ctx.stroke();
+    arrow(ctx, x, (yTop + yBot) / 2, x, yTop + 1, C.soft, 1.5, 7); arrow(ctx, x, (yTop + yBot) / 2, x, yBot - 1, C.soft, 1.5, 7);
+    txt(ctx, label, x + (x < 640 ? -12 : 12), (yTop + yBot) / 2 + 5, { size: 14, mono: true, weight: 700, color: C.ink, align: x < 640 ? 'right' : 'left' });
+  }
+  function callout(ctx, x, y, a, b, col) {
+    rrect(ctx, x, y, 240, 62, 8); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke();
+    txt(ctx, a, x + 12, y + 24, { size: 13, weight: 600, color: C.soft });
+    txt(ctx, b, x + 12, y + 50, { size: 18, mono: true, weight: 800, color: col });
+  }
+  function stamp(ctx, x, y, s, col) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(-0.08);
+    font(ctx, 26, 800); const w = ctx.measureText(s).width + 32;
+    rrect(ctx, -w / 2, -26, w, 52, 8); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = 4; ctx.stroke();
+    txt(ctx, s, 0, 10, { size: 26, weight: 800, color: col, align: 'center' });
+    ctx.restore();
+  }
+
+  // timeline
+  let acc = 0;
+  SCENES.forEach(s => { s.start = acc; acc += s.dur; });
+  const TOTAL = acc;
+  function sceneAt(t) { let i = SCENES.length - 1; while (i > 0 && t < SCENES[i].start) i--; return i; }
+
+  // ================= Stage render =================
+  const stage = document.getElementById('stage'), sctx = stage.getContext('2d');
+  const K = stage.width / 1280;
+  function renderAt(t) {
+    t = clamp(t, 0, TOTAL - 1e-3);
+    const i = sceneAt(t), sc = SCENES[i], lt = t - sc.start;
+    const ctx = sctx;
+    ctx.setTransform(K, 0, 0, K, 0, 0);
+    ctx.fillStyle = C.page; ctx.fillRect(0, 0, 1280, 720);
+    sc.draw(ctx, lt, sc.dur);
+    // top bar
+    if (i > 0 && i < SCENES.length - 1) {
+      rrect(ctx, 40, 18, 50, 36, 6); ctx.fillStyle = C.red; ctx.fill();
+      txt(ctx, String(i + 1).padStart(2, '0'), 65, 43, { size: 18, mono: true, weight: 700, color: '#fff', align: 'center' });
+      txt(ctx, sc.title, 104, 45, { size: 25, weight: 800, color: C.ink });
+      txt(ctx, 'PROBE DELAY vs DISPLAY DELAY', 1240, 42, { size: 13, mono: true, weight: 600, color: C.faded, align: 'right' });
+    }
+    // caption strip
+    for (const [a, b, s] of sc.caps) {
+      const al = fade(lt, a, b, 0.35); if (al <= 0) continue;
+      withAlpha(ctx, al, () => {
+        rrect(ctx, 40, 628, 1200, 76, 10); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = C.rule; ctx.lineWidth = 1; ctx.stroke();
+        ctx.fillStyle = C.red; ctx.fillRect(40, 638, 6, 56);
+        drawRich(ctx, s, 646, 667, 27, 1130);
+      });
+    }
+    // scene fade-in
+    const fin = 1 - clamp(lt / 0.45);
+    if (fin > 0 && i > 0) { ctx.fillStyle = C.page; ctx.globalAlpha = fin; ctx.fillRect(0, 0, 1280, 720); ctx.globalAlpha = 1; }
+    return i;
+  }
+
+  // ================= Player UI =================
+  const params = new URLSearchParams(location.search);
+  const RECORD = params.has('record');
+  if (RECORD) document.body.classList.add('record');
+  const playBtn = document.getElementById('play'), bigPlay = document.getElementById('bigplay');
+  const scrub = document.getElementById('scrub'), timeEl = document.getElementById('time');
+  const cc = document.getElementById('cc'), ccToggle = document.getElementById('ccToggle'), chapWrap = document.getElementById('chapters');
+  let tNow = clamp(parseFloat(params.get('t')) || 0, 0, TOTAL), playing = false, lastTs = null, curScene = -1;
+  const fmt = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+  SCENES.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.innerHTML = '<span class="n">' + String(i + 1).padStart(2, '0') + '</span>' + s.title;
+    b.addEventListener('click', () => { tNow = s.start; draw(); });
+    chapWrap.appendChild(b);
+  });
+  function setPlaying(p) {
+    playing = p; if (p && tNow >= TOTAL - 0.01) tNow = 0;
+    playBtn.textContent = p ? '❚❚ Pause' : '▶ Play'; bigPlay.hidden = p || tNow > 0; lastTs = null;
+  }
+  playBtn.addEventListener('click', () => setPlaying(!playing));
+  bigPlay.addEventListener('click', () => setPlaying(true));
+  stage.addEventListener('click', () => setPlaying(!playing));
+  scrub.addEventListener('input', () => { tNow = scrub.value / 1000 * TOTAL; bigPlay.hidden = true; draw(); });
+  ccToggle.addEventListener('change', () => { cc.hidden = !ccToggle.checked; });
+  document.addEventListener('keydown', e => { if (e.code === 'Space' && e.target === document.body) { e.preventDefault(); setPlaying(!playing); } });
+  function draw() {
+    const i = renderAt(tNow);
+    scrub.value = Math.round(tNow / TOTAL * 1000);
+    timeEl.textContent = fmt(tNow) + ' / ' + fmt(TOTAL);
+    if (i !== curScene) {
+      curScene = i; cc.textContent = SCENES[i].narr;
+      [...chapWrap.children].forEach((b, j) => b.classList.toggle('on', j === i));
+    }
+  }
+  function loop(ts) {
+    if (playing) {
+      if (lastTs != null) tNow += (ts - lastTs) / 1000;
+      lastTs = ts;
+      if (tNow >= TOTAL) { tNow = TOTAL; setPlaying(false); }
+      draw();
+    }
+    requestAnimationFrame(loop);
+  }
+  if (tNow > 0) bigPlay.hidden = true;
+
+  // ================= Sandbox =================
+  const sbx = document.getElementById('sbx'), bctx = sbx.getContext('2d');
+  const SK = sbx.width / 1280;
+  const STOP = { x: 40, y: 20, w: 1200, h: 250 }, SASC = { x: 40, y: 284, w: 1200, h: 330 };
+  const SPLOT = plotOf(SASC);
+  const MODES = {
+    contact: {
+      label: 'Contact · 50 mm block', kind: 'contact', init: { Z: 0, D: 0, R: 60 }, over: [-10, 72], ranges: [25, 50, 60, 100],
+      title: 'TEST BLOCK · STEEL · 50 mm · reflector at 25.0 mm (calipers)',
+      hint: 'The reading is 2.40 mm too deep at every depth: that is probe time. Raise ZERO OFFSET until Gate A reads 25.00. (Changing DELAY moves the echo on screen but never changes the number.)',
+      tasks: [
+        { text: 'Make Gate A read the true depth: 25.00 mm.', check: s => Math.abs(read(s, 'flaw') - 25) < 0.02 },
+        { text: 'Now change DELAY. Does the reading change? (Move DELAY off zero with the flaw still on screen.)', check: s => s.D !== 0 && visible(s, 'flaw') }
+      ]
+    },
+    thick: {
+      label: 'Contact · 200 mm block', kind: 'thick', init: { Z: T0, D: 0, R: 50 }, over: [-25, 240], ranges: [25, 50, 100, 210],
+      title: 'TEST BLOCK · STEEL · 200 mm · flaw at 180 mm · zero offset already calibrated',
+      hint: 'Keep RANGE at 50. DELAY sets the depth at the left edge of the screen. Anything from about 151 to 178 mm puts both 180 and 200 on screen.',
+      tasks: [
+        { text: 'With RANGE at 50 mm, get both the flaw (180 mm) and the back wall (200 mm) on screen.', check: s => s.R === 50 && inWin(s, 'flaw', 1) && inWin(s, 'bw', 1) && Math.abs(read(s, 'flaw') - 180) < 0.05 }
+      ]
+    },
+    immersion: {
+      label: 'Immersion · 50 mm water, 25 mm steel', kind: 'immersion', init: { Z: T0, D: 0, R: 260 }, over: [-20, 275], ranges: [25, 35, 50, 100, 260],
+      title: 'IMMERSION · time drawn as steel distance · flaw 12 mm below the front surface',
+      hint: 'At steel velocity the 50 mm water path looks like 200 mm. For task 1, use DELAY ≈ 195 and RANGE 35. For task 2, the water adds 67.57 µs of round-trip time. Add it to ZERO OFFSET (0.81 + 67.57 = 68.38 µs), then bring DELAY back to 0.',
+      tasks: [
+        { text: 'Push the water path off-screen: interface echo at the left edge, the whole part (to the back wall) on screen.', check: s => { const i = spos(s, 'if'), b = spos(s, 'bw'); return i >= s.D - 0.5 && i <= s.D + 0.3 * s.R && b <= s.D + s.R - 0.5 && s.R <= 100; } },
+        { text: 'Make the flaw read its depth below the front surface: 12 mm (11.99 counts, since zero offset steps in 0.01 µs).', check: s => Math.abs(read(s, 'flaw') - 12) < 0.03 }
+      ]
+    }
+  };
+  const SB = { mode: 'contact', Z: 0, D: 0, R: 60, done: {} };
+  const echoOf = (s, id) => echoList(MODES[s.mode].kind).find(e => e.id === id);
+  const spos = (s, id) => screenPos(echoOf(s, id).p, s.Z);
+  const visible = (s, id) => { const x = spos(s, id); return x >= s.D && x <= s.D + s.R; };
+  const inWin = (s, id, m) => { const x = spos(s, id); return x >= s.D + m && x <= s.D + s.R - m; };
+  const read = (s, id) => visible(s, id) ? +spos(s, id).toFixed(2) : NaN;
+
+  const modesEl = document.getElementById('modes'), tasksEl = document.getElementById('tasks');
+  const rSel = document.getElementById('rSel');
+  Object.entries(MODES).forEach(([k, m]) => {
+    const b = document.createElement('button'); b.textContent = m.label; b.dataset.mode = k;
+    b.addEventListener('click', () => setMode(k)); modesEl.appendChild(b);
+  });
+  function mkBtns(el, steps, fn) { steps.forEach(v => { const b = document.createElement('button'); b.textContent = (v > 0 ? '+' : '−') + Math.abs(v); b.addEventListener('click', () => fn(v)); el.appendChild(b); }); }
+  const r2 = x => Math.round(x * 100) / 100;
+  mkBtns(document.getElementById('zBtns'), [-10, -1, -0.1, -0.01, 0.01, 0.1, 1, 10], v => { SB.Z = clamp(r2(SB.Z + v), 0, 100); sbDraw(); });
+  mkBtns(document.getElementById('dBtns'), [-10, -1, -0.1, 0.1, 1, 10], v => { SB.D = clamp(r2(SB.D + v), 0, 500); sbDraw(); });
+  rSel.addEventListener('change', () => { SB.R = +rSel.value; sbDraw(); });
+  document.getElementById('reset').addEventListener('click', () => setMode(SB.mode));
+  function setMode(k) {
+    const m = MODES[k]; SB.mode = k; Object.assign(SB, m.init);
+    [...modesEl.children].forEach(b => b.classList.toggle('on', b.dataset.mode === k));
+    rSel.innerHTML = m.ranges.map(r => `<option value="${r}">${r.toFixed(2)} mm</option>`).join('');
+    rSel.value = SB.R;
+    tasksEl.innerHTML = m.tasks.map((t, i) => `<li data-i="${i}">${t.text}</li>`).join('');
+    document.getElementById('hintText').textContent = m.hint; document.getElementById('hint').open = false;
+    sbDraw();
+  }
+  function sbDraw() {
+    const m = MODES[SB.mode], ctx = bctx;
+    document.getElementById('zVal').textContent = SB.Z.toFixed(2) + ' µs';
+    document.getElementById('dVal').textContent = SB.D.toFixed(2) + ' mm';
+    document.getElementById('rVal').textContent = SB.R.toFixed(2) + ' mm';
+    ctx.setTransform(SK, 0, 0, SK, 0, 0);
+    ctx.fillStyle = C.page; ctx.fillRect(0, 0, 1280, 620);
+    const t = drawTop(ctx, STOP, { kind: m.kind, Z: SB.Z, map: { x0: STOP.x + 20, w: STOP.w - 40, start: m.over[0], range: m.over[1] }, title: m.title, zeroAlpha: 1, frame: { D: SB.D, R: SB.R, alpha: 1 } });
+    connectors(ctx, t.fr, SPLOT, 1);
+    drawAscan(ctx, SASC, { kind: m.kind, Z: SB.Z, D: SB.D, R: SB.R, readouts: [{ id: 'flaw', label: 'A↓ FLAW DEPTH' }], labels: m.kind === 'immersion' ? [{ id: 'if', text: 'interface' }, { id: 'bw', text: 'back wall' }] : [{ id: 'bw', text: 'back wall' }] });
+    m.tasks.forEach((tk, i) => { const li = tasksEl.children[i]; if (tk.check(SB)) li.classList.add('ok'); });
+  }
+
+  // ================= Boot =================
+  function boot() {
+    draw(); setMode('contact');
+    if (!RECORD) requestAnimationFrame(loop);
+    window.__video = {
+      duration: TOTAL, ready: true,
+      scenes: SCENES.map(s => ({ title: s.title, start: s.start, dur: s.dur, narr: s.narr, caps: s.caps })),
+      frame: (t, q) => { renderAt(t); return stage.toDataURL('image/jpeg', q || 0.93).slice(23); },
+      renderAt
+    };
+  }
+  const fontsReady = document.fonts ? Promise.all([
+    document.fonts.load("700 20px 'Manrope'"), document.fonts.load("800 20px 'Manrope'"), document.fonts.load("600 20px 'Manrope'"),
+    document.fonts.load("700 20px 'JetBrains Mono'"), document.fonts.load("600 20px 'JetBrains Mono'")
+  ]).catch(() => {}) : Promise.resolve();
+  Promise.race([fontsReady, new Promise(r => setTimeout(r, 2500))]).then(boot);
+})();
+</script>
+</body>
+</html>
