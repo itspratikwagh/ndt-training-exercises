@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UT Epoch Two Back-Wall Calibration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="epoch650/sim.css">
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Ultrasonic Testing · Level I · Epoch 650 Lesson 4 of 4</div>
+    <h1>Calibration on One Step Using Two Back Walls</h1>
+    <a class="back" href="index.html">← Exercise Hub</a><a class="back" href="UT-Epoch-Cal-Two-Step.html">← Two-step calibration</a>
+  </div>
+</header>
+<main class="wrap" id="app"></main>
+<script src="epoch650/sim.js"></script>
+<script>
+(function () {
+  const E = Epoch650;
+  const reset = () => ({ vel: 0.2300, zero: 0.000, range: 1.000, delay: 0, gain: 40.0, probe: null, menu: 'Receiver' });
+  const near = (a, b, tol) => Math.abs(a - b) < (tol || 5e-4);
+  const last = (st, name, f) => { for (let i = st.events.length - 1; i >= 0; i--) { const e = st.events[i]; if (e.name === name && (!f || f(e))) return i; } return -1; };
+  const onEcho = (st, th, n) => { const h = E.gateHit(st); return st.probe === th && h && !h.e.ip && h.e.n === n; };
+  const autoOn = (st, n) => st.probe === 0.5 && last(st, 'auto', e => e.ok && e.n === n) > Math.max(last(st, 'place'), last(st, n === 2 ? 'calzero' : 'place'));
+  const p1ok = st => st.cal.p1 && near(st.cal.p1.d, 0.5) && st.cal.p1.probe === 0.5 && st.cal.p1.n === 1;
+  const calDone = st => st.cal.stage === 'done' && p1ok(st) && st.cal.p2 && near(st.cal.p2.d, 1.0) && st.cal.p2.probe === 0.5 && st.cal.p2.n === 2;
+  const checks = {};
+  const gateKeys = st => st.menu !== 'Gate 1' ? ['GATES'] : ['KNOB', 'CHECK'];
+  const autoKeys = st => st.second ? ['GATES'] : ['2NDF'];
+  const calKeys = (st, p) => st.dialog ? [] : st.group !== 1 ? ['NEXT'] : st.menu !== 'Auto Cal' ? ['F3'] : [p];
+  const rangeOk = st => st.range >= 1.2;
+
+  const steps = [
+    { text: 'Press <b>F1</b> (Basic), then <b>P3</b> (Range).', keys: st => st.menu !== 'Basic' ? ['F1'] : ['P3'], check: st => st.sel === 'range' || rangeOk(st) },
+    { text: 'Set <b>Range to 2.000 in</b> so the second back-wall echo fits on the screen.', tip: 'Press ✓ until the Range box shows Δ1, then one click right.', keys: ['CHECK', 'KNOB'], check: st => near(st.range, 2.0) || p1ok(st) },
+    { text: 'Click the <b>0.500 in</b> step to place the probe.', place: 0.5, keys: [], check: st => st.probe === 0.5 || p1ok(st) },
+    { text: 'Press <b>GATES</b> and move Gate 1 over the <b>first</b> back-wall echo.', tip: 'Press ✓ for bigger knob steps.', keys: gateKeys, check: st => onEcho(st, 0.5, 1) || p1ok(st) },
+    { text: 'Press <b>2nd F</b>, then <b>GATES</b> to set the first echo to 80%.', keys: autoKeys, check: st => autoOn(st, 1) || p1ok(st) },
+    { text: 'Open <b>Auto Cal</b> (F3) and press <b>P2 · Cal-Zero</b>.', keys: st => calKeys(st, 'P2'), check: st => (st.dialog && st.dialog.mode === 'calzero') || p1ok(st) },
+    { text: 'Enter <b>0.500</b> with the knob, then press <b>P6 · Continue</b>.', tip: st => st.cal.single ? '⚠ You pressed Done — that only sets zero. Press P2 again and finish with <b>P6 Continue</b>.' : '', keys: st => st.dialog ? (near(st.dialog.value, 0.5) ? ['P6'] : ['KNOB']) : calKeys(st, 'P2'), check: st => p1ok(st) && st.cal.stage !== 'idle' },
+    { text: '<b>Don’t move the probe.</b> Press <b>GATES</b> and move Gate 1 to the <b>second</b> back-wall echo.', keys: gateKeys, check: st => onEcho(st, 0.5, 2) || calDone(st) },
+    { text: 'Press <b>2nd F</b>, then <b>GATES</b> to set the second echo to 80%.', keys: autoKeys, check: st => autoOn(st, 2) || calDone(st) },
+    { text: 'Open <b>Auto Cal</b> (F3) and press <b>P3 · Cal-Vel</b>.', keys: st => calKeys(st, 'P3'), check: st => (st.dialog && st.dialog.mode === 'calvel') || calDone(st) },
+    { text: 'Enter <b>1.000</b> — the second echo has crossed the 0.500 step twice — then press <b>P7 · Done</b>.', keys: st => st.dialog ? (near(st.dialog.value, 1.0) ? ['P7'] : ['KNOB']) : calKeys(st, 'P3'), check: calDone },
+    { text: 'Check: move Gate 1 back to the <b>first</b> back-wall echo. It should read <b>0.500</b>.', tip: 'The gain went up for the 2nd echo, so this one may be off the top of the screen. 2nd F → GATES brings it back to 80%.', keys: gateKeys, check: st => checks.bw1 },
+    { text: 'Verify: move the probe to the <b>0.200 in</b> step and gate its first echo.', place: 0.2, keys: st => st.probe !== 0.2 ? [] : gateKeys(st), check: st => checks[0.2] },
+    { text: 'Verify: move to the <b>0.400 in</b> step and gate its first echo.', place: 0.4, keys: st => st.probe !== 0.4 ? [] : gateKeys(st), check: st => checks[0.4] }
+  ];
+
+  const cards = Object.assign(E.calCards({ maxD: 1.2, verify: [0.2, 0.4], mistakes: ['Range too small, so the second echo is off the screen.', 'Moving the probe between Cal-Zero and Cal-Vel.', 'Entering 0.500 for both points.', 'Gating the third echo by mistake.'] }), {
+    idea(ctx, b, st, t, h) {
+      h.txt(ctx, 'One step, two points', b.x + 18, b.y + 38, { size: 21, weight: 800, color: '#1f1d1b' });
+      h.bullets(ctx, b, ['1st back wall: sound crossed 0.500 once each way → 0.500.', '2nd back wall: crossed it twice → 1.000.', 'Same probe position for both.'], '#2a6fdb', b.y + 80);
+    }
+  });
+
+  const video = {
+    num: '04', title: 'Calibration on one step using two back walls',
+    initial: () => E.makeState(reset()),
+    cards,
+    cues: [
+      { say: 'Most real parts have only one thickness. You can still do a two-point calibration by using the first and second back-wall echoes from the same step.', card: 'idea' },
+      { say: 'The second back-wall echo has traveled through the 0.500 inch step twice. To the Epoch, it is a 1.000 inch reflector.' },
+      { say: 'The Epoch has been reset. First, set the range so both echoes fit. Press F1 for Basic, then P3 for Range.', do: [[3.8, 'F1'], [5.2, 'P3']] },
+      { say: 'Press the check key for 1 inch steps, then turn up to 2.000 inches.', do: [[0.8, 'CHECK'], [2.6, ['knob', 1]]] },
+      { say: 'Place the probe on the 0.500 inch step.', do: [[1.0, ['place', 0.5]]] },
+      { say: 'Now we see the initial pulse, the first back-wall echo, the second one, and a third further to the right.' },
+      { say: 'Press GATES, press check for bigger steps, and move Gate 1 onto the first back-wall echo.', do: [[0.6, 'GATES'], [2.0, 'CHECK'], [3.6, ['knob', 2, 0.4]]] },
+      { say: 'Press 2nd F and GATES to bring it to 80 percent.', do: [[0.6, '2NDF'], [1.6, 'GATES']] },
+      { say: 'Press F3 for Auto Cal, then P2 for Cal-Zero. Enter 0.500 inch with the knob.', do: [[0.8, 'F3'], [2.0, 'P2'], [3.6, ['knob', -5, 0.22]]], card: 'graph' },
+      { say: 'Press P6, Continue.', do: [[0.8, 'P6']] },
+      { say: 'Now, do not move the probe. The second point comes from the same spot on the same step.' },
+      { say: 'Press GATES and move Gate 1 onto the second back-wall echo.', do: [[0.6, 'GATES'], [1.8, ['knob', 4, 0.35]]] },
+      { say: 'Bring the second echo to 80 percent. It is smaller, so the gain goes up.', do: [[0.6, '2NDF'], [1.6, 'GATES']] },
+      { say: 'Press F3 for Auto Cal, then P3 for Cal-Vel.', do: [[0.8, 'F3'], [2.0, 'P3']] },
+      { say: 'Enter 1.000 inch, not 0.500. The second echo has crossed the step twice. Here the value already reads 1.000.' },
+      { say: 'Press P7, Done.', do: [[0.6, 'P7']] },
+      { say: 'Velocity 0.2320 and zero 0.500 microseconds: the same answer as the two-step method, from a single thickness.' },
+      { say: 'Check it. Move Gate 1 back to the first back-wall echo, and set it back to 80 percent. It reads 0.500.', do: [[0.8, 'GATES'], [1.8, ['knob', -5, 0.3]], [4.0, '2NDF'], [4.8, 'GATES']] },
+      { say: 'Now verify on steps you did not use. The 0.200 inch step reads 0.200.', do: [[1.6, ['place', 0.2]], [2.6, ['knob', -3, 0.3]]], card: 'verify' },
+      { say: 'And the 0.400 inch step reads 0.400.', do: [[0.4, ['place', 0.4]], [1.4, ['knob', 2, 0.3]]] },
+      { say: 'Common mistakes: a range too small to show the second echo, moving the probe between Cal-Zero and Cal-Vel, and entering 0.500 for both points.', card: 'mistakes' },
+      { say: 'Now try it yourself on the Epoch below.', hold: 1.5 }
+    ]
+  };
+
+  E.page({
+    lede: 'Calibrate on a single thickness: the <b>first</b> back-wall echo from the 0.500&nbsp;in step for <b>Cal-Zero</b> (0.500) and the <b>second</b> back-wall echo for <b>Cal-Vel</b> (1.000). This is the method you use on a part with only one thickness.',
+    tryIntro: 'The Epoch has just been reset (velocity 0.2300, zero 0.000, range 1.000). Follow the steps. Keys you need next glow yellow.',
+    video,
+    trainerInitial: reset,
+    steps,
+    doneText: 'Two points from one thickness.',
+    keyPoints: `<ul>
+      <li>The <b>second back-wall echo</b> has traveled through the part twice, so on a 0.500&nbsp;in step you enter it as <b>1.000&nbsp;in</b>.</li>
+      <li>Set the <b>range</b> big enough (2.000&nbsp;in here) that the second echo sits well inside the screen before you start.</li>
+      <li>Cal-Zero: gate the 1st echo → 80% → enter 0.500 → <b>P6 Continue</b>. Cal-Vel: gate the 2nd echo → 80% → enter 1.000 → <b>P7 Done</b>.</li>
+      <li><b>Don't move the probe</b> between Cal-Zero and Cal-Vel. Both points must come from the same probe position.</li>
+      <li>You get the same zero and velocity as the two-step method, with no step block needed.</li>
+      <li>Check the 1st echo reads 0.500, then verify on other thicknesses (0.200 and 0.400 here).</li></ul>`,
+    onReset() { for (const k in checks) delete checks[k]; },
+    onPlace(st, th) {
+      if (st.cal.stage === 'zero' && th !== st.probe) {
+        st.toast = { text: 'Don’t move the probe between Cal-Zero and Cal-Vel', kind: 'warn', t: st.now };
+        return false;
+      }
+    },
+    extra(el, tr) {
+      el.innerHTML = `<div class="panel"><h3>Calibration record</h3>
+        <table class="ws"><tbody>
+          <tr><td>Velocity</td><td id="cv">—</td></tr><tr><td>Zero</td><td id="cz">—</td></tr><tr><td>Status</td><td id="cs">—</td></tr>
+          <tr><td>1st echo reads</td><td id="c1">—</td></tr><tr><td>Verify 0.200</td><td id="v2">—</td></tr><tr><td>Verify 0.400</td><td id="v4">—</td></tr></tbody></table></div>`;
+      const show = v => v ? `<span class="ok">${v.toFixed(3)} ✓</span>` : '—';
+      tr.onChange(st => {
+        if (calDone(st)) {
+          if (onEcho(st, 0.5, 1) && near(E.reading(st), 0.5, 0.003)) checks.bw1 = E.reading(st);
+          if (checks.bw1) [0.2, 0.4].forEach(d => { if (onEcho(st, d, 1) && near(E.reading(st), d, 0.003)) checks[d] = E.reading(st); });
+        }
+        el.querySelector('#cv').textContent = st.vel.toFixed(4) + ' in/µs';
+        el.querySelector('#cz').textContent = st.zero.toFixed(3) + ' µs';
+        el.querySelector('#cs').innerHTML = calDone(st) ? '<span class="ok">Calibrated</span>' : st.cal.stage === 'zero' ? 'Zero set — waiting for Cal-Vel' : st.cal.single ? '<span class="no">Zero only (Done pressed)</span>' : st.cal.stage === 'done' ? '<span class="no">Check the values you entered</span>' : 'Not calibrated';
+        el.querySelector('#c1').innerHTML = show(checks.bw1); el.querySelector('#v2').innerHTML = show(checks[0.2]); el.querySelector('#v4').innerHTML = show(checks[0.4]);
+      });
+    }
+  });
+})();
+</script>
+</body>
+</html>

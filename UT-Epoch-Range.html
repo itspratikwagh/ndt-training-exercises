@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UT Epoch Range</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="epoch650/sim.css">
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Ultrasonic Testing · Level I · Epoch 650 Lesson 1 of 4</div>
+    <h1>Range: How Much Sound Path Fits on the Screen</h1>
+    <a class="back" href="index.html">← Exercise Hub</a><a class="back" href="UT-Epoch-Gain-dB.html">Next: Gain &amp; dB →</a>
+  </div>
+</header>
+<main class="wrap" id="app"></main>
+<script src="epoch650/sim.js"></script>
+<script>
+(function () {
+  const E = Epoch650, ROWS = [0.700, 1.100, 3.100, 5.100];
+  const ws = { pred: {}, seen: {}, answer: null };
+  const calibrated = extra => Object.assign({ vel: 0.2320, zero: 0.500, range: 1.000, gain: 42.7, probe: 0.500, g1: { start: 0.450, width: 0.100, level: 40 } }, extra);
+  const count = st => E.echoes(st).filter(e => { if (e.ip) return false; const s = E.sOf(st, e.t); return s >= st.delay && s <= st.delay + st.range && e.pct >= 3; }).length;
+  const at = (st, R) => Math.abs(st.range - R) < 5e-4;
+
+  const steps = [
+    { text: 'Press <b>F1</b> to open the <b>Basic</b> menu.', keys: ['F1'], check: st => st.menu === 'Basic' },
+    { text: 'Press <b>P3</b> to select <b>Range</b>. The knob now changes Range.', keys: ['P3'], check: st => st.sel === 'range' },
+    ...ROWS.map(R => ({
+      text: `Predict the echo count for <b>${R.toFixed(3)} in</b> in the worksheet, then turn the knob until Range = <b>${R.toFixed(3)}</b>.`,
+      tip: R > 2 ? 'Big jump? Press ✓ until the Range box shows Δ1 — then each click is 1.000 in.' : 'The small Δ in the Range box is the knob step. ✓ changes it.',
+      keys: st => ws.pred[R] == null ? [] : R > 2 ? ['KNOB', 'CHECK'] : ['KNOB'],
+      check: st => ws.pred[R] != null && at(st, R)
+    })),
+    { text: 'Answer the last question in the worksheet: did the <b>G1 THICKNESS</b> reading change?', keys: [], check: () => ws.answer === 'no' }
+  ];
+
+  const cards = {
+    what(ctx, b, st, t, h) {
+      h.txt(ctx, 'RANGE', b.x + 18, b.y + 38, { size: 22, weight: 800, color: '#2a6fdb' });
+      h.txt(ctx, 'Basic menu · P3', b.x + 110, b.y + 38, { size: 13, weight: 700, color: '#8f8882', mono: true });
+      bullets(ctx, h, b, ['The distance shown across the screen, left edge to right edge.', 'Measured in inches of sound path in steel.', 'It changes the view — not the part.']);
+    },
+    table(ctx, b, st, t, h) {
+      h.txt(ctx, 'Echoes on screen', b.x + 18, b.y + 34, { size: 19, weight: 800, color: '#1f1d1b' });
+      h.txt(ctx, '≈ Range ÷ thickness (0.500)', b.x + 18, b.y + 58, { size: 14, weight: 700, color: '#2a6fdb' });
+      const seen = new Set(st.events.filter(e => e.name === 'turn' && e.key === 'range').map(e => e.value.toFixed(3)));
+      ['RANGE', '÷ 0.500', 'SEEN'].forEach((c, i) => h.txt(ctx, c, b.x + 18 + i * 96, b.y + 92, { size: 11, weight: 700, color: '#8f8882', mono: true }));
+      ROWS.forEach((R, i) => {
+        const y = b.y + 122 + i * 34, on = seen.has(R.toFixed(3));
+        h.txt(ctx, R.toFixed(3), b.x + 18, y, { size: 16, weight: 700, color: '#1f1d1b', mono: true });
+        if (on) {
+          h.txt(ctx, (R / 0.5).toFixed(1), b.x + 114, y, { size: 16, weight: 700, color: '#57524d', mono: true });
+          h.txt(ctx, String(Math.floor(R / 0.5)), b.x + 210, y, { size: 18, weight: 800, color: '#0d904f', mono: true });
+        }
+      });
+    },
+    reading(ctx, b, st, t, h) {
+      h.txt(ctx, 'G1 THICKNESS', b.x + 18, b.y + 38, { size: 13, weight: 700, color: '#d93025', mono: true });
+      const r = h.reading();
+      h.txt(ctx, r == null ? '----' : r.toFixed(3) + ' in', b.x + 18, b.y + 86, { size: 36, weight: 800, color: '#1f1d1b', mono: true });
+      bullets(ctx, h, { x: b.x, y: b.y + 70, w: b.w }, ['Same reading at every range.', 'Range does not move the back wall.', 'It only zooms the time base in or out.']);
+    },
+    use(ctx, b, st, t, h) {
+      h.txt(ctx, 'Choosing a range', b.x + 18, b.y + 36, { size: 19, weight: 800, color: '#1f1d1b' });
+      bullets(ctx, h, b, ['Small range: one echo, spread out, easy to see.', 'Large range: several back-wall echoes.', 'Two-back-wall calibration needs the 2nd echo on screen.']);
+    }
+  };
+  function bullets(ctx, h, b, arr) {
+    let y = b.y + 76;
+    arr.forEach(s => { h.font(ctx, 15, 600); const ls = h.wrap(ctx, s, b.w - 56); ctx.fillStyle = '#2a6fdb'; ctx.beginPath(); ctx.arc(b.x + 24, y - 5, 4, 0, 7); ctx.fill(); ls.forEach((l, i) => h.txt(ctx, l, b.x + 38, y + i * 20, { size: 15, weight: 600, color: '#1f1d1b' })); y += ls.length * 20 + 12; });
+  }
+
+  const video = {
+    num: '01', title: 'Range: how much sound path fits on the screen',
+    initial: () => E.makeState(calibrated({ menu: 'Receiver' })),
+    cards,
+    cues: [
+      { say: 'Range sets how much sound path the Epoch shows across the screen, from the left edge to the right edge.', card: 'what' },
+      { say: 'We are calibrated on the steel step block, with the probe sitting on the 0.500 inch step.' },
+      { say: 'Range is 1.000 inch right now. The first back-wall echo is in the middle of the screen, at 0.500, and the second one is right on the right edge.' },
+      { say: 'To change it, press F1 for the Basic menu, then P3 to select Range.', do: [[1.6, 'F1'], [3.2, 'P3']] },
+      { say: 'The Range box is highlighted, so the knob now changes Range. The small delta shows the knob step: 0.100 inch per click.' },
+      { say: 'Turn the knob down to 0.700 inch.', do: [[0.8, ['knob', -3, 0.3]]], card: 'table' },
+      { say: 'Now only one back-wall echo fits. Range divided by thickness: 0.7 divided by 0.5 is 1.4, so one whole echo.' },
+      { say: 'Turn it up to 1.100 inch. Two echoes fit now, because 1.1 divided by 0.5 is 2.2.', do: [[0.6, ['knob', 4, 0.3]]] },
+      { say: 'For a big change, press the check key so each click is 1.000 inch, then turn up to 3.100.', do: [[1.8, 'CHECK'], [3.4, ['knob', 2, 0.45]]] },
+      { say: 'Six echoes. Each one is another round trip through the 0.500 inch step, so they are spaced 0.500 apart.' },
+      { say: 'Each echo is a little shorter than the one before. Every trip loses some energy to attenuation and at the surface.' },
+      { say: 'Now 5.100 inches. Ten echoes. The last ones are small, but they are still there.', do: [[0.8, ['knob', 2, 0.45]]] },
+      { say: 'Now look at the Gate 1 thickness reading. It said 0.500 inch the whole time.', card: 'reading' },
+      { say: 'Range did not move the back wall and did not change the thickness. It only changed how much of the time base fits on the screen, like zooming a map in or out.' },
+      { say: 'Increasing the range does not create new echoes. It lets you see more of the sound path.' },
+      { say: 'A small range spreads one echo out so you can see it clearly. A large range shows several back-wall echoes, which you need for a two-back-wall calibration.', card: 'use' },
+      { say: 'Now try it yourself. Predict how many echoes you will see first, then set the range and count them.', hold: 1.5 }
+    ]
+  };
+
+  E.page({
+    lede: 'Range is the distance shown across the Epoch screen. Change it and watch how many back-wall echoes from the 0.500&nbsp;in step fit on the screen — and what happens to the thickness reading.',
+    tryIntro: 'The Epoch is already calibrated on the steel step block and the probe is on the 0.500&nbsp;in step. Follow the steps on the right. Keys you need next glow yellow.',
+    video,
+    trainerInitial: () => calibrated({ menu: 'Receiver' }),
+    steps,
+    doneText: 'Range changes the view, not the part.',
+    keyPoints: `<ul>
+      <li><b>Range</b> (Basic menu, P3) is the distance shown across the screen, from the left edge to the right edge.</li>
+      <li>Echoes on screen ≈ <b>Range ÷ thickness</b>. On the 0.500&nbsp;in step: 0.700 → 1 echo, 1.100 → 2, 3.100 → 6, 5.100 → 10.</li>
+      <li>Each back-wall echo is one more round trip, so they're evenly spaced one thickness apart and get smaller each time (attenuation and surface losses).</li>
+      <li>Range <b>does not</b> create echoes or change the reading. The Gate 1 thickness stays 0.500&nbsp;in at every range.</li>
+      <li>Use a small range to spread one echo out, and a large range to see several back walls (for example, for a two-back-wall calibration).</li>
+      <li>Press <b>✓</b> to change the knob step (0.001 / 0.010 / 0.100 / 1.000&nbsp;in) for big or fine changes.</li></ul>`,
+    onReset() { ws.pred = {}; ws.seen = {}; ws.answer = null; renderWS(); const f = document.getElementById('ansfb'); if (f) f.textContent = ''; },
+    extra(el, tr) {
+      el.innerHTML = `<div class="panel"><h3>Worksheet · 0.500 in step</h3>
+        <table class="ws"><thead><tr><th>Range</th><th>Predict</th><th>Seen</th><th></th></tr></thead><tbody id="wsb"></tbody></table>
+        <p style="font-size:14px;margin-top:10px"><b>Did the G1 THICKNESS reading change when you changed Range?</b></p>
+        <div class="row"><button data-a="yes">Yes</button><button data-a="no">No</button></div><p id="ansfb" style="font-size:13.5px;margin-top:6px"></p></div>`;
+      el.querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', () => {
+        ws.answer = b.dataset.a;
+        el.querySelector('#ansfb').innerHTML = ws.answer === 'no' ? '<span class="ok">Right.</span> It stays 0.500 in. Range only changes how much you see.' : '<span class="no">Look again.</span> Watch the G1 THICKNESS box while you turn the range.';
+        tr.poke();
+      }));
+      tr.onChange(st => { ROWS.forEach(R => { if (at(st, R) && ws.seen[R] == null) ws.seen[R] = count(st); }); renderWS(); });
+      renderWS();
+    }
+  });
+  function renderWS() {
+    const tb = document.getElementById('wsb'); if (!tb) return;
+    tb.innerHTML = ROWS.map(R => {
+      const p = ws.pred[R], s = ws.seen[R];
+      const mark = s == null || p == null ? '' : p === s ? '<span class="ok">✓</span>' : `<span class="no">✗</span>`;
+      return `<tr><td>${R.toFixed(3)}</td><td><select data-r="${R}"><option value="">?</option>${Array.from({ length: 13 }, (_, i) => `<option value="${i}" ${p === i ? 'selected' : ''}>${i}</option>`).join('')}</select></td><td>${s == null ? '—' : s}</td><td>${mark}</td></tr>`;
+    }).join('');
+    tb.querySelectorAll('select').forEach(x => x.addEventListener('change', () => { ws.pred[+x.dataset.r] = x.value === '' ? null : +x.value; window.__trainer.poke(); }));
+  }
+})();
+</script>
+</body>
+</html>

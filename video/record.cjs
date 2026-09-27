@@ -1,6 +1,6 @@
 // Renders UT-Probe-Delay-vs-Display-Delay.html to an MP4, frame by frame.
 //
-//   NODE_PATH=$(npm root -g) node video/record.cjs [out.mp4]
+//   [PAGE=UT-Epoch-Range.html] NODE_PATH=$(npm root -g) node video/record.cjs [out.mp4]
 //   NODE_PATH=$(npm root -g) node video/record.cjs --stills 10,40,90   (PNG stills only)
 //
 // Needs Playwright and ffmpeg (set FFMPEG=/path/to/ffmpeg if it isn't on PATH).
@@ -9,7 +9,8 @@ const { spawn, execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const PAGE = path.resolve(__dirname, '..', 'UT-Probe-Delay-vs-Display-Delay.html');
+// Page to record: PAGE=UT-Epoch-Range.html (default: the probe delay lesson)
+const PAGE = path.resolve(__dirname, '..', process.env.PAGE || 'UT-Probe-Delay-vs-Display-Delay.html');
 const FFMPEG = process.env.FFMPEG || 'ffmpeg';
 const FPS = +(process.env.FPS || 30);
 const args = process.argv.slice(2);

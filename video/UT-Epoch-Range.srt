@@ -1,0 +1,67 @@
+1
+00:00:00,600 --> 00:00:08,793
+Range sets how much sound path the Epoch shows across the screen, from the left edge to the right edge.
+
+2
+00:00:08,793 --> 00:00:15,810
+We are calibrated on the steel step block, with the probe sitting on the 0.500 inch step.
+
+3
+00:00:15,810 --> 00:00:27,532
+Range is 1.000 inch right now. The first back-wall echo is in the middle of the screen, at 0.500, and the second one is right on the right edge.
+
+4
+00:00:27,532 --> 00:00:33,373
+To change it, press F1 for the Basic menu, then P3 to select Range.
+
+5
+00:00:33,373 --> 00:00:42,350
+The Range box is highlighted, so the knob now changes Range. The small delta shows the knob step: 0.100 inch per click.
+
+6
+00:00:42,350 --> 00:00:45,445
+Turn the knob down to 0.700 inch.
+
+7
+00:00:45,445 --> 00:00:53,638
+Now only one back-wall echo fits. Range divided by thickness: 0.7 divided by 0.5 is 1.4, so one whole echo.
+
+8
+00:00:53,638 --> 00:01:00,655
+Turn it up to 1.100 inch. Two echoes fit now, because 1.1 divided by 0.5 is 2.2.
+
+9
+00:01:00,655 --> 00:01:08,456
+For a big change, press the check key so each click is 1.000 inch, then turn up to 3.100.
+
+10
+00:01:08,456 --> 00:01:16,257
+Six echoes. Each one is another round trip through the 0.500 inch step, so they are spaced 0.500 apart.
+
+11
+00:01:16,257 --> 00:01:24,842
+Each echo is a little shorter than the one before. Every trip loses some energy to attenuation and at the surface.
+
+12
+00:01:24,842 --> 00:01:31,075
+Now 5.100 inches. Ten echoes. The last ones are small, but they are still there.
+
+13
+00:01:31,075 --> 00:01:37,307
+Now look at the Gate 1 thickness reading. It said 0.500 inch the whole time.
+
+14
+00:01:37,307 --> 00:01:50,598
+Range did not move the back wall and did not change the thickness. It only changed how much of the time base fits on the screen, like zooming a map in or out.
+
+15
+00:01:50,598 --> 00:01:57,615
+Increasing the range does not create new echoes. It lets you see more of the sound path.
+
+16
+00:01:57,615 --> 00:02:08,553
+A small range spreads one echo out so you can see it clearly. A large range shows several back-wall echoes, which you need for a two-back-wall calibration.
+
+17
+00:02:08,553 --> 00:02:17,504
+Now try it yourself. Predict how many echoes you will see first, then set the range and count them.

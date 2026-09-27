@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UT Epoch Gain dB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="epoch650/sim.css">
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Ultrasonic Testing · Level I · Epoch 650 Lesson 2 of 4</div>
+    <h1>Gain and Decibels: The 6 dB Rule</h1>
+    <a class="back" href="index.html">← Exercise Hub</a><a class="back" href="UT-Epoch-Range.html">← Range</a><a class="back" href="UT-Epoch-Cal-Two-Step.html">Next: Two-step calibration →</a>
+  </div>
+</header>
+<main class="wrap" id="app"></main>
+<script src="epoch650/sim.js"></script>
+<script>
+(function () {
+  const E = Epoch650, OFFS = [-6, -12, 6];
+  const ws = { G0: null, autoN: 0, pred: {}, seen: {}, quiz: null };
+  const start = extra => Object.assign({ vel: 0.2320, zero: 0.500, range: 1.000, gain: 36.0, probe: 0.300, g1: { start: 0.250, width: 0.100, level: 10 } }, extra);
+  const amp1 = st => { const e = E.echoes(st).find(e => e.n === 1); return e ? e.pct : 0; };
+  const near = (a, b) => Math.abs(a - b) < 0.05;
+  const lastIdx = (st, name) => { for (let i = st.events.length - 1; i >= 0; i--) if (st.events[i].name === name && (name !== 'auto' || st.events[i].ok)) return i; return -1; };
+
+  const steps = [
+    { text: 'Press <b>2nd F</b>, then <b>GATES</b> (AUTO XX%). The back-wall echo goes to 80% — that gain is your <b>reference</b>.', keys: st => st.second ? ['GATES'] : ['2NDF'], check: () => ws.G0 != null },
+    { text: 'Press <b>dB</b> so the knob controls gain.', keys: ['DB'], check: st => lastIdx(st, 'db') > lastIdx(st, 'auto') && st.target === 'gain' },
+    { text: 'Press <b>✓</b> until the dB box shows <b>Δ6.0</b> — each knob click is now 6 dB.', keys: ['CHECK'], check: st => st.stepIdx.gain === 3 },
+    { text: 'Predict the height at <b>−6 dB</b> in the worksheet, then turn the knob <b>one click left</b>.', keys: () => ws.pred[-6] == null ? [] : ['KNOB'], check: st => ws.pred[-6] != null && ws.seen[-6] != null },
+    { text: 'Predict <b>−12 dB</b>, then turn <b>one more click left</b>.', keys: () => ws.pred[-12] == null ? [] : ['KNOB'], check: st => ws.pred[-12] != null && ws.seen[-12] != null },
+    { text: 'Turn <b>two clicks right</b> to go back to the reference gain. The echo returns to 80%.', keys: ['KNOB'], check: st => near(st.gain, ws.G0) },
+    { text: 'Predict <b>+6 dB</b>, then turn <b>one click right</b>. Watch the top of the screen.', keys: () => ws.pred[6] == null ? [] : ['KNOB'], check: st => ws.pred[6] != null && ws.seen[6] != null },
+    { text: 'Turn <b>one click left</b> to return to the reference gain.', keys: ['KNOB'], check: st => near(st.gain, ws.G0) },
+    { text: 'Answer the question in the worksheet.', keys: [], check: () => ws.quiz === 320 }
+  ];
+
+  const G0v = +(40 + 20 * Math.log10(80 / (62 * (1 - 0.1 * 0.3)))).toFixed(1);
+  const cards = {
+    what(ctx, b, st, t, h) {
+      h.txt(ctx, 'GAIN (dB)', b.x + 18, b.y + 38, { size: 22, weight: 800, color: '#A82020' });
+      h.txt(ctx, 'dB key', b.x + 150, b.y + 38, { size: 13, weight: 700, color: '#8f8882', mono: true });
+      h.bullets(ctx, b, ['Changes how tall echoes look.', 'Never moves an echo left or right.', 'Measured in decibels (dB).'], '#A82020');
+    },
+    rule(ctx, b, st, t, h) {
+      h.txt(ctx, 'Every 6 dB = × 2', b.x + 18, b.y + 38, { size: 21, weight: 800, color: '#1f1d1b' });
+      const d = st.gain - G0v;
+      const rows = [[0, '80%', 'reference'], [-6, '40%', '½'], [-12, '20%', '¼'], [6, '160%', '× 2 (off screen)']];
+      rows.forEach(([o, pct, note], i) => {
+        const y = b.y + 82 + i * 44, on = Math.abs(d - o) < 0.05;
+        if (on) { h.rrect(ctx, b.x + 10, y - 26, b.w - 20, 38, 6); ctx.fillStyle = '#fff4d6'; ctx.fill(); }
+        h.txt(ctx, (o > 0 ? '+' : o < 0 ? '−' : '') + Math.abs(o) + ' dB', b.x + 22, y, { size: 17, weight: 800, color: on ? '#A82020' : '#57524d', mono: true });
+        h.txt(ctx, pct, b.x + 130, y, { size: 17, weight: 800, color: '#1f1d1b', mono: true });
+        h.txt(ctx, note, b.x + 200, y, { size: 14, weight: 600, color: '#57524d' });
+      });
+    },
+    rule2(ctx, b, st, t, h) {
+      h.txt(ctx, 'Remember', b.x + 18, b.y + 38, { size: 21, weight: 800, color: '#1f1d1b' });
+      [['6 dB', '× 2 or ½'], ['12 dB', '× 4 or ¼'], ['20 dB', '× 10 or ⅒']].forEach(([a, c], i) => {
+        const y = b.y + 90 + i * 50;
+        h.txt(ctx, a, b.x + 24, y, { size: 24, weight: 800, color: '#A82020', mono: true });
+        h.txt(ctx, c, b.x + 140, y, { size: 21, weight: 700, color: '#1f1d1b' });
+      });
+      h.txt(ctx, 'Off the top = saturated: bring it down.', b.x + 24, b.y + 250, { size: 14, weight: 700, color: '#57524d' });
+    }
+  };
+
+  const video = {
+    num: '02', title: 'Gain and decibels: the 6 dB rule',
+    initial: () => E.makeState(start()),
+    cards,
+    cues: [
+      { say: 'Gain controls how tall echoes look on the screen. It is measured in decibels, or dB, and it never moves an echo left or right.', card: 'what' },
+      { say: 'The Epoch is calibrated, the probe is on the 0.300 inch step, and Gate 1 is on the first back-wall echo.' },
+      { say: 'First, bring the echo to a standard height. Press 2nd F, then GATES. That is AUTO XX percent.', do: [[2.6, '2NDF'], [3.6, 'GATES']] },
+      { say: `The Epoch sets the gain so the gated echo sits at 80 percent of full screen height. That gain, ${G0v.toFixed(1)} dB, is our reference.` },
+      { say: 'Press dB so the knob controls gain. The delta in the gain box shows the step: 1 dB per click.', do: [[0.9, 'DB']] },
+      { say: 'Press the check key until the step reads 6 dB.', do: [[1.2, 'CHECK'], [2.0, 'CHECK']] },
+      { say: 'Every 6 dB is a factor of two. Take away 6 dB: one click to the left.', do: [[2.8, ['knob', -1]]], card: 'rule' },
+      { say: 'The echo drops from 80 to 40 percent. Half the height.' },
+      { say: 'Another 6 dB down, 12 dB in total. Now it is at 20 percent, one quarter of where it started.', do: [[0.6, ['knob', -1]]] },
+      { say: 'Two clicks to the right brings us back to the reference gain, and the echo is back at 80 percent.', do: [[0.8, ['knob', 2, 0.5]]] },
+      { say: 'Now add 6 dB above the reference. The echo should double, to 160 percent.', do: [[1.6, ['knob', 1]]] },
+      { say: 'But the screen only goes to 100 percent, so the echo runs off the top. The amplitude box just says more than 110 percent. It is really at 160.' },
+      { say: 'An echo off the top of the screen is saturated. You cannot measure its height, so bring the gain back down before you compare echoes.', do: [[4.5, ['knob', -1]]] },
+      { say: 'Remember: 6 dB doubles or halves the height. 12 dB is four times. 20 dB is ten times.', card: 'rule2' },
+      { say: 'Now try it yourself. Predict each height first, then turn the knob and check your answer.', hold: 1.5 }
+    ]
+  };
+
+  E.page({
+    lede: 'Gain sets how tall echoes look. Learn to use the <b>dB</b> key on purpose: every 6&nbsp;dB doubles or halves the echo height.',
+    tryIntro: 'The Epoch is calibrated and the probe is on the 0.300&nbsp;in step with Gate 1 on the first back-wall echo. Follow the steps; the keys you need next glow yellow.',
+    video,
+    trainerInitial: () => start(),
+    steps,
+    doneText: 'Every 6 dB is a factor of two.',
+    keyPoints: `<ul>
+      <li>Gain (the <b>dB</b> key) changes echo <b>height</b> only. It never moves an echo left or right.</li>
+      <li><b>2nd F → GATES</b> (AUTO XX%) sets the gain so the gated echo sits at 80% of full screen height. That's a repeatable reference.</li>
+      <li>Every <b>6 dB</b> is a factor of two: −6&nbsp;dB halves (80% → 40%), −12&nbsp;dB quarters (80% → 20%), +6&nbsp;dB doubles (80% → 160%).</li>
+      <li>12&nbsp;dB = ×4 and 20&nbsp;dB = ×10.</li>
+      <li>The screen stops at 100%. An echo above the top is <b>saturated</b>: its real height is unknown until you reduce the gain.</li>
+      <li>Press <b>✓</b> after <b>dB</b> to change the gain step (0.1 / 1 / 2 / 6&nbsp;dB).</li></ul>`,
+    onReset() { ws.G0 = null; ws.autoN = 0; ws.pred = {}; ws.seen = {}; ws.quiz = null; renderWS(); const f = document.getElementById('qfb'); if (f) f.textContent = ''; },
+    extra(el, tr) {
+      el.innerHTML = `<div class="panel"><h3>Worksheet · 0.300 in step</h3>
+        <p style="font-size:13.5px;margin-bottom:6px">Reference gain: <b id="g0">— (press AUTO XX%)</b></p>
+        <table class="ws"><thead><tr><th>Change</th><th>Predict</th><th>Seen</th><th></th></tr></thead><tbody id="wsb"></tbody></table>
+        <p style="font-size:14px;margin-top:10px"><b>An echo is at 80%. You add 12 dB. How tall is it really?</b></p>
+        <div class="row">${[160, 240, 320].map(v => `<button data-q="${v}">${v}%</button>`).join('')}</div><p id="qfb" style="font-size:13.5px;margin-top:6px"></p></div>`;
+      el.querySelectorAll('[data-q]').forEach(b => b.addEventListener('click', () => {
+        ws.quiz = +b.dataset.q;
+        el.querySelector('#qfb').innerHTML = ws.quiz === 320 ? '<span class="ok">Right.</span> 12 dB is ×4: 80% × 4 = 320% — way off the screen.' : '<span class="no">Not quite.</span> 6 dB doubles once; 12 dB doubles twice.';
+        tr.poke();
+      }));
+      tr.onChange(st => {
+        const n = st.events.filter(e => e.name === 'auto' && e.ok).length;
+        if (n !== ws.autoN) { ws.autoN = n; ws.G0 = st.gain; ws.seen = {}; }
+        if (ws.G0 != null) OFFS.forEach(o => { if (near(st.gain, ws.G0 + o) && ws.pred[o] != null && ws.seen[o] == null) ws.seen[o] = Math.round(amp1(st)); });
+        renderWS();
+      });
+      renderWS();
+    }
+  });
+  function renderWS() {
+    const tb = document.getElementById('wsb'); if (!tb) return;
+    document.getElementById('g0').textContent = ws.G0 == null ? '— (press AUTO XX%)' : ws.G0.toFixed(1) + ' dB  →  80%';
+    const opts = [10, 20, 40, 60, 80, 120, 160];
+    tb.innerHTML = OFFS.map(o => {
+      const p = ws.pred[o], s = ws.seen[o];
+      const mark = s == null || p == null ? '' : Math.abs(p - s) <= 3 ? '<span class="ok">✓</span>' : '<span class="no">✗</span>';
+      return `<tr><td>${o > 0 ? '+' : '−'}${Math.abs(o)} dB</td><td><select data-o="${o}"><option value="">?</option>${opts.map(v => `<option value="${v}" ${p === v ? 'selected' : ''}>${v}%</option>`).join('')}</select></td><td>${s == null ? '—' : s > 100 ? s + '% <small>(off screen)</small>' : s + '%'}</td><td>${mark}</td></tr>`;
+    }).join('');
+    tb.querySelectorAll('select').forEach(x => x.addEventListener('change', () => { ws.pred[+x.dataset.o] = x.value === '' ? null : +x.value; window.__trainer.poke(); }));
+  }
+})();
+</script>
+</body>
+</html>
