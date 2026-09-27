@@ -1,0 +1,103 @@
+1
+00:00:00,600 --> 00:00:08,793
+A straight-beam calibration teaches the Epoch two things: where zero really is, and how fast sound travels in the part.
+
+2
+00:00:08,793 --> 00:00:17,378
+The machine only measures time. Thickness equals velocity times time, divided by two, because the sound goes down and comes back.
+
+3
+00:00:17,378 --> 00:00:27,140
+Zero is the delay through the wear plate and couplant. Velocity is the speed in steel. Two unknowns, so we need two known thicknesses.
+
+4
+00:00:27,140 --> 00:00:35,725
+The Epoch has just been reset. Velocity is 0.2300 inches per microsecond, the book value for steel, and zero is 0.000.
+
+5
+00:00:35,725 --> 00:00:40,389
+Put couplant on the 0.200 inch step and place the probe.
+
+6
+00:00:40,389 --> 00:00:53,288
+On the far left is the initial pulse. The next signal is the first back-wall echo. It sits at about 0.26 on the screen, not 0.200, because zero is not set yet.
+
+7
+00:00:53,288 --> 00:01:00,697
+Press GATES, press the check key for bigger steps, and move Gate 1 over the first back-wall echo.
+
+8
+00:01:00,697 --> 00:01:10,459
+Make sure the gate is on the back-wall echo, not on the initial pulse. The red marker shows which signal the gate is measuring.
+
+9
+00:01:10,459 --> 00:01:15,515
+Press 2nd F, then GATES, to bring the echo to 80 percent.
+
+10
+00:01:15,515 --> 00:01:19,786
+Now press F3 for Auto Cal, then P2 for Cal-Zero.
+
+11
+00:01:19,786 --> 00:01:24,058
+Turn the knob to enter the known thickness: 0.200 inch.
+
+12
+00:01:24,058 --> 00:01:31,467
+Press P6, Continue. Continue, not Done. The Epoch keeps this first point and waits for the second one.
+
+13
+00:01:31,467 --> 00:01:34,954
+Move the probe to the 0.500 inch step.
+
+14
+00:01:34,954 --> 00:01:40,794
+Press GATES and move Gate 1 onto the first back-wall echo of this step.
+
+15
+00:01:40,794 --> 00:01:45,066
+Bring it to 80 percent with 2nd F and GATES.
+
+16
+00:01:45,066 --> 00:01:48,945
+Press F3 for Auto Cal, then P3 for Cal-Vel.
+
+17
+00:01:48,945 --> 00:01:55,962
+The value already reads 0.500. If it did not, you would turn the knob until it did.
+
+18
+00:01:55,962 --> 00:02:03,371
+Press P7, Done. The Epoch now works out both the velocity and the zero from the two points.
+
+19
+00:02:03,371 --> 00:02:13,132
+Velocity is now 0.2320 and zero is 0.500 microseconds. Zero is where the line starts. Velocity is its slope. Two points fix the line.
+
+20
+00:02:13,132 --> 00:02:20,933
+Now verify on steps you did not calibrate on. Move to the 0.300 inch step and gate its echo.
+
+21
+00:02:20,933 --> 00:02:22,852
+It reads 0.300. Good.
+
+22
+00:02:22,852 --> 00:02:26,462
+Now the 0.400 inch step.
+
+23
+00:02:26,462 --> 00:02:29,557
+It reads 0.400. The calibration is good.
+
+24
+00:02:29,557 --> 00:02:40,103
+Why not verify on 0.200 or 0.500? They were used to build the calibration, so they read correctly by definition. 0.300 and 0.400 are independent checks.
+
+25
+00:02:40,103 --> 00:02:47,512
+Common mistakes: gating the initial pulse, skipping AUTO 80 percent, and pressing Done after Cal-Zero instead of Continue.
+
+26
+00:02:47,512 --> 00:02:52,149
+Now try it yourself on the Epoch below.

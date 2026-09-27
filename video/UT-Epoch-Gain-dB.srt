@@ -1,0 +1,59 @@
+1
+00:00:00,600 --> 00:00:10,754
+Gain controls how tall echoes look on the screen. It is measured in decibels, or dB, and it never moves an echo left or right.
+
+2
+00:00:10,754 --> 00:00:19,339
+The Epoch is calibrated, the probe is on the 0.300 inch step, and Gate 1 is on the first back-wall echo.
+
+3
+00:00:19,339 --> 00:00:26,748
+First, bring the echo to a standard height. Press 2nd F, then GATES. That is AUTO XX percent.
+
+4
+00:00:26,748 --> 00:00:36,510
+The Epoch sets the gain so the gated echo sits at 80 percent of full screen height. That gain, 42.5 dB, is our reference.
+
+5
+00:00:36,510 --> 00:00:44,703
+Press dB so the knob controls gain. The delta in the gain box shows the step: 1 dB per click.
+
+6
+00:00:44,703 --> 00:00:48,975
+Press the check key until the step reads 6 dB.
+
+7
+00:00:48,975 --> 00:00:55,991
+Every 6 dB is a factor of two. Take away 6 dB: one click to the left.
+
+8
+00:00:55,991 --> 00:01:00,655
+The echo drops from 80 to 40 percent. Half the height.
+
+9
+00:01:00,655 --> 00:01:08,848
+Another 6 dB down, 12 dB in total. Now it is at 20 percent, one quarter of where it started.
+
+10
+00:01:08,848 --> 00:01:17,041
+Two clicks to the right brings us back to the reference gain, and the echo is back at 80 percent.
+
+11
+00:01:17,041 --> 00:01:22,881
+Now add 6 dB above the reference. The echo should double, to 160 percent.
+
+12
+00:01:22,881 --> 00:01:34,604
+But the screen only goes to 100 percent, so the echo runs off the top. The amplitude box just says more than 110 percent. It is really at 160.
+
+13
+00:01:34,604 --> 00:01:44,758
+An echo off the top of the screen is saturated. You cannot measure its height, so bring the gain back down before you compare echoes.
+
+14
+00:01:44,758 --> 00:01:52,167
+Remember: 6 dB doubles or halves the height. 12 dB is four times. 20 dB is ten times.
+
+15
+00:01:52,167 --> 00:01:59,941
+Now try it yourself. Predict each height first, then turn the knob and check your answer.
