@@ -661,10 +661,12 @@
         <option value="1.25">1.25×</option>
         <option value="1.5">1.5×</option>
       </select>
+      <button id="btn-vo" class="on" aria-label="Mute narration">🔊</button>
       <button id="btn-cc" class="on" aria-label="Toggle captions">CC</button>
       <button id="btn-fs" aria-label="Full screen">⛶</button>
     </div>
     <div class="mobile-caption" id="mobile-caption"></div>
+    <audio id="narration" src="audio/RT-Dose-Limits-narration.mp3" preload="auto"></audio>
   </div>
 
   <div class="chapters" id="chapters"></div>
@@ -767,6 +769,10 @@
     ]
   };
 
+  // Holds inserted so the visuals wait for the narrator: per scene, [design time, seconds].
+  // Generated from the narration clip lengths; regenerate whenever CAPTIONS change.
+  const HOLDS = /*HOLDS*/{"title":[[2.99,3.39],[4.59,3.6],[8.49,0.19]],"people":[[1.2,2.02],[11.5,2.19],[13.99,3.18],[15.99,0.92],[18.49,1.61]],"occ":[[2.39,1.93],[4.8,2.4],[7.39,0.69],[9.59,1.38],[12.39,1.05],[14.59,0.35],[17.39,0.06],[21.49,0.98]],"alara":[[1.2,2.61],[3.2,3.36],[7.19,0.11],[9.39,2.17]],"body":[[1.19,2.17],[2.19,3.54],[9.6,2.7]],"dose":[[1.99,3.56],[2.0,0.83],[8.59,4.95],[10.4,2.54],[14.99,2.94],[16.59,0.42],[18.4,0.99]],"restricted":[[1.19,3.02],[3.4,2.81],[11.19,0.12]],"zones":[[1.99,3.35],[7.79,1.31],[13.39,0.62],[16.39,4.35],[24.39,3.73]],"year":[[7.99,1.86]],"limits":[[1.4,2.7],[13.6,2.91],[18.19,0.4],[22.39,1.76],[25.99,3.06]],"recap":[[1.2,0.89],[5.0,0.46],[15.49,1.41]]}/*END-HOLDS*/;
+
   const stage = document.getElementById('stage');
   const viewport = document.getElementById('viewport');
   const captionEl = document.getElementById('caption');
@@ -784,9 +790,11 @@
   // Build the scene list and element animation specs once.
   let cursor = 0;
   const scenes = [...stage.querySelectorAll('.scene')].map(el => {
+    const holds = HOLDS[el.dataset.scene] || [];
+    const design = parseFloat(el.dataset.dur);
     const s = {
-      el, id: el.dataset.scene, name: el.dataset.name,
-      start: cursor, dur: parseFloat(el.dataset.dur),
+      el, id: el.dataset.scene, name: el.dataset.name, holds, design,
+      start: cursor, dur: design + holds.reduce((a, h) => a + h[1], 0),
       items: [...el.querySelectorAll('[data-t]')].map(n => {
         const [tin, tout] = n.dataset.t.split(',').map(Number);
         const from = (n.dataset.from || '0,0').split(',').map(Number);
@@ -801,6 +809,17 @@
     return s;
   });
   const TOTAL = cursor;
+
+  // Real (playback) time within a scene → design time, freezing during holds.
+  function toDesign(s, r) {
+    let acc = 0;
+    for (const [d, h] of s.holds) {
+      if (r < d + acc) return r - acc;
+      if (r < d + acc + h) return d;
+      acc += h;
+    }
+    return r - acc;
+  }
 
   // ── per-element effects ──
   function applyFx(it, local, sceneDur) {
@@ -855,13 +874,14 @@
     t = clamp(t, 0, TOTAL);
     let caption = '';
     for (const s of scenes) {
-      const local = t - s.start;
+      const real = t - s.start;
       const isLast = s === scenes[scenes.length - 1];
-      const visible = local >= 0 && (local < s.dur || (isLast && local <= s.dur));
+      const visible = real >= 0 && (real < s.dur || (isLast && real <= s.dur));
       if (!visible) { s.el.style.display = 'none'; continue; }
       s.el.style.display = 'block';
-      const fin = clamp(local / 0.35, 0, 1);
-      const fout = isLast ? 1 : clamp((s.dur - local) / 0.35, 0, 1);
+      const fin = clamp(real / 0.35, 0, 1);
+      const fout = isLast ? 1 : clamp((s.dur - real) / 0.35, 0, 1);
+      const local = toDesign(s, real);
       s.el.style.opacity = Math.min(fin, fout);
       for (const it of s.items) applyFx(it, local, s.dur);
       for (const c of s.counters) {
@@ -917,11 +937,26 @@
   fit();
 
   // ── playback ──
-  let t = 0, playing = false, last = 0, speed = 1;
+  let t = 0, playing = false, last = 0, speed = 1, voiceOn = true;
+  const audio = document.getElementById('narration');
+  let audioOk = true;
+  audio.addEventListener('error', () => { audioOk = false; });
+  const useAudio = () => voiceOn && audioOk && audio.readyState >= 2;
+  function syncAudio() {
+    if (!audioOk) return;
+    audio.playbackRate = speed;
+    if (playing && voiceOn) {
+      if (Math.abs(audio.currentTime - t) > 0.05) audio.currentTime = t;
+      audio.play().catch(() => {});
+    } else audio.pause();
+  }
   function frame(now) {
     if (!playing) return;
-    t += (now - last) / 1000 * speed;
+    const step = (now - last) / 1000 * speed;
     last = now;
+    // The narration track is the master clock while it plays; fall back to wall time.
+    if (useAudio() && !audio.paused && !audio.ended && Math.abs(audio.currentTime - t) < 1) t = audio.currentTime;
+    else t += step;
     if (t >= TOTAL) { t = TOTAL; setPlaying(false); }
     render(t);
     if (playing) requestAnimationFrame(frame);
@@ -932,14 +967,23 @@
     playBtn.textContent = on ? '❚❚' : '▶';
     playBtn.setAttribute('aria-label', on ? 'Pause' : 'Play');
     if (on) { last = performance.now(); requestAnimationFrame(frame); }
+    syncAudio();
   }
-  function seek(x) { t = clamp(x, 0, TOTAL); render(t); }
+  function seek(x) { t = clamp(x, 0, TOTAL); render(t); if (audioOk && audio.readyState >= 1) audio.currentTime = t; }
 
   playBtn.addEventListener('click', () => setPlaying(!playing));
   viewport.addEventListener('click', () => setPlaying(!playing));
   document.getElementById('btn-restart').addEventListener('click', () => { seek(0); setPlaying(true); });
   scrub.addEventListener('input', () => seek(scrub.value / 1000 * TOTAL));
-  document.getElementById('speed').addEventListener('change', e => { speed = parseFloat(e.target.value); });
+  document.getElementById('speed').addEventListener('change', e => { speed = parseFloat(e.target.value); syncAudio(); });
+  const voBtn = document.getElementById('btn-vo');
+  voBtn.addEventListener('click', () => {
+    voiceOn = !voiceOn;
+    voBtn.classList.toggle('on', voiceOn);
+    voBtn.textContent = voiceOn ? '🔊' : '🔇';
+    voBtn.setAttribute('aria-label', voiceOn ? 'Mute narration' : 'Unmute narration');
+    syncAudio();
+  });
   const ccBtn = document.getElementById('btn-cc');
   ccBtn.addEventListener('click', () => { captionsOn = !captionsOn; ccBtn.classList.toggle('on', captionsOn); lastCaption = null; render(t); });
   document.getElementById('btn-fs').addEventListener('click', () => {
@@ -962,6 +1006,11 @@
     fit();
   }
   window.__duration = TOTAL;
+  window.__narration = scenes.map(s => ({
+    id: s.id, dur: s.design, captions: CAPTIONS[s.id] || [],
+    anims: [...s.items.map(i => [i.tin, i.tin + i.d]), ...s.counters.map(c => [c.tin, c.tin + c.d]),
+            ...s.parts.map(n => [parseFloat(n.dataset.at), parseFloat(n.dataset.at) + 0.6])]
+  }));
   window.__seek = seek;
 
   render(0);
