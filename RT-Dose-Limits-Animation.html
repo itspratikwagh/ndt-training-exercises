@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dose Limits Explained</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #faf7f2;
+    --paper-deep: #f1ece2;
+    --ink: #1a1a1a;
+    --ink-soft: #4a4a47;
+    --ink-faded: #8a8a85;
+    --rule: #d9d2c4;
+    --amber: #b54515;
+    --amber-soft: #e8a87c;
+    --amber-tint: #fdf2e6;
+    --blue: #2f6db5;
+    --blue-tint: #e6eef8;
+    --green: #2d7a4f;
+    --green-tint: #e4f0e8;
+    --red: #b3261e;
+    --red-tint: #fbe9e7;
+    --z1: #d9a21b;
+    --z2: #d9661f;
+    --z3: #b3261e;
+    --player-bg: #141413;
+    --player-ink: #ece8df;
+    --player-faded: #9a968d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--player-bg); color: var(--player-ink); }
+  body {
+    font-family: 'Manrope', -apple-system, sans-serif;
+    min-height: 100vh;
+    line-height: 1.45;
+  }
+  a { color: var(--amber-soft); }
+
+  .page { max-width: 1120px; margin: 0 auto; padding: 20px 16px 48px; }
+  .topbar {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+  }
+  .topbar .crumb {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--amber-soft);
+  }
+  .topbar h1 {
+    font-family: 'Fraunces', serif; font-weight: 500; font-size: clamp(20px, 3vw, 28px);
+    color: var(--player-ink);
+  }
+  .topbar a.back { font-size: 13px; text-decoration: none; }
+
+  /* ── Player ── */
+  .player { background: #000; border-radius: 6px; overflow: hidden; box-shadow: 0 20px 50px -20px rgba(0,0,0,.6); }
+  .viewport { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: var(--paper); cursor: pointer; }
+  .stage {
+    position: absolute; left: 0; top: 0; width: 1280px; height: 720px;
+    transform-origin: 0 0; background: var(--paper); color: var(--ink);
+    background-image:
+      radial-gradient(ellipse at top left, rgba(181, 69, 21, 0.06), transparent 55%),
+      radial-gradient(ellipse at bottom right, rgba(181, 69, 21, 0.05), transparent 55%);
+    overflow: hidden;
+  }
+  .controls {
+    display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+    background: #1d1d1b; color: var(--player-ink); flex-wrap: wrap;
+  }
+  .controls button {
+    background: none; border: 1px solid #3a3a37; color: var(--player-ink);
+    font: 600 13px 'Manrope', sans-serif; padding: 7px 12px; border-radius: 4px; cursor: pointer;
+    min-width: 40px;
+  }
+  .controls button:hover { border-color: var(--amber-soft); }
+  .controls button.on { border-color: var(--amber-soft); color: var(--amber-soft); }
+  .time { font: 500 12px 'JetBrains Mono', monospace; color: var(--player-faded); white-space: nowrap; }
+  .scrub { position: relative; flex: 1 1 260px; height: 28px; display: flex; align-items: center; }
+  .scrub input { width: 100%; accent-color: var(--amber); cursor: pointer; }
+  .ticks { position: absolute; left: 0; right: 0; top: 2px; height: 6px; pointer-events: none; }
+  .ticks i { position: absolute; top: 0; width: 2px; height: 6px; background: #5a5a55; }
+  .controls select {
+    background: #1d1d1b; color: var(--player-ink); border: 1px solid #3a3a37;
+    border-radius: 4px; padding: 6px 8px; font: 500 13px 'Manrope', sans-serif;
+  }
+  .mobile-caption { display: none; padding: 12px 14px; background: #1d1d1b; border-top: 1px solid #2a2a27; font-size: 15px; min-height: 64px; }
+
+  .chapters { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-top: 18px; }
+  .chapters button {
+    text-align: left; background: #1d1d1b; border: 1px solid #2f2f2c; color: var(--player-ink);
+    padding: 10px 12px; border-radius: 4px; cursor: pointer; font: 500 13px 'Manrope', sans-serif;
+  }
+  .chapters button span { display: block; font: 500 11px 'JetBrains Mono', monospace; color: var(--player-faded); }
+  .chapters button.active { border-color: var(--amber-soft); }
+  .note { margin-top: 18px; font-size: 13px; color: var(--player-faded); }
+
+  @media (max-width: 700px) {
+    .stage .caption { display: none; }
+    .mobile-caption { display: block; }
+    .controls { gap: 8px; }
+  }
+
+  /* record mode: stage only, filling the window */
+  body.record .page { max-width: none; padding: 0; }
+  body.record .topbar, body.record .controls, body.record .chapters, body.record .note, body.record .mobile-caption { display: none; }
+  body.record .player { border-radius: 0; box-shadow: none; }
+  body.record .viewport { width: 100vw; height: 100vh; aspect-ratio: auto; cursor: default; }
+
+  /* ── Stage typography & pieces ── */
+  .scene { position: absolute; inset: 0; padding: 56px 72px 120px; display: none; }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace; font-size: 15px; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--amber); font-weight: 500;
+  }
+  .h {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 46px; line-height: 1.08;
+    letter-spacing: -.015em; margin-top: 8px;
+  }
+  .h em { font-style: italic; color: var(--amber); font-weight: 500; }
+  .cite { font-family: 'JetBrains Mono', monospace; font-size: 15px; color: var(--ink-faded); }
+  .card {
+    background: #fff; border: 1px solid var(--rule); border-radius: 6px;
+    box-shadow: 0 1px 0 rgba(0,0,0,.04), 0 10px 26px -14px rgba(60,40,20,.25);
+  }
+  .abs { position: absolute; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .big-num { font-family: 'Fraunces', serif; font-weight: 700; }
+  .caption {
+    position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%);
+    width: 1100px; text-align: center; font-size: 25px; font-weight: 600; line-height: 1.35;
+    color: #fff; background: rgba(20,20,19,.86); padding: 12px 22px; border-radius: 6px;
+    min-height: 0; z-index: 50;
+  }
+  .caption:empty { display: none; }
+  .progress-line { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--amber); z-index: 60; }
+
+  /* scene: title */
+  .title-wrap { position: absolute; left: 96px; top: 120px; width: 1090px; }
+  .title-wrap .h { font-size: 74px; }
+  .title-wrap .sub { font-size: 24px; color: var(--ink-soft); margin-top: 18px; }
+  .promise { display: flex; gap: 24px; margin-top: 46px; }
+  .promise .card { padding: 22px 26px; font-size: 24px; font-weight: 600; width: 500px; display: flex; gap: 16px; align-items: center; }
+  .promise .n { font-family: 'Fraunces', serif; font-size: 46px; color: var(--amber); line-height: 1; }
+
+  /* scene: people */
+  .people { position: absolute; left: 72px; right: 72px; top: 170px; display: flex; gap: 20px; }
+  .person { width: 270px; padding: 20px 20px 22px; text-align: center; }
+  .person svg { height: 130px; }
+  .person .who { font-family: 'Fraunces', serif; font-size: 27px; font-weight: 600; margin-top: 8px; line-height: 1.1; }
+  .person .what { font-size: 19px; color: var(--ink-soft); margin-top: 8px; }
+  .person.wide { width: 380px; text-align: left; }
+  .person.wide .top { display: flex; gap: 14px; align-items: center; }
+  .person.wide svg { height: 110px; flex: none; }
+  .checks { list-style: none; margin-top: 12px; }
+  .checks li { font-size: 18px; padding: 6px 0 6px 30px; position: relative; border-top: 1px dashed var(--rule); }
+  .checks li::before { content: '✓'; position: absolute; left: 4px; color: var(--green); font-weight: 800; }
+
+  /* scene: occupational */
+  .worker { position: absolute; left: 70px; top: 190px; width: 300px; text-align: center; }
+  .col-head { font-size: 22px; font-weight: 800; padding: 10px 16px; border-radius: 6px 6px 0 0; color: #fff; }
+  .col { position: absolute; top: 175px; width: 400px; }
+  .chip { margin-top: 10px; padding: 11px 14px 11px 46px; font-size: 19px; font-weight: 600; position: relative; line-height: 1.25; }
+  .chip .mark { position: absolute; left: 12px; top: 50%; margin-top: -14px; width: 28px; height: 28px; border-radius: 50%; color: #fff; font-weight: 800; display: grid; place-items: center; font-size: 16px; }
+  .chip.yes { background: var(--green-tint); border-color: #b5d6c1; }
+  .chip.no { background: var(--red-tint); border-color: #eec3bd; }
+  .chip.yes .mark { background: var(--green); }
+  .chip.no .mark { background: var(--red); }
+
+  /* scene: ALARA */
+  .alara-def { position: absolute; left: 72px; top: 190px; width: 520px; font-size: 24px; color: var(--ink-soft); }
+  .alara-def b { color: var(--ink); }
+  .factors { margin-top: 26px; display: flex; flex-direction: column; gap: 12px; }
+  .factors .card { padding: 12px 18px; font-size: 21px; font-weight: 700; border-left: 5px solid var(--amber); }
+
+  /* scene: body */
+  .body-fig { position: absolute; left: 110px; top: 160px; height: 440px; }
+  .legend { position: absolute; left: 520px; top: 160px; width: 680px; }
+  .legend .card { padding: 18px 22px; margin-bottom: 18px; }
+  .legend h3 { font-family: 'Fraunces', serif; font-size: 30px; font-weight: 600; display: flex; align-items: center; gap: 12px; }
+  .legend h3 i { width: 20px; height: 20px; border-radius: 4px; display: inline-block; }
+  .legend p { font-size: 21px; color: var(--ink-soft); margin-top: 6px; }
+  .callout { position: absolute; background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 6px; font-size: 21px; font-weight: 700; }
+
+  /* scene: dose types */
+  .tissue { position: absolute; left: 72px; top: 165px; width: 610px; height: 420px; }
+  .tede { position: absolute; left: 730px; top: 175px; width: 480px; padding: 22px 26px; }
+  .tede .eq { font-family: 'Fraunces', serif; font-size: 34px; font-weight: 700; }
+  .tede .term { display: flex; gap: 12px; align-items: center; margin-top: 14px; font-size: 20px; }
+  .tede .term b { font-size: 22px; }
+  .tede .plus { font-family: 'Fraunces', serif; font-size: 36px; color: var(--amber); text-align: center; margin: 6px 0 0; line-height: 1; }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 15px; font-weight: 700; color: #fff; }
+
+  /* scene: restricted */
+  .plan { position: absolute; left: 72px; top: 160px; width: 700px; height: 420px; }
+  .side-notes { position: absolute; left: 810px; top: 175px; width: 400px; }
+  .side-notes .card { padding: 16px 20px; margin-bottom: 16px; font-size: 20px; }
+  .side-notes .card b { display: block; font-size: 22px; margin-bottom: 4px; }
+
+  /* scene: zones */
+  .zones { position: absolute; left: 72px; right: 72px; bottom: 128px; display: flex; gap: 22px; align-items: flex-end; }
+  .zone { flex: 1; padding: 0 0 18px; overflow: hidden; }
+  .zone .band { height: 12px; }
+  .zone .inner { padding: 16px 20px 0; }
+  .zone .zn { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 600; line-height: 1.1; }
+  .zone .thr { margin-top: 10px; display: flex; align-items: baseline; gap: 8px; }
+  .zone .thr .big-num { font-size: 64px; line-height: 1; }
+  .zone .thr .u { font-size: 24px; font-weight: 700; }
+  .zone .alt { font: 500 15px 'JetBrains Mono', monospace; color: var(--ink-faded); margin-top: 4px; }
+  .zone svg { width: 100%; height: 92px; margin-top: 10px; }
+  .zone .warn { margin-top: 8px; font-size: 17px; font-weight: 800; color: var(--z3); }
+  .shortcut {
+    position: absolute; display: flex; gap: 14px; align-items: center;
+    background: var(--ink); color: #fff; padding: 12px 24px; border-radius: 999px; font-weight: 800; font-size: 22px;
+  }
+  .shortcut .nums { font-family: 'Fraunces', serif; font-size: 34px; color: var(--amber-soft); letter-spacing: .02em; }
+
+  /* scene: year */
+  .months { position: absolute; left: 72px; right: 72px; top: 250px; display: grid; grid-template-columns: repeat(12, 1fr); gap: 8px; }
+  .month { text-align: center; padding: 18px 0; font-weight: 800; font-size: 20px; }
+  .month.jan { background: var(--amber); color: #fff; border-color: var(--amber); }
+  .year-notes { position: absolute; left: 72px; right: 72px; top: 400px; display: flex; gap: 20px; }
+  .year-notes .card { flex: 1; padding: 18px 22px; font-size: 21px; }
+  .year-notes .card b { display: block; font-size: 23px; margin-bottom: 4px; }
+
+  /* scene: limits */
+  .limits { position: absolute; left: 72px; top: 160px; width: 1136px; }
+  .lrow { display: grid; grid-template-columns: 330px 1fr; gap: 18px; align-items: center; margin-bottom: 16px; }
+  .lrow .lab { font-size: 21px; font-weight: 700; line-height: 1.2; }
+  .lrow .lab small { display: block; font-weight: 500; color: var(--ink-faded); font-size: 15px; margin-top: 2px; }
+  .track { position: relative; height: 54px; background: var(--paper-deep); border-radius: 4px; }
+  .bar { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; transform-origin: left center; }
+  .bar-val { position: absolute; top: 50%; transform: translateY(-50%); font-weight: 800; font-size: 24px; white-space: nowrap; }
+  .bar-val small { font: 500 15px 'JetBrains Mono', monospace; color: var(--ink-faded); margin-left: 6px; }
+  .limit-notes { position: absolute; left: 72px; right: 72px; top: 470px; display: flex; gap: 18px; }
+  .limit-notes .card { flex: 1; padding: 14px 18px; font-size: 19px; }
+  .limit-notes .card b { color: var(--amber); }
+
+  /* scene: recap */
+  .recap { position: absolute; left: 72px; right: 72px; top: 175px; display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+  .recap .card { padding: 24px 28px; }
+  .recap h3 { font-family: 'Fraunces', serif; font-size: 30px; font-weight: 600; }
+  .recap .nums { font-family: 'Fraunces', serif; font-weight: 700; font-size: 72px; color: var(--amber); line-height: 1.1; margin-top: 8px; }
+  .recap ul { list-style: none; margin-top: 8px; }
+  .recap li { font-size: 20px; padding: 5px 0; border-top: 1px dashed var(--rule); }
+  .recap li b { display: inline-block; min-width: 92px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="topbar">
+    <div>
+      <div class="crumb">Radiographic Testing · Radiation Safety · 10 CFR Part 20</div>
+      <h1>Definitions &amp; Dose Limits, animated</h1>
+    </div>
+    <a class="back" href="index.html">← Exercise hub</a>
+  </div>
+
+  <div class="player">
+    <div class="viewport" id="viewport">
+      <div class="stage" id="stage">
+
+        <!-- 0 · TITLE -->
+        <section class="scene" data-scene="title" data-dur="9" data-name="Introduction">
+          <div class="title-wrap">
+            <div class="eyebrow" data-t="0.2">Radiation safety · 10 CFR Part 20</div>
+            <div class="h" data-t="0.6" data-fx="up">Definitions &amp; dose limits,<br><em>the plain version</em></div>
+            <div class="sub" data-t="1.4" data-fx="up">Definitions from § 20.1003 &nbsp;·&nbsp; Adult occupational dose limits from § 20.1201</div>
+            <div class="promise">
+              <div class="card" data-t="3.0" data-fx="up"><span class="n">1</span>It names the zones, body parts and types of dose</div>
+              <div class="card" data-t="4.6" data-fx="up"><span class="n">2</span>It sets a yearly dose budget for radiation workers</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 1 · WHO'S WHO -->
+        <section class="scene" data-scene="people" data-dur="24" data-name="Who's who">
+          <div class="eyebrow" data-t="0.1">§ 20.1003 · People</div>
+          <div class="h" data-t="0.3" data-fx="up">Who's <em>who</em></div>
+          <div class="people">
+            <div class="card person" data-t="1.2" data-fx="up">
+              <svg viewBox="0 0 80 120"><use href="#ico-person" fill="#4a4a47"/></svg>
+              <div class="who">Adult</div>
+              <div class="what"><b>18</b> or older</div>
+            </div>
+            <div class="card person" data-t="4.0" data-fx="up">
+              <svg viewBox="0 0 80 120"><g transform="translate(14 30) scale(.65)"><use href="#ico-person" fill="#8a8a85"/></g></svg>
+              <div class="who">Minor</div>
+              <div class="what">Under <b>18</b></div>
+            </div>
+            <div class="card person" data-t="7.0" data-fx="up">
+              <svg viewBox="0 0 120 120"><g transform="translate(-6 10) scale(.85)"><use href="#ico-person" fill="#2f6db5"/></g><g transform="translate(48 10) scale(.85)"><use href="#ico-person" fill="#5d8fcf"/></g></svg>
+              <div class="who">Member of the public</div>
+              <div class="what">Anyone, <i>except</i> while they're receiving occupational dose</div>
+            </div>
+            <div class="card person wide" data-t="11.5" data-fx="up">
+              <div class="top">
+                <svg viewBox="0 0 80 120"><use href="#ico-person" fill="#b54515"/><rect x="50" y="62" width="26" height="32" rx="2" fill="#fff" stroke="#1a1a1a" stroke-width="2"/><path d="M55 70h16M55 76h16M55 82h10" stroke="#1a1a1a" stroke-width="2"/></svg>
+                <div>
+                  <div class="who">Declared pregnant woman</div>
+                  <div class="what" style="margin-top:4px">A worker who chose to tell the licensee</div>
+                </div>
+              </div>
+              <ul class="checks">
+                <li data-t="14.0" data-fx="left">Voluntary: it's her choice</li>
+                <li data-t="16.0" data-fx="left">In writing, with the estimated date of conception</li>
+                <li data-t="18.5" data-fx="left">Stays in effect until withdrawn in writing, or she's no longer pregnant</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2 · OCCUPATIONAL DOSE -->
+        <section class="scene" data-scene="occ" data-dur="22" data-name="Occupational dose">
+          <div class="eyebrow" data-t="0.1">§ 20.1003 · Occupational dose</div>
+          <div class="h" data-t="0.3" data-fx="up">Only the dose <em>from your job</em></div>
+          <div class="worker" data-t="0.8" data-fx="fade">
+            <svg viewBox="0 0 160 240" width="220" height="320">
+              <use href="#ico-person" x="16" y="20" width="128" height="192" fill="#4a4a47"/>
+              <rect x="88" y="108" width="24" height="30" rx="3" fill="#b54515"/>
+              <circle cx="100" cy="120" r="6" fill="#fff"/>
+              <text x="100" y="153" font-size="10" text-anchor="middle" font-family="JetBrains Mono" fill="#1a1a1a">badge</text>
+            </svg>
+            <div style="font-size:20px;font-weight:700;margin-top:-8px">Radiation worker</div>
+          </div>
+          <div class="col" style="left:400px">
+            <div class="col-head" style="background:var(--green)" data-t="1.4" data-fx="fade">Counts</div>
+            <div class="card chip yes" data-t="2.4" data-fx="fly" data-from="-160,120"><span class="mark">✓</span>Dose received on the job when your assigned duties involve radiation</div>
+          </div>
+          <div class="col" style="left:820px">
+            <div class="col-head" style="background:var(--red)" data-t="4.8" data-fx="fade">Doesn't count</div>
+            <div class="card chip no" data-t="5.4" data-fx="fly" data-from="-420,140"><span class="mark">✗</span>Background radiation</div>
+            <div class="card chip no" data-t="7.4" data-fx="fly" data-from="-420,90"><span class="mark">✗</span>Your own medical procedures (X-rays, etc.)</div>
+            <div class="card chip no" data-t="9.6" data-fx="fly" data-from="-420,40"><span class="mark">✗</span>Exposure to released nuclear medicine patients <span class="mono" style="font-size:14px">§ 35.75</span></div>
+            <div class="card chip no" data-t="12.4" data-fx="fly" data-from="-420,0"><span class="mark">✗</span>Voluntary participation in medical research</div>
+            <div class="card chip no" data-t="14.6" data-fx="fly" data-from="-420,-40"><span class="mark">✗</span>Dose received as a member of the public</div>
+          </div>
+        </section>
+
+        <!-- 3 · ALARA -->
+        <section class="scene" data-scene="alara" data-dur="16" data-name="ALARA">
+          <div class="eyebrow" data-t="0.1">§ 20.1003 · ALARA</div>
+          <div class="h" data-t="0.3" data-fx="up">As Low As <em>Reasonably</em> Achievable</div>
+          <div class="alara-def">
+            <div data-t="1.2" data-fx="up">Make <b>every reasonable effort</b> to keep exposures <b>well below</b> the dose limits, not just under them.</div>
+            <div class="factors">
+              <div style="font-size:18px;color:var(--ink-faded);font-weight:600" data-t="7.2">"Reasonable" takes into account:</div>
+              <div class="card" data-t="8.0" data-fx="left">The state of technology</div>
+              <div class="card" data-t="9.4" data-fx="left">Economics</div>
+              <div class="card" data-t="10.8" data-fx="left">The benefit to public health</div>
+            </div>
+          </div>
+          <svg class="abs" style="left:680px;top:170px" width="520" height="420" viewBox="0 0 520 420">
+            <g data-t="1.6" data-fx="fade">
+              <line x1="60" y1="20" x2="60" y2="380" stroke="#1a1a1a" stroke-width="2"/>
+              <line x1="60" y1="380" x2="500" y2="380" stroke="#1a1a1a" stroke-width="2"/>
+              <text x="22" y="200" transform="rotate(-90 22 200)" text-anchor="middle" font-size="18" font-weight="700" fill="#4a4a47">Dose</text>
+            </g>
+            <g data-t="2.4" data-fx="fade">
+              <line x1="60" y1="70" x2="500" y2="70" stroke="#b3261e" stroke-width="3" stroke-dasharray="10 7"/>
+              <text x="496" y="58" text-anchor="end" font-size="20" font-weight="800" fill="#b3261e">Dose limit</text>
+            </g>
+            <rect x="120" y="70" width="110" height="310" fill="#f1d4cf" data-t="3.2" data-fx="growy" data-d="1.4"/>
+            <text x="175" y="105" text-anchor="middle" font-size="16" font-weight="700" fill="#b3261e" data-t="4.2">Legal, but</text>
+            <text x="175" y="125" text-anchor="middle" font-size="16" font-weight="700" fill="#b3261e" data-t="4.2">not ALARA</text>
+            <rect x="320" y="315" width="110" height="65" fill="#2d7a4f" data-t="4.8" data-fx="growy" data-d="1.2"/>
+            <text x="375" y="304" text-anchor="middle" font-size="18" font-weight="800" fill="#2d7a4f" data-t="5.6">ALARA</text>
+            <path d="M375 90 L375 262" stroke="#2d7a4f" stroke-width="3" fill="none" marker-end="url(#arrow-green)" pathLength="1" data-t="6.0" data-fx="draw" data-d="1"/>
+            <text x="390" y="190" font-size="17" font-weight="700" fill="#2d7a4f" data-t="6.4">well below</text>
+          </svg>
+        </section>
+
+        <!-- 4 · BODY REGIONS -->
+        <section class="scene" data-scene="body" data-dur="24" data-name="Body regions">
+          <div class="eyebrow" data-t="0.1">§ 20.1003 · Body regions</div>
+          <div class="h" data-t="0.3" data-fx="up">Whole body vs. <em>extremities</em></div>
+          <svg class="body-fig" viewBox="0 0 300 560" data-t="0.6" data-fx="fade">
+            <g stroke="#fff" stroke-width="3" id="body-parts">
+              <rect data-part="wb" data-at="2.2" x="66" y="116" width="30" height="94" rx="14"/>
+              <rect data-part="wb" data-at="2.2" x="204" y="116" width="30" height="94" rx="14"/>
+              <rect data-part="ex" data-at="10.0" x="68" y="226" width="26" height="92" rx="12"/>
+              <rect data-part="ex" data-at="10.0" x="206" y="226" width="26" height="92" rx="12"/>
+              <ellipse data-part="ex" data-at="10.6" cx="81" cy="338" rx="17" ry="21"/>
+              <ellipse data-part="ex" data-at="10.6" cx="219" cy="338" rx="17" ry="21"/>
+              <rect data-part="wb" data-at="2.8" x="104" y="282" width="44" height="114" rx="18"/>
+              <rect data-part="wb" data-at="2.8" x="152" y="282" width="44" height="114" rx="18"/>
+              <rect data-part="ex" data-at="11.2" x="108" y="424" width="34" height="94" rx="14"/>
+              <rect data-part="ex" data-at="11.2" x="158" y="424" width="34" height="94" rx="14"/>
+              <ellipse data-part="ex" data-at="11.8" cx="122" cy="532" rx="26" ry="12"/>
+              <ellipse data-part="ex" data-at="11.8" cx="178" cy="532" rx="26" ry="12"/>
+              <rect data-part="wb" data-at="1.6" x="98" y="104" width="104" height="182" rx="24"/>
+              <rect data-part="wb" data-at="1.6" x="136" y="90" width="28" height="20"/>
+              <circle data-part="wb" data-at="1.0" cx="150" cy="56" r="36"/>
+              <circle data-part="ex" data-joint="1" data-at="10.0" cx="81" cy="218" r="15"/>
+              <circle data-part="ex" data-joint="1" data-at="10.0" cx="219" cy="218" r="15"/>
+              <circle data-part="ex" data-joint="1" data-at="11.2" cx="125" cy="410" r="18"/>
+              <circle data-part="ex" data-joint="1" data-at="11.2" cx="175" cy="410" r="18"/>
+            </g>
+          </svg>
+          <div class="legend">
+            <div class="card" data-t="1.2" data-fx="left">
+              <h3><i style="background:var(--amber)"></i>Whole body: your core</h3>
+              <p>Head, trunk (including the male gonads), arms <b>above the elbow</b>, legs <b>above the knee</b></p>
+            </div>
+            <div class="card" data-t="9.6" data-fx="left">
+              <h3><i style="background:var(--blue)"></i>Extremities: elbows &amp; knees down</h3>
+              <p>Elbow, arm below the elbow, hand, knee, leg below the knee, foot</p>
+            </div>
+          </div>
+          <div class="callout" style="left:560px;top:470px" data-t="16.0" data-fx="pop">The elbow and knee themselves count as <span style="color:#9cc0ec">extremities</span></div>
+        </section>
+
+        <!-- 5 · DOSE TYPES -->
+        <section class="scene" data-scene="dose" data-dur="26" data-name="Types of dose">
+          <div class="eyebrow" data-t="0.1">§ 20.1003 · How dose is measured</div>
+          <div class="h" data-t="0.3" data-fx="up">Shallow, deep, and <em>TEDE</em></div>
+          <svg class="tissue" viewBox="0 0 610 420" data-t="0.8" data-fx="fade">
+            <defs>
+              <linearGradient id="tissue-g" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#f3cdb6"/><stop offset="1" stop-color="#d99f86"/>
+              </linearGradient>
+            </defs>
+            <text x="8" y="22" font-size="16" font-weight="700" fill="#8a8a85">OUTSIDE THE BODY</text>
+            <rect x="0" y="80" width="610" height="340" fill="url(#tissue-g)"/>
+            <rect x="0" y="80" width="610" height="16" fill="#e7b498"/>
+            <text x="600" y="412" text-anchor="end" font-size="14" fill="#6b4a3c" font-style="italic">Depths not to scale</text>
+            <g stroke="#b54515" stroke-width="3" fill="none">
+              <path d="M70 30 L70 104" pathLength="1" data-t="2.0" data-fx="draw" data-d=".8" marker-end="url(#arrow-amber)"/>
+              <path d="M140 30 L140 104" pathLength="1" data-t="2.3" data-fx="draw" data-d=".8" marker-end="url(#arrow-amber)"/>
+              <path d="M210 30 L210 104" pathLength="1" data-t="2.6" data-fx="draw" data-d=".8" marker-end="url(#arrow-amber)"/>
+            </g>
+            <g stroke="#2f6db5" stroke-width="3" fill="none">
+              <path d="M330 30 L330 300" pathLength="1" data-t="8.6" data-fx="draw" data-d="1.2" marker-end="url(#arrow-blue)"/>
+              <path d="M400 30 L400 300" pathLength="1" data-t="8.9" data-fx="draw" data-d="1.2" marker-end="url(#arrow-blue)"/>
+              <path d="M470 30 L470 300" pathLength="1" data-t="9.2" data-fx="draw" data-d="1.2" marker-end="url(#arrow-blue)"/>
+            </g>
+            <g data-t="3.4" data-fx="left">
+              <line x1="0" y1="106" x2="610" y2="106" stroke="#b54515" stroke-width="2.5" stroke-dasharray="8 5"/>
+              <rect x="20" y="118" width="330" height="56" rx="5" fill="#fff" opacity=".93"/>
+              <text x="32" y="142" font-size="19" font-weight="800" fill="#b54515">Shallow dose (Hs) · 0.007 cm</text>
+              <text x="32" y="164" font-size="15" fill="#4a4a47">7 mg/cm² · skin, or an extremity</text>
+            </g>
+            <g data-t="10.4" data-fx="left">
+              <line x1="0" y1="310" x2="610" y2="310" stroke="#2f6db5" stroke-width="2.5" stroke-dasharray="8 5"/>
+              <rect x="20" y="322" width="370" height="56" rx="5" fill="#fff" opacity=".93"/>
+              <text x="32" y="346" font-size="19" font-weight="800" fill="#2f6db5">Deep dose (Hd) · 1 cm</text>
+              <text x="32" y="368" font-size="15" fill="#4a4a47">1000 mg/cm² · external, whole body</text>
+            </g>
+          </svg>
+          <div class="card tede" data-t="15.0" data-fx="up">
+            <div class="eq">TEDE = your total</div>
+            <div class="term" data-t="16.6" data-fx="left"><span class="pill" style="background:var(--blue)">OUT</span><div><b>External</b> (effective) dose<br><span style="color:var(--ink-faded)">radiation hitting you from outside</span></div></div>
+            <div class="plus" data-t="18.4" data-fx="fade">+</div>
+            <div class="term" data-t="18.8" data-fx="left"><span class="pill" style="background:var(--amber)">IN</span><div><b>Committed</b> (internal) dose<br><span style="color:var(--ink-faded)">from material taken into the body</span></div></div>
+            <div style="margin-top:14px;font:600 14px 'JetBrains Mono',monospace;color:var(--ink-faded)" data-t="20.4">Total Effective Dose Equivalent</div>
+          </div>
+        </section>
+
+        <!-- 6 · RESTRICTED / UNRESTRICTED -->
+        <section class="scene" data-scene="restricted" data-dur="17" data-name="Restricted areas">
+          <div class="eyebrow" data-t="0.1">§ 20.1003 · Area classifications</div>
+          <div class="h" data-t="0.3" data-fx="up">Who controls <em>the door?</em></div>
+          <svg class="plan" viewBox="0 0 700 420" data-t="0.8" data-fx="fade">
+            <rect x="0" y="0" width="700" height="420" rx="8" fill="#e9efe6"/>
+            <text x="20" y="34" font-size="22" font-weight="800" fill="#2d7a4f">UNRESTRICTED AREA</text>
+            <text x="20" y="58" font-size="16" fill="#4a4a47">Access not limited or controlled by the licensee</text>
+            <g data-t="3.4" data-fx="scale">
+              <rect x="170" y="100" width="380" height="280" rx="6" fill="#fdf2e6" stroke="#b54515" stroke-width="4" stroke-dasharray="14 8"/>
+              <text x="360" y="148" text-anchor="middle" font-size="22" font-weight="800" fill="#b54515">RESTRICTED AREA</text>
+              <text x="360" y="172" text-anchor="middle" font-size="16" fill="#4a4a47">Access limited by the licensee</text>
+              <circle cx="360" cy="262" r="16" fill="#b54515"/>
+              <g transform="translate(360 262)">
+                <circle r="44" fill="none" stroke="#b54515" stroke-width="2" opacity=".35"/>
+                <circle r="70" fill="none" stroke="#b54515" stroke-width="2" opacity=".2"/>
+              </g>
+              <text x="360" y="352" text-anchor="middle" font-size="15" font-weight="700" fill="#b54515">source / exposure area</text>
+            </g>
+            <g data-t="5.4" data-fx="fade">
+              <rect x="540" y="214" width="20" height="60" fill="#fdf2e6"/>
+              <path d="M560 214 L600 196" stroke="#1a1a1a" stroke-width="4"/>
+              <rect x="572" y="232" width="110" height="34" rx="4" fill="#1a1a1a"/>
+              <text x="627" y="255" text-anchor="middle" font-size="15" font-weight="800" fill="#fff">CONTROLLED</text>
+            </g>
+          </svg>
+          <div class="side-notes">
+            <div class="card" data-t="8.4" data-fx="left"><b>Living quarters</b>can't be a restricted area.</div>
+            <div class="card" data-t="11.2" data-fx="left"><b>But…</b>separate rooms in a residential building <i>can</i> be set apart as restricted areas.</div>
+          </div>
+        </section>
+
+        <!-- 7 · RADIATION ZONES -->
+        <section class="scene" data-scene="zones" data-dur="30" data-name="Radiation zones">
+          <div class="eyebrow" data-t="0.1">§ 20.1003 · How "hot" is the area?</div>
+          <div class="h" data-t="0.3" data-fx="up">Stand there for <em>one hour</em>…</div>
+          <div class="zones">
+            <div class="card zone" data-t="2.0" data-fx="up" style="height:290px">
+              <div class="band" style="background:var(--z1)"></div>
+              <div class="inner">
+                <div class="zn">Radiation area</div>
+                <div class="thr"><span style="font-size:22px;font-weight:700">&gt;</span><span class="big-num" data-count="5" data-t="2.6" data-d="1">5</span><span class="u">mrem</span></div>
+                <div class="alt">0.005 rem · 0.05 mSv</div>
+                <svg viewBox="0 0 320 92"><use href="#ico-dist30"/></svg>
+              </div>
+            </div>
+            <div class="card zone" data-t="7.8" data-fx="up" style="height:335px">
+              <div class="band" style="background:var(--z2)"></div>
+              <div class="inner">
+                <div class="zn">High radiation area</div>
+                <div class="thr"><span style="font-size:22px;font-weight:700">&gt;</span><span class="big-num" data-count="100" data-t="8.4" data-d="1.2">100</span><span class="u">mrem</span></div>
+                <div class="alt">0.1 rem · 1 mSv</div>
+                <svg viewBox="0 0 320 92"><use href="#ico-dist30"/></svg>
+              </div>
+            </div>
+            <div class="card zone" data-t="13.4" data-fx="up" style="height:380px;border-color:var(--z3)">
+              <div class="band" style="background:var(--z3)"></div>
+              <div class="inner">
+                <div class="zn">Very high radiation area</div>
+                <div class="thr"><span style="font-size:22px;font-weight:700">&gt;</span><span class="big-num" style="color:var(--z3)" data-count="500" data-t="14.0" data-d="1.4">500</span><span class="u">rad</span></div>
+                <div class="alt">5 Gy · absorbed dose</div>
+                <svg viewBox="0 0 320 92"><use href="#ico-dist1m"/></svg>
+                <div class="warn" data-t="16.4" data-fx="pop">⚠ Life-threatening dose levels</div>
+              </div>
+            </div>
+          </div>
+          <div class="callout" style="left:600px;top:62px;width:610px;font-size:19px;font-weight:600;background:#fff;color:var(--ink);border:2px solid var(--z3)" data-t="19.6" data-fx="pop">Watch out: <b>very high</b> uses <b>rads / grays</b> (absorbed dose) at <b>1 m</b>. The other two use <b>rem</b> (dose equivalent) at <b>30 cm</b>.</div>
+          <div class="shortcut" style="left:72px;top:190px" data-t="24.4" data-fx="pop">Shortcut <span class="nums">5 · 100 · 500</span></div>
+        </section>
+
+        <!-- 8 · YEAR -->
+        <section class="scene" data-scene="year" data-dur="13" data-name="The compliance year">
+          <div class="eyebrow" data-t="0.1">§ 20.1003 · Year</div>
+          <div class="h" data-t="0.3" data-fx="up">What counts as <em>a year?</em></div>
+          <div class="months">
+            <div class="card month jan" data-t="1.0" data-fx="pop">JAN</div>
+            <div class="card month" data-t="1.15" data-fx="pop">FEB</div>
+            <div class="card month" data-t="1.3" data-fx="pop">MAR</div>
+            <div class="card month" data-t="1.45" data-fx="pop">APR</div>
+            <div class="card month" data-t="1.6" data-fx="pop">MAY</div>
+            <div class="card month" data-t="1.75" data-fx="pop">JUN</div>
+            <div class="card month" data-t="1.9" data-fx="pop">JUL</div>
+            <div class="card month" data-t="2.05" data-fx="pop">AUG</div>
+            <div class="card month" data-t="2.2" data-fx="pop">SEP</div>
+            <div class="card month" data-t="2.35" data-fx="pop">OCT</div>
+            <div class="card month" data-t="2.5" data-fx="pop">NOV</div>
+            <div class="card month" data-t="2.65" data-fx="pop">DEC</div>
+          </div>
+          <div class="abs" style="left:72px;top:205px;font-weight:800;color:var(--amber);font-size:20px" data-t="2.8" data-fx="fade">▼ The year starts in January</div>
+          <div class="year-notes">
+            <div class="card" data-t="5.2" data-fx="up"><b>The licensee can change the start date…</b>but only at the beginning of a year.</div>
+            <div class="card" data-t="8.0" data-fx="up"><b>No gaps, no overlaps</b>No days skipped, and no days counted twice.</div>
+          </div>
+        </section>
+
+        <!-- 9 · ANNUAL LIMITS -->
+        <section class="scene" data-scene="limits" data-dur="32" data-name="Annual dose limits">
+          <div class="eyebrow" data-t="0.1">§ 20.1201 · Occupational dose limits for adults</div>
+          <div class="h" data-t="0.3" data-fx="up">Your <em>yearly</em> dose budget</div>
+          <div class="limits">
+            <div class="lrow" data-t="1.4" data-fx="fade">
+              <div class="lab">Whole body (TEDE)<small>total effective dose equivalent</small></div>
+              <div class="track"><div class="bar" style="background:var(--amber);width:10%" data-t="2.0" data-fx="growx" data-d="1"></div><div class="bar-val" style="left:calc(10% + 12px)" data-t="2.6"><span data-count="5" data-t="2.0" data-d="1">5</span> rem<small>0.05 Sv</small></div></div>
+            </div>
+            <div class="lrow" data-t="5.6" data-fx="fade">
+              <div class="lab">Lens of the eye<small>eye dose equivalent</small></div>
+              <div class="track"><div class="bar" style="background:#c9741f;width:30%" data-t="6.2" data-fx="growx" data-d="1.2"></div><div class="bar-val" style="left:calc(30% + 12px)" data-t="7.0"><span data-count="15" data-t="6.2" data-d="1.2">15</span> rem<small>0.15 Sv</small></div></div>
+            </div>
+            <div class="lrow" data-t="9.6" data-fx="fade">
+              <div class="lab">Any single organ or tissue<small>deep + committed dose, except the eye lens</small></div>
+              <div class="track"><div class="bar" style="background:#7d5a8c;width:100%" data-t="10.2" data-fx="growx" data-d="1.6"></div><div class="bar-val" style="right:16px;color:#fff" data-t="11.4"><span data-count="50" data-t="10.2" data-d="1.6">50</span> rem<small style="color:#e9dff0">0.5 Sv</small></div></div>
+            </div>
+            <div class="lrow" data-t="13.6" data-fx="fade">
+              <div class="lab">Skin or any extremity<small>shallow dose</small></div>
+              <div class="track"><div class="bar" style="background:var(--blue);width:100%" data-t="14.2" data-fx="growx" data-d="1.6"></div><div class="bar-val" style="right:16px;color:#fff" data-t="15.4"><span data-count="50" data-t="14.2" data-d="1.6">50</span> rem<small style="color:#dbe6f5">0.5 Sv</small></div></div>
+            </div>
+          </div>
+          <div class="limit-notes">
+            <div class="card" data-t="18.2" data-fx="up">Whole body <b>and</b> single organ both apply: <b>whichever is more limiting</b> wins.</div>
+            <div class="card" data-t="22.4" data-fx="up">The only exception: <b>planned special exposures</b> under §&nbsp;20.1206.</div>
+          </div>
+          <div class="shortcut" style="left:880px;top:72px" data-t="26.0" data-fx="pop">Shortcut <span class="nums">5 · 15 · 50</span></div>
+        </section>
+
+        <!-- 10 · RECAP -->
+        <section class="scene" data-scene="recap" data-dur="16" data-name="Recap">
+          <div class="eyebrow" data-t="0.1">Recap</div>
+          <div class="h" data-t="0.3" data-fx="up">Two shortcuts to <em>remember</em></div>
+          <div class="recap">
+            <div class="card" data-t="1.2" data-fx="up">
+              <h3>Zones, in one hour</h3>
+              <div class="nums">5 · 100 · 500</div>
+              <ul>
+                <li><b>5 mrem</b> Radiation area (30 cm)</li>
+                <li><b>100 mrem</b> High radiation area (30 cm)</li>
+                <li><b>500 rad</b> Very high radiation area (1 m)</li>
+              </ul>
+            </div>
+            <div class="card" data-t="5.0" data-fx="up">
+              <h3>Yearly limits, adult workers</h3>
+              <div class="nums">5 · 15 · 50</div>
+              <ul>
+                <li><b>5 rem</b> Whole body (TEDE)</li>
+                <li><b>15 rem</b> Lens of the eye</li>
+                <li><b>50 rem</b> Skin, extremity, or any single organ</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <div class="caption" id="caption"></div>
+        <div class="progress-line" id="progress-line"></div>
+
+        <svg width="0" height="0" style="position:absolute">
+          <defs>
+            <symbol id="ico-person" viewBox="0 0 80 120" overflow="visible">
+              <circle cx="40" cy="20" r="16"/>
+              <path d="M18 44 Q40 34 62 44 L66 86 L56 86 L54 64 L54 118 L43 118 L41 84 L39 84 L37 118 L26 118 L26 64 L24 86 L14 86 Z"/>
+            </symbol>
+            <symbol id="ico-dist30" viewBox="0 0 320 92">
+              <circle cx="22" cy="46" r="11" fill="#b54515"/>
+              <path d="M22 46 m-20 0 a20 20 0 0 1 40 0" fill="none" stroke="#b54515" stroke-width="2" opacity=".5"/>
+              <line x1="40" y1="66" x2="128" y2="66" stroke="#1a1a1a" stroke-width="2"/>
+              <path d="M40 60v12M128 60v12" stroke="#1a1a1a" stroke-width="2"/>
+              <text x="84" y="88" text-anchor="middle" font-size="15" font-weight="800" font-family="Manrope" fill="#1a1a1a">30 cm (~1 ft)</text>
+              <use href="#ico-person" x="120" y="8" width="40" height="60" fill="#4a4a47"/>
+              <circle cx="232" cy="38" r="24" fill="#fff" stroke="#1a1a1a" stroke-width="2.5"/>
+              <path d="M232 38 V22 M232 38 H244" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
+              <text x="232" y="86" text-anchor="middle" font-size="15" font-weight="800" font-family="Manrope" fill="#1a1a1a">in 1 hour</text>
+            </symbol>
+            <symbol id="ico-dist1m" viewBox="0 0 320 92">
+              <circle cx="22" cy="46" r="11" fill="#b3261e"/>
+              <path d="M22 46 m-20 0 a20 20 0 0 1 40 0" fill="none" stroke="#b3261e" stroke-width="2" opacity=".5"/>
+              <line x1="40" y1="66" x2="176" y2="66" stroke="#1a1a1a" stroke-width="2"/>
+              <path d="M40 60v12M176 60v12" stroke="#1a1a1a" stroke-width="2"/>
+              <text x="108" y="88" text-anchor="middle" font-size="15" font-weight="800" font-family="Manrope" fill="#1a1a1a">1 m (~3 ft)</text>
+              <use href="#ico-person" x="168" y="8" width="40" height="60" fill="#4a4a47"/>
+              <circle cx="262" cy="38" r="24" fill="#fff" stroke="#1a1a1a" stroke-width="2.5"/>
+              <path d="M262 38 V22 M262 38 H274" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
+              <text x="262" y="86" text-anchor="middle" font-size="15" font-weight="800" font-family="Manrope" fill="#1a1a1a">in 1 hour</text>
+            </symbol>
+            <marker id="arrow-green" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2d7a4f"/></marker>
+            <marker id="arrow-amber" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#b54515"/></marker>
+            <marker id="arrow-blue" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2f6db5"/></marker>
+          </defs>
+        </svg>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="btn-play" aria-label="Play">▶</button>
+      <button id="btn-restart" aria-label="Restart">↺</button>
+      <div class="scrub">
+        <div class="ticks" id="ticks"></div>
+        <input type="range" id="scrub" min="0" max="1000" step="1" value="0" aria-label="Seek">
+      </div>
+      <span class="time" id="time">0:00 / 0:00</span>
+      <select id="speed" aria-label="Playback speed">
+        <option value="0.75">0.75×</option>
+        <option value="1" selected>1×</option>
+        <option value="1.25">1.25×</option>
+        <option value="1.5">1.5×</option>
+      </select>
+      <button id="btn-cc" class="on" aria-label="Toggle captions">CC</button>
+      <button id="btn-fs" aria-label="Full screen">⛶</button>
+    </div>
+    <div class="mobile-caption" id="mobile-caption"></div>
+  </div>
+
+  <div class="chapters" id="chapters"></div>
+  <p class="note">Keys: <b>Space</b> play/pause · <b>←/→</b> skip 5 s · <b>[ ]</b> previous/next chapter. Source: 10 CFR § 20.1003 (definitions) and § 20.1201 (occupational dose limits for adults).</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // Narration, timed in seconds from the start of each scene.
+  const CAPTIONS = {
+    title: [
+      [0.4, 'This page of the regulations is mostly definitions and numbers. Here is the plain version.'],
+      [3.0, 'It does two things. First, it names the zones, body parts and types of dose.'],
+      [4.6, 'Second, it sets a yearly dose budget for radiation workers.']
+    ],
+    people: [
+      [0.8, 'Start with the people the rules talk about.'],
+      [1.4, 'An adult is anyone 18 or older.'],
+      [4.2, 'A minor is anyone under 18.'],
+      [7.2, 'A member of the public is everyone else: anyone, except while they are receiving an occupational dose.'],
+      [11.6, 'A declared pregnant woman is a worker who chose to tell the licensee she is pregnant.'],
+      [14.0, 'Declaring is voluntary. It is her choice.'],
+      [16.0, 'It must be in writing, and include the estimated date of conception.'],
+      [18.5, 'It stays in effect until she withdraws it in writing, or is no longer pregnant.']
+    ],
+    occ: [
+      [0.6, 'Occupational dose is only the dose you get from your job.'],
+      [2.4, 'It is dose received on the job, when your assigned duties involve radiation.'],
+      [5.0, 'Background radiation does not count toward it.'],
+      [7.4, 'Neither do your own medical procedures, like X-rays.'],
+      [9.6, 'Or exposure to nuclear medicine patients who have been released.'],
+      [12.4, 'Or volunteering for medical research.'],
+      [14.6, 'Or dose you receive as a member of the public.'],
+      [17.4, 'On the job, with radiation duties: it counts. Everything else: it does not.']
+    ],
+    alara: [
+      [0.6, 'ALARA stands for As Low As Reasonably Achievable.'],
+      [1.4, 'It means making every reasonable effort to keep exposures well below the dose limits.'],
+      [3.4, 'Staying just under the limit is legal, but it is not ALARA.'],
+      [7.2, 'What counts as reasonable takes into account the state of technology,'],
+      [9.4, 'economics,'],
+      [10.8, 'and the benefit to public health.']
+    ],
+    body: [
+      [0.6, 'The rules split your body into two regions.'],
+      [1.2, 'The whole body is your core: your head and trunk, including the male gonads,'],
+      [2.2, 'your arms above the elbow, and your legs above the knee.'],
+      [9.6, 'Extremities are everything from the elbows and knees down:'],
+      [10.4, 'the arm below the elbow and the hand, the leg below the knee and the foot.'],
+      [16.0, 'Watch the joints: the elbow and the knee themselves count as extremities.']
+    ],
+    dose: [
+      [0.6, 'Next, the types of dose. They differ by how deep in the tissue the dose is measured.'],
+      [2.0, 'Shallow dose is the dose to your skin.'],
+      [3.6, 'It is measured just 0.007 centimeters down, or 7 milligrams per square centimeter, for the skin of the whole body or an extremity.'],
+      [8.6, 'Deep dose is from external radiation that penetrates into the body.'],
+      [10.6, 'It is measured 1 centimeter down, or 1000 milligrams per square centimeter, for external whole-body exposure.'],
+      [15.0, 'TEDE is your total.'],
+      [16.6, 'It is the dose from radiation outside your body,'],
+      [18.8, 'plus the committed dose from any radioactive material you took in.']
+    ],
+    restricted: [
+      [0.6, 'Areas are classified first by who controls access.'],
+      [1.2, 'In an unrestricted area, the licensee does not limit or control who goes in.'],
+      [3.6, 'In a restricted area, the licensee limits access.'],
+      [8.4, 'Living quarters cannot be a restricted area.'],
+      [11.2, 'But separate rooms in a residential building can be set apart as restricted areas.']
+    ],
+    zones: [
+      [0.6, 'Next, how hot an area is. Picture standing near the source for one hour.'],
+      [2.0, 'A radiation area: you would get more than 5 millirem in that hour, measured 30 centimeters away, about a foot.'],
+      [7.8, 'A high radiation area: more than 100 millirem in an hour, also at 30 centimeters.'],
+      [13.4, 'A very high radiation area: more than 500 rad in an hour, measured 1 meter away, about 3 feet.'],
+      [16.4, 'At that level, the dose can be life-threatening.'],
+      [19.6, 'Note the switch: very high uses absorbed dose, in rads or grays, at 1 meter. The other two use rem at 30 centimeters.'],
+      [24.4, 'Shortcut: 5, 100, 500.']
+    ],
+    year: [
+      [0.6, 'For compliance, a year starts in January.'],
+      [5.2, 'A licensee can change the start date, but only at the beginning of a year.'],
+      [8.0, 'And no days can be skipped, or counted twice.']
+    ],
+    limits: [
+      [0.6, 'Now the yearly dose budget for adult radiation workers.'],
+      [1.6, 'Whole body, measured as TEDE: 5 rem a year.'],
+      [5.8, 'The lens of the eye: 15 rem.'],
+      [9.8, 'Any single organ or tissue, other than the lens of the eye, counting deep plus committed dose: 50 rem.'],
+      [13.8, 'And shallow dose to the skin, or any extremity like your hands: 50 rem.'],
+      [18.2, 'The whole-body limit and the single-organ limit both apply. Whichever is more limiting wins.'],
+      [22.4, 'The only exception to these limits is a planned special exposure, under section 20.1206.'],
+      [26.0, 'Shortcut: 5, 15, 50.']
+    ],
+    recap: [
+      [0.6, 'So, two shortcuts.'],
+      [1.4, 'Zones, measured over one hour: 5, 100, 500.'],
+      [5.2, 'Yearly limits for adult workers: 5, 15, 50.'],
+      [10.0, 'Remember: only dose from your job counts, and ALARA means staying well below the limits, not just under them.']
+    ]
+  };
+
+  const stage = document.getElementById('stage');
+  const viewport = document.getElementById('viewport');
+  const captionEl = document.getElementById('caption');
+  const mobileCaption = document.getElementById('mobile-caption');
+  const progressLine = document.getElementById('progress-line');
+  const scrub = document.getElementById('scrub');
+  const timeEl = document.getElementById('time');
+  const playBtn = document.getElementById('btn-play');
+
+  const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+  const easeOut = p => 1 - Math.pow(1 - p, 3);
+  const easeBack = p => { const c = 1.7; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
+  const fmt = s => { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+
+  // Build the scene list and element animation specs once.
+  let cursor = 0;
+  const scenes = [...stage.querySelectorAll('.scene')].map(el => {
+    const s = {
+      el, id: el.dataset.scene, name: el.dataset.name,
+      start: cursor, dur: parseFloat(el.dataset.dur),
+      items: [...el.querySelectorAll('[data-t]')].map(n => {
+        const [tin, tout] = n.dataset.t.split(',').map(Number);
+        const from = (n.dataset.from || '0,0').split(',').map(Number);
+        return { n, tin, tout, fx: n.dataset.fx || 'fade', d: parseFloat(n.dataset.d || '0.7'), from };
+      }),
+      counters: [...el.querySelectorAll('[data-count]')].map(n => ({
+        n, target: parseFloat(n.dataset.count), tin: parseFloat(n.dataset.t), d: parseFloat(n.dataset.d || '1')
+      })),
+      parts: [...el.querySelectorAll('[data-part]')]
+    };
+    cursor += s.dur;
+    return s;
+  });
+  const TOTAL = cursor;
+
+  // ── per-element effects ──
+  function applyFx(it, local, sceneDur) {
+    const p = clamp((local - it.tin) / it.d, 0, 1);
+    const outStart = isNaN(it.tout) ? Infinity : it.tout;
+    const q = 1 - clamp((local - outStart) / 0.4, 0, 1);
+    const st = it.n.style;
+    const e = easeOut(p);
+    let op = q, tf = '';
+    switch (it.fx) {
+      case 'fade': op *= e; break;
+      case 'up': op *= e; tf = `translateY(${(1 - e) * 26}px)`; break;
+      case 'left': op *= e; tf = `translateX(${(1 - e) * -36}px)`; break;
+      case 'scale': op *= e; tf = `scale(${0.88 + 0.12 * e})`; break;
+      case 'pop': op *= clamp(p * 3, 0, 1); tf = `scale(${p === 0 ? 0.6 : 0.6 + 0.4 * easeBack(p)})`; break;
+      case 'fly': op *= clamp(p * 2.5, 0, 1); tf = `translate(${(1 - e) * it.from[0]}px, ${(1 - e) * it.from[1]}px)`; break;
+      case 'growx': op *= p > 0 ? 1 : 0; tf = `scaleX(${e})`; break;
+      case 'growy': op *= p > 0 ? 1 : 0; tf = `scaleY(${e})`; st.transformOrigin = 'center bottom'; st.transformBox = 'fill-box'; break;
+      case 'draw': op *= p > 0 ? 1 : 0; st.strokeDasharray = '1'; st.strokeDashoffset = String(1 - e); break;
+    }
+    if (it.fx === 'scale' || it.fx === 'pop') { st.transformBox = 'fill-box'; st.transformOrigin = 'center'; }
+    st.opacity = op;
+    st.transform = tf;
+  }
+
+  function hexMix(a, b, k) {
+    const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+    const ch = s => [(s >> 16) & 255, (s >> 8) & 255, s & 255];
+    const [r1, g1, b1] = ch(pa), [r2, g2, b2] = ch(pb);
+    const m = (x, y) => Math.round(x + (y - x) * k);
+    return `rgb(${m(r1, r2)},${m(g1, g2)},${m(b1, b2)})`;
+  }
+
+  function renderBody(s, local) {
+    for (const part of s.parts) {
+      const at = parseFloat(part.dataset.at);
+      const k = easeOut(clamp((local - at) / 0.6, 0, 1));
+      const color = part.dataset.part === 'wb' ? '#b54515' : '#2f6db5';
+      part.setAttribute('fill', hexMix('#d6d1c6', color, k));
+      if (part.dataset.joint) {
+        const pulse = local > 16 ? 0.5 + 0.5 * Math.sin((local - 16) * 6) : 0;
+        part.setAttribute('stroke', pulse > 0 ? '#1a1a1a' : '#fff');
+        part.setAttribute('stroke-width', String(3 + pulse * 4));
+      }
+    }
+  }
+
+  let captionsOn = true;
+  let lastCaption = null;
+
+  function render(t) {
+    t = clamp(t, 0, TOTAL);
+    let caption = '';
+    for (const s of scenes) {
+      const local = t - s.start;
+      const isLast = s === scenes[scenes.length - 1];
+      const visible = local >= 0 && (local < s.dur || (isLast && local <= s.dur));
+      if (!visible) { s.el.style.display = 'none'; continue; }
+      s.el.style.display = 'block';
+      const fin = clamp(local / 0.35, 0, 1);
+      const fout = isLast ? 1 : clamp((s.dur - local) / 0.35, 0, 1);
+      s.el.style.opacity = Math.min(fin, fout);
+      for (const it of s.items) applyFx(it, local, s.dur);
+      for (const c of s.counters) {
+        const k = easeOut(clamp((local - c.tin) / c.d, 0, 1));
+        c.n.textContent = Math.round(c.target * k);
+      }
+      if (s.parts.length) renderBody(s, local);
+      for (const [ct, text] of (CAPTIONS[s.id] || [])) if (local >= ct) caption = text;
+    }
+    const shown = captionsOn ? caption : '';
+    if (shown !== lastCaption) {
+      captionEl.textContent = shown;
+      mobileCaption.textContent = caption;
+      lastCaption = shown;
+    }
+    progressLine.style.width = (t / TOTAL * 100) + '%';
+    scrub.value = Math.round(t / TOTAL * 1000);
+    timeEl.textContent = fmt(t) + ' / ' + fmt(TOTAL);
+    const cur = currentScene(t);
+    chapterBtns.forEach((b, i) => b.classList.toggle('active', i === cur));
+  }
+
+  function currentScene(t) {
+    let idx = 0;
+    scenes.forEach((s, i) => { if (t >= s.start) idx = i; });
+    return idx;
+  }
+
+  // ── chapters & ticks ──
+  const chapterWrap = document.getElementById('chapters');
+  const ticks = document.getElementById('ticks');
+  const chapterBtns = scenes.map((s, i) => {
+    const b = document.createElement('button');
+    b.innerHTML = `<span>${String(i + 1).padStart(2, '0')} · ${fmt(s.start)}</span>${s.name}`;
+    b.addEventListener('click', () => seek(s.start));
+    chapterWrap.appendChild(b);
+    if (i > 0) {
+      const tk = document.createElement('i');
+      tk.style.left = (s.start / TOTAL * 100) + '%';
+      ticks.appendChild(tk);
+    }
+    return b;
+  });
+
+  // ── fit stage to viewport ──
+  function fit() {
+    const r = viewport.getBoundingClientRect();
+    const k = Math.min(r.width / 1280, r.height / 720);
+    stage.style.transform = `translate(${(r.width - 1280 * k) / 2}px, ${(r.height - 720 * k) / 2}px) scale(${k})`;
+  }
+  window.addEventListener('resize', fit);
+  document.addEventListener('fullscreenchange', fit);
+  fit();
+
+  // ── playback ──
+  let t = 0, playing = false, last = 0, speed = 1;
+  function frame(now) {
+    if (!playing) return;
+    t += (now - last) / 1000 * speed;
+    last = now;
+    if (t >= TOTAL) { t = TOTAL; setPlaying(false); }
+    render(t);
+    if (playing) requestAnimationFrame(frame);
+  }
+  function setPlaying(on) {
+    if (on && t >= TOTAL) t = 0;
+    playing = on;
+    playBtn.textContent = on ? '❚❚' : '▶';
+    playBtn.setAttribute('aria-label', on ? 'Pause' : 'Play');
+    if (on) { last = performance.now(); requestAnimationFrame(frame); }
+  }
+  function seek(x) { t = clamp(x, 0, TOTAL); render(t); }
+
+  playBtn.addEventListener('click', () => setPlaying(!playing));
+  viewport.addEventListener('click', () => setPlaying(!playing));
+  document.getElementById('btn-restart').addEventListener('click', () => { seek(0); setPlaying(true); });
+  scrub.addEventListener('input', () => seek(scrub.value / 1000 * TOTAL));
+  document.getElementById('speed').addEventListener('change', e => { speed = parseFloat(e.target.value); });
+  const ccBtn = document.getElementById('btn-cc');
+  ccBtn.addEventListener('click', () => { captionsOn = !captionsOn; ccBtn.classList.toggle('on', captionsOn); lastCaption = null; render(t); });
+  document.getElementById('btn-fs').addEventListener('click', () => {
+    const el = document.querySelector('.player');
+    if (document.fullscreenElement) document.exitFullscreen();
+    else if (el.requestFullscreen) el.requestFullscreen();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+    if (e.key === ' ') { e.preventDefault(); setPlaying(!playing); }
+    else if (e.key === 'ArrowRight') seek(t + 5);
+    else if (e.key === 'ArrowLeft') seek(t - 5);
+    else if (e.key === ']') { const i = currentScene(t); if (i < scenes.length - 1) seek(scenes[i + 1].start); }
+    else if (e.key === '[') { const i = currentScene(t); seek(t - scenes[i].start > 1.5 ? scenes[i].start : scenes[Math.max(0, i - 1)].start); }
+  });
+
+  // Record mode (?record): stage only, driven externally frame by frame.
+  if (new URLSearchParams(location.search).has('record')) {
+    document.body.classList.add('record');
+    fit();
+  }
+  window.__duration = TOTAL;
+  window.__seek = seek;
+
+  render(0);
+})();
+</script>
+</body>
+</html>
