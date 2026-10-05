@@ -84,6 +84,9 @@ table.ws select { font: 600 13px 'Manrope', sans-serif; padding: 3px; border-rad
   main { padding: 1rem 0.6rem 3rem; }
 }
 
+/* embed mode (?embed): standalone in an iframe, no link out to the hub */
+body.embed header a.back { display: none; }
+
 /* recording mode: only the video canvas at 1920x1080 */
 body.record { background: #f6f3ee; overflow: hidden; }
 body.record > header { display: none; }

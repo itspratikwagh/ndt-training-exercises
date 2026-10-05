@@ -507,7 +507,7 @@
       e.preventDefault(); doHit(hh);
       if (hh.knob) {                                   // hold to keep turning; speeds up the longer you hold
         let n = 0; const dir = hh.knob;
-        hold = setInterval(() => { n++; if (n > 3) doHit({ knob: dir * (n > 22 ? 10 : n > 10 ? 5 : 1) }); }, 110);
+        hold = setInterval(() => { n++; if (n > 4) doHit({ knob: dir * (n > 30 ? 25 : n > 20 ? 10 : n > 12 ? 5 : 1) }); }, 80);
       }
     });
     const stop = () => { if (hold) clearInterval(hold); hold = null; };
@@ -720,7 +720,7 @@
           <canvas id="block" width="800" height="440" aria-label="Step block — click a step to place the probe"></canvas>
           <div class="panel"><div class="ph"><b>Steps</b><label><input type="checkbox" id="hints" checked> Highlight keys</label></div>
             <ol class="steps" id="steps"></ol>
-            <div class="done" id="done" hidden>✓ Lesson complete. ${cfg.doneText || ''}</div>
+            <div class="done" id="done" hidden>✓ Exercise complete. ${cfg.doneText || ''}</div>
             <div class="row"><button id="reset">Start over</button></div></div>
           <div id="extra"></div>
         </aside>
@@ -737,6 +737,7 @@
     if (cfg.extra) cfg.extra(document.getElementById('extra'), trainer);
     const params = new URLSearchParams(location.search);
     if (params.has('record')) document.body.classList.add('record');
+    if (params.has('embed')) document.body.classList.add('embed');   // ?embed: for iframes, hides the link back to the hub
     window.__trainer = trainer;
     if (!hasVideo) return;
     const video = mountVideo({
