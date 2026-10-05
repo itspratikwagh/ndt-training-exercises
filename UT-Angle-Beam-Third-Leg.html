@@ -96,7 +96,7 @@
   </div>
 </header>
 <main class="wrap">
-  <p class="lede">A stiffener next to this weld means you can only scan from one side. With a 30° bevel and a 60° wedge, legs 1 and 2 can't reach the top of the far-side fusion face, but leg 3 can, as long as the A-scan range is long enough to show it.</p>
+  <p class="lede">A stiffener next to this weld means you can only scan from one side. With a 30° bevel and a 60° wedge, legs 1 and 2 can't reach the top of the far-side fusion face from the base metal, but leg 3 can, as long as the A-scan range is long enough to show it. Then compare it with leg 1 from the flush cap.</p>
   <div class="trainer">
     <div class="stage" id="stage">
       <div class="cvwrap">
@@ -113,7 +113,7 @@
       <div class="panel">
         <div class="ph"><b>Steps</b></div>
         <ol class="steps" id="steps"></ol>
-        <div class="done" id="done" hidden>✓ Exercise complete. One-sided access: increase the range and use leg 3.</div>
+        <div class="done" id="done" hidden>✓ Exercise complete. One side only: leg 1 from a flush cap, or leg 3 with a longer range.</div>
         <div class="row"><button id="reset">Start over</button></div>
       </div>
     </aside>
@@ -122,7 +122,8 @@
   <div class="card"><ul>
     <li>Sometimes you can only scan from <b>one side</b> of a weld: a stiffener, flange, nozzle or other structure is in the way.</li>
     <li>With a 30° bevel and a 60° wedge, <b>leg 1</b> meets only the <b>lower</b> part of the far-side fusion face. To reach higher, the probe would have to sit on the weld.</li>
-    <li><b>Leg 3</b> runs the same way as leg 1 (down at 60°) after leg 2 bounces off the top surface, so it meets the <b>upper</b> far-side face square-on. The cap has to be ground flush for that bounce.</li>
+    <li><b>Leg 3</b> runs the same way as leg 1 (down at 60°) after leg 2 bounces off the top surface, so it meets the <b>upper</b> far-side face square-on. It bounces off the top surface right where leg 1's probe would sit, so it needs the cap ground flush.</li>
+    <li>With the cap ground flush, <b>leg 1 from the cap</b> reaches the same flaw with a much shorter sound path and a stronger echo, if your procedure allows scanning on the weld.</li>
     <li>One skip (leg 1 + leg 2) at 60° in 1 inch plate is <b>4.000″</b> of sound path. A leg 3 echo comes after that, so <b>set the range past one skip</b> or the echo is off the screen.</li>
     <li>On leg 3 the sound is heading down from the top again: depth = sound path × cos 60° − 2 × thickness. The instrument's leg and depth readouts do this for you.</li>
   </ul></div>
@@ -193,17 +194,20 @@
     return null;
   }
   const onScreen = e => e && e.amp > 20 && e.s <= st.range - 0.05;
+  const capSpot = () => faceX(FLAW.side, FLAW.y) - FLAW.y * Math.tan(ANG * RAD);             // leg 1 onto the middle of the flaw, probe on the cap
+  const maxX = () => ['cap', 'end'].includes(q.phase) ? STIFF.x1 - 0.2 : capL - 0.25;
   const legSpot = () => faceX(FLAW.side, FLAW.y) - (2 * T + FLAW.y) * Math.tan(ANG * RAD);   // leg 3 onto the middle of the flaw
 
   // ---------- lesson flow ----------
-  const fresh = () => ({ phase: 'why', fb: '', answered: {}, scanned: 0 });
+  const fresh = () => ({ phase: 'why', fb: '', answered: {}, scanned: 0, leg3: null, leg1: null });
   let q = fresh();
   const STEPS = [
     { text: 'Why can you only scan from one side?', done: () => !!q.answered.why },
     { text: 'Scan with <b>legs 1 and 2</b> for the flaw on the upper far-side face.', done: () => !!q.answered.scan12 },
     { text: 'Slide the probe back until <b>leg 3</b> hits the flaw. Why is the screen flat?', done: () => !!q.answered.leg3 },
     { text: 'Increase the <b>A-scan range</b> until the echo shows up.', done: () => !!q.answered.range },
-    { text: 'Which leg is the echo on?', done: () => !!q.answered.leg }
+    { text: 'Which leg is the echo on?', done: () => !!q.answered.leg },
+    { text: 'The cap is flush: put the probe <b>on the weld</b> and compare leg 1 with leg 3.', done: () => !!q.answered.cap }
   ];
   function renderSteps() {
     const i = STEPS.findIndex(s => !s.done());
@@ -231,7 +235,7 @@
       case 'scan12-q':
         show(`<div class="ql">Question</div><div class="qq">Legs 1 and 2 never found it. Why?</div>${opts('s12', [['low', 'Leg 1 only reaches the lower part of the far-side face; leg 2 heads back up on the near side'], ['gain', 'The gain is too low'], ['wedge', 'The 60° wedge is wrong for a 30° bevel']])}<div class="fb">${q.fb}</div>`); break;
       case 'scan12-ok':
-        show(`<div class="ql">Out of reach</div><div class="qq"><span class="ok">Right.</span> To reach the upper far-side face with leg 1, the probe would have to sit on the weld.</div><div class="ex">But the sound keeps going. After leg 2 bounces off the top surface (the ground-flush cap), <b>leg 3</b> heads down again at 60°, the same way as leg 1.</div><button class="go" data-a="next" data-v="leg3">Show leg 3 →</button>`); break;
+        show(`<div class="ql">Out of reach</div><div class="qq"><span class="ok">Right.</span> To reach the upper far-side face with leg 1 from here, the probe would have to sit on the weld. (You will try that at the end.)</div><div class="ex">But the sound keeps going. After leg 2 bounces off the top surface (the ground-flush cap), <b>leg 3</b> heads down again at 60°, the same way as leg 1.</div><button class="go" data-a="next" data-v="leg3">Show leg 3 →</button>`); break;
       case 'leg3':
         show(`<div class="ql">Leg 3</div><div class="qq">Slide the probe <b>back, away from the weld</b>, until leg 3 runs into the flaw.</div><div class="qs">${live()}</div>`); break;
       case 'leg3-q':
@@ -244,11 +248,17 @@
       }
       case 'leg-ok': {
         const e = echo();
-        show(`<div class="ql">Leg 3</div><div class="qq"><span class="ok">Right: past ${IN(SKIP_S)} is leg 3.</span></div><div class="ex">On leg 3 the sound is heading down from the top again, so the DEPTH readout shows ${IN(e.depth)} below the surface: the upper part of the far-side face. With one-sided access, set the range past one skip and use leg 3. It's weaker (it has traveled farther) and needs a flat cap to bounce off.</div><button class="go" data-a="next" data-v="end">Finish →</button>`); break;
+        show(`<div class="ql">Leg 3</div><div class="qq"><span class="ok">Right: past ${IN(SKIP_S)} is leg 3.</span></div><div class="ex">On leg 3 the sound is heading down from the top again, so the DEPTH readout shows ${IN(e.depth)} below the surface: the upper part of the far-side face. With one-sided access, set the range past one skip and use leg 3. It's weaker (it has traveled farther) and needs a flat cap to bounce off.</div><button class="go" data-a="next" data-v="cap">Next →</button>`); break;
       }
+      case 'cap':
+        show(`<div class="ql">Leg 1 from the cap</div><div class="qq">The cap is ground flush, so the probe can sit <b>on the weld</b>. Slide the probe onto the cap until leg 1 hits the same flaw.</div><div class="qs">${live()} Leg 3 gave ${pct(q.leg3.amp)}.</div>`); break;
+      case 'cap-q':
+        show(`<div class="ql">Compare</div><div class="qq">Leg 1: <b>${pct(q.leg1.amp)}</b> at ${IN(q.leg1.s)}. Leg 3: <b>${pct(q.leg3.amp)}</b> at ${IN(q.leg3.s)}. Same flaw, same depth (${IN(q.leg1.depth)}). Why is leg 1 stronger?</div>${opts('cap', [['path', 'Its sound path is much shorter, so less spread and attenuation'], ['square', 'Leg 1 meets the face more square-on'], ['cap', 'The weld metal makes the echo louder']])}<div class="fb">${q.fb}</div>`); break;
+      case 'cap-ok':
+        show(`<div class="ql">Leg 1 or leg 3?</div><div class="qq"><span class="ok">Right.</span> Both meet the face square-on, but leg 3 traveled almost 8 times as far.</div><div class="ex">Leg 3 bounces off the top surface at the same spot where leg 1's probe sits, so both need the flush cap. If your procedure lets you scan on a flush weld, leg 1 from the cap gives the stronger echo. If it doesn't, or the cap isn't smooth enough to couple to, leg 3 from the base metal still finds the flaw: sound bounces off a surface you couldn't couple a probe to. Either way, set the range to fit the leg you use.</div><button class="go" data-a="next" data-v="end">Finish →</button>`); break;
       case 'end': {
         const e = echo();
-        show(`<div class="ql">Exercise complete · free play</div><div class="qq">One side only? Increase the range and use leg 3.</div><div class="ex">Keep playing: slide the probe and change the range. Watch which leg each echo is on, and what happens to the echo when the range is too short.</div><div class="fb">${onScreen(e) ? `Echo ${pct(e.amp)} on leg ${e.leg}, depth ${IN(e.depth)}.` : e && e.amp > 20 ? `Leg ${e.leg} hits the flaw, but the echo at ${IN(e.s)} is off the screen (range ${st.range.toFixed(1)}″).` : 'No flaw echo here.'}</div>`); break;
+        show(`<div class="ql">Exercise complete · free play</div><div class="qq">One side only? Leg 1 from a flush cap, or leg 3 with the range set past one skip.</div><div class="ex">Keep playing: slide the probe (on the base metal or the cap) and change the range. Watch which leg each echo is on, and what happens to the echo when the range is too short.</div><div class="fb">${onScreen(e) ? `Echo ${pct(e.amp)} on leg ${e.leg}, depth ${IN(e.depth)}.` : e && e.amp > 20 ? `Leg ${e.leg} hits the flaw, but the echo at ${IN(e.s)} is off the screen (range ${st.range.toFixed(1)}″).` : 'No flaw echo here.'}</div>`); break;
       }
     }
   }
@@ -256,11 +266,12 @@
     if (a === 'why') { if (v === 'stiff') { q.answered.why = true; q.fb = ''; q.phase = 'why-ok'; } else q.fb = v === 'thick' ? '<span class="no">Both plates are 1 inch.</span> Look at what\'s sitting on top of the plate, right of the weld.' : '<span class="no">Sound goes whichever way the wedge points.</span> Turn the probe around and it scans right to left. Look at the plate, right of the weld.'; }
     if (a === 's12') { if (v === 'low') { q.answered.scan12 = true; q.fb = ''; q.phase = 'scan12-ok'; } else q.fb = v === 'gain' ? '<span class="no">More gain only makes echoes taller.</span> No sound is coming back at all. Look at where legs 1 and 2 go.' : '<span class="no">It\'s the right wedge:</span> 30° + 60° = 90°. The problem is where the legs can reach.'; }
     if (a === 'l3') { if (v === 'range') { q.answered.leg3 = true; q.fb = ''; q.phase = 'range'; } else q.fb = v === 'weak' ? '<span class="no">It has lost some, not all.</span> Leg 1 + leg 2 is already ' + IN(SKIP_S) + ' of sound path, and leg 3 adds more. Where would that land on a ' + st.range.toFixed(1) + '″ screen?' : '<span class="no">It does:</span> leg 3 runs the same way as leg 1, square-on to the far-side face. See the green circle.'; }
+    if (a === 'cap') { if (v === 'path') { q.answered.cap = true; q.fb = ''; q.phase = 'cap-ok'; } else q.fb = v === 'square' ? '<span class="no">Both are square-on:</span> leg 3 runs exactly the same way as leg 1. Compare the sound paths.' : '<span class="no">Weld metal doesn\'t add energy.</span> Compare how far the sound traveled each time.'; }
     if (a === 'leg') { if (v === '3') { q.answered.leg = true; q.fb = ''; q.phase = 'leg-ok'; } else q.fb = '<span class="no">Look at the dashed line on the screen.</span> Everything past ' + IN(SKIP_S) + ' is after leg 1 and leg 2.'; }
     if (a === 'next') { q.fb = ''; q.phase = v; if (v === 'scan12') q.scanned = 0; if (v === 'leg3') { st.legs = 3; st.xp = 3.0; } }
     render();
   }
-  const unlocked = () => ['place', 'scan12', 'leg3', 'end'].includes(q.phase);
+  const unlocked = () => ['place', 'scan12', 'leg3', 'cap', 'end'].includes(q.phase);
   const lockMsg = () => q.phase === 'range' ? 'Turn up the A-scan range first' : q.phase.endsWith('-ok') ? 'Press Next on the card to continue' : 'Answer the question first';
   let toast = null;
   const say = t => { toast = { t, at: performance.now() }; };
@@ -272,8 +283,8 @@
   const SNAP = 0.12;
   function setX(x) {
     const prev = st.xp, phase0 = q.phase;
-    x = Math.round(Math.min(capL - 0.25, Math.max(0.55, x)) * 100) / 100;
-    const spot = q.phase === 'leg3' ? legSpot() : null;
+    x = Math.round(Math.min(maxX(), Math.max(0.55, x)) * 100) / 100;
+    const spot = q.phase === 'leg3' ? legSpot() : q.phase === 'cap' ? capSpot() : null;
     if (spot != null) {
       const lo = Math.min(prev == null ? x : prev, x), hi = Math.max(prev == null ? x : prev, x);
       if (spot >= lo - SNAP && spot <= hi + SNAP) x = spot;
@@ -281,7 +292,7 @@
     st.xp = x;
     if (q.phase === 'place') q.phase = 'scan12';
     else if (q.phase === 'scan12' && prev != null) q.scanned += Math.abs(st.xp - prev);
-    if (spot != null && Math.abs(st.xp - spot) < 1e-9) q.phase = 'leg3-q';
+    if (spot != null && Math.abs(st.xp - spot) < 1e-9) { if (q.phase === 'leg3') { q.leg3 = echo(); q.phase = 'leg3-q'; } else { q.leg1 = echo(); q.phase = 'cap-q'; } }
     render();
     if (!unlocked() || q.phase !== phase0) st.drag = null;
   }
@@ -301,7 +312,7 @@
   cv.addEventListener('pointerup', e => {
     if (!st.drag) return;
     const p = pos(e), was = st.drag; st.drag = null;
-    if (st.xp == null && p.y + was.dy > TOPY - 70 && p.y + was.dy < Y(T) + 20 && p.x > PX && p.x < X(capL)) setX((p.x + was.dx - PX) / S);
+    if (st.xp == null && p.y + was.dy > TOPY - 70 && p.y + was.dy < Y(T) + 20 && p.x > PX && p.x < X(maxX())) setX((p.x + was.dx - PX) / S);
   });
   cv.tabIndex = 0;
   cv.addEventListener('keydown', e => {
@@ -360,7 +371,7 @@
     ctx.strokeStyle = '#7a6a52'; ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
     for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(X(faceX(sd, 0)), Y(0)); ctx.lineTo(X(faceX(sd, T)), Y(T)); ctx.stroke(); }
     ctx.setLineDash([]);
-    txt('cap ground flush', X(WC), Y(0) - 6, { size: 11, w: 700, c: '#7a6a52', a: 'center' });
+    if (st.xp == null || st.xp < capL - 0.6) txt('cap ground flush', X(WC), Y(0) - 6, { size: 11, w: 700, c: '#7a6a52', a: 'center' });
     // bevel angle on the far side
     const x0 = capR;
     ctx.strokeStyle = C.soft; ctx.lineWidth = 1.2; ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.moveTo(X(x0), Y(0)); ctx.lineTo(X(x0), Y(0.55)); ctx.stroke(); ctx.setLineDash([]);
