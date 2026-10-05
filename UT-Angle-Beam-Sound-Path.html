@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UT Angle Beam Sound Path</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page: #f6f3ee; --panel: #fff; --ink: #1f1d1b; --ink-soft: #57524d; --ink-faded: #8f8882; --rule: #ddd6cc;
+    --red: #A82020; --red-deep: #7a1818; --navy: #0f1c2b; --yellow: #e8b923; --blue: #2a6fdb;
+    --good: #0d904f; --good-tint: #e6f4ea; --bad: #d93025;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Manrope', system-ui, sans-serif; background: var(--page); color: var(--ink); line-height: 1.5; min-height: 100vh; }
+  header { background: linear-gradient(135deg, var(--red-deep), var(--red)); color: #fff; padding: 1.4rem 1.5rem 1.2rem; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  header .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; margin-bottom: 6px; }
+  header h1 { font-size: clamp(22px, 3.4vw, 30px); font-weight: 800; letter-spacing: -0.01em; line-height: 1.15; text-wrap: balance; }
+  header a.back { color: #fff; opacity: 0.8; font-size: 13px; text-decoration: none; display: inline-block; margin-top: 8px; }
+  header a.back:hover { opacity: 1; text-decoration: underline; }
+  body.embed header a.back { display: none; }
+  main { padding: 1.25rem 1rem 3rem; }
+  .lede { color: var(--ink-soft); font-size: 15px; max-width: 820px; margin-bottom: 0.9rem; }
+  h2 { font-size: 20px; font-weight: 800; margin: 2rem 0 0.5rem; }
+  button { font: 700 14px 'Manrope', sans-serif; border-radius: 8px; border: 1px solid var(--rule); background: #fff; color: var(--ink); cursor: pointer; padding: 8px 12px; touch-action: manipulation; }
+  button:hover { border-color: var(--red); }
+  button:focus-visible { outline: 3px solid rgba(42,111,219,0.4); outline-offset: 1px; }
+
+  .trainer { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 12px; align-items: start; }
+  .stage { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 10px; position: relative; }
+  .stage canvas { display: block; width: 100%; height: auto; border-radius: 8px; touch-action: none; outline: none; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+  .toolbar .lab { font: 700 11px 'JetBrains Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faded); }
+  .wedges button.on { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .toolbar .sp { flex: 1; }
+  .help { font-size: 13px; color: var(--ink-soft); margin-top: 8px; }
+
+  .side { display: grid; gap: 10px; }
+  .panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 12px; }
+  .ph { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .steps { list-style: none; counter-reset: s; display: grid; gap: 6px; }
+  .steps li { counter-increment: s; position: relative; padding: 7px 10px 7px 36px; border-radius: 8px; border: 1px solid transparent; font-size: 14px; color: var(--ink-faded); }
+  .steps li::before { content: counter(s); position: absolute; left: 8px; top: 7px; width: 20px; height: 20px; border-radius: 50%; border: 2px solid currentColor; display: grid; place-items: center; font: 700 11px 'JetBrains Mono', monospace; }
+  .steps li.now { color: var(--ink); border-color: var(--yellow); background: #fff8e1; font-weight: 600; }
+  .steps li.done { color: var(--good); }
+  .steps li.done::before { content: '✓'; background: var(--good); color: #fff; border-color: var(--good); }
+  .done { margin-top: 10px; padding: 10px 12px; border-radius: 8px; background: var(--good-tint); border: 1px solid var(--good); color: var(--good); font-weight: 700; font-size: 14px; }
+  .done[hidden] { display: none; }
+  .row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+  /* question card: floats over the right half of the A-scan, which stays empty in this exercise */
+  .qpop { position: absolute; right: 2.4%; top: 61%; width: 44%; z-index: 2; background: #fff; border: 2px solid var(--yellow); border-radius: 12px; padding: 12px 14px; box-shadow: 0 10px 30px rgba(20,16,10,0.28); }
+  .qpop[hidden] { display: none; }
+  .qpop .ql { font: 700 10.5px 'JetBrains Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; color: var(--red); margin-bottom: 4px; }
+  .qpop .qq { font-size: 15.5px; font-weight: 800; line-height: 1.3; text-wrap: balance; }
+  .qpop .qs { font-size: 13px; color: var(--ink-soft); margin-top: 4px; }
+  .qpop .ex { font-size: 13.5px; color: var(--ink-soft); margin-top: 8px; }
+  .qpop .fb { font-size: 13.5px; margin-top: 8px; }
+  .qpop .opts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .qpop .opts button { flex: 1 1 auto; }
+  .qpop .go { margin-top: 10px; width: 100%; background: var(--red); color: #fff; border-color: var(--red); }
+  .qpop table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13.5px; }
+  .qpop td { padding: 4px 6px; border-bottom: 1px solid var(--rule); }
+  .qpop td:last-child { text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+  .qpop.mini { top: 61%; }
+  .ok { color: var(--good); font-weight: 800; } .no { color: var(--bad); font-weight: 800; }
+  .card { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 18px; }
+  .card ul { padding-left: 1.2em; font-size: 15px; color: var(--ink-soft); display: grid; gap: 4px; }
+  .card b { color: var(--ink); }
+  @media (max-width: 900px) {
+    .trainer { grid-template-columns: 1fr; }
+    main { padding: 1rem 0.6rem 3rem; }
+    .qpop, .qpop.mini { position: static; width: auto; margin-top: 10px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Ultrasonic Testing · Level I · Angle Beam</div>
+    <h1>Angle Beam Sound Path: Where Does the Sound Go?</h1>
+    <a class="back" href="index.html">← Exercise Hub</a>
+  </div>
+</header>
+<main class="wrap">
+  <p class="lede">An angle-beam probe sends sound into the steel at an angle. Follow the sound through a 1 inch plate, see why a plain plate gives no echo, compare the skip for three wedges, and find the one place the plate sends the sound back.</p>
+  <div class="trainer">
+    <div class="stage" id="stage">
+      <canvas id="cv" width="1500" height="960" aria-label="Side view of a 1 inch steel plate with an angle-beam probe, and the A-scan below"></canvas>
+      <div class="toolbar">
+        <span class="lab">Wedge</span>
+        <span class="wedges" id="wedges"></span>
+        <span class="sp"></span>
+        <span class="lab">Move probe</span>
+        <button id="left" aria-label="Move probe left">◀ 0.05″</button>
+        <button id="right" aria-label="Move probe right">0.05″ ▶</button>
+      </div>
+      <div class="help">Drag the probe along the plate (or click the plate first and use ← →). Change the wedge with the buttons. The probe stays the same; only the wedge changes the angle.</div>
+      <div class="qpop" id="card" hidden aria-live="polite"></div>
+    </div>
+    <aside class="side">
+      <div class="panel">
+        <div class="ph"><b>Steps</b></div>
+        <ol class="steps" id="steps"></ol>
+        <div class="done" id="done" hidden>✓ Exercise complete. Sound only comes back from something that faces the beam.</div>
+        <div class="row"><button id="reset">Start over</button></div>
+      </div>
+    </aside>
+  </div>
+  <h2>Key points</h2>
+  <div class="card"><ul>
+    <li>The angle comes from the <b>wedge</b>. A 45° wedge sends the sound into the steel at 45°; the probe on top can be the same for every wedge.</li>
+    <li><b>Leg 1</b> runs from the top surface down to the back wall. <b>Leg 2</b> runs from the back wall back up to the top surface. Where the sound reaches the top surface again is <b>one skip</b>.</li>
+    <li>In a 1 inch plate, one skip is 2.000″ with a 45° wedge, 3.464″ with a 60° wedge and 5.495″ with a 70° wedge. The bigger the angle, the flatter the sound travels and the longer the skip.</li>
+    <li>In a plate with smooth surfaces and no flaws, the sound zig-zags away from the probe and never comes back: <b>no echo</b>.</li>
+    <li>A <b>corner</b> (back wall meeting the end of the plate) sends the sound straight back to the probe. That's a <b>corner trap</b>. You can catch it with leg 1 or, farther back, with leg 2.</li>
+  </ul></div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  // ---------- geometry (inches) ----------
+  const T = 1.0, L = 8.0;                     // plate thickness and length
+  const WEDGES = [45, 60, 70];
+  const BEAM_W = 0.14;                        // beam half-width used for the corner echo (inch)
+  const RANGE = 10;                           // A-scan: 0-10 inch of sound path
+  const W = 1000, H = 640, K = 1.5;
+  const PX = 50, S = 110, TOPY = 176;         // plate drawing: x of 0 inch, px per inch, top surface y
+  const X = x => PX + x * S, Y = y => TOPY + y * S;
+  const AS = { x: 64, y: 440, w: 880, h: 168 };   // A-scan screen
+  const C = { ink: '#1f1d1b', soft: '#57524d', faded: '#8f8882', rule: '#ddd6cc', red: '#A82020', blue: '#2a6fdb', good: '#0d904f', orange: '#d9731a', navy: '#0b1320', trace: '#f5e663' };
+  const SANS = "'Manrope', system-ui, sans-serif", MONO = "'JetBrains Mono', ui-monospace, monospace";
+  const IN = v => v.toFixed(3) + '″';
+
+  const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  const card = document.getElementById('card'), stepsEl = document.getElementById('steps');
+  const st = { xp: null, angle: 45, drag: null, tried: new Set([45]) };
+
+  // ---------- sound path: straight segments bouncing between top (y=0) and back wall (y=T) until the plate end ----------
+  function path(xp, ang) {
+    const a = ang * Math.PI / 180, dx = Math.sin(a);
+    let x = xp, y = 0, dy = Math.cos(a), s = 0, leg = 1;
+    const segs = [];
+    for (let i = 0; i < 40 && x < L - 1e-9; i++) {
+      const tY = dy > 0 ? (T - y) / dy : -y / dy, tX = (L - x) / dx, t = Math.min(tY, tX);
+      const x2 = x + dx * t, y2 = y + dy * t;
+      segs.push({ x1: x, y1: y, x2, y2, s1: s, len: t, leg, down: dy > 0 });
+      s += t; x = x2; y = y2;
+      if (tX <= tY) break;                     // reached the end of the plate
+      dy = -dy; leg++;
+    }
+    return segs;
+  }
+  // corner echo: a corner sends sound straight back only if the beam passes close to the corner itself
+  function echoes(xp, ang) {
+    if (xp == null) return [];
+    const out = [];
+    for (const g of path(xp, ang)) {
+      const ux = (g.x2 - g.x1) / g.len, uy = (g.y2 - g.y1) / g.len;
+      for (const c of [{ x: L, y: T, name: 'bottom' }, { x: L, y: 0, name: 'top' }]) {
+        const t = (c.x - g.x1) * ux + (c.y - g.y1) * uy;
+        if (t < 0 || t > g.len + 0.3) continue;
+        const d = Math.abs((c.x - g.x1) * uy - (c.y - g.y1) * ux);
+        const amp = 92 * Math.exp(-Math.pow(d / BEAM_W, 2)) * Math.exp(-Math.pow((g.s1 + t) / 4.5, 2));   // the beam spreads and weakens with distance
+        if (amp > 2) out.push({ s: g.s1 + t, amp, corner: c.name, leg: g.leg, d });
+      }
+    }
+    return out;
+  }
+  const best = () => echoes(st.xp, st.angle).reduce((b, e) => !b || e.amp > b.amp ? e : b, null);
+  const skipLen = ang => 2 * T * Math.tan(ang * Math.PI / 180);
+
+  // ---------- lesson flow ----------
+  const fresh = () => ({ phase: 'place', fb: '', guess: null, found1: null, found2: null, answered: {} });
+  let q = fresh();
+  const STEPS = [
+    { text: 'Drag the probe onto the plate.', done: () => q.phase !== 'place' },
+    { text: 'Watch the sound travel and answer: does any of it come back?', done: () => !!q.answered.echo },
+    { text: 'Guess which wedge makes the longest skip, then try the <b>60°</b> and <b>70°</b> wedges.', done: () => !!q.answered.skip },
+    { text: 'With the <b>45°</b> wedge, slide the probe toward the end of the plate until an echo appears.', done: () => !!q.answered.corner1 },
+    { text: 'Slide the probe back, away from the end, until you find a second spot that gives an echo.', done: () => !!q.answered.corner2 }
+  ];
+  function renderSteps() {
+    const i = STEPS.findIndex(s => !s.done());
+    stepsEl.innerHTML = STEPS.map((s, j) => `<li class="${i === -1 || j < i ? 'done' : j === i ? 'now' : ''}">${s.text}</li>`).join('');
+    document.getElementById('done').hidden = i !== -1;
+  }
+  function show(html, mini) {
+    card.hidden = false; card.className = mini ? 'qpop mini' : 'qpop'; card.innerHTML = html;
+    card.querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', () => act(b.dataset.a, b.dataset.v)));
+  }
+  const opts = (name, list) => `<div class="opts">${list.map(([v, t]) => `<button data-a="${name}" data-v="${v}">${t}</button>`).join('')}</div>`;
+  function render() {
+    renderSteps();
+    const e = best();
+    switch (q.phase) {
+      case 'place': card.hidden = true; break;
+      case 'echo':
+        if (e && e.amp > 20) { show(`<div class="ql">Almost</div><div class="qq">The beam is reaching the end of the plate from here. Slide the probe back toward the left, more than 4″ from the end.</div><div class="qs">Exit point is ${IN(L - st.xp)} from the end of the plate.</div>`, true); break; }
+        show(`<div class="ql">Question</div><div class="qq">Watch the sound travel through the steel. Does any of it come back to the probe?</div>${opts('echo', [['yes', 'Yes'], ['no', 'No']])}<div class="fb">${q.fb}</div>`); break;
+      case 'echo-ok':
+        show(`<div class="ql">No echo</div><div class="qq"><span class="ok">Right. The screen stays flat.</span></div><div class="ex">The sound bounces off the back wall, then off the top surface, and keeps going away from the probe. Nothing in a smooth plate turns it around, so nothing comes back.</div><button class="go" data-a="next" data-v="skip">Next →</button>`); break;
+      case 'skip':
+        show(`<div class="ql">Legs and skip</div><div class="qq">Leg 1 goes down to the back wall. Leg 2 comes back up to the top surface. That whole V is <b>one skip</b>.</div><div class="qs">With the 45° wedge, one skip in this 1 inch plate is ${IN(skipLen(45))}. Which wedge will make the longest skip?</div>${opts('guess', WEDGES.map(a => [a, a + '° wedge']))}`); break;
+      case 'skip-try':
+        show(`<div class="ql">Try it</div><div class="qq">Your guess: ${q.guess}° wedge. Now switch to the <b>60°</b> and <b>70°</b> wedges and watch the skip.</div><div class="qs">Tried: ${[...st.tried].sort().map(a => a + '°').join(', ')}</div>`, true); break;
+      case 'skip-ok':
+        show(`<div class="ql">One skip in a 1 inch plate</div><table>${WEDGES.map(a => `<tr><td>${a}° wedge</td><td>${IN(skipLen(a))}</td></tr>`).join('')}</table><div class="fb">${q.guess === 70 ? '<span class="ok">Your guess was right: the 70° wedge.</span>' : `<span class="no">You guessed ${q.guess}°.</span> The 70° wedge makes the longest skip.`}</div><div class="ex">The bigger the angle, the flatter the sound travels, so it goes farther along the plate before it reaches the back wall and comes back up.</div><button class="go" data-a="next" data-v="corner1">Next →</button>`); break;
+      case 'corner1':
+        show(`<div class="ql">Find an echo</div><div class="qq">${st.angle !== 45 ? 'Put the <b>45° wedge</b> back on, then slide' : 'Slide'} the probe toward the end of the plate until an echo appears on the screen.</div><div class="qs">Exit point is ${IN(L - st.xp)} from the end of the plate.</div>`, true); break;
+      case 'corner1-q':
+        show(`<div class="ql">An echo!</div><div class="qq">Where is this echo coming from?</div>${opts('c1', [['bw', 'The back wall'], ['corner', 'The bottom corner of the plate'], ['flaw', 'A flaw']])}<div class="fb">${q.fb}</div>`); break;
+      case 'corner1-ok':
+        show(`<div class="ql">Corner trap · leg 1</div><div class="qq"><span class="ok">Right, the bottom corner.</span></div><div class="ex">Leg 1 runs into the corner where the back wall meets the end of the plate. A corner sends sound straight back the way it came, so it returns to the probe. The echo is at ${IN(q.found1.s)} of sound path.</div><button class="go" data-a="next" data-v="corner2">Next →</button>`); break;
+      case 'corner2':
+        show(`<div class="ql">Find a second echo</div><div class="qq">Now slide the probe back, away from the end, until you find another spot that gives an echo.</div><div class="qs">Exit point is ${IN(L - st.xp)} from the end of the plate.</div>`, true); break;
+      case 'corner2-q':
+        show(`<div class="ql">Echo again</div><div class="qq">Which leg reached the corner this time?</div>${opts('c2', [['1', 'Leg 1'], ['2', 'Leg 2']])}<div class="fb">${q.fb}</div>`); break;
+      case 'corner2-ok':
+        show(`<div class="ql">Corner trap · leg 2</div><div class="qq"><span class="ok">Right, leg 2.</span></div><div class="ex">The sound went down (leg 1), bounced off the back wall and came back up (leg 2) into the top corner. It traveled about twice as far, so the echo is at ${IN(q.found2.s)} instead of ${IN(q.found1.s)}.</div><button class="go" data-a="next" data-v="end">Finish →</button>`); break;
+      case 'end':
+        show(`<div class="ql">Exercise complete</div><div class="qq">Sound only comes back from something that faces the beam.</div><div class="ex">A smooth plate sends the sound away, so there's no echo. A corner sends it straight back. Next you'll see what that means for flaws: the reflector has to face the beam.</div>`); break;
+    }
+  }
+  function act(a, v) {
+    if (a === 'echo') { if (v === 'no') { q.answered.echo = true; q.phase = 'echo-ok'; } else q.fb = '<span class="no">Look at the screen below.</span> Is there an echo on it?'; }
+    if (a === 'guess') { q.guess = +v; q.phase = 'skip-try'; }
+    if (a === 'c1') { if (v === 'corner') { q.answered.corner1 = true; q.phase = 'corner1-ok'; } else q.fb = v === 'bw' ? '<span class="no">Not the back wall.</span> Away from the end, the beam hit the back wall too, and there was no echo.' : '<span class="no">There are no flaws in this plate.</span> Look where the beam meets the end of the plate.'; }
+    if (a === 'c2') { if (v === '2') { q.answered.corner2 = true; q.phase = 'corner2-ok'; } else q.fb = '<span class="no">Count the legs.</span> Follow the beam from the probe: down, then back up.'; }
+    if (a === 'next') { q.fb = ''; q.phase = v; if (v === 'skip') q.answered.skipStart = true; }
+    if (a === 'next' && v === 'corner1') q.answered.skip = true;
+    check(); render();
+  }
+  // move the lesson on when the student does the thing on the plate
+  function check() {
+    const e = best();
+    if (q.phase === 'skip-try' && st.tried.has(60) && st.tried.has(70)) q.phase = 'skip-ok';
+    if (q.phase === 'corner1' && st.angle === 45 && e && e.amp >= 50 && e.leg === 1) { q.found1 = e; q.phase = 'corner1-q'; }
+    if (q.phase === 'corner2' && st.angle === 45 && e && e.amp >= 50 && e.leg === 2) { q.found2 = e; q.phase = 'corner2-q'; }
+  }
+  const locked = () => (q.phase === 'echo' && !(best() && best().amp > 20)) || ['echo-ok', 'skip', 'skip-ok', 'corner1-q', 'corner1-ok', 'corner2-q', 'corner2-ok'].includes(q.phase);
+  let toast = null;
+  function say(t) { toast = { t, at: performance.now() }; }
+
+  // ---------- input ----------
+  const pos = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height }; };
+  const parked = { x: 110, y: 96 };
+  const probeHit = p => { const px = st.xp == null ? parked.x : X(st.xp), py = st.xp == null ? parked.y : TOPY; return p.x > px - 80 && p.x < px + 40 && p.y > py - 90 && p.y < py + 6; };
+  function setX(x) {
+    st.xp = Math.round(Math.min(L - 0.5, Math.max(0.6, x)) * 100) / 100;   // keep the whole wedge on the plate
+    if (q.phase === 'place') { q.phase = 'echo'; }
+    check(); render();
+    if (locked()) st.drag = null;              // a question just popped up: let go of the probe
+  }
+  cv.addEventListener('pointerdown', e => {
+    const p = pos(e); if (!probeHit(p)) return;
+    if (st.xp != null && locked()) { say(q.phase.endsWith('-ok') || q.phase === 'echo-ok' || q.phase === 'skip-ok' ? 'Press Next on the card to continue' : 'Answer the question first'); return; }
+    e.preventDefault(); cv.setPointerCapture(e.pointerId);
+    st.drag = { dx: (st.xp == null ? parked.x : X(st.xp)) - p.x, x: p.x, y: p.y };
+  });
+  cv.addEventListener('pointermove', e => {
+    const p = pos(e);
+    cv.style.cursor = st.drag ? 'grabbing' : probeHit(p) ? 'grab' : 'default';
+    if (!st.drag) return;
+    st.drag.x = p.x; st.drag.y = p.y;
+    if (st.xp != null) setX((p.x + st.drag.dx - PX) / S);
+  });
+  cv.addEventListener('pointerup', e => {
+    if (!st.drag) return;
+    const p = pos(e), was = st.drag; st.drag = null;
+    if (st.xp == null) { if (p.y > TOPY - 120 && p.y < Y(T) + 20 && p.x > PX && p.x < X(L)) setX((p.x + was.dx - PX) / S); }
+  });
+  cv.tabIndex = 0;
+  cv.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); nudge(e.key === 'ArrowLeft' ? -1 : 1); } });
+  function nudge(dir) {
+    if (st.xp == null) { say('Drag the probe onto the plate first'); return; }
+    if (locked()) { say('Answer the question on the card first'); return; }
+    setX(st.xp + dir * 0.05);
+  }
+  document.getElementById('left').addEventListener('click', () => nudge(-1));
+  document.getElementById('right').addEventListener('click', () => nudge(1));
+  const wedgesEl = document.getElementById('wedges');
+  wedgesEl.innerHTML = WEDGES.map(a => `<button data-w="${a}">${a}°</button>`).join(' ');
+  wedgesEl.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    if (locked() && q.phase !== 'skip') { say('Answer the question on the card first'); return; }
+    if (q.phase === 'skip') { say('Make your guess on the card first'); return; }
+    st.angle = +b.dataset.w; st.tried.add(st.angle); check(); render(); paintWedges();
+  }));
+  function paintWedges() { wedgesEl.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.w === st.angle)); }
+  document.getElementById('reset').addEventListener('click', () => { q = fresh(); st.xp = null; st.angle = 45; st.tried = new Set([45]); paintWedges(); render(); });
+  if (new URLSearchParams(location.search).has('embed')) document.body.classList.add('embed');
+
+  // ---------- drawing ----------
+  function txt(s, x, y, o) { o = o || {}; ctx.font = `${o.w || 600} ${o.size || 14}px ${o.mono ? MONO : SANS}`; ctx.fillStyle = o.c || C.ink; ctx.textAlign = o.a || 'left'; ctx.textBaseline = o.b || 'alphabetic'; ctx.fillText(s, x, y); }
+  function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+  function arrowLine(x1, y1, x2, y2, col) {
+    ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    for (const [ax, ay, bx] of [[x1, y1, 1], [x2, y2, -1]]) { ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax + bx * 8, ay - 4); ctx.lineTo(ax + bx * 8, ay + 4); ctx.closePath(); ctx.fill(); }
+  }
+  // probe on its wedge; exit point at (ex, ey); the wedge face tilts more for bigger angles
+  function drawProbe(ex, ey, ang, alpha) {
+    ctx.save(); ctx.globalAlpha = alpha == null ? 1 : alpha;
+    const tilt = (ang - 30) * 0.9 * Math.PI / 180;           // visual tilt of the probe face
+    const back = ex - 70, front = ex + 26, hb = 54, hf = hb - Math.tan(tilt) * (front - back) * 0.5;
+    ctx.fillStyle = '#e9c98a'; ctx.strokeStyle = '#a0824a'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(back, ey); ctx.lineTo(front, ey); ctx.lineTo(front, ey - Math.max(hf, 14)); ctx.lineTo(back, ey - hb); ctx.closePath(); ctx.fill(); ctx.stroke();
+    txt(ang + '°', (back + front) / 2 - 6, ey - 8, { size: 13, w: 800, c: '#6b4f1d', a: 'center' });
+    // probe (same for every wedge) sitting on the sloped face
+    const mx = (back + front) / 2 - 6, my = ey - (hb + Math.max(hf, 14)) / 2, a = Math.atan2(hb - Math.max(hf, 14), front - back);
+    ctx.translate(mx, my); ctx.rotate(a);
+    rr(-24, -40, 48, 40, 5); ctx.fillStyle = '#3a3f47'; ctx.fill();
+    ctx.fillStyle = '#d4a017'; ctx.fillRect(-24, -4, 48, 4);
+    ctx.strokeStyle = '#3a3f47'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, -40); ctx.quadraticCurveTo(-6, -62, -34, -70); ctx.stroke();
+    ctx.restore();
+    ctx.save(); ctx.globalAlpha = alpha == null ? 1 : alpha;
+    ctx.fillStyle = C.red; ctx.beginPath(); ctx.moveTo(ex, ey - 1); ctx.lineTo(ex - 6, ey - 11); ctx.lineTo(ex + 6, ey - 11); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  function frame(now) {
+    const t = now / 1000;
+    ctx.setTransform(K, 0, 0, K, 0, 0); ctx.clearRect(0, 0, W, H);
+    // plate
+    txt('1 INCH STEEL PLATE · SIDE VIEW', PX, 26, { size: 11, w: 700, c: C.faded, mono: true });
+    const g = ctx.createLinearGradient(0, Y(0), 0, Y(T)); g.addColorStop(0, '#d3d9e0'); g.addColorStop(1, '#a3adb9');
+    ctx.fillStyle = g; ctx.fillRect(X(0), Y(0), L * S, T * S);
+    ctx.strokeStyle = '#5f6b78'; ctx.lineWidth = 2; ctx.strokeRect(X(0), Y(0), L * S, T * S);
+    txt('back wall', X(0.15), Y(T) - 8, { size: 12, w: 600, c: '#4b5563' });
+    txt('end of plate', X(L) - 6, Y(0) - 8, { size: 12, w: 600, c: '#4b5563', a: 'right' });
+    // thickness dimension
+    ctx.strokeStyle = C.soft; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(X(L) + 22, Y(0)); ctx.lineTo(X(L) + 22, Y(T)); ctx.stroke();
+    txt('1″', X(L) + 30, Y(T / 2) + 5, { size: 13, w: 700, c: C.soft });
+    // ruler along the top
+    for (let i = 0; i <= L; i++) { ctx.strokeStyle = C.rule; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X(i), Y(0) - 4); ctx.lineTo(X(i), Y(0)); ctx.stroke(); }
+
+    const e = best(), segs = st.xp == null ? [] : path(st.xp, st.angle);
+    // beam band + centre line + leg labels
+    if (segs.length) {
+      ctx.save(); ctx.beginPath(); ctx.rect(X(0), Y(0), L * S, T * S); ctx.clip();
+      for (const s of segs) {
+        ctx.strokeStyle = 'rgba(255,190,70,0.30)'; ctx.lineWidth = BEAM_W * 2 * S; ctx.lineCap = 'butt';
+        ctx.beginPath(); ctx.moveTo(X(s.x1), Y(s.y1)); ctx.lineTo(X(s.x2), Y(s.y2)); ctx.stroke();
+      }
+      ctx.strokeStyle = C.orange; ctx.lineWidth = 2; ctx.setLineDash([6, 5]);
+      ctx.beginPath(); segs.forEach((s, i) => { if (!i) ctx.moveTo(X(s.x1), Y(s.y1)); ctx.lineTo(X(s.x2), Y(s.y2)); }); ctx.stroke(); ctx.setLineDash([]);
+      ctx.restore();
+      segs.slice(0, 4).forEach(s => {
+        if (s.len < 0.5) return;
+        const mx = X((s.x1 + s.x2) / 2), my = Y((s.y1 + s.y2) / 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.85)'; rr(mx + 8, my - 11, 52, 20, 5); ctx.fill();
+        txt('Leg ' + s.leg, mx + 34, my + 4, { size: 12, w: 800, c: C.ink, a: 'center' });
+      });
+      // pulse: travels out along the path; if a corner sends it back, it returns
+      const total = segs[segs.length - 1].s1 + segs[segs.length - 1].len, speed = 3.2;
+      const back = e && e.amp > 20 ? e.s : null, cycle = (back ? 2 * back : total) / speed + 0.8, u = (t % cycle) * speed;
+      const at = s => { for (const g of segs) if (s <= g.s1 + g.len + 1e-9) { const f = (s - g.s1) / g.len; return { x: g.x1 + (g.x2 - g.x1) * f, y: g.y1 + (g.y2 - g.y1) * f }; } return null; };
+      let p = null, ret = false;
+      if (back) { if (u <= back) p = at(u); else if (u <= 2 * back) { p = at(2 * back - u); ret = true; } }
+      else if (u <= total) p = at(u);
+      if (p) { ctx.fillStyle = ret ? C.good : C.red; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(X(p.x), Y(p.y), 6, 0, 7); ctx.fill(); ctx.shadowBlur = 0; }
+      // skip dimension under the plate
+      const sk = skipLen(st.angle), yy = Y(T) + 30;
+      if (st.xp + sk <= L) {
+        arrowLine(X(st.xp), yy, X(st.xp + sk), yy, C.blue);
+        ctx.strokeStyle = 'rgba(42,111,219,0.4)'; ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.moveTo(X(st.xp), Y(0)); ctx.lineTo(X(st.xp), yy + 6); ctx.moveTo(X(st.xp + sk), Y(0)); ctx.lineTo(X(st.xp + sk), yy + 6); ctx.stroke(); ctx.setLineDash([]);
+        txt('1 skip = ' + IN(sk), X(st.xp + sk / 2), yy + 22, { size: 13, w: 800, c: C.blue, a: 'center' });
+      } else txt('1 skip = ' + IN(sk) + ' (runs past the end of the plate)', X(L), yy + 22, { size: 13, w: 700, c: C.blue, a: 'right' });
+      // corner highlight when it's sending sound back
+      if (e && e.amp > 20) { const cy = e.corner === 'bottom' ? Y(T) : Y(0); ctx.strokeStyle = C.good; ctx.lineWidth = 3; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * 6); ctx.beginPath(); ctx.arc(X(L), cy, 16, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
+    }
+    // probe
+    if (st.xp == null) {
+      const d = st.drag;
+      drawProbe(d ? d.x + d.dx : parked.x, d ? d.y + 40 : parked.y, st.angle, d ? 0.9 : 1);
+      if (!d) { txt('← drag the probe onto the plate', parked.x + 50, parked.y - 22, { size: 14, w: 700, c: C.blue });
+        ctx.strokeStyle = '#ffd84d'; ctx.lineWidth = 4; ctx.globalAlpha = 0.55 + 0.45 * Math.sin(t * 6); rr(parked.x - 82, parked.y - 92, 124, 100, 10); ctx.stroke(); ctx.globalAlpha = 1; }
+    } else {
+      drawProbe(X(st.xp), Y(0), st.angle);
+      txt('◂ exit point', X(st.xp) + 32, Y(0) - 5, { size: 11, w: 700, c: C.red });
+    }
+
+    // ---------- A-scan ----------
+    txt('A-SCAN · SOUND PATH 0 TO 10″', AS.x, AS.y - 52, { size: 11, w: 700, c: C.faded, mono: true });
+    const boxes = [['SOUND PATH', e && e.amp > 20 ? IN(e.s) : '---'], ['SURFACE DISTANCE', e && e.amp > 20 ? IN(e.s * Math.sin(st.angle * Math.PI / 180)) : '---'], ['DEPTH', e && e.amp > 20 ? IN(e.corner === 'bottom' ? T : 0) : '---'], ['WEDGE', st.angle + '°']];
+    boxes.forEach(([l, v], i) => {
+      const bx = AS.x + i * 222, by = AS.y - 44, bw = 212;
+      rr(bx, by, bw, 34, 6); ctx.fillStyle = '#16202e'; ctx.fill();
+      txt(l, bx + 10, by + 21, { size: 10, w: 700, c: '#9fb3c8', mono: true });
+      txt(v, bx + bw - 10, by + 24, { size: 18, w: 700, c: '#fff', mono: true, a: 'right' });
+    });
+    rr(AS.x - 4, AS.y - 4, AS.w + 8, AS.h + 8, 6); ctx.fillStyle = C.navy; ctx.fill();
+    ctx.strokeStyle = 'rgba(160,190,220,0.15)'; ctx.lineWidth = 1;
+    for (let i = 0; i <= 10; i++) { const gx = AS.x + i * AS.w / 10; ctx.beginPath(); ctx.moveTo(gx, AS.y); ctx.lineTo(gx, AS.y + AS.h); ctx.stroke(); }
+    for (let i = 0; i <= 5; i++) { const gy = AS.y + i * AS.h / 5; ctx.beginPath(); ctx.moveTo(AS.x, gy); ctx.lineTo(AS.x + AS.w, gy); ctx.stroke(); }
+    const list = echoes(st.xp, st.angle), bot = AS.y + AS.h - 2;
+    ctx.save(); ctx.beginPath(); ctx.rect(AS.x, AS.y, AS.w, AS.h); ctx.clip();
+    ctx.beginPath();
+    for (let px = 0; px <= AS.w; px++) {
+      const s = px / AS.w * RANGE;
+      let a = 1.2 + 1.8 * Math.abs(Math.sin(s * 37.1 + Math.sin(s * 9.3) * 3)) * (0.6 + 0.4 * Math.sin(t * 9 + s * 5));
+      if (st.xp != null) a += 70 * Math.exp(-Math.pow(Math.max(s + 0.05, 0) / 0.09, 1)) ;   // initial pulse ring-down
+      for (const g2 of list) { const d = (s - g2.s) / RANGE * AS.w, w = d < 0 ? 3 : 5; if (Math.abs(d) < 24) a += g2.amp * Math.exp(-Math.pow(d / w, 2)) * (0.5 + 0.5 * Math.abs(Math.sin(d * 0.9))); }
+      const yv = bot - Math.min(a, 105) / 100 * (AS.h - 6);
+      px ? ctx.lineTo(AS.x + px, yv) : ctx.moveTo(AS.x, yv);
+    }
+    ctx.strokeStyle = C.trace; ctx.lineWidth = 1.6; ctx.stroke();
+    ctx.restore();
+    for (let i = 0; i <= 10; i += 1) txt(i + (i === 10 ? '″' : ''), AS.x + i * AS.w / 10, AS.y + AS.h + 18, { size: 11, w: 600, c: C.soft, mono: true, a: i === 0 ? 'left' : i === 10 ? 'right' : 'center' });
+    if (st.xp != null && !(e && e.amp > 20)) txt('no echo', AS.x + 16, AS.y + 26, { size: 13, w: 700, c: '#8fa4bb', mono: true });
+    if (e && e.amp > 20) txt('corner echo', AS.x + e.s / RANGE * AS.w + 10, AS.y + 26, { size: 13, w: 800, c: '#7dffb0' });
+
+    // toast
+    if (toast && now - toast.at < 2600) {
+      ctx.font = `700 14px ${SANS}`; const tw = ctx.measureText(toast.t).width + 28;
+      ctx.globalAlpha = Math.min(1, (2600 - (now - toast.at)) / 300);
+      rr(W / 2 - tw / 2, 40, tw, 32, 8); ctx.fillStyle = '#6b2412'; ctx.fill();
+      txt(toast.t, W / 2, 61, { size: 14, w: 700, c: '#fff', a: 'center' }); ctx.globalAlpha = 1;
+    }
+    requestAnimationFrame(frame);
+  }
+  paintWedges(); render();
+  const go = () => requestAnimationFrame(frame);
+  (document.fonts ? Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 2000))]) : Promise.resolve()).then(go);
+  window.__abeam = { st, get q() { return q; }, best, path, skipLen, setX, act };
+})();
+</script>
+</body>
+</html>
