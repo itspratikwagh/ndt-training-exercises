@@ -34,7 +34,24 @@ label { font-size: 13px; color: var(--ink-soft); display: inline-flex; align-ite
 .inst canvas { background: transparent; touch-action: manipulation; outline: none; }
 .helpline { font-size: 13px; color: var(--ink-soft); margin-top: 8px; }
 .side { display: grid; gap: 10px; }
-.side > canvas { background: #fff; border: 1px solid var(--rule); border-radius: 10px; touch-action: manipulation; }
+.side > canvas { background: #fff; border: 1px solid var(--rule); border-radius: 10px; touch-action: none; }
+
+/* floating question card over the instrument's right-hand keys */
+.inst { position: relative; }
+.qpop { position: absolute; z-index: 2; background: #fff; border: 2px solid var(--yellow); border-radius: 12px; padding: 12px 14px; box-shadow: 0 10px 30px rgba(20,16,10,0.28); }
+.qpop[hidden] { display: none; }
+.qpop .ql { font: 700 10.5px 'JetBrains Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; color: var(--red); margin-bottom: 4px; }
+.qpop .qq { font-size: 15.5px; font-weight: 800; line-height: 1.3; text-wrap: balance; }
+.qpop .qs { font-size: 13px; color: var(--ink-soft); margin-top: 4px; }
+.qpop .nums { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; margin-top: 10px; }
+.qpop .nums button, .qpop .yn button { padding: 7px 0; font: 700 15px 'JetBrains Mono', monospace; }
+.qpop .yn { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+.qpop .yn button { font-family: 'Manrope', sans-serif; }
+.qpop .fb { font-size: 13.5px; margin-top: 8px; }
+.qpop .ex { font-size: 13.5px; color: var(--ink-soft); margin-top: 8px; }
+.qpop .big { font-size: 26px; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+.qpop .go { margin-top: 10px; width: 100%; background: var(--red); color: #fff; border-color: var(--red); }
+.qpop.mini .qq { font-size: 14.5px; font-weight: 700; }
 .panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 12px; }
 .ph { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .steps { list-style: none; counter-reset: s; display: grid; gap: 6px; }
@@ -60,6 +77,8 @@ table.ws select { font: 600 13px 'Manrope', sans-serif; padding: 3px; border-rad
   .trainer { grid-template-columns: 1fr; }
   .side { grid-template-columns: 1fr; }
   .inst { overflow-x: auto; }
+  .qpop, .qpop.mini { position: static; width: auto !important; margin-top: 10px; }
+  .qpop .nums { grid-template-columns: repeat(5, 1fr); }
   .inst canvas { min-width: 720px; }
   main { padding: 1rem 0.6rem 3rem; }
 }

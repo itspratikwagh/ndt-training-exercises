@@ -318,7 +318,7 @@
       });
       txt(ctx, 'Menu ' + (st.group + 1) + '/3 · NEXT', X + 53, Y + 50 + 5 * 66 - 4, { size: 9, weight: 700, color: '#6c8098', align: 'center', mono: true });
     }
-    drawAscan(ctx, st, A);
+    drawAscan(ctx, st, A, opt);
     // params (P1-P7)
     if (!full) {
       const ps = st.dialog ? dialogParams(st) : (PARAMS[st.menu] || []);
@@ -362,7 +362,7 @@
     txt(ctx, 'Δ' + ADJ.dialog.steps[st.stepIdx.dialog].toFixed(3), x + w - 16, y + 86, { size: 12, weight: 700, color: '#ffd84d', mono: true, align: 'right' });
     txt(ctx, 'Knob: adjust · ✓: step · ' + (st.dialog.mode === 'calzero' ? 'P6 Continue' : 'P7 Done'), x + 16, y + 114, { size: 11, weight: 600, color: '#9fb3c8' });
   }
-  function drawAscan(ctx, st, A) {
+  function drawAscan(ctx, st, A, opt) {
     ctx.fillStyle = '#050b14'; ctx.fillRect(A.x, A.y, A.w, A.h);
     ctx.strokeStyle = 'rgba(160,190,220,0.16)'; ctx.lineWidth = 1;
     for (let i = 0; i <= 10; i++) { const gx = A.x + i * A.w / 10; ctx.beginPath(); ctx.moveTo(gx, A.y); ctx.lineTo(gx, A.y + A.h); ctx.stroke(); }
@@ -391,6 +391,7 @@
     const gs = S(st.g1.start), ge = S(st.g1.start + st.g1.width), gy = bottom - st.g1.level / 100 * plotH;
     ctx.strokeStyle = '#ff4d4d'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(gs, gy); ctx.lineTo(ge, gy); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(gs, gy - 5); ctx.lineTo(gs, gy + 5); ctx.moveTo(ge, gy - 5); ctx.lineTo(ge, gy + 5); ctx.stroke();
+    if (opt && opt.arrows) drawArrows(ctx, st, A, S, bottom, plotH, opt.arrows);
     const h = gateHit(st);
     if (h) { const hx = S(h.s); ctx.fillStyle = '#ff4d4d'; ctx.beginPath(); ctx.moveTo(hx, gy - 3); ctx.lineTo(hx - 6, gy - 12); ctx.lineTo(hx + 6, gy - 12); ctx.closePath(); ctx.fill(); }
     ctx.restore();
@@ -399,6 +400,24 @@
       const v = D + i * R / 10;
       txt(ctx, v.toFixed(R >= 2 ? 1 : 2), A.x + i * A.w / 10, A.y + A.h - 3, { size: 10, weight: 600, color: '#8fa4bb', mono: true, align: i === 0 ? 'left' : i === 10 ? 'right' : 'center' });
     }
+  }
+
+  // Glowing arrows over each visible back-wall echo (numbered when arrows.numbered)
+  function visibleBackwalls(st) {
+    return echoes(st).filter(e => { if (e.ip) return false; const s = sOf(st, e.t); return s >= st.delay && s <= st.delay + st.range && e.pct >= 3; });
+  }
+  function drawArrows(ctx, st, A, S, bottom, plotH, arrows) {
+    const pulse = 0.65 + 0.35 * Math.sin(st.now * 5);
+    visibleBackwalls(st).forEach((e, i) => {
+      const x = S(sOf(st, e.t)), peak = Math.max(bottom - Math.min(e.pct, 104) / 100 * plotH, A.y + 46);
+      const tip = peak - 6, tail = tip - 26;
+      ctx.save(); ctx.globalAlpha = pulse; ctx.shadowColor = '#5fd4ff'; ctx.shadowBlur = 12;
+      ctx.strokeStyle = '#5fd4ff'; ctx.fillStyle = '#5fd4ff'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(x, tail); ctx.lineTo(x, tip - 8); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, tip); ctx.lineTo(x - 7, tip - 10); ctx.lineTo(x + 7, tip - 10); ctx.closePath(); ctx.fill();
+      ctx.restore();
+      if (arrows.numbered) txt(ctx, String(i + 1), x, tail - 6, { size: 14, weight: 800, color: '#5fd4ff', align: 'center', mono: true });
+    });
   }
 
   // ================= Step block view =================
@@ -420,17 +439,29 @@
     ctx.strokeStyle = '#5f6b78'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(b.x + 20, base);
     STEPS.forEach((th, i) => { const x = b.x + 20 + i * sx, top = base - th * scale; ctx.lineTo(x, top); ctx.lineTo(x + sx, top); });
     ctx.lineTo(b.x + 20 + 5 * sx, base); ctx.closePath(); ctx.stroke();
-    if (st.probe != null) {
+    const dragging = opt.drag;
+    if (st.probe != null && !dragging) {
       const i = STEPS.indexOf(st.probe), x = b.x + 20 + i * sx + sx / 2, top = base - st.probe * scale;
       ctx.fillStyle = 'rgba(120,190,255,0.35)'; ctx.fillRect(x - 16, top - 2, 32, 3);
-      rrect(ctx, x - 16, top - 44, 32, 40, 4); ctx.fillStyle = '#3a3f47'; ctx.fill();
-      ctx.fillStyle = '#d4a017'; ctx.fillRect(x - 16, top - 6, 32, 3);
-      ctx.strokeStyle = '#3a3f47'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x, top - 44); ctx.quadraticCurveTo(x + 6, top - 62, x + 30, top - 66); ctx.stroke();
+      drawProbe(ctx, x, top);
       ctx.strokeStyle = 'rgba(217,115,26,0.7)'; ctx.setLineDash([3, 4]); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, base); ctx.stroke(); ctx.setLineDash([]);
-    } else if (!opt.noHint) {
-      txt(ctx, 'Click a step to place the probe', b.x + b.w / 2, b.y + 44, { size: 13, weight: 700, color: '#2a6fdb', align: 'center' });
+      rects.probe = { x: x - 22, y: top - 50, w: 44, h: 50 };
+    } else if (!opt.noHint && !dragging) {
+      const px = b.x + 48, py = b.y + 92;                      // parked probe, waiting to be dragged
+      drawProbe(ctx, px, py);
+      txt(ctx, '← drag the probe onto a step', px + 34, py - 18, { size: 13, weight: 700, color: '#2a6fdb' });
+      rects.probe = { x: px - 22, y: py - 50, w: 44, h: 50 };
+      if (opt.glowProbe) glowRing(ctx, px - 24, py - 52, 48, 56, 8, st.now);
     }
+    if (dragging) drawProbe(ctx, dragging.x, dragging.y + 22, 0.9);
     return rects;
+  }
+  function drawProbe(ctx, x, top, alpha) {
+    ctx.save(); if (alpha != null) ctx.globalAlpha = alpha;
+    rrect(ctx, x - 16, top - 44, 32, 40, 4); ctx.fillStyle = '#3a3f47'; ctx.fill();
+    ctx.fillStyle = '#d4a017'; ctx.fillRect(x - 16, top - 6, 32, 3);
+    ctx.strokeStyle = '#3a3f47'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x, top - 44); ctx.quadraticCurveTo(x + 6, top - 62, x + 30, top - 66); ctx.stroke();
+    ctx.restore();
   }
 
   // ================= Guided trainer =================
@@ -457,7 +488,7 @@
         const li = document.createElement('li');
         li.className = i < stepI ? 'done' : i === stepI ? 'now' : '';
         const tip = i === stepI && s.tip ? (typeof s.tip === 'function' ? s.tip(st, api) : s.tip) : '';
-        li.innerHTML = s.text + (tip ? `<div class="tip">${tip}</div>` : '');
+        li.innerHTML = (typeof s.text === 'function' ? s.text(st, api, i < stepI) : s.text) + (tip ? `<div class="tip">${tip}</div>` : '');
         el.appendChild(li);
       });
       if (stepI >= o.steps.length && o.doneEl) o.doneEl.hidden = false; else if (o.doneEl) o.doneEl.hidden = true;
@@ -466,13 +497,17 @@
     let hold = null;
     function doHit(hh) {
       st.now = performance.now() / 1000;
+      if (o.guard && o.guard(hh, st, api) === false) { refresh(); return; }   // lesson blocked or handled it
       if (hh.key) press(st, hh.key); else turn(st, hh.knob);
       refresh();
     }
     cv.addEventListener('pointerdown', e => {
       const p = pos(e, cv, K), hh = hit(p.x, p.y); if (!hh) return;
       e.preventDefault(); doHit(hh);
-      if (hh.knob) { let n = 0; hold = setInterval(() => { if (++n > 3) doHit(hh); }, 110); }
+      if (hh.knob) {                                   // hold to keep turning; speeds up the longer you hold
+        let n = 0; const dir = hh.knob;
+        hold = setInterval(() => { n++; if (n > 3) doHit({ knob: dir * (n > 22 ? 10 : n > 10 ? 5 : 1) }); }, 110);
+      }
     });
     const stop = () => { if (hold) clearInterval(hold); hold = null; };
     cv.addEventListener('pointerup', stop); cv.addEventListener('pointerleave', stop);
@@ -483,22 +518,40 @@
       const map = { ArrowRight: { knob: 1 }, ArrowUp: { knob: 1 }, ArrowLeft: { knob: -1 }, ArrowDown: { knob: -1 }, Enter: { key: 'CHECK' }, Escape: { key: 'ESC' } };
       if (map[e.key]) { e.preventDefault(); doHit(map[e.key]); }
     });
-    bc.addEventListener('pointermove', e => { const p = pos(e, bc, BK), r = rects.find(r => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h); hover = r ? r.th : null; bc.style.cursor = r ? 'pointer' : 'default'; });
-    bc.addEventListener('pointerleave', () => { hover = null; });
+    // probe: drag it onto a step (clicking a step also works)
+    let drag = null;
+    const inR = (p, r) => r && p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+    const stepAt = p => rects.find(r => inR(p, r));
+    function tryPlace(th) {
+      st.now = performance.now() / 1000;
+      if (o.onPlace && o.onPlace(st, th, api) === false) { refresh(); return; }
+      place(st, th); refresh();
+    }
+    bc.addEventListener('pointermove', e => {
+      const p = pos(e, bc, BK), r = stepAt(p);
+      hover = r ? r.th : null;
+      if (drag) { drag.x = p.x; drag.y = p.y; drag.moved = true; }
+      bc.style.cursor = drag ? 'grabbing' : inR(p, rects.probe) ? 'grab' : r ? 'pointer' : 'default';
+    });
+    bc.addEventListener('pointerleave', () => { if (!drag) hover = null; });
     bc.addEventListener('pointerdown', e => {
-      const p = pos(e, bc, BK), r = rects.find(r => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h);
-      if (!r) return; st.now = performance.now() / 1000;
-      if (o.onPlace && o.onPlace(st, r.th, api) === false) { refresh(); return; }
-      place(st, r.th); refresh();
+      const p = pos(e, bc, BK);
+      if (inR(p, rects.probe)) { e.preventDefault(); drag = { x: p.x, y: p.y, moved: false }; bc.setPointerCapture(e.pointerId); return; }
+      const r = stepAt(p); if (r) tryPlace(r.th);
+    });
+    bc.addEventListener('pointerup', e => {
+      if (!drag) return;
+      const p = pos(e, bc, BK), r = stepAt(p), moved = drag.moved; drag = null; hover = null;
+      if (r && moved) tryPlace(r.th);
     });
     function frame() {
       st.now = performance.now() / 1000;
       ctx.setTransform(K, 0, 0, K, 0, 0); ctx.clearRect(0, 0, W, H);
       const cur = o.steps[stepI];
       const hk = hints && cur ? (typeof cur.keys === 'function' ? cur.keys(st, api) : cur.keys) || [] : [];
-      drawInstrument(ctx, st, { hints: hk });
+      drawInstrument(ctx, st, { hints: hk, arrows: o.arrows ? o.arrows(st, api) : null });
       bctx.setTransform(BK, 0, 0, BK, 0, 0); bctx.clearRect(0, 0, 400, bc.height / BK);
-      rects = drawBlock(bctx, { x: 0, y: 0, w: 400, h: bc.height / BK }, st, { hover });
+      rects = drawBlock(bctx, { x: 0, y: 0, w: 400, h: bc.height / BK }, st, { hover, drag, glowProbe: hints && cur && cur.place != null && st.probe == null });
       if (hints && cur && cur.place != null && st.probe !== cur.place) {
         const r = rects.find(r => r.th === cur.place); if (r) glowRing(bctx, r.x + 2, r.y + 50, r.w - 4, r.h - 48, 6, st.now);
       }
@@ -659,7 +712,7 @@
       <p class="lede">${cfg.tryIntro}</p>
       <div class="trainer">
         <div class="inst"><canvas id="inst" width="1500" height="900" aria-label="EPOCH 650-style flaw detector"></canvas>
-          <div class="helpline">Click keys to press them. Turn the knob by clicking its left or right half (hold to keep turning), scrolling over it, or pressing ← → after clicking the instrument. <b>✓</b> changes the step size.</div></div>
+          <div class="helpline">${cfg.helpline || 'Click keys to press them. Turn the knob by clicking its left or right half (hold to keep turning), scrolling over it, or pressing ← → after clicking the instrument. <b>✓</b> changes the step size.'}</div></div>
         <aside class="side">
           <canvas id="block" width="800" height="440" aria-label="Step block — click a step to place the probe"></canvas>
           <div class="panel"><div class="ph"><b>Steps</b><label><input type="checkbox" id="hints" checked> Highlight keys</label></div>
@@ -674,7 +727,7 @@
     const trainer = mountTrainer({
       canvas: document.getElementById('inst'), blockCanvas: document.getElementById('block'),
       stepsEl: document.getElementById('steps'), doneEl: document.getElementById('done'),
-      initial: cfg.trainerInitial, steps: cfg.steps, onPlace: cfg.onPlace
+      initial: cfg.trainerInitial, steps: cfg.steps, onPlace: cfg.onPlace, guard: cfg.guard, arrows: cfg.arrows
     });
     document.getElementById('hints').addEventListener('change', e => trainer.setHints(e.target.checked));
     document.getElementById('reset').addEventListener('click', () => { if (cfg.onReset) cfg.onReset(); trainer.reset(); });
@@ -744,5 +797,5 @@
     };
   }
 
-  window.Epoch650 = { calCards, page, makeState, keyCenter, W, H, press, turn, place, echoes, reading, gateHit, sOf, TRUE_V, T0, STEPS, draw: { txt, rrect, wrap, font } };
+  window.Epoch650 = { calCards, visibleBackwalls, toast, page, makeState, keyCenter, W, H, press, turn, place, echoes, reading, gateHit, sOf, TRUE_V, T0, STEPS, draw: { txt, rrect, wrap, font } };
 })();
