@@ -7,7 +7,7 @@
   'use strict';
 
   // ================= Physics =================
-  const TRUE_V = 0.2320;          // steel longitudinal velocity of the "real" block, in/µs
+  const TRUE_V = 0.2320;          // steel longitudinal velocity of the "real" block, inch/µs
   const T0 = 0.50;                // probe delay: wear plate + couplant, µs
   const STEPS = [0.100, 0.200, 0.300, 0.400, 0.500];
 
@@ -47,7 +47,7 @@
   ];
   const ro = (label, value) => ({ label, value, ro: true });
   const PARAMS = {
-    'Basic': [{ label: 'Velocity', key: 'vel' }, { label: 'Zero', key: 'zero' }, { label: 'Range', key: 'range' }, { label: 'Delay', key: 'delay' }, ro('Units', 'in')],
+    'Basic': [{ label: 'Velocity', key: 'vel' }, { label: 'Zero', key: 'zero' }, { label: 'Range', key: 'range' }, { label: 'Delay', key: 'delay' }, ro('Units', 'inch')],
     'Pulser': [ro('PRF', 'Auto Med'), ro('Energy', '100 V'), ro('Damping', '50 Ω'), ro('Mode', 'P/E'), ro('Pulser', 'Square'), ro('Freq', '5.00 MHz')],
     'Receiver': [ro('Filter', '2.0–21.5'), ro('Rectify', 'Full'), ro('Reject', '0 %')],
     'Trig': [ro('Angle', '0.0°'), ro('Thickness', '0.000'), ro('X Value', '0.000')],
@@ -174,7 +174,7 @@
       if (!(v > 0.05 && v < 0.6)) { toast(st, 'Those two points give an impossible velocity — check the values', 'warn'); return; }
       st.vel = +v.toFixed(4); st.zero = +(p1.t - 2 * p1.d / st.vel).toFixed(3);
       st.cal.p2 = { t: t2, d: d.value, n: h.e.n, probe: st.probe }; st.cal.stage = 'done'; st.dialog = null;
-      toast(st, 'Calibration done: velocity ' + st.vel.toFixed(4) + ' in/µs, zero ' + st.zero.toFixed(3) + ' µs');
+      toast(st, 'Calibration done: velocity ' + st.vel.toFixed(4) + ' inch/µs, zero ' + st.zero.toFixed(3) + ' µs');
       ev(st, 'calvel', { d: d.value });
     }
   }
@@ -303,7 +303,7 @@
       txt(ctx, lab, x + 8, Y + 18, { size: 9, weight: 700, color: col, mono: true });
       txt(ctx, val, x + w - 8, Y + 32, { size: 19, weight: 700, color: '#fff', mono: true, align: 'right' });
     };
-    box(X + SCR.w - 322, 190, 'G1 THICKNESS (in)', rd == null ? '- - - -' : rd.toFixed(3), '#ff8a80');
+    box(X + SCR.w - 322, 190, 'G1 THICKNESS (inch)', rd == null ? '- - - -' : rd.toFixed(3), '#ff8a80');
     box(X + SCR.w - 126, 120, 'G1 AMP', mx ? (mx.e.pct > 110 ? '>110%' : mx.e.pct.toFixed(0) + '%') : '---', '#ff8a80');
     if (opt && opt.highlight === 'thickness') glowRing(ctx, X + SCR.w - 327, Y + 1, 200, 40, 7, st.now);
     // menu tabs (F1-F5)
@@ -359,7 +359,7 @@
     rrect(ctx, x, y, w, h, 8); ctx.fillStyle = 'rgba(12,22,36,0.96)'; ctx.fill(); ctx.strokeStyle = '#ffd84d'; ctx.lineWidth = 2; ctx.stroke();
     txt(ctx, st.dialog.mode === 'calzero' ? 'AUTO CAL · CAL-ZERO' : 'AUTO CAL · CAL-VEL', x + 16, y + 26, { size: 13, weight: 800, color: '#ffd84d', mono: true });
     txt(ctx, 'Known thickness of the gated echo:', x + 16, y + 50, { size: 12, weight: 600, color: '#9fb3c8' });
-    txt(ctx, st.dialog.value.toFixed(3) + ' in', x + 16, y + 86, { size: 30, weight: 700, color: '#fff', mono: true });
+    txt(ctx, st.dialog.value.toFixed(3) + '″', x + 16, y + 86, { size: 30, weight: 700, color: '#fff', mono: true });
     txt(ctx, 'Δ' + ADJ.dialog.steps[st.stepIdx.dialog].toFixed(3), x + w - 16, y + 86, { size: 12, weight: 700, color: '#ffd84d', mono: true, align: 'right' });
     txt(ctx, 'Knob: adjust · ✓: step · ' + (st.dialog.mode === 'calzero' ? 'P6 Continue' : 'P7 Done'), x + 16, y + 114, { size: 11, weight: 600, color: '#9fb3c8' });
   }
@@ -799,7 +799,7 @@
         ctx.strokeStyle = '#ddd6cc'; ctx.lineWidth = 1;
         for (let i = 0; i <= 4; i++) { const d = maxD * i / 4; ctx.beginPath(); ctx.moveTo(GX(d), gy); ctx.lineTo(GX(d), gy + gh); ctx.stroke(); h.txt(ctx, d.toFixed(2), GX(d), gy + gh + 16, { size: 11, color: '#57524d', mono: true, align: 'center' }); }
         for (let i = 0; i <= 4; i++) { const tt = maxT * i / 4; ctx.beginPath(); ctx.moveTo(gx, GY(tt)); ctx.lineTo(gx + gw, GY(tt)); ctx.stroke(); h.txt(ctx, tt.toFixed(1), gx - 6, GY(tt) + 4, { size: 11, color: '#57524d', mono: true, align: 'right' }); }
-        h.txt(ctx, 'thickness (in)', gx + gw, gy + gh + 34, { size: 11, color: '#8f8882', mono: true, align: 'right' });
+        h.txt(ctx, 'thickness (inch)', gx + gw, gy + gh + 34, { size: 11, color: '#8f8882', mono: true, align: 'right' });
         h.txt(ctx, 'µs', gx - 6, gy - 10, { size: 11, color: '#8f8882', mono: true, align: 'right' });
         ctx.strokeStyle = '#1f1d1b'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx, gy + gh); ctx.lineTo(gx + gw, gy + gh); ctx.stroke();
         const pts = [st.cal.p1, st.cal.p2].filter(Boolean);
@@ -809,7 +809,7 @@
           ctx.fillStyle = '#d9731a'; ctx.beginPath(); ctx.arc(GX(0), GY(st.zero), 6, 0, 7); ctx.fill();
           h.txt(ctx, 'zero ' + st.zero.toFixed(3) + ' µs', GX(maxD * 0.12), GY(st.zero) - 6, { size: 12, weight: 800, color: '#d9731a', mono: true });
           h.txt(ctx, 'slope → velocity', GX(maxD * 0.03), gy + 18, { size: 12, weight: 800, color: '#1f1d1b', mono: true });
-          h.txt(ctx, st.vel.toFixed(4) + ' in/µs', GX(maxD * 0.03), gy + 34, { size: 12, weight: 800, color: '#1f1d1b', mono: true });
+          h.txt(ctx, st.vel.toFixed(4) + ' inch/µs', GX(maxD * 0.03), gy + 34, { size: 12, weight: 800, color: '#1f1d1b', mono: true });
         }
         pts.forEach((p, i) => {
           ctx.fillStyle = i ? '#1f1d1b' : '#A82020'; ctx.beginPath(); ctx.arc(GX(p.d), GY(p.t), 7, 0, 7); ctx.fill();
@@ -858,11 +858,11 @@
       hide() { el.hidden = true; }
     };
   }
-  // Knob rules for range lessons: fixed 0.01 in step (✓ does nothing), knob locked while a card asks
+  // Knob rules for range lessons: fixed 0.01″ step (✓ does nothing), knob locked while a card asks
   // something, and the knob stops exactly on the target range so nobody overshoots.
   function fixedStepRangeGuard(o) {
     return (hh, st) => {
-      if (hh.key === 'CHECK') { toast(st, 'The knob step stays at 0.01 in for this lesson'); return false; }
+      if (hh.key === 'CHECK') { toast(st, 'The knob step stays at 0.01″ for this lesson'); return false; }
       if (hh.knob == null) return;
       const msg = o.locked && o.locked(); if (msg) { toast(st, msg, 'warn'); return false; }
       const R = o.target && o.target();

@@ -95,7 +95,7 @@
 
   E.page({
     lede: 'Gain sets how tall echoes look. Learn to use the <b>dB</b> key on purpose: every 6&nbsp;dB doubles or halves the echo height.',
-    tryIntro: 'The Epoch is calibrated and the probe is on the 0.300&nbsp;in step with Gate 1 on the first back-wall echo. Follow the steps; the keys you need next glow yellow.',
+    tryIntro: 'The Epoch is calibrated and the probe is on the 0.300″ step with Gate 1 on the first back-wall echo. Follow the steps; the keys you need next glow yellow.',
     video,
     trainerInitial: () => start(),
     steps,
@@ -109,7 +109,7 @@
       <li>Press <b>✓</b> after <b>dB</b> to change the gain step (0.1 / 1 / 2 / 6&nbsp;dB).</li></ul>`,
     onReset() { ws.G0 = null; ws.autoN = 0; ws.pred = {}; ws.seen = {}; ws.quiz = null; renderWS(); const f = document.getElementById('qfb'); if (f) f.textContent = ''; },
     extra(el, tr) {
-      el.innerHTML = `<div class="panel"><h3>Worksheet · 0.300 in step</h3>
+      el.innerHTML = `<div class="panel"><h3>Worksheet · 0.300″ step</h3>
         <p style="font-size:13.5px;margin-bottom:6px">Reference gain: <b id="g0">— (press AUTO XX%)</b></p>
         <table class="ws"><thead><tr><th>Change</th><th>Predict</th><th>Seen</th><th></th></tr></thead><tbody id="wsb"></tbody></table>
         <p style="font-size:14px;margin-top:10px"><b>An echo is at 80%. You add 12 dB. How tall is it really?</b></p>

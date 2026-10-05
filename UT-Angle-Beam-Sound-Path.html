@@ -93,12 +93,8 @@
       <div class="toolbar">
         <span class="lab">Wedge</span>
         <span class="wedges" id="wedges"></span>
-        <span class="sp"></span>
-        <span class="lab">Move probe</span>
-        <button id="left" aria-label="Move probe left">◀ 0.05″</button>
-        <button id="right" aria-label="Move probe right">0.05″ ▶</button>
       </div>
-      <div class="help">Drag the probe along the plate (or click the plate first and use ← →). Change the wedge with the buttons. The probe stays the same; only the wedge changes the angle.</div>
+      <div class="help">Drag the probe along the plate. Change the wedge with the buttons. The probe stays the same; only the wedge changes the angle: the sound leaves the probe at a shallow angle in the wedge and bends (refracts) to the steeper angle as it enters the steel.</div>
       <div class="qpop" id="card" hidden aria-live="polite"></div>
     </div>
     <aside class="side">
@@ -115,7 +111,7 @@
     <li>The angle comes from the <b>wedge</b>. A 45° wedge sends the sound into the steel at 45°; the probe on top can be the same for every wedge.</li>
     <li><b>Leg 1</b> runs from the top surface down to the back wall. <b>Leg 2</b> runs from the back wall back up to the top surface. Where the sound reaches the top surface again is <b>one skip</b>.</li>
     <li>In a 1 inch plate, one skip is 2.000″ with a 45° wedge, 3.464″ with a 60° wedge and 5.495″ with a 70° wedge. The bigger the angle, the flatter the sound travels and the longer the skip.</li>
-    <li>In a plate with smooth surfaces and no flaws, the sound zig-zags away from the probe and never comes back: <b>no echo</b>.</li>
+    <li>In a plate with smooth surfaces and no flaws, the sound zig-zags away from the probe until it dies down due to attenuation. It never comes back: <b>no echo</b>.</li>
     <li>A <b>corner</b> (back wall meeting the end of the plate) sends the sound straight back to the probe. That's a <b>corner trap</b>. You can catch it with leg 1 or, farther back, with leg 2.</li>
   </ul></div>
 </main>
@@ -150,7 +146,7 @@
       const x2 = x + dx * t, y2 = y + dy * t;
       segs.push({ x1: x, y1: y, x2, y2, s1: s, len: t, leg, down: dy > 0 });
       s += t; x = x2; y = y2;
-      if (tX <= tY) break;                     // reached the end of the plate
+      if (tX <= tY + 1e-9) break;                     // reached the end of the plate
       dy = -dy; leg++;
     }
     return segs;
@@ -160,6 +156,7 @@
     if (xp == null) return [];
     const out = [];
     for (const g of path(xp, ang)) {
+      if (g.len < 1e-9) continue;
       const ux = (g.x2 - g.x1) / g.len, uy = (g.y2 - g.y1) / g.len;
       for (const c of [{ x: L, y: T, name: 'bottom' }, { x: L, y: 0, name: 'top' }]) {
         const t = (c.x - g.x1) * ux + (c.y - g.y1) * uy;
@@ -173,6 +170,9 @@
   }
   const best = () => echoes(st.xp, st.angle).reduce((b, e) => !b || e.amp > b.amp ? e : b, null);
   const skipLen = ang => 2 * T * Math.tan(ang * Math.PI / 180);
+  // exit point that sends the beam centre exactly into the corner: leg 1 -> bottom corner, leg 2 -> top corner
+  const cornerX = leg => L - leg * T * Math.tan(st.angle * Math.PI / 180);
+  const SNAP = 0.12;                          // within this of a corner spot the probe settles exactly on it
 
   // ---------- lesson flow ----------
   const fresh = () => ({ phase: 'place', fb: '', guess: null, found1: null, found2: null, answered: {} });
@@ -203,7 +203,7 @@
         if (e && e.amp > 20) { show(`<div class="ql">Almost</div><div class="qq">The beam is reaching the end of the plate from here. Slide the probe back toward the left, more than 4″ from the end.</div><div class="qs">Exit point is ${IN(L - st.xp)} from the end of the plate.</div>`, true); break; }
         show(`<div class="ql">Question</div><div class="qq">Watch the sound travel through the steel. Does any of it come back to the probe?</div>${opts('echo', [['yes', 'Yes'], ['no', 'No']])}<div class="fb">${q.fb}</div>`); break;
       case 'echo-ok':
-        show(`<div class="ql">No echo</div><div class="qq"><span class="ok">Right. The screen stays flat.</span></div><div class="ex">The sound bounces off the back wall, then off the top surface, and keeps going away from the probe. Nothing in a smooth plate turns it around, so nothing comes back.</div><button class="go" data-a="next" data-v="skip">Next →</button>`); break;
+        show(`<div class="ql">No echo</div><div class="qq"><span class="ok">Right. The screen stays flat.</span></div><div class="ex">The sound bounces off the back wall, then off the top surface, and keeps going away from the probe until it dies down due to attenuation. Nothing in a smooth plate turns it around, so nothing comes back.</div><button class="go" data-a="next" data-v="skip">Next →</button>`); break;
       case 'skip':
         show(`<div class="ql">Legs and skip</div><div class="qq">Leg 1 goes down to the back wall. Leg 2 comes back up to the top surface. That whole V is <b>one skip</b>.</div><div class="qs">With the 45° wedge, one skip in this 1 inch plate is ${IN(skipLen(45))}. Which wedge will make the longest skip?</div>${opts('guess', WEDGES.map(a => [a, a + '° wedge']))}`); break;
       case 'skip-try':
@@ -239,8 +239,10 @@
   function check() {
     const e = best();
     if (q.phase === 'skip-try' && st.tried.has(60) && st.tried.has(70)) q.phase = 'skip-ok';
-    if (q.phase === 'corner1' && st.angle === 45 && e && e.amp >= 50 && e.leg === 1) { q.found1 = e; q.phase = 'corner1-q'; }
-    if (q.phase === 'corner2' && st.angle === 45 && e && e.amp >= 50 && e.leg === 2) { q.found2 = e; q.phase = 'corner2-q'; }
+    const at = leg => st.angle === 45 && st.xp != null && Math.abs(st.xp - cornerX(leg)) < 1e-6;
+    const hit = (leg, corner) => echoes(st.xp, st.angle).find(g => g.leg === leg && g.corner === corner);
+    if (q.phase === 'corner1' && at(1)) { q.found1 = hit(1, 'bottom'); q.phase = 'corner1-q'; }
+    if (q.phase === 'corner2' && at(2)) { q.found2 = hit(2, 'top'); q.phase = 'corner2-q'; }
   }
   const locked = () => (q.phase === 'echo' && !(best() && best().amp > 20)) || ['echo-ok', 'skip', 'skip-ok', 'corner1-q', 'corner1-ok', 'corner2-q', 'corner2-ok'].includes(q.phase);
   let toast = null;
@@ -248,10 +250,18 @@
 
   // ---------- input ----------
   const pos = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height }; };
-  const parked = { x: 110, y: 96 };
-  const probeHit = p => { const px = st.xp == null ? parked.x : X(st.xp), py = st.xp == null ? parked.y : TOPY; return p.x > px - 80 && p.x < px + 40 && p.y > py - 90 && p.y < py + 6; };
+  const parked = { x: 120, y: 132 };
+  const probeHit = p => { const px = st.xp == null ? parked.x : X(st.xp), py = st.xp == null ? parked.y : TOPY; return p.x > px - 78 && p.x < px + 24 && p.y > py - 112 && p.y < py + 6; };
   function setX(x) {
-    st.xp = Math.round(Math.min(L - 0.5, Math.max(0.6, x)) * 100) / 100;   // keep the whole wedge on the plate
+    const prev = st.xp;
+    x = Math.round(Math.min(L - 0.5, Math.max(0.6, x)) * 100) / 100;   // keep the whole wedge on the plate
+    // while the student is hunting for a corner echo, settle exactly on the corner spot when the probe reaches or passes it
+    const leg = q.phase === 'corner1' ? 1 : q.phase === 'corner2' ? 2 : 0;
+    if (leg && st.angle === 45) {
+      const xc = cornerX(leg), lo = Math.min(prev == null ? x : prev, x), hi = Math.max(prev == null ? x : prev, x);
+      if (xc >= lo - SNAP && xc <= hi + SNAP) x = xc;
+    }
+    st.xp = x;
     if (q.phase === 'place') { q.phase = 'echo'; }
     check(); render();
     if (locked()) st.drag = null;              // a question just popped up: let go of the probe
@@ -260,7 +270,7 @@
     const p = pos(e); if (!probeHit(p)) return;
     if (st.xp != null && locked()) { say(q.phase.endsWith('-ok') || q.phase === 'echo-ok' || q.phase === 'skip-ok' ? 'Press Next on the card to continue' : 'Answer the question first'); return; }
     e.preventDefault(); cv.setPointerCapture(e.pointerId);
-    st.drag = { dx: (st.xp == null ? parked.x : X(st.xp)) - p.x, x: p.x, y: p.y };
+    st.drag = { dx: (st.xp == null ? parked.x : X(st.xp)) - p.x, dy: (st.xp == null ? parked.y : TOPY) - p.y, x: p.x, y: p.y };
   });
   cv.addEventListener('pointermove', e => {
     const p = pos(e);
@@ -272,7 +282,7 @@
   cv.addEventListener('pointerup', e => {
     if (!st.drag) return;
     const p = pos(e), was = st.drag; st.drag = null;
-    if (st.xp == null) { if (p.y > TOPY - 120 && p.y < Y(T) + 20 && p.x > PX && p.x < X(L)) setX((p.x + was.dx - PX) / S); }
+    if (st.xp == null) { if (p.y + was.dy > TOPY - 70 && p.y + was.dy < Y(T) + 20 && p.x > PX && p.x < X(L)) setX((p.x + was.dx - PX) / S); }
   });
   cv.tabIndex = 0;
   cv.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); nudge(e.key === 'ArrowLeft' ? -1 : 1); } });
@@ -281,8 +291,6 @@
     if (locked()) { say('Answer the question on the card first'); return; }
     setX(st.xp + dir * 0.05);
   }
-  document.getElementById('left').addEventListener('click', () => nudge(-1));
-  document.getElementById('right').addEventListener('click', () => nudge(1));
   const wedgesEl = document.getElementById('wedges');
   wedgesEl.innerHTML = WEDGES.map(a => `<button data-w="${a}">${a}°</button>`).join(' ');
   wedgesEl.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
@@ -302,36 +310,47 @@
     ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
     for (const [ax, ay, bx] of [[x1, y1, 1], [x2, y2, -1]]) { ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax + bx * 8, ay - 4); ctx.lineTo(ax + bx * 8, ay + 4); ctx.closePath(); ctx.fill(); }
   }
-  // probe on its wedge; exit point at (ex, ey); the wedge face tilts more for bigger angles
-  function drawProbe(ex, ey, ang, alpha) {
+  // Wedge geometry. The probe sits on the sloped face and aims down and forward (to the right). In the wedge the sound
+  // runs at the incident angle; at the exit point it refracts to the steel angle (Snell: Rexolite wedge -> shear wave in steel).
+  const V_WEDGE = 2.337, V_STEEL = 3.23, WD = 60, HALF = 28;   // mm/µs; px of beam in the wedge; half the crystal width (px)
+  function wedgeGeo(ex, ey, ang) {
+    const a = Math.asin(Math.sin(ang * Math.PI / 180) * V_WEDGE / V_STEEL);
+    const P = { x: ex - WD * Math.sin(a), y: ey - WD * Math.cos(a) }, u = { x: Math.cos(a), y: -Math.sin(a) };
+    return { a, P, Pa: { x: P.x - HALF * u.x, y: P.y - HALF * u.y }, Pb: { x: P.x + HALF * u.x, y: P.y + HALF * u.y }, front: ex + 16 };
+  }
+  function drawProbe(ex, ey, ang, alpha, beam) {
+    const g = wedgeGeo(ex, ey, ang);
     ctx.save(); ctx.globalAlpha = alpha == null ? 1 : alpha;
-    const tilt = (ang - 30) * 0.9 * Math.PI / 180;           // visual tilt of the probe face
-    const back = ex - 70, front = ex + 26, hb = 54, hf = hb - Math.tan(tilt) * (front - back) * 0.5;
-    ctx.fillStyle = '#e9c98a'; ctx.strokeStyle = '#a0824a'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(back, ey); ctx.lineTo(front, ey); ctx.lineTo(front, ey - Math.max(hf, 14)); ctx.lineTo(back, ey - hb); ctx.closePath(); ctx.fill(); ctx.stroke();
-    txt(ang + '°', (back + front) / 2 - 6, ey - 8, { size: 13, w: 800, c: '#6b4f1d', a: 'center' });
-    // probe (same for every wedge) sitting on the sloped face
-    const mx = (back + front) / 2 - 6, my = ey - (hb + Math.max(hf, 14)) / 2, a = Math.atan2(hb - Math.max(hf, 14), front - back);
-    ctx.translate(mx, my); ctx.rotate(a);
-    rr(-24, -40, 48, 40, 5); ctx.fillStyle = '#3a3f47'; ctx.fill();
-    ctx.fillStyle = '#d4a017'; ctx.fillRect(-24, -4, 48, 4);
-    ctx.strokeStyle = '#3a3f47'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, -40); ctx.quadraticCurveTo(-6, -62, -34, -70); ctx.stroke();
+    ctx.fillStyle = 'rgba(233,201,138,0.92)'; ctx.strokeStyle = '#a0824a'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(g.Pa.x, ey); ctx.lineTo(g.front, ey); ctx.lineTo(g.front, g.Pb.y); ctx.lineTo(g.Pb.x, g.Pb.y); ctx.lineTo(g.Pa.x, g.Pa.y); ctx.closePath(); ctx.fill(); ctx.stroke();
+    if (beam) {                                  // incident beam inside the wedge, from the crystal to the exit point
+      ctx.fillStyle = 'rgba(255,170,40,0.28)';
+      ctx.beginPath(); ctx.moveTo(g.Pa.x, g.Pa.y); ctx.lineTo(g.Pb.x, g.Pb.y); ctx.lineTo(ex + 7, ey); ctx.lineTo(ex - 7, ey); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = C.orange; ctx.lineWidth = 2; ctx.setLineDash([6, 5]); ctx.beginPath(); ctx.moveTo(g.P.x, g.P.y); ctx.lineTo(ex, ey); ctx.stroke(); ctx.setLineDash([]);
+    }
+    txt(ang + '° wedge', g.front + 6, g.Pb.y + 12, { size: 12, w: 800, c: '#6b4f1d' });
+    // probe (the same for every wedge) on the sloped face, crystal facing the exit point
+    ctx.translate(g.P.x, g.P.y); ctx.rotate(-g.a);
+    rr(-26, -36, 52, 36, 5); ctx.fillStyle = '#3a3f47'; ctx.fill();
+    ctx.fillStyle = '#d4a017'; ctx.fillRect(-26, -4, 52, 4);
+    ctx.strokeStyle = '#3a3f47'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-6, -36); ctx.quadraticCurveTo(-14, -58, -40, -64); ctx.stroke();
     ctx.restore();
     ctx.save(); ctx.globalAlpha = alpha == null ? 1 : alpha;
-    ctx.fillStyle = C.red; ctx.beginPath(); ctx.moveTo(ex, ey - 1); ctx.lineTo(ex - 6, ey - 11); ctx.lineTo(ex + 6, ey - 11); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = C.red; ctx.beginPath(); ctx.moveTo(ex, ey + 1); ctx.lineTo(ex - 6, ey + 11); ctx.lineTo(ex + 6, ey + 11); ctx.closePath(); ctx.fill();
     ctx.restore();
+    return g;
   }
 
   function frame(now) {
     const t = now / 1000;
     ctx.setTransform(K, 0, 0, K, 0, 0); ctx.clearRect(0, 0, W, H);
     // plate
-    txt('1 INCH STEEL PLATE · SIDE VIEW', PX, 26, { size: 11, w: 700, c: C.faded, mono: true });
+    txt('1 INCH STEEL PLATE · SIDE VIEW', X(L), 26, { size: 11, w: 700, c: C.faded, mono: true, a: 'right' });
     const g = ctx.createLinearGradient(0, Y(0), 0, Y(T)); g.addColorStop(0, '#d3d9e0'); g.addColorStop(1, '#a3adb9');
     ctx.fillStyle = g; ctx.fillRect(X(0), Y(0), L * S, T * S);
     ctx.strokeStyle = '#5f6b78'; ctx.lineWidth = 2; ctx.strokeRect(X(0), Y(0), L * S, T * S);
     txt('back wall', X(0.15), Y(T) - 8, { size: 12, w: 600, c: '#4b5563' });
-    txt('end of plate', X(L) - 6, Y(0) - 8, { size: 12, w: 600, c: '#4b5563', a: 'right' });
+    txt('end of plate', X(L) - 4, Y(T) + 16, { size: 12, w: 600, c: '#4b5563', a: 'right' });
     // thickness dimension
     ctx.strokeStyle = C.soft; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(X(L) + 22, Y(0)); ctx.lineTo(X(L) + 22, Y(T)); ctx.stroke();
     txt('1″', X(L) + 30, Y(T / 2) + 5, { size: 13, w: 700, c: C.soft });
@@ -339,30 +358,55 @@
     for (let i = 0; i <= L; i++) { ctx.strokeStyle = C.rule; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X(i), Y(0) - 4); ctx.lineTo(X(i), Y(0)); ctx.stroke(); }
 
     const e = best(), segs = st.xp == null ? [] : path(st.xp, st.angle);
+    // probe
+    if (st.xp == null) {
+      const d = st.drag;
+      drawProbe(d ? d.x + d.dx : parked.x, d ? d.y + d.dy : parked.y, st.angle, d ? 0.9 : 1);
+      if (!d) { txt('← drag the probe onto the plate', parked.x + 40, parked.y - 40, { size: 14, w: 700, c: C.blue });
+        ctx.strokeStyle = '#ffd84d'; ctx.lineWidth = 4; ctx.globalAlpha = 0.55 + 0.45 * Math.sin(t * 6); rr(parked.x - 84, parked.y - 116, 116, 124, 10); ctx.stroke(); ctx.globalAlpha = 1; }
+    } else {
+      drawProbe(X(st.xp), Y(0), st.angle, 1, true);
+      txt('◂ exit point', X(st.xp) + 22, Y(0) - 5, { size: 11, w: 700, c: C.red });
+    }
+
     // beam band + centre line + leg labels
     if (segs.length) {
       ctx.save(); ctx.beginPath(); ctx.rect(X(0), Y(0), L * S, T * S); ctx.clip();
       for (const s of segs) {
-        ctx.strokeStyle = 'rgba(255,190,70,0.30)'; ctx.lineWidth = BEAM_W * 2 * S; ctx.lineCap = 'butt';
+        ctx.strokeStyle = `rgba(255,190,70,${(0.32 * Math.exp(-s.s1 / 6)).toFixed(3)})`; ctx.lineWidth = BEAM_W * 2 * S; ctx.lineCap = 'butt';
         ctx.beginPath(); ctx.moveTo(X(s.x1), Y(s.y1)); ctx.lineTo(X(s.x2), Y(s.y2)); ctx.stroke();
       }
       ctx.strokeStyle = C.orange; ctx.lineWidth = 2; ctx.setLineDash([6, 5]);
       ctx.beginPath(); segs.forEach((s, i) => { if (!i) ctx.moveTo(X(s.x1), Y(s.y1)); ctx.lineTo(X(s.x2), Y(s.y2)); }); ctx.stroke(); ctx.setLineDash([]);
       ctx.restore();
+      const th = st.angle * Math.PI / 180, ex0 = X(st.xp), ey0 = Y(0);
+      ctx.strokeStyle = C.soft; ctx.lineWidth = 1.2; ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.moveTo(ex0, ey0); ctx.lineTo(ex0, ey0 + 56); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = C.red; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(ex0, ey0, 34, Math.PI / 2 - th, Math.PI / 2); ctx.stroke();
+      txt(st.angle + '°', ex0 + 46 * Math.sin(th / 2) - 4, ey0 + 46 * Math.cos(th / 2) + 8, { size: 13, w: 800, c: C.red, a: 'center' });
       segs.slice(0, 4).forEach(s => {
         if (s.len < 0.5) return;
         const mx = X((s.x1 + s.x2) / 2), my = Y((s.y1 + s.y2) / 2);
         ctx.fillStyle = 'rgba(255,255,255,0.85)'; rr(mx + 8, my - 11, 52, 20, 5); ctx.fill();
         txt('Leg ' + s.leg, mx + 34, my + 4, { size: 12, w: 800, c: C.ink, a: 'center' });
       });
-      // pulse: travels out along the path; if a corner sends it back, it returns
+      // pulse: leaves the crystal, crosses the wedge, refracts into the steel; it fades as it travels (attenuation).
+      // If a corner sends it back, it returns the same way.
+      const wg = wedgeGeo(X(st.xp), Y(0), st.angle), dw = WD / S;
       const total = segs[segs.length - 1].s1 + segs[segs.length - 1].len, speed = 3.2;
-      const back = e && e.amp > 20 ? e.s : null, cycle = (back ? 2 * back : total) / speed + 0.8, u = (t % cycle) * speed;
-      const at = s => { for (const g of segs) if (s <= g.s1 + g.len + 1e-9) { const f = (s - g.s1) / g.len; return { x: g.x1 + (g.x2 - g.x1) * f, y: g.y1 + (g.y2 - g.y1) * f }; } return null; };
+      const back = e && e.amp > 20 ? e.s : null, cycle = (back ? 2 * (dw + back) : dw + total) / speed + 0.8, u = (t % cycle) * speed;
+      const at = s => {
+        if (s < dw) { const f = s / dw; return { px: wg.P.x + (X(st.xp) - wg.P.x) * f, py: wg.P.y + (Y(0) - wg.P.y) * f, s: 0 }; }
+        s -= dw;
+        for (const g of segs) if (s <= g.s1 + g.len + 1e-9) { const f = (s - g.s1) / g.len; return { px: X(g.x1 + (g.x2 - g.x1) * f), py: Y(g.y1 + (g.y2 - g.y1) * f), s }; }
+        return null;
+      };
       let p = null, ret = false;
-      if (back) { if (u <= back) p = at(u); else if (u <= 2 * back) { p = at(2 * back - u); ret = true; } }
-      else if (u <= total) p = at(u);
-      if (p) { ctx.fillStyle = ret ? C.good : C.red; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(X(p.x), Y(p.y), 6, 0, 7); ctx.fill(); ctx.shadowBlur = 0; }
+      if (back) { const end = dw + back; if (u <= end) p = at(u); else if (u <= 2 * end) { p = at(2 * end - u); ret = true; } }
+      else if (u <= dw + total) p = at(u);
+      if (p) {
+        ctx.globalAlpha = ret ? 1 : Math.max(0.12, Math.exp(-p.s / 5));
+        ctx.fillStyle = ret ? C.good : C.red; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(p.px, p.py, 6, 0, 7); ctx.fill(); ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+      }
       // skip dimension under the plate
       const sk = skipLen(st.angle), yy = Y(T) + 30;
       if (st.xp + sk <= L) {
@@ -373,17 +417,6 @@
       // corner highlight when it's sending sound back
       if (e && e.amp > 20) { const cy = e.corner === 'bottom' ? Y(T) : Y(0); ctx.strokeStyle = C.good; ctx.lineWidth = 3; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * 6); ctx.beginPath(); ctx.arc(X(L), cy, 16, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
     }
-    // probe
-    if (st.xp == null) {
-      const d = st.drag;
-      drawProbe(d ? d.x + d.dx : parked.x, d ? d.y + 40 : parked.y, st.angle, d ? 0.9 : 1);
-      if (!d) { txt('← drag the probe onto the plate', parked.x + 50, parked.y - 22, { size: 14, w: 700, c: C.blue });
-        ctx.strokeStyle = '#ffd84d'; ctx.lineWidth = 4; ctx.globalAlpha = 0.55 + 0.45 * Math.sin(t * 6); rr(parked.x - 82, parked.y - 92, 124, 100, 10); ctx.stroke(); ctx.globalAlpha = 1; }
-    } else {
-      drawProbe(X(st.xp), Y(0), st.angle);
-      txt('◂ exit point', X(st.xp) + 32, Y(0) - 5, { size: 11, w: 700, c: C.red });
-    }
-
     // ---------- A-scan ----------
     txt('A-SCAN · SOUND PATH 0 TO 10″', AS.x, AS.y - 52, { size: 11, w: 700, c: C.faded, mono: true });
     const boxes = [['SOUND PATH', e && e.amp > 20 ? IN(e.s) : '---'], ['SURFACE DISTANCE', e && e.amp > 20 ? IN(e.s * Math.sin(st.angle * Math.PI / 180)) : '---'], ['DEPTH', e && e.amp > 20 ? IN(e.corner === 'bottom' ? T : 0) : '---'], ['WEDGE', st.angle + '°']];

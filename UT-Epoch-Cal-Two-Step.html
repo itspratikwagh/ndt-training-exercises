@@ -35,18 +35,18 @@
   const calKeys = (st, p) => st.dialog ? [] : st.group !== 1 ? ['NEXT'] : st.menu !== 'Auto Cal' ? ['F3'] : [p];
 
   const steps = [
-    { text: 'Click the <b>0.200 in</b> step on the block to place the probe.', place: 0.2, keys: [], check: st => st.probe === 0.2 || p1ok(st) },
+    { text: 'Click the <b>0.200″</b> step on the block to place the probe.', place: 0.2, keys: [], check: st => st.probe === 0.2 || p1ok(st) },
     { text: 'Press <b>GATES</b>, then turn the knob to move <b>Gate 1</b> over the <b>first back-wall echo</b> — not the initial pulse on the far left.', tip: 'Press ✓ for bigger knob steps. The gate is on the echo when the red ▼ marker appears on it.', keys: gateKeys, check: st => onEcho(st, 0.2) || p1ok(st) },
     { text: 'Press <b>2nd F</b>, then <b>GATES</b> (AUTO XX%) to bring the echo to 80%.', keys: autoKeys, check: st => autoDone(st, 0.2) || p1ok(st) },
     { text: 'Open <b>Auto Cal</b> (F3 in the Gate menu group) and press <b>P2 · Cal-Zero</b>.', keys: st => calKeys(st, 'P2'), check: st => (st.dialog && st.dialog.mode === 'calzero') || p1ok(st) },
     { text: 'Turn the knob to <b>0.200</b>, then press <b>P6 · Continue</b>.', tip: st => st.cal.single ? '⚠ You pressed Done — that only sets zero. Press P2 Cal-Zero again and finish with <b>P6 Continue</b>.' : 'Continue — not Done. The Epoch keeps this point and waits for the second one.', keys: st => st.dialog ? (near(st.dialog.value, 0.2) ? ['P6'] : ['KNOB']) : calKeys(st, 'P2'), check: st => p1ok(st) && (st.cal.stage === 'zero' || st.cal.stage === 'done') },
-    { text: 'Move the probe to the <b>0.500 in</b> step.', place: 0.5, keys: [], check: st => st.probe === 0.5 || calDone(st) },
+    { text: 'Move the probe to the <b>0.500″</b> step.', place: 0.5, keys: [], check: st => st.probe === 0.5 || calDone(st) },
     { text: 'Press <b>GATES</b> and move Gate 1 over the <b>first back-wall echo</b> of this step.', keys: gateKeys, check: st => onEcho(st, 0.5) || calDone(st) },
     { text: 'Press <b>2nd F</b>, then <b>GATES</b> to set the echo to 80%.', keys: autoKeys, check: st => autoDone(st, 0.5) || calDone(st) },
     { text: 'Open <b>Auto Cal</b> (F3) and press <b>P3 · Cal-Vel</b>.', keys: st => calKeys(st, 'P3'), check: st => (st.dialog && st.dialog.mode === 'calvel') || calDone(st) },
     { text: 'Set the value to <b>0.500</b>, then press <b>P7 · Done</b>.', keys: st => st.dialog ? (near(st.dialog.value, 0.5) ? ['P7'] : ['KNOB']) : calKeys(st, 'P3'), check: calDone },
-    { text: 'Verify: move to the <b>0.300 in</b> step and gate its first back-wall echo. It should read 0.300.', place: 0.3, keys: st => st.probe !== 0.3 ? [] : gateKeys(st), check: st => verified[0.3] },
-    { text: 'Verify: move to the <b>0.400 in</b> step and gate its echo. It should read 0.400.', place: 0.4, keys: st => st.probe !== 0.4 ? [] : gateKeys(st), check: st => verified[0.4] }
+    { text: 'Verify: move to the <b>0.300″</b> step and gate its first back-wall echo. It should read 0.300.', place: 0.3, keys: st => st.probe !== 0.3 ? [] : gateKeys(st), check: st => verified[0.3] },
+    { text: 'Verify: move to the <b>0.400″</b> step and gate its echo. It should read 0.400.', place: 0.4, keys: st => st.probe !== 0.4 ? [] : gateKeys(st), check: st => verified[0.4] }
   ];
 
   const video = {
@@ -84,7 +84,7 @@
   };
 
   E.page({
-    lede: 'Calibrate the Epoch for a straight-beam probe on the steel step block: <b>Cal-Zero</b> on the 0.200&nbsp;in step, <b>Cal-Vel</b> on the 0.500&nbsp;in step, then verify on 0.300 and 0.400.',
+    lede: 'Calibrate the Epoch for a straight-beam probe on the steel step block: <b>Cal-Zero</b> on the 0.200″ step, <b>Cal-Vel</b> on the 0.500″ step, then verify on 0.300 and 0.400.',
     tryIntro: 'The Epoch has just been reset (velocity 0.2300, zero 0.000, range 1.000). Follow the steps. Keys you need next glow yellow, and so does the step to place the probe on.',
     video,
     trainerInitial: reset,
@@ -106,7 +106,7 @@
           <tr><td>Verify 0.300</td><td id="v3">—</td></tr><tr><td>Verify 0.400</td><td id="v4">—</td></tr></tbody></table></div>`;
       tr.onChange(st => {
         if (calDone(st)) [0.3, 0.4].forEach(d => { if (onEcho(st, d) && near(E.reading(st), d, 0.003)) verified[d] = E.reading(st); });
-        el.querySelector('#cv').textContent = st.vel.toFixed(4) + ' in/µs';
+        el.querySelector('#cv').textContent = st.vel.toFixed(4) + ' inch/µs';
         el.querySelector('#cz').textContent = st.zero.toFixed(3) + ' µs';
         el.querySelector('#cs').innerHTML = calDone(st) ? '<span class="ok">Calibrated</span>' : st.cal.stage === 'zero' ? 'Zero set — waiting for Cal-Vel' : st.cal.single ? '<span class="no">Zero only (Done pressed)</span>' : 'Not calibrated';
         el.querySelector('#v3').innerHTML = verified[0.3] ? `<span class="ok">${verified[0.3].toFixed(3)} ✓</span>` : '—';
