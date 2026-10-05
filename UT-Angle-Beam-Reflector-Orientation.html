@@ -42,6 +42,13 @@
   .tilt input { flex: 1; accent-color: var(--red); height: 28px; }
   .tilt output { font: 700 15px 'JetBrains Mono', monospace; min-width: 3.2em; text-align: right; }
   .tilt.glow { outline: 3px solid #ffd84d; outline-offset: 4px; border-radius: 8px; }
+  /* the controls sit in the gap between the plate and the A-scan, right under the probe */
+  .cvwrap { position: relative; }
+  .cvwrap .toolbar { position: absolute; left: 5.4%; right: 5%; top: 48%; margin: 0; }
+  @media (max-width: 700px) {               /* small screens: controls go just above the plate */
+    .cvwrap { display: flex; flex-direction: column; }
+    .cvwrap .toolbar { position: static; order: -1; margin: 0 0 8px; }
+  }
   .help { font-size: 13px; color: var(--ink-soft); margin-top: 8px; }
 
   .side { display: grid; gap: 10px; }
@@ -91,11 +98,13 @@
   <p class="lede">An echo only shows up when sound comes back to the probe. Hunt for a root crack with a straight beam and then with a 45° wedge, move the crack to the middle of the plate, then tilt it and see how quickly the echo disappears when the flaw stops facing the beam.</p>
   <div class="trainer">
     <div class="stage" id="stage">
-      <canvas id="cv" width="1500" height="960" aria-label="Side view of a 1 inch steel plate with a probe and a flaw, and the A-scan below"></canvas>
-      <div class="toolbar">
-        <span class="lab">Probe</span>
-        <span class="probes" id="probes"><button data-p="0">Straight beam (no wedge)</button> <button data-p="45">45° wedge</button></span>
-        <label class="tilt" id="tiltBox" hidden><span class="lab">Flaw tilt</span><input type="range" id="tilt" min="0" max="90" step="1" value="90" aria-label="Flaw tilt in degrees"><output id="tiltOut">90°</output></label>
+      <div class="cvwrap">
+        <canvas id="cv" width="1500" height="1050" aria-label="Side view of a 1 inch steel plate with a probe and a flaw, and the A-scan below"></canvas>
+        <div class="toolbar">
+          <span class="lab">Probe</span>
+          <span class="probes" id="probes"><button data-p="0">Straight beam (no wedge)</button> <button data-p="45">45° wedge</button></span>
+          <label class="tilt" id="tiltBox" hidden><span class="lab">Flaw tilt</span><input type="range" id="tilt" min="0" max="90" step="1" value="90" aria-label="Flaw tilt in degrees"><output id="tiltOut">90°</output></label>
+        </div>
       </div>
       <div class="help" id="help">Drag the probe along the plate. The probe is the same throughout; the wedge is what angles the sound.</div>
     </div>
@@ -130,10 +139,10 @@
   const PROBE_B = 4.5;                        // exit point used in part B
   const BEAM_W = 0.14;                        // beam half-width (inch)
   const RANGE = 5;                            // A-scan: 0-5 inch of sound path
-  const W = 1000, H = 640, K = 1.5;
+  const W = 1000, H = 700, K = 1.5;
   const PX = 50, S = 110, TOPY = 176;         // plate drawing: x of 0 inch, px per inch, top surface y
   const X = x => PX + x * S, Y = y => TOPY + y * S;
-  const AS = { x: 64, y: 440, w: 880, h: 168 };
+  const AS = { x: 64, y: 500, w: 880, h: 168 };   // the gap above it (y 320-440) holds the probe and tilt controls
   const C = { ink: '#1f1d1b', soft: '#57524d', faded: '#8f8882', rule: '#ddd6cc', red: '#A82020', blue: '#2a6fdb', good: '#0d904f', orange: '#d9731a', navy: '#0b1320', trace: '#f5e663', crack: '#7a1818' };
   const SANS = "'Manrope', system-ui, sans-serif", MONO = "'JetBrains Mono', ui-monospace, monospace";
   const IN = v => v.toFixed(3) + '″';
