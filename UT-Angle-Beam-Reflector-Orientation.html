@@ -88,14 +88,14 @@
   </div>
 </header>
 <main class="wrap">
-  <p class="lede">An echo only shows up when sound comes back to the probe. Hunt for a root crack with a straight beam and then with a 45° wedge, then tilt a flat flaw and see how quickly the echo disappears when the flaw stops facing the beam.</p>
+  <p class="lede">An echo only shows up when sound comes back to the probe. Hunt for a root crack with a straight beam and then with a 45° wedge, move the crack to the middle of the plate, then tilt it and see how quickly the echo disappears when the flaw stops facing the beam.</p>
   <div class="trainer">
     <div class="stage" id="stage">
       <canvas id="cv" width="1500" height="960" aria-label="Side view of a 1 inch steel plate with a probe and a flaw, and the A-scan below"></canvas>
       <div class="toolbar">
         <span class="lab">Probe</span>
         <span class="probes" id="probes"><button data-p="0">Straight beam (no wedge)</button> <button data-p="45">45° wedge</button></span>
-        <label class="tilt" id="tiltBox" hidden><span class="lab">Flaw tilt</span><input type="range" id="tilt" min="0" max="90" step="1" value="0" aria-label="Flaw tilt in degrees"><output id="tiltOut">0°</output></label>
+        <label class="tilt" id="tiltBox" hidden><span class="lab">Flaw tilt</span><input type="range" id="tilt" min="0" max="90" step="1" value="90" aria-label="Flaw tilt in degrees"><output id="tiltOut">90°</output></label>
       </div>
       <div class="help" id="help">Drag the probe along the plate. The probe is the same throughout; the wedge is what angles the sound.</div>
     </div>
@@ -114,6 +114,7 @@
     <li>An echo needs sound to <b>come back</b> to the probe. A flaw only sends sound back when it <b>faces the beam</b>.</li>
     <li>A crack standing upright, like a <b>root crack</b>, lies along a straight beam. The sound slides past it, so the straight beam only shows the back wall.</li>
     <li>With a <b>45° wedge</b>, the crack face and the back wall make a <b>corner</b>. A corner sends the sound straight back: a <b>corner trap</b>. That's why angle beams find root cracks.</li>
+    <li>Move the same upright crack up into the middle of the plate and the corner is gone. The sound bounces off it to the side, so there's <b>no echo</b>, even though the beam hits it.</li>
     <li>A flat flaw gives the biggest echo when the beam meets it at <b>90°</b> (square-on). Tilt it just 10 to 15° away and the echo nearly disappears, because the sound bounces off to the side and misses the probe.</li>
     <li>In weld inspection, this is why you pick the wedge to suit the weld bevel: so the beam faces the fusion face.</li>
   </ul></div>
@@ -141,21 +142,33 @@
   const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
   const card = document.getElementById('card'), stepsEl = document.getElementById('steps');
   const tiltEl = document.getElementById('tilt'), tiltOut = document.getElementById('tiltOut'), tiltBox = document.getElementById('tiltBox');
-  const st = { xp: null, angle: 0, tilt: 0, part: 'A', drag: null };
+  const st = { xp: null, angle: 0, tilt: 90, part: 'A', sub: null, drag: null };   // part B sub: 'lift' | 'scan' | 'tilt'
 
-  // ---------- sound path for the 45° wedge in part A: bounces until it reaches the plate end or runs into the crack ----------
-  function path(xp, ang) {
+  // The upright crack: at the root in part A; in part B it rises to the middle of the plate (animated), where it
+  // becomes the flaw that the tilt slider turns. Returns the vertical segment {x, y1, y2}.
+  const LIFT_MS = 2800;
+  const ease = f => f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
+  function crackNow() {
+    if (st.part === 'A') return { x: CRACK.x, y1: T - CRACK.h, y2: T };
+    const f = st.sub === 'lift' ? ease(Math.min(1, (performance.now() - q.liftAt) / LIFT_MS)) : 1;
+    const x = CRACK.x + (FLAW.x - CRACK.x) * f, yc = (T - CRACK.h / 2) + (FLAW.y - (T - CRACK.h / 2)) * f, h = CRACK.h + (FLAW.len - CRACK.h) * f;
+    return { x, y1: yc - h / 2, y2: yc + h / 2 };
+  }
+  // ---------- 45° sound path: bounces until it reaches the plate end or runs into the upright crack ----------
+  function path(xp, ang, ob) {
+    ob = ob || crackNow();
     const a = ang * RAD, dx = Math.sin(a);
     let x = xp, y = 0, dy = Math.cos(a), s = 0, leg = 1;
     const segs = [];
     for (let i = 0; i < 40 && x < L - 1e-9; i++) {
       const tY = dy > 0 ? (T - y) / dy : -y / dy, tX = (L - x) / dx;
       let t = Math.min(tY, tX), stop = tX <= tY + 1e-9;
-      if (x < CRACK.x - 1e-9) {                 // does this leg run into the crack face?
-        const tc = (CRACK.x - x) / dx, yc = y + dy * tc;
-        if (tc <= t + 1e-9 && yc >= T - CRACK.h - 1e-9) { t = tc; stop = true; }
+      let hit = false;
+      if (x < ob.x - 1e-9) {                    // does this leg run into the crack face?
+        const tc = (ob.x - x) / dx, yc = y + dy * tc;
+        if (tc <= t + 1e-9 && yc >= ob.y1 - 1e-9 && yc <= ob.y2 + 1e-9) { t = tc; stop = true; hit = true; }
       }
-      segs.push({ x1: x, y1: y, x2: x + dx * t, y2: y + dy * t, s1: s, len: t, leg });
+      segs.push({ x1: x, y1: y, x2: x + dx * t, y2: y + dy * t, s1: s, len: t, leg, hit, up: dy < 0 });
       s += t; x += dx * t; y += dy * t;
       if (stop) break;
       dy = -dy; leg++;
@@ -165,7 +178,7 @@
   // part A, 45° wedge: one corner echo (crack root meets back wall), strongest when the beam centre runs into the corner
   function cornerEcho(xp) {
     let best = null;
-    for (const g of path(xp, 45)) {
+    for (const g of path(xp, 45, { x: CRACK.x, y1: T - CRACK.h, y2: T })) {
       if (g.len < 1e-9) continue;
       const ux = (g.x2 - g.x1) / g.len, uy = (g.y2 - g.y1) / g.len;
       const t = (CRACK.x - g.x1) * ux + (T - g.y1) * uy;
@@ -181,20 +194,21 @@
   const FLAW_S = FLAW.y / Math.cos(45 * RAD);
   function echoes() {
     if (st.xp == null) return [];
-    if (st.part === 'B') { const a = flawAmp(st.tilt); return a > 2 ? [{ s: FLAW_S, amp: a, depth: FLAW.y, what: 'flaw' }] : []; }
+    if (st.part === 'B') { if (st.sub !== 'tilt') return []; const a = flawAmp(st.tilt); return a > 2 ? [{ s: FLAW_S, amp: a, depth: FLAW.y, what: 'flaw' }] : []; }
     if (st.angle === 0) return [1, 2, 3, 4, 5].map(n => ({ s: n * T, amp: 88 * Math.pow(0.72, n - 1), depth: T, what: 'bw' }));
     const e = cornerEcho(st.xp); return e ? [Object.assign(e, { what: 'corner' })] : [];
   }
   const first = () => { const l = echoes().filter(e => e.amp > 20); return l.length ? l.reduce((a, b) => a.s < b.s ? a : b) : null; };
 
   // ---------- lesson flow ----------
-  const fresh = () => ({ phase: 'place', fb: '', guess: null, peak: null, away: null, answered: {} });
+  const fresh = () => ({ phase: 'place', fb: '', guess: null, peak: null, away: null, answered: {}, wentOff: false, scanned: 0, liftAt: 0 });
   let q = fresh();
   const STEPS = [
     { text: 'Drag the <b>straight-beam</b> probe onto the plate.', done: () => q.phase !== 'place' },
-    { text: 'Slide the probe right over the crack. Is there a crack echo?', done: () => !!q.answered.over },
+    { text: 'Slide the probe over the crack, and on and off it. Is there a crack echo?', done: () => !!q.answered.over },
     { text: 'Put on the <b>45° wedge</b> and slide the probe until the crack gives an echo.', done: () => !!q.answered.find },
-    { text: 'Guess which tilt of a flat flaw gives the biggest echo.', done: () => q.guess != null },
+    { text: 'Watch the crack move to the middle of the plate, then scan it with the <b>45° wedge</b>.', done: () => !!q.answered.scan },
+    { text: 'Guess which tilt of the flaw gives the biggest echo.', done: () => q.guess != null },
     { text: 'Turn the <b>tilt slider</b> to find the biggest echo, then let go.', done: () => !!q.answered.peak },
     { text: 'Tilt the flaw <b>15° or more</b> away from that and watch the echo.', done: () => !!q.answered.away }
   ];
@@ -209,6 +223,8 @@
   }
   const opts = (name, list) => `<div class="opts">${list.map(([v, t]) => `<button data-a="${name}" data-v="${v}">${t}</button>`).join('')}</div>`;
   const pct = a => Math.round(a) + '%';
+  const where = () => { const d = Math.abs(st.xp - CRACK.x); return d < 0.005 ? 'Probe: <b>right over the crack</b>.' : `Probe: <b>${IN(d)}</b> from the crack.`; };
+  const hitNow = () => { const g = path(st.xp, 45).find(s => s.hit); return g ? `Beam hitting the crack: <b>yes, leg ${g.leg}</b>.` : 'Beam hitting the crack: <b>no</b>.'; };
   function render() {
     renderSteps();
     paintTools();
@@ -218,7 +234,9 @@
       case 'over':
         show(`<div class="ql">Find the crack</div><div class="qq">Slide the probe until it sits right over the crack.</div><div class="qs">The crack is ${IN(Math.abs(dist))} ${dist < 0 ? 'to the right of' : 'to the left of'} the probe.</div>`); break;
       case 'over-q':
-        show(`<div class="ql">Question</div><div class="qq">The probe is right over the crack. Is there an echo from the crack?</div>${opts('over', [['yes', 'Yes, the echo at 1.000″'], ['no', 'No, only the back wall']])}<div class="fb">${q.fb}</div>`); break;
+        show(`<div class="ql">Question</div><div class="qq">Is there an echo from the crack?</div><div class="qs">Before you answer, you can keep sliding the probe on and off the crack and watch the A-scan. ${where()}</div>${opts('over', [['yes', 'Yes, the echo at 1.000″'], ['no', 'No, only the back wall']])}<div class="fb">${q.fb}</div>`); break;
+      case 'over-check':
+        show(`<div class="ql">Check for yourself</div><div class="qq">${q.wentOff ? 'Now slide back over the crack. Did the echo at 1.000″ change?' : 'Slide the probe at least 0.5″ away from the crack. Watch the echo at 1.000″.'}</div><div class="qs">${where()}</div>`); break;
       case 'over-ok':
         show(`<div class="ql">No crack echo</div><div class="qq"><span class="ok">Right. The straight beam misses the crack.</span></div><div class="ex">The echoes are the back wall at 1.000″ and its repeats, the same as anywhere on the plate. The crack stands on edge, along the path of the sound. The sound slides past it and nothing faces back toward the probe.</div><button class="go" data-a="next" data-v="wedge">Next →</button>`); break;
       case 'wedge':
@@ -228,9 +246,17 @@
       case 'find-q':
         show(`<div class="ql">An echo!</div><div class="qq">Where is this echo coming from?</div>${opts('find', [['bw', 'The back wall'], ['tip', 'The top of the crack'], ['corner', 'The corner where the crack meets the back wall']])}<div class="fb">${q.fb}</div>`); break;
       case 'find-ok':
-        show(`<div class="ql">Corner trap</div><div class="qq"><span class="ok">Right, the corner at the root of the crack.</span></div><div class="ex">The crack face and the back wall make a corner, and a corner sends the sound straight back the way it came. The echo is at ${IN(q.found.s)} of sound path, ${IN(T)} deep: the root of the crack. That's why angle beams find root cracks that a straight beam misses.</div><button class="go" data-a="next" data-v="guess">Next →</button>`); break;
+        show(`<div class="ql">Corner trap</div><div class="qq"><span class="ok">Right, the corner at the root of the crack.</span></div><div class="ex">The crack face and the back wall make a corner, and a corner sends the sound straight back the way it came. The echo is at ${IN(q.found.s)} of sound path, ${IN(T)} deep: the root of the crack. That's why angle beams find root cracks that a straight beam misses.</div><button class="go" data-a="next" data-v="lift">Next →</button>`); break;
+      case 'lift':
+        show(`<div class="ql">Part 2 · move the crack</div><div class="qq">Watch the plate: the same upright crack moves up to the middle of the plate, away from the back wall.</div>`); break;
+      case 'scan2':
+        show(`<div class="ql">Scan it</div><div class="qq">Scan the crack with the same <b>45° wedge</b>. Slide the probe back and forth and look for an echo.</div><div class="qs">${hitNow()}</div>`); break;
+      case 'scan2-q':
+        show(`<div class="ql">Question</div><div class="qq">The beam hits the crack, but the screen stays flat. Why?</div><div class="qs">You can keep scanning while you think. ${hitNow()}</div>${opts('scan', [['small', 'The crack is too small to reflect sound'], ['side', 'There\'s no corner now: the crack sends the sound off to the side'], ['reach', 'The sound can\'t reach the middle of the plate']])}<div class="fb">${q.fb}</div>`); break;
+      case 'scan2-ok':
+        show(`<div class="ql">No corner, no echo</div><div class="qq"><span class="ok">Right. The sound bounces off to the side.</span></div><div class="ex">At the root, the crack and the back wall made a corner that sent the sound straight back. In the middle there's no corner. The upright crack doesn't face the 45° beam, so the sound bounces away (follow the green line) and never reaches the probe. So which way would a flaw have to face to send the sound back?</div><button class="go" data-a="next" data-v="guess">Next →</button>`); break;
       case 'guess':
-        show(`<div class="ql">Part 2 · a flat flaw</div><div class="qq">Now there's a flat flaw in the middle of the plate. The probe stays put and you tilt the flaw. Which tilt will give the biggest echo?</div>${opts('guess', [['0', '0° (lying flat)'], ['45', '45°'], ['90', '90° (upright)']])}`); break;
+        show(`<div class="ql">Tilt the flaw</div><div class="qq">The probe is now set so the beam hits the middle of the flaw, and you can tilt the flaw with the slider. Which tilt will give the biggest echo?</div>${opts('guess', [['0', '0° (lying flat)'], ['45', '45°'], ['90', '90° (upright, like now)']])}`); break;
       case 'tilt':
         show(`<div class="ql">Find the biggest echo</div><div class="qq">Turn the <b>tilt slider</b> until the echo is as tall as it gets, then let go.</div><div class="qs">Echo now: <b>${pct(flawAmp(st.tilt))}</b> at ${st.tilt}°. Follow the green line: where does the sound go after it hits the flaw?</div>${q.fb ? `<div class="fb">${q.fb}</div>` : ''}`); break;
       case 'tilt-ok':
@@ -244,16 +270,25 @@
     }
   }
   function act(a, v) {
-    if (a === 'over') { if (v === 'no') { q.answered.over = true; q.phase = 'over-ok'; } else q.fb = '<span class="no">That\'s the back wall.</span> Slide off the crack and the echo at 1.000″ is still there, the same height. It comes from the bottom of the plate, not the crack.'; }
+    if (a === 'over') { if (v === 'no') { q.answered.over = true; q.phase = 'over-ok'; } else { q.fb = ''; q.wentOff = Math.abs(st.xp - CRACK.x) >= 0.5; q.phase = 'over-check'; } }
     if (a === 'find') { if (v === 'corner') { q.answered.find = true; q.phase = 'find-ok'; } else q.fb = v === 'bw' ? '<span class="no">Not the back wall.</span> On its own, the back wall sends the angled sound away from the probe, so it gives no echo.' : '<span class="no">Not the top.</span> Look where the beam runs in: the bottom of the crack, where it meets the back wall.'; }
-    if (a === 'guess') { q.guess = +v; startPartB(); q.phase = 'tilt'; }
+    if (a === 'scan') { if (v === 'side') { q.answered.scan = true; q.phase = 'scan2-ok'; } else q.fb = v === 'small' ? '<span class="no">It\'s the same crack that gave a big corner echo a moment ago.</span> Follow the green line: the sound does bounce off it, just not back to the probe.' : '<span class="no">It does reach it.</span> Look at the plate: the orange beam runs right into the crack.'; }
+    if (a === 'guess') { q.guess = +v; q.phase = 'tilt'; }
     if (a === 'next') { q.fb = ''; q.phase = v; }
+    if (a === 'next' && v === 'lift') startLift();
+    if (a === 'next' && v === 'guess') startTilt();
     render();
   }
-  function startPartB() {
-    st.part = 'B'; st.angle = 45; st.xp = PROBE_B; st.tilt = 0; tiltEl.value = 0; tiltOut.textContent = '0°';
+  function startLift() {
+    st.part = 'B'; st.sub = 'lift'; q.liftAt = performance.now();
+    const mine = q;
+    setTimeout(() => { if (q === mine && q.phase === 'lift') { st.sub = 'scan'; q.phase = 'scan2'; render(); } }, LIFT_MS + 300);
   }
-  const probeLocked = () => !['place', 'over', 'find'].includes(q.phase);
+  function startTilt() {
+    st.sub = 'tilt'; st.xp = PROBE_B; st.tilt = 90; tiltEl.value = 90; tiltOut.textContent = '90°';
+  }
+  const probeLocked = () => !['place', 'over', 'over-q', 'over-check', 'find', 'scan2', 'scan2-q'].includes(q.phase);
+  const lockMsg = () => st.sub === 'tilt' ? 'The probe stays put now. Use the tilt slider.' : st.sub === 'lift' ? 'Watch the crack move first' : q.phase.endsWith('-ok') ? 'Press Next on the card to continue' : q.phase === 'wedge' ? 'Put the 45° wedge on first' : 'Answer the question first';
   let toast = null;
   function say(t) { toast = { t, at: performance.now() }; }
 
@@ -263,10 +298,10 @@
   const probeHit = p => { const px = st.xp == null ? parked.x : X(st.xp), py = st.xp == null ? parked.y : TOPY; return p.x > px - 78 && p.x < px + 34 && p.y > py - 112 && p.y < py + 6; };
   const SNAP = 0.12;
   function setX(x) {
-    const prev = st.xp;
+    const prev = st.xp, phase0 = q.phase;
     x = Math.round(Math.min(L - 0.5, Math.max(0.6, x)) * 100) / 100;
     // settle exactly on the spot the student is hunting for when the probe reaches or passes it
-    const spot = q.phase === 'over' ? CRACK.x : q.phase === 'find' ? CRACK.x - T * Math.tan(45 * RAD) : null;
+    const spot = q.phase === 'over' || (q.phase === 'over-check' && q.wentOff) ? CRACK.x : q.phase === 'find' ? CRACK.x - T * Math.tan(45 * RAD) : null;
     if (spot != null) {
       const lo = Math.min(prev == null ? x : prev, x), hi = Math.max(prev == null ? x : prev, x);
       if (spot >= lo - SNAP && spot <= hi + SNAP) x = spot;
@@ -274,13 +309,19 @@
     st.xp = x;
     if (q.phase === 'place') q.phase = 'over';
     if (q.phase === 'over' && st.xp === CRACK.x) q.phase = 'over-q';
+    if (q.phase === 'over-check') {
+      if (Math.abs(st.xp - CRACK.x) >= 0.5) q.wentOff = true;
+      else if (q.wentOff && st.xp === CRACK.x) { q.phase = 'over-q'; q.fb = '<span class="ok">On the crack or off it, the A-scan looks the same:</span> the back wall at 1.000″ and its repeats. Now answer again.'; }
+    }
+    // part 2: count how far the student scans with the beam on the crack, then ask
+    if ((q.phase === 'scan2') && prev != null && path(st.xp, 45).some(g => g.hit)) { q.scanned += Math.abs(st.xp - prev); if (q.scanned >= 0.4) q.phase = 'scan2-q'; }
     if (q.phase === 'find' && st.xp === spot) { q.found = cornerEcho(st.xp); q.phase = 'find-q'; }
     render();
-    if (probeLocked()) st.drag = null;
+    if (probeLocked() || q.phase !== phase0) st.drag = null;   // a new card popped up: let go so the probe stays where it is
   }
   cv.addEventListener('pointerdown', e => {
     const p = pos(e); if (!probeHit(p)) return;
-    if (st.xp != null && probeLocked()) { say(st.part === 'B' ? 'The probe stays put now. Use the tilt slider.' : q.phase.endsWith('-ok') ? 'Press Next on the card to continue' : q.phase === 'wedge' ? 'Put the 45° wedge on first' : 'Answer the question first'); return; }
+    if (st.xp != null && probeLocked()) { say(lockMsg()); return; }
     e.preventDefault(); cv.setPointerCapture(e.pointerId);
     st.drag = { dx: (st.xp == null ? parked.x : X(st.xp)) - p.x, dy: (st.xp == null ? parked.y : TOPY) - p.y, x: p.x, y: p.y };
   });
@@ -301,7 +342,7 @@
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
     e.preventDefault();
     if (st.xp == null) { say('Drag the probe onto the plate first'); return; }
-    if (probeLocked()) { say(st.part === 'B' ? 'The probe stays put now. Use the tilt slider.' : 'Answer the question on the card first'); return; }
+    if (probeLocked()) { say(lockMsg()); return; }
     setX(st.xp + (e.key === 'ArrowLeft' ? -0.05 : 0.05));
   });
   const probesEl = document.getElementById('probes');
@@ -313,10 +354,10 @@
   }));
   function paintTools() {
     probesEl.querySelectorAll('button').forEach(b => { b.classList.toggle('on', +b.dataset.p === st.angle); b.classList.toggle('glow', q.phase === 'wedge' && +b.dataset.p === 45); });
-    tiltBox.hidden = st.part !== 'B';
+    tiltBox.hidden = st.sub !== 'tilt';
     tiltEl.disabled = !['tilt', 'away'].includes(q.phase);
     tiltBox.classList.toggle('glow', ['tilt', 'away'].includes(q.phase));
-    document.getElementById('help').textContent = st.part === 'B'
+    document.getElementById('help').textContent = st.sub === 'tilt'
       ? 'The probe stays put with the 45° wedge. Turn the tilt slider to tilt the flaw; the green line shows where the sound goes after it hits the flaw.'
       : 'Drag the probe along the plate. The probe is the same throughout; the wedge is what angles the sound.';
   }
@@ -329,7 +370,7 @@
     } else if (q.phase === 'away' && Math.abs(st.tilt - 45) >= 15) { q.away = { tilt: st.tilt, amp: flawAmp(st.tilt) }; q.answered.away = true; q.phase = 'away-ok'; }
     render();
   });
-  document.getElementById('reset').addEventListener('click', () => { q = fresh(); Object.assign(st, { xp: null, angle: 0, tilt: 0, part: 'A', drag: null }); tiltEl.value = 0; tiltOut.textContent = '0°'; render(); });
+  document.getElementById('reset').addEventListener('click', () => { q = fresh(); Object.assign(st, { xp: null, angle: 0, tilt: 90, part: 'A', sub: null, drag: null }); tiltEl.value = 90; tiltOut.textContent = '90°'; render(); });
   if (new URLSearchParams(location.search).has('embed')) document.body.classList.add('embed');
 
   // ---------- drawing ----------
@@ -373,11 +414,8 @@
     ctx.fillStyle = C.red; ctx.beginPath(); ctx.moveTo(ex, ey + 1); ctx.lineTo(ex - 6, ey + 11); ctx.lineTo(ex + 6, ey + 11); ctx.closePath(); ctx.fill();
     ctx.restore();
   }
-  // part B: where the sound goes after hitting the flaw (mirror rule), with one more bounce off the back wall
-  function reflected() {
-    const t = st.tilt * RAD, v = { x: Math.sin(45 * RAD), y: Math.cos(45 * RAD) }, n = { x: Math.sin(t), y: Math.cos(t) };
-    const dot = v.x * n.x + v.y * n.y;
-    let d = { x: v.x - 2 * dot * n.x, y: v.y - 2 * dot * n.y }, p = { x: FLAW.x, y: FLAW.y };
+  // where the sound goes after it bounces off the flaw: follow it to the top surface, with one bounce off the back wall
+  function ray(p, d) {
     const pts = [[p.x, p.y]];
     for (let i = 0; i < 2; i++) {
       const tY = d.y > 1e-9 ? (T - p.y) / d.y : d.y < -1e-9 ? -p.y / d.y : Infinity;
@@ -386,7 +424,17 @@
       if (tX < tY || p.y < 1e-6) break;          // reached the top surface or the plate end
       d = { x: d.x, y: -d.y };                    // bounce off the back wall once
     }
-    return { pts, back: Math.abs(st.tilt - 45) <= 3 };
+    return pts;
+  }
+  function reflected() {                          // tilted flat flaw (mirror rule)
+    const t = st.tilt * RAD, v = { x: Math.sin(45 * RAD), y: Math.cos(45 * RAD) }, n = { x: Math.sin(t), y: Math.cos(t) };
+    const dot = v.x * n.x + v.y * n.y;
+    return { pts: ray({ x: FLAW.x, y: FLAW.y }, { x: v.x - 2 * dot * n.x, y: v.y - 2 * dot * n.y }), back: Math.abs(st.tilt - 45) <= 3 };
+  }
+  function greenRay(pts) {
+    dashed(pts, C.good, 2.5);
+    const a = pts[pts.length - 2], b = pts[pts.length - 1];
+    arrowHead(b[0], b[1], Math.atan2(b[1] - a[1], b[0] - a[0]), C.good);
   }
 
   function frame(now) {
@@ -420,21 +468,22 @@
         band(X(st.xp), Y(0), X(st.xp), Y(T), 0.32);
         dashed([[X(st.xp), Y(0)], [X(st.xp), Y(T)]], C.orange);
         route = [[X(st.xp), Y(0)], [X(st.xp), Y(T)]]; back = true;
-      } else if (st.part === 'A') {
+      } else if (st.part === 'A' || st.sub !== 'tilt') {
         const segs = path(st.xp, 45);
         segs.forEach(s => band(X(s.x1), Y(s.y1), X(s.x2), Y(s.y2), 0.32 * Math.exp(-s.s1 / 6)));
         route = [[X(segs[0].x1), Y(segs[0].y1)]].concat(segs.map(s => [X(s.x2), Y(s.y2)]));
         dashed(route, C.orange);
-        if (e) { route = [[X(st.xp), Y(0)], [X(CRACK.x), Y(T)]]; back = true; }
+        const last = segs[segs.length - 1];
+        if (st.part === 'A' && e) { route = [[X(st.xp), Y(0)], [X(CRACK.x), Y(T)]]; back = true; }
+        else if (st.part === 'B' && last.hit) {    // the upright crack in mid-plate: mirror off its face, away from the probe
+          const pts = ray({ x: last.x2, y: last.y2 }, { x: -Math.sin(45 * RAD), y: last.up ? -Math.cos(45 * RAD) : Math.cos(45 * RAD) }).map(p => [X(p[0]), Y(p[1])]);
+          greenRay(pts); route = route.concat(pts.slice(1));
+        }
       } else {
         band(X(st.xp), Y(0), X(FLAW.x), Y(FLAW.y), 0.32);
         dashed([[X(st.xp), Y(0)], [X(FLAW.x), Y(FLAW.y)]], C.orange);
         const r = reflected(), pts = r.pts.map(p => [X(p[0]), Y(p[1])]);
-        if (!r.back) {
-          dashed(pts, C.good, 2.5);
-          const a = pts[pts.length - 2], b = pts[pts.length - 1];
-          arrowHead(b[0], b[1], Math.atan2(b[1] - a[1], b[0] - a[0]), C.good);
-        }
+        if (!r.back) greenRay(pts);
         route = [[X(st.xp), Y(0)], [X(FLAW.x), Y(FLAW.y)]].concat(r.back ? [] : pts.slice(1)); back = r.back;
       }
       ctx.restore();
@@ -448,22 +497,25 @@
       if (p) { ctx.fillStyle = ret ? C.good : C.red; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(p[0], p[1], 6, 0, 7); ctx.fill(); ctx.shadowBlur = 0; }
     }
     // the flaw
-    if (st.part === 'A') {
+    if (st.part === 'A' || st.sub !== 'tilt') {
+      const c = crackNow(), lifting = st.sub === 'lift' && performance.now() - q.liftAt < LIFT_MS + 300;
+      if (lifting) { ctx.strokeStyle = '#ffd84d'; ctx.lineWidth = 16; ctx.lineCap = 'round'; ctx.globalAlpha = 0.45 + 0.35 * Math.sin(tm * 5); ctx.beginPath(); ctx.moveTo(X(c.x), Y(c.y2)); ctx.lineTo(X(c.x), Y(c.y1)); ctx.stroke(); ctx.globalAlpha = 1; }
       ctx.strokeStyle = C.crack; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(X(CRACK.x), Y(T)); ctx.lineTo(X(CRACK.x) - 2, Y(T - CRACK.h * 0.5)); ctx.lineTo(X(CRACK.x) + 1, Y(T - CRACK.h)); ctx.stroke(); ctx.lineCap = 'butt';
-      txt('root crack', X(CRACK.x) + 10, Y(T) - 10, { size: 12, w: 800, c: C.crack });
+      ctx.beginPath(); ctx.moveTo(X(c.x), Y(c.y2)); ctx.lineTo(X(c.x) - 2, Y((c.y1 + c.y2) / 2)); ctx.lineTo(X(c.x) + 1, Y(c.y1)); ctx.stroke(); ctx.lineCap = 'butt';
+      if (st.part === 'A') txt('root crack', X(CRACK.x) + 10, Y(T) - 10, { size: 12, w: 800, c: C.crack });
+      else txt('upright crack', X(c.x) + 10, Y(c.y2) + 2, { size: 12, w: 800, c: C.crack });
       if (e && st.angle === 45) { ctx.strokeStyle = C.good; ctx.lineWidth = 3; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(tm * 6); ctx.beginPath(); ctx.arc(X(CRACK.x), Y(T), 16, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
     } else {
       const t = st.tilt * RAD, hx = Math.cos(t) * FLAW.len / 2 * S, hy = -Math.sin(t) * FLAW.len / 2 * S;
       ctx.strokeStyle = C.crack; ctx.lineWidth = 5; ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(X(FLAW.x) - hx, Y(FLAW.y) - hy); ctx.lineTo(X(FLAW.x) + hx, Y(FLAW.y) + hy); ctx.stroke(); ctx.lineCap = 'butt';
-      txt('flat flaw · ' + st.tilt + '°', X(FLAW.x) + 40, Y(FLAW.y) + 34, { size: 12, w: 800, c: C.crack });
+      txt('flaw · ' + st.tilt + '°', X(FLAW.x) + 40, Y(FLAW.y) + 34, { size: 12, w: 800, c: C.crack });
       if (Math.abs(st.tilt - 45) <= 3) txt('faces the beam: sound comes straight back', X(FLAW.x), Y(T) + 22, { size: 12, w: 800, c: C.good, a: 'center' });
     }
 
     // ---------- A-scan ----------
     txt('A-SCAN · SOUND PATH 0 TO 5″', AS.x, AS.y - 52, { size: 11, w: 700, c: C.faded, mono: true });
-    const boxes = [['SOUND PATH', e ? IN(e.s) : '---'], ['DEPTH', e ? IN(e.depth) : '---'], ['PROBE', st.angle ? '45° wedge' : 'straight'], ['FLAW TILT', st.part === 'B' ? st.tilt + '°' : '---']];
+    const boxes = [['SOUND PATH', e ? IN(e.s) : '---'], ['DEPTH', e ? IN(e.depth) : '---'], ['PROBE', st.angle ? '45° wedge' : 'straight'], ['FLAW TILT', st.sub === 'tilt' ? st.tilt + '°' : '---']];
     boxes.forEach(([l, v], i) => {
       const bx = AS.x + i * 222, by = AS.y - 44, bw = 212;
       rr(bx, by, bw, 34, 6); ctx.fillStyle = '#16202e'; ctx.fill();
@@ -502,7 +554,7 @@
   render();
   const go = () => requestAnimationFrame(frame);
   (document.fonts ? Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 2000))]) : Promise.resolve()).then(go);
-  window.__orient = { st, get q() { return q; }, echoes, cornerEcho, flawAmp, setX, act };
+  window.__orient = { st, get q() { return q; }, echoes, cornerEcho, flawAmp, path, setX, act };
 })();
 </script>
 </body>
