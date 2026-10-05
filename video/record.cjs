@@ -1,6 +1,6 @@
 // Renders UT-Probe-Delay-vs-Display-Delay.html to an MP4, frame by frame.
 //
-//   [PAGE=UT-Epoch-Range.html] NODE_PATH=$(npm root -g) node video/record.cjs [out.mp4]
+//   [PAGE=UT-Epoch-Range.html] [AUDIO=video/audio/UT-Epoch-Range-voice.mp3] NODE_PATH=$(npm root -g) node video/record.cjs [out.mp4]
 //   NODE_PATH=$(npm root -g) node video/record.cjs --stills 10,40,90   (PNG stills only)
 //
 // Needs Playwright and ffmpeg (set FFMPEG=/path/to/ffmpeg if it isn't on PATH).
@@ -48,7 +48,9 @@ const args = process.argv.slice(2);
   }
 
   const out = path.resolve(args[0] || 'UT-Probe-Delay-vs-Display-Delay.mp4');
-  const ff = spawn(FFMPEG, ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-',
+  // AUDIO=video/audio/<page>-voice.mp3 adds the narration track (made by video/make-voice.cjs)
+  const audio = process.env.AUDIO ? ['-i', path.resolve(process.env.AUDIO), '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '128k', '-shortest'] : [];
+  const ff = spawn(FFMPEG, ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-', ...audio,
     '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p', '-r', String(FPS), '-movflags', '+faststart', out],
     { stdio: ['pipe', 'inherit', 'inherit'] });
   const n = Math.round(dur * FPS);

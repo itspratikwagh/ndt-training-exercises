@@ -447,10 +447,10 @@
       drawProbe(ctx, x, top);
       ctx.strokeStyle = 'rgba(217,115,26,0.7)'; ctx.setLineDash([3, 4]); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, base); ctx.stroke(); ctx.setLineDash([]);
       rects.probe = { x: x - 22, y: top - 50, w: 44, h: 50 };
-    } else if (!opt.noHint && !dragging) {
+    } else if ((!opt.noHint || opt.parked) && !dragging) {
       const px = b.x + 48, py = b.y + 92;                      // parked probe, waiting to be dragged
       drawProbe(ctx, px, py);
-      txt(ctx, '← drag the probe onto a step', px + 34, py - 18, { size: 13, weight: 700, color: '#2a6fdb' });
+      if (!opt.noHint) txt(ctx, '← drag the probe onto a step', px + 34, py - 18, { size: 13, weight: 700, color: '#2a6fdb' });
       rects.probe = { x: px - 22, y: py - 50, w: 44, h: 50 };
       if (opt.glowProbe) glowRing(ctx, px - 24, py - 52, 48, 56, 8, st.now);
     }
@@ -565,7 +565,9 @@
   // ================= Scripted lesson video =================
   // cues: [{ say, do: [[offsetSec, action], ...], hold, card }]
   // action: 'F1'..'P7','CHECK','ESC','2NDF','NEXT','DB','GATES','FREEZE'  |  ['knob', n]  |  ['place', th]  |  ['set', {..}]  |  ['toast', text]
-  function buildTimeline(cues) {
+  // voice: optional measured narration length (s) per cue, so each line gets exactly its spoken time
+  const VOICE_LEAD = 0.15;                       // narration starts this long after the cue begins
+  function buildTimeline(cues, voice) {
     let t = 0.6; const acts = [], out = [];
     cues.forEach((c, i) => {
       const words = c.say.split(/\s+/).length;
@@ -577,8 +579,11 @@
           last = Math.max(last, off + Math.abs(n) * gap);
         } else { acts.push({ t: t + off, a }); last = Math.max(last, off); }
       });
-      const dur = Math.max(words / 2.55, last + 0.7) + (c.hold || 0.35);
-      out.push({ t0: t, t1: t + dur, say: c.say, card: c.card, i });
+      const spoken = voice && voice[i] != null ? VOICE_LEAD + voice[i] + 0.3 : words / 2.55;
+      const dur = Math.max(spoken, last + 0.7) + (c.hold || 0.35);
+      const q = { t0: t, t1: t + dur, say: c.say, speak: c.speak || c.say, card: c.card, i };
+      ['arrows', 'highlight'].forEach(k => { if (k in c) q[k] = c[k]; });
+      out.push(q);
       t += dur;
     });
     acts.sort((x, y) => x.t - y.t);
@@ -637,15 +642,26 @@
     txt(ctx, 'EPOCH 650-STYLE TRAINER · UT LEVEL I', VW - 18, 40, { size: 12, weight: 600, color: '#8f8882', align: 'right', mono: true });
     // instrument
     ctx.save(); ctx.translate(IX, IY); ctx.scale(IS, IS);
-    drawInstrument(ctx, st, {});
+    let arrows = null, highlight = null;
+    for (const q of tl.cues) { if (q.t0 > t) break; if ('arrows' in q) arrows = q.arrows; if ('highlight' in q) highlight = q.highlight; }
+    drawInstrument(ctx, st, { arrows: arrows ? { numbered: arrows === 'numbered' } : null, highlight });
     const c = cursorAt(tl, t);
     if (c && c.kind === 'inst') { ctx.globalAlpha = c.alpha; drawFinger(ctx, c.x, c.y, c.press); ctx.globalAlpha = 1; }
     ctx.restore();
     // right column
     const bx = IX + W * IS + 16, bw = VW - bx - 18;
     const B = { x: bx, y: IY, w: bw, h: 210 };
-    const r = drawBlock(ctx, B, st, { noHint: true });
-    if (c && c.kind === 'block') { const rr = r.find(q => q.th === c.th); if (rr) { ctx.globalAlpha = c.alpha; drawFinger(ctx, rr.x + rr.w / 2, rr.y + 40, c.press); ctx.globalAlpha = 1; } }
+    // probe drag: in the second before a 'place', the finger carries the probe from its parking spot to the step
+    const nextPlace = tl.acts.find(x => Array.isArray(x.a) && x.a[0] === 'place' && x.t > t && x.t - t < 1.1);
+    let dragPos = null;
+    if (nextPlace && st.probe == null) {
+      const rr0 = drawBlock(document.createElement('canvas').getContext('2d'), B, st, { noHint: true }).find(q => q.th === nextPlace.a[1]);
+      const f = clamp(1 - (nextPlace.t - t) / 1.0), e = f * f * (3 - 2 * f);
+      dragPos = { x: lerp(B.x + 48, rr0.x + rr0.w / 2, e), y: lerp(B.y + 70, rr0.y + 60 - 22, e) - Math.sin(Math.PI * e) * 30 };
+    }
+    const r = drawBlock(ctx, B, st, { noHint: true, parked: true, drag: dragPos });
+    if (dragPos) drawFinger(ctx, dragPos.x, dragPos.y - 10, 0);
+    else if (c && c.kind === 'block') { const rr = r.find(q => q.th === c.th); if (rr) { ctx.globalAlpha = c.alpha; drawFinger(ctx, rr.x + rr.w / 2, rr.y + 40, c.press); ctx.globalAlpha = 1; } }
     const cue = tl.cues.find(q => t >= q.t0 && t < q.t1) || tl.cues[tl.cues.length - 1];
     let card = null; for (const q of tl.cues) { if (q.t0 > t) break; if (q.card) card = q.card; }
     const CB = { x: bx, y: IY + 222, w: bw, h: IY + H * IS - (IY + 222) };
@@ -666,8 +682,16 @@
 
   function mountVideo(o) {
     const cv = o.canvas, ctx = cv.getContext('2d'), K = cv.width / VW;
-    const tl = buildTimeline(o.cfg.cues);
+    const tl = buildTimeline(o.cfg.cues, o.cfg.voice);
     let tNow = 0, playing = false, last = null, subs = true, lastCue = -1;
+    // narration track (one file, starts at t = 0); the clock follows it while it plays
+    let audio = null;
+    if (o.cfg.audio && !o.noAudio) {
+      audio = new Audio(o.cfg.audio); audio.preload = 'auto';
+      audio.addEventListener('error', () => { audio = null; });
+      if (o.voice) o.voice.addEventListener('change', () => { if (audio) audio.muted = !o.voice.checked; });
+    }
+    const audioOk = () => audio && audio.readyState >= 2 && !audio.error;
     const fmt = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
     function draw() {
       ctx.setTransform(K, 0, 0, K, 0, 0);
@@ -676,19 +700,28 @@
       o.time.textContent = fmt(tNow) + ' / ' + fmt(tl.total);
       if (cue && cue.i !== lastCue) { lastCue = cue.i; }
     }
-    function setPlaying(p) { playing = p; if (p && tNow >= tl.total - 0.05) tNow = 0; o.play.textContent = p ? '❚❚ Pause' : '▶ Play'; if (o.big) o.big.hidden = p || tNow > 0; last = null; }
+    function setPlaying(p) {
+      playing = p; if (p && tNow >= tl.total - 0.05) tNow = 0;
+      o.play.textContent = p ? '❚❚ Pause' : '▶ Play'; if (o.big) o.big.hidden = p || tNow > 0; last = null;
+      if (audio) { if (p) { try { audio.currentTime = tNow; } catch (e) {} audio.play().catch(() => {}); } else audio.pause(); }
+    }
     o.play.addEventListener('click', () => setPlaying(!playing));
     if (o.big) o.big.addEventListener('click', () => setPlaying(true));
     cv.addEventListener('click', () => setPlaying(!playing));
-    o.scrub.addEventListener('input', () => { tNow = o.scrub.value / 1000 * tl.total; if (o.big) o.big.hidden = true; draw(); });
+    o.scrub.addEventListener('input', () => { tNow = o.scrub.value / 1000 * tl.total; if (o.big) o.big.hidden = true; if (audio) try { audio.currentTime = tNow; } catch (e) {} draw(); });
     if (o.subs) o.subs.addEventListener('change', () => { subs = o.subs.checked; draw(); });
     function loop(ts) {
-      if (playing) { if (last != null) tNow += (ts - last) / 1000; last = ts; if (tNow >= tl.total) { tNow = tl.total; setPlaying(false); } draw(); }
+      if (playing) {
+        if (audioOk() && !audio.paused && !audio.ended && audio.currentTime < tl.total) tNow = audio.currentTime;
+        else if (last != null) tNow += (ts - last) / 1000;
+        last = ts; if (tNow >= tl.total) { tNow = tl.total; setPlaying(false); } draw();
+      }
       requestAnimationFrame(loop);
     }
     draw(); requestAnimationFrame(loop);
     return {
-      duration: tl.total, cues: tl.cues.map(c => ({ start: c.t0, end: c.t1, text: c.say })),
+      duration: tl.total, voiceLead: VOICE_LEAD, cues: tl.cues.map(c => ({ start: c.t0, end: c.t1, text: c.say, speak: c.speak })),
+      allCues: o.cfg.cues.map(c => ({ text: c.say, speak: c.speak || c.say })),
       stateAt: t => { const s = stateAt(o.cfg.initial, tl, t); return { range: s.range, gain: s.gain, vel: s.vel, zero: s.zero, probe: s.probe, g1: s.g1.start, rd: reading(s), cal: s.cal.stage, dialog: s.dialog && s.dialog.value, menu: s.menu, amp: (gateHit(s) || { e: {} }).e.pct }; },
       frame: (t, q) => { ctx.setTransform(K, 0, 0, K, 0, 0); renderVideo(ctx, o.cfg, tl, t, true); return cv.toDataURL('image/jpeg', q || 0.93).slice(23); },
       redraw: draw
@@ -709,7 +742,7 @@
       ${hasVideo ? `<h2><span class="n">${++n}</span> Watch the lesson</h2>
       <div class="player">
         <div class="stage-wrap"><canvas id="vid" width="1920" height="1080" aria-label="Lesson video"></canvas><button class="bigplay" id="big" aria-label="Play">▶</button></div>
-        <div class="controls"><button class="play" id="play">▶ Play</button><input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Seek"><span class="time" id="time"></span><label><input type="checkbox" id="subs" checked> Subtitles</label></div>
+        <div class="controls"><button class="play" id="play">▶ Play</button><input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Seek"><span class="time" id="time"></span>${cfg.video.audio ? '<label><input type="checkbox" id="voice" checked> Voice</label>' : ''}<label><input type="checkbox" id="subs" checked> Subtitles</label></div>
       </div>` : ''}
       <h2><span class="n">${++n}</span> Try it on the Epoch</h2>
       <p class="lede">${cfg.tryIntro}</p>
@@ -742,7 +775,8 @@
     if (!hasVideo) return;
     const video = mountVideo({
       canvas: document.getElementById('vid'), cfg: cfg.video, play: document.getElementById('play'), big: document.getElementById('big'),
-      scrub: document.getElementById('scrub'), time: document.getElementById('time'), subs: document.getElementById('subs')
+      scrub: document.getElementById('scrub'), time: document.getElementById('time'), subs: document.getElementById('subs'),
+      voice: document.getElementById('voice'), noAudio: params.has('record')
     });
     window.__video = Object.assign(video, { ready: true, title: cfg.video.title });
     window.__trainer = trainer;
