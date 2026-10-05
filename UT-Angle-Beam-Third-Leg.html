@@ -103,7 +103,7 @@
         <canvas id="cv" width="1500" height="1050" aria-label="Side view of a welded 1 inch plate with a stiffener, an angle-beam probe, and the A-scan below"></canvas>
         <div class="toolbar">
           <span class="lab">60° wedge · 30° bevel</span>
-          <label class="rng" id="rngBox"><span class="lab">A-scan range</span><input type="range" id="rng" min="2" max="8" step="0.5" value="4" aria-label="A-scan range in inches of sound path"><output id="rngOut">4.0″</output></label>
+          <label class="rng" id="rngBox"><span class="lab">A-scan range</span><input type="range" id="rng" min="2" max="8" step="0.01" value="4" aria-label="A-scan range in inches of sound path"><output id="rngOut">4.00″</output></label>
         </div>
       </div>
       <div class="help" id="help">Drag the probe along the plate. Change the A-scan range with the slider.</div>
@@ -193,7 +193,7 @@
     }
     return null;
   }
-  const onScreen = e => e && e.amp > 20 && e.s <= st.range - 0.05;
+  const onScreen = e => e && e.amp > 20 && e.s <= st.range - 0.15;   // clear of the right edge
   const capSpot = () => faceX(FLAW.side, FLAW.y) - FLAW.y * Math.tan(ANG * RAD);             // leg 1 onto the middle of the flaw, probe on the cap
   const maxX = () => ['cap', 'end'].includes(q.phase) ? STIFF.x1 - 0.2 : capL - 0.25;
   const legSpot = () => faceX(FLAW.side, FLAW.y) - (2 * T + FLAW.y) * Math.tan(ANG * RAD);   // leg 3 onto the middle of the flaw
@@ -233,7 +233,7 @@
       case 'why-ok':
         show(`<div class="ql">Right</div><div class="qq"><span class="ok">The stiffener is in the way.</span></div><div class="ex">One-sided access is common: stiffeners, flanges, nozzles, or a structure next to the weld. The weld cap here has been ground flush.</div><button class="go" data-a="next" data-v="place">Next →</button>`); break;
       case 'place':
-        show(`<div class="ql">Legs 1 and 2</div><div class="qq">Drag the probe onto the plate, left of the weld.</div><div class="qs">The A-scan range is ${st.range.toFixed(1)}″: exactly one skip (legs 1 and 2) of a 60° beam in 1 inch plate.</div>`); break;
+        show(`<div class="ql">Legs 1 and 2</div><div class="qq">Drag the probe onto the plate, left of the weld.</div><div class="qs">The A-scan range is ${st.range.toFixed(2)}″: exactly one skip (legs 1 and 2) of a 60° beam in 1 inch plate.</div>`); break;
       case 'scan12':
         show(`<div class="ql">Scan with legs 1 and 2</div><div class="qq">Look for the flaw on the <b>upper</b> part of the far-side fusion face. Slide the probe all the way along and watch where legs 1 and 2 go.</div><div class="qs">${live()} Scanned ${Math.min(q.scanned, 2).toFixed(1)}″ of 2″.</div>${q.scanned >= 2 ? '<button class="go" data-a="next" data-v="scan12-q">I\'ve scanned it →</button>' : ''}`); break;
       case 'scan12-q':
@@ -245,7 +245,7 @@
       case 'leg3-q':
         show(`<div class="ql">Question</div><div class="qq">Leg 3 hits the flaw square-on (green circle), but the A-scan is flat. Why?</div>${opts('l3', [['range', 'The echo is past the right edge of the screen'], ['weak', 'Leg 3 has lost too much energy to give an echo'], ['angle', 'Leg 3 doesn\'t meet the face square-on']])}<div class="fb">${q.fb}</div>`); break;
       case 'range':
-        show(`<div class="ql">Increase the range</div><div class="qq">The screen shows only ${st.range.toFixed(1)}″ of sound path. Turn the <b>A-scan range</b> slider up until the echo shows up.</div><div class="qs">Leg 1 + leg 2 = ${IN(SKIP_S)}; leg 3 comes after that.</div>`); break;
+        show(`<div class="ql">Increase the range</div><div class="qq">The screen shows only ${st.range.toFixed(2)}″ of sound path. Turn the <b>A-scan range</b> slider up until the echo shows up.</div><div class="qs">Leg 1 + leg 2 = ${IN(SKIP_S)}; leg 3 comes after that.</div>`); break;
       case 'leg-q': {
         const e = echo();
         show(`<div class="ql">There it is</div><div class="qq">${pct(e.amp)} at ${IN(e.s)}. Which leg is this echo on?</div><div class="qs">The dashed line on the screen marks the end of leg 2 (${IN(SKIP_S)}).</div>${opts('leg', [['1', 'Leg 1'], ['2', 'Leg 2'], ['3', 'Leg 3']])}<div class="fb">${q.fb}</div>`); break;
@@ -262,14 +262,14 @@
         show(`<div class="ql">Leg 1 or leg 3?</div><div class="qq"><span class="ok">Right.</span> Both meet the face square-on, but leg 3 traveled almost 8 times as far.</div><div class="ex">Leg 3 bounces off the top surface at the same spot where leg 1's probe sits, so both need the flush cap. If your procedure lets you scan on a flush weld, leg 1 from the cap gives the stronger echo. If it doesn't, or the cap isn't smooth enough to couple to, leg 3 from the base metal still finds the flaw: sound bounces off a surface you couldn't couple a probe to. Either way, set the range to fit the leg you use.</div><button class="go" data-a="next" data-v="end">Finish →</button>`); break;
       case 'end': {
         const e = echo();
-        show(`<div class="ql">Exercise complete · free play</div><div class="qq">One side only? Leg 1 from a flush cap, or leg 3 with the range set past one skip.</div><div class="ex">Keep playing: slide the probe (on the base metal or the cap) and change the range. Watch which leg each echo is on, and what happens to the echo when the range is too short.</div><div class="fb">${onScreen(e) ? `Echo ${pct(e.amp)} on leg ${e.leg}, depth ${IN(e.depth)}.` : e && e.amp > 20 ? `Leg ${e.leg} hits the flaw, but the echo at ${IN(e.s)} is off the screen (range ${st.range.toFixed(1)}″).` : 'No flaw echo here.'}</div>`); break;
+        show(`<div class="ql">Exercise complete · free play</div><div class="qq">One side only? Leg 1 from a flush cap, or leg 3 with the range set past one skip.</div><div class="ex">Keep playing: slide the probe (on the base metal or the cap) and change the range. Watch which leg each echo is on, and what happens to the echo when the range is too short.</div><div class="fb">${onScreen(e) ? `Echo ${pct(e.amp)} on leg ${e.leg}, depth ${IN(e.depth)}.` : e && e.amp > 20 ? `Leg ${e.leg} hits the flaw, but the echo at ${IN(e.s)} is off the screen (range ${st.range.toFixed(2)}″).` : 'No flaw echo here.'}</div>`); break;
       }
     }
   }
   function act(a, v) {
     if (a === 'why') { if (v === 'stiff') { q.answered.why = true; q.fb = ''; q.phase = 'why-ok'; } else q.fb = v === 'thick' ? '<span class="no">Both plates are 1 inch.</span> Look at what\'s sitting on top of the plate, right of the weld.' : '<span class="no">Sound goes whichever way the wedge points.</span> Turn the probe around and it scans right to left. Look at the plate, right of the weld.'; }
     if (a === 's12') { if (v === 'low') { q.answered.scan12 = true; q.fb = ''; q.phase = 'scan12-ok'; } else q.fb = v === 'gain' ? '<span class="no">More gain only makes echoes taller.</span> No sound is coming back at all. Look at where legs 1 and 2 go.' : '<span class="no">It\'s the right wedge:</span> 30° + 60° = 90°. The problem is where the legs can reach.'; }
-    if (a === 'l3') { if (v === 'range') { q.answered.leg3 = true; q.fb = ''; q.phase = 'range'; } else q.fb = v === 'weak' ? '<span class="no">It has lost some, not all.</span> Leg 1 + leg 2 is already ' + IN(SKIP_S) + ' of sound path, and leg 3 adds more. Where would that land on a ' + st.range.toFixed(1) + '″ screen?' : '<span class="no">It does:</span> leg 3 runs the same way as leg 1, square-on to the far-side face. See the green circle.'; }
+    if (a === 'l3') { if (v === 'range') { q.answered.leg3 = true; q.fb = ''; q.phase = 'range'; } else q.fb = v === 'weak' ? '<span class="no">It has lost some, not all.</span> Leg 1 + leg 2 is already ' + IN(SKIP_S) + ' of sound path, and leg 3 adds more. Where would that land on a ' + st.range.toFixed(2) + '″ screen?' : '<span class="no">It does:</span> leg 3 runs the same way as leg 1, square-on to the far-side face. See the green circle.'; }
     if (a === 'cap') { if (v === 'path') { q.answered.cap = true; q.fb = ''; q.phase = 'cap-ok'; } else q.fb = v === 'square' ? '<span class="no">Both are square-on:</span> leg 3 runs exactly the same way as leg 1. Compare the sound paths.' : '<span class="no">Weld metal doesn\'t add energy.</span> Compare how far the sound traveled each time.'; }
     if (a === 'leg') { if (v === '3') { q.answered.leg = true; q.fb = ''; q.phase = 'leg-ok'; } else q.fb = '<span class="no">Look at the dashed line on the screen.</span> Everything past ' + IN(SKIP_S) + ' is after leg 1 and leg 2.'; }
     if (a === 'next') { q.fb = ''; q.phase = v; if (v === 'scan12') q.scanned = 0; if (v === 'leg3') { st.legs = 3; st.xp = 3.0; } }
@@ -331,11 +331,11 @@
     rngBox.classList.toggle('glow', q.phase === 'range');
   }
   rngEl.addEventListener('input', () => {
-    st.range = +rngEl.value; rngOut.textContent = st.range.toFixed(1) + '″';
+    st.range = +rngEl.value; rngOut.textContent = st.range.toFixed(2) + '″';
     if (q.phase === 'range' && onScreen(echo())) { q.answered.range = true; q.phase = 'leg-q'; }
     render();
   });
-  document.getElementById('reset').addEventListener('click', () => { q = fresh(); Object.assign(st, { xp: null, legs: 2, range: 4, drag: null }); rngEl.value = 4; rngOut.textContent = '4.0″'; render(); });
+  document.getElementById('reset').addEventListener('click', () => { q = fresh(); Object.assign(st, { xp: null, legs: 2, range: 4, drag: null }); rngEl.value = 4; rngOut.textContent = '4.00″'; render(); });
   if (new URLSearchParams(location.search).has('embed')) document.body.classList.add('embed');
 
   // ---------- drawing ----------
@@ -468,7 +468,7 @@
 
     // ---------- A-scan ----------
     const R = st.range;
-    txt(`A-SCAN · SOUND PATH 0 TO ${R.toFixed(1)}″`, AS.x, AS.y - 52, { size: 11, w: 700, c: C.faded, mono: true });
+    txt(`A-SCAN · SOUND PATH 0 TO ${R.toFixed(2)}″`, AS.x, AS.y - 52, { size: 11, w: 700, c: C.faded, mono: true });
     const boxes = [['SOUND PATH', vis ? IN(e.s) : '---'], ['SURFACE DIST.', vis ? IN(e.s * Math.sin(ANG * RAD)) : '---'], ['DEPTH', vis ? IN(e.depth) : '---'], ['LEG', vis ? String(e.leg) : '---']];
     boxes.forEach(([l, v], i) => {
       const bx = AS.x + i * 222, by = AS.y - 44, bw = 212;
@@ -501,7 +501,8 @@
     }
     ctx.strokeStyle = C.trace; ctx.lineWidth = 1.6; ctx.stroke(); ctx.restore();
     const step = R > 5 ? 1 : 0.5;
-    for (let v = 0; v <= R + 1e-9; v += step) txt(v.toFixed(step < 1 ? 1 : 0) + (Math.abs(v - R) < 1e-9 ? '″' : ''), AS.x + v / R * AS.w, AS.y + AS.h + 18, { size: 11, w: 600, c: C.soft, mono: true, a: v === 0 ? 'left' : Math.abs(v - R) < 1e-9 ? 'right' : 'center' });
+    for (let v = 0; (R - v) / R * AS.w > 64; v += step) txt(v.toFixed(step < 1 ? 1 : 0), AS.x + v / R * AS.w, AS.y + AS.h + 18, { size: 11, w: 600, c: C.soft, mono: true, a: v === 0 ? 'left' : 'center' });
+    txt(R.toFixed(2) + '″', AS.x + AS.w, AS.y + AS.h + 18, { size: 11, w: 600, c: C.soft, mono: true, a: 'right' });
     if (st.xp != null && !vis) txt(e && e.amp > 20 ? 'no echo on screen' : 'no echo', AS.x + 16, AS.y + 26, { size: 13, w: 700, c: '#8fa4bb', mono: true });
     if (e && e.amp > 20 && !vis) { txt('echo is past the edge →', AS.x + AS.w - 12, AS.y + 26, { size: 12, w: 700, c: q.phase === 'range' ? '#ffb3a6' : 'rgba(0,0,0,0)', mono: true, a: 'right' }); }
     if (vis) txt('flaw echo · leg ' + e.leg, Math.min(AS.x + e.s / R * AS.w + 10, AS.x + AS.w - 150), AS.y + 26, { size: 13, w: 800, c: '#7dffb0' });
