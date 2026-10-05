@@ -162,11 +162,15 @@
         const t = (c.x - g.x1) * ux + (c.y - g.y1) * uy;
         if (t < 0 || t > g.len + 0.3) continue;
         const d = Math.abs((c.x - g.x1) * uy - (c.y - g.y1) * ux);
-        const amp = 92 * Math.exp(-Math.pow(d / BEAM_W, 2)) * Math.exp(-Math.pow((g.s1 + t) / 4.5, 2));   // the beam spreads and weakens with distance
+        const amp = 105 * Math.exp(-Math.pow(d / BEAM_W, 2)) * Math.exp(-Math.pow((g.s1 + t) / 4.5, 2));   // the beam spreads and weakens with distance
         if (amp > 2) out.push({ s: g.s1 + t, amp, corner: c.name, leg: g.leg, d });
       }
     }
-    return out;
+    // one corner gives one echo: when two legs pass the same corner (one leg ending at it, the next starting
+    // beside it), keep the stronger, closer-aligned one instead of adding them together
+    const one = {};
+    for (const e of out) if (!one[e.corner] || e.amp > one[e.corner].amp) one[e.corner] = e;
+    return Object.values(one);
   }
   const best = () => echoes(st.xp, st.angle).reduce((b, e) => !b || e.amp > b.amp ? e : b, null);
   const skipLen = ang => 2 * T * Math.tan(ang * Math.PI / 180);
@@ -459,7 +463,7 @@
   paintWedges(); render();
   const go = () => requestAnimationFrame(frame);
   (document.fonts ? Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 2000))]) : Promise.resolve()).then(go);
-  window.__abeam = { st, get q() { return q; }, best, path, skipLen, setX, act };
+  window.__abeam = { st, get q() { return q; }, best, path, echoes, skipLen, setX, act };
 })();
 </script>
 </body>
