@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UT Epoch Range and Reading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="epoch650/sim.css">
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Ultrasonic Testing · Level I · Epoch 650 Lesson 2 of 5</div>
+    <h1>Range and the Thickness Reading</h1>
+    <a class="back" href="index.html">← Exercise Hub</a><a class="back" href="UT-Epoch-Range.html">← Range</a><a class="back" href="UT-Epoch-Gain-dB.html">Next: Gain &amp; dB →</a>
+  </div>
+</header>
+<main class="wrap" id="app"></main>
+<script src="epoch650/sim.js"></script>
+<script>
+(function () {
+  const E = Epoch650;
+  const TARGETS = [0.700, 2.500, 4.000];          // change the range a few times while watching the reading
+  const calibrated = extra => Object.assign({ vel: 0.2320, zero: 0.500, range: 1.000, gain: 42.7, probe: null, g1: { start: 0.450, width: 0.100, level: 40 } }, extra);
+  const at = (st, R) => Math.abs(st.range - R) < 5e-4;
+  const freshQ = () => ({ phase: 'idle', intro: false, row: -1, readings: {}, done: {}, final: null, fb: '' });
+  let q = freshQ(), tr = null, card = null;
+
+  const steps = [
+    { text: 'Drag the probe onto the <b>0.500 in</b> step of the block.', place: 0.5, keys: [], check: st => st.probe === 0.5 },
+    { text: 'Find the glowing <b>G1 THICKNESS</b> box at the top of the screen, then press <b>Got it</b> on the card.', keys: [], check: () => q.intro },
+    { text: 'Press <b>F1</b> to open the <b>Basic</b> menu.', keys: ['F1'], check: st => st.menu === 'Basic' || q.row >= 0 },
+    { text: 'Press <b>P3</b> to select <b>Range</b>.', keys: ['P3'], check: st => st.sel === 'range' || q.row >= 0 },
+    ...TARGETS.map((R, i) => ({
+      text: (st, api, done) => done ? `Range <b>${R.toFixed(3)} in</b>: reading ${q.readings[i]} in` : `Turn the knob to Range <b>${R.toFixed(3)} in</b> while you watch the G1 THICKNESS box.`,
+      keys: () => q.row === i && q.phase === 'turn' ? ['KNOB'] : [],
+      check: () => !!q.done[i]
+    })),
+    { text: 'Answer the question on the instrument.', keys: [], check: () => q.final === 'no' }
+  ];
+
+  function sync(st) {
+    if (q.phase === 'idle' && st.probe === 0.5) q.phase = 'intro';
+    if (q.intro && q.row === -1 && st.sel === 'range') { q.row = 0; q.phase = 'turn'; }
+    if (q.phase === 'turn' && at(st, TARGETS[q.row])) { const r = E.reading(st); q.readings[q.row] = r == null ? '----' : r.toFixed(3); q.phase = 'note'; }
+    render(st);
+  }
+  function act(what, val) {
+    if (what === 'intro') { q.intro = true; q.phase = 'menu'; }
+    if (what === 'next') { q.done[q.row] = true; if (q.row + 1 < TARGETS.length) { q.row++; q.phase = 'turn'; } else { q.phase = 'final'; q.fb = ''; } }
+    if (what === 'final') {
+      if (val === 'no') { q.final = 'no'; q.phase = 'end'; }
+      else q.fb = '<span class="no">Look at your notes above.</span> The box read the same number at every range.';
+    }
+    tr.poke();
+  }
+  function notes() {
+    const rows = TARGETS.map((R, i) => q.readings[i] == null ? '' : `<tr><td>Range ${R.toFixed(3)} in</td><td><b>${q.readings[i]} in</b></td></tr>`).join('');
+    return rows ? `<table class="ws" style="margin-top:8px"><tbody>${rows}</tbody></table>` : '';
+  }
+  function render(st) {
+    if (!card) return;
+    let el;
+    const rd = E.reading(st), rdTxt = rd == null ? '----' : rd.toFixed(3);
+    switch (q.phase) {
+      case 'idle': card.hide(); return;
+      case 'intro':
+        el = card.show(`<div class="ql">Watch this box</div><div class="qq">The glowing box at the top of the screen is the <b>G1 THICKNESS</b> reading.</div><div class="ex">Gate 1 (the red line) sits on the back-wall echo, and the box shows the thickness it measures: <b>${rdTxt} in</b>. Keep your eye on it while you change the Range.</div><button class="go" data-act="intro">Got it →</button>`);
+        break;
+      case 'menu': card.hide(); return;
+      case 'turn':
+        el = card.show(`<div class="ql">Range change ${q.row + 1} of ${TARGETS.length}</div><div class="qq">Turn the knob to Range <b>${TARGETS[q.row].toFixed(3)} in</b>.</div><div class="qs">Now: ${st.range.toFixed(3)} in. Watch the echo move across the screen, and watch the G1 THICKNESS box.</div>`, true);
+        break;
+      case 'note':
+        el = card.show(`<div class="ql">Range ${TARGETS[q.row].toFixed(3)} in</div><div class="qq">G1 THICKNESS reads <span class="big">${q.readings[q.row]}</span> in</div>${notes()}<button class="go" data-act="next">${q.row + 1 < TARGETS.length ? 'Next range →' : 'Continue →'}</button>`);
+        break;
+      case 'final':
+        el = card.show(`<div class="ql">Question</div><div class="qq">Did the G1 THICKNESS reading change when you changed the Range?</div>${notes()}<div class="yn"><button data-final="yes">Yes</button><button data-final="no">No</button></div><div class="fb">${q.fb}</div>`);
+        break;
+      case 'end':
+        el = card.show(`<div class="ql">Lesson complete</div><div class="qq"><span class="ok">Right. It stayed ${q.readings[0]} in.</span></div><div class="ex">The echo moved across the screen because the screen got wider or narrower, but the back wall is still 0.500 in below the probe. Range changes what you see, not what you measure.</div><a class="go" href="UT-Epoch-Gain-dB.html">Next lesson: Gain &amp; dB →</a>`);
+        break;
+    }
+    el.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => act(b.dataset.act)));
+    el.querySelectorAll('[data-final]').forEach(b => b.addEventListener('click', () => act('final', b.dataset.final)));
+  }
+
+  E.page({
+    lede: 'When you change the Range, the echoes slide across the screen. Does the thickness reading change too? Watch the reading box and find out.',
+    tryIntro: 'The Epoch is calibrated for the steel step block and Gate 1 is set on the first back-wall echo. Follow the steps on the right; the keys you need next glow yellow, and cards pop up on the instrument.',
+    trainerInitial: () => calibrated({ menu: 'Receiver', stepIdx: { range: 1 } }),
+    steps,
+    highlight: () => q.phase === 'idle' ? null : 'thickness',
+    guard: E.fixedStepRangeGuard({
+      locked: () => q.phase === 'intro' ? 'Press Got it on the card first' : q.phase === 'note' ? 'Press Next on the card to continue' : q.phase === 'final' ? 'Answer the question first' : null,
+      target: () => q.phase === 'turn' ? TARGETS[q.row] : null
+    }),
+    helpline: 'Drag the probe onto the block. Click keys to press them. Turn the knob by clicking its left or right half; hold it down to turn faster. You can also scroll over the knob.',
+    onPlace(st, th) { if (th !== 0.5) { E.toast(st, 'This lesson uses the 0.500 in step. Drag the probe there.', 'warn'); return false; } },
+    doneText: 'Range changes what you see, not what you measure.',
+    keyPoints: `<ul>
+      <li>The <b>G1 THICKNESS</b> box shows the thickness of the echo Gate 1 is sitting on.</li>
+      <li>Changing the <b>Range</b> makes the screen wider or narrower, so the echoes slide left or right on the screen.</li>
+      <li>The back wall itself doesn't move: it is still 0.500&nbsp;in below the probe. So the reading stays 0.500&nbsp;in at every range.</li>
+      <li>Range changes what you <b>see</b>, not what you <b>measure</b>.</li></ul>`,
+    onReset() { q = freshQ(); },
+    extra(el, trainer) {
+      tr = trainer; card = E.questionCard();
+      tr.onChange(st => sync(st));
+      sync(tr.state);
+    }
+  });
+})();
+</script>
+</body>
+</html>

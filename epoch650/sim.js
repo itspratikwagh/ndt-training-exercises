@@ -305,6 +305,7 @@
     };
     box(X + SCR.w - 322, 190, 'G1 THICKNESS (in)', rd == null ? '- - - -' : rd.toFixed(3), '#ff8a80');
     box(X + SCR.w - 126, 120, 'G1 AMP', mx ? (mx.e.pct > 110 ? '>110%' : mx.e.pct.toFixed(0) + '%') : '---', '#ff8a80');
+    if (opt && opt.highlight === 'thickness') glowRing(ctx, X + SCR.w - 327, Y + 1, 200, 40, 7, st.now);
     // menu tabs (F1-F5)
     const full = st.full;
     const A = full ? { x: X + 8, y: Y + 50, w: SCR.w - 16, h: SCR.h - 58 - 22 } : { x: X + 108, y: Y + 50, w: SCR.w - 116, h: 328 };
@@ -549,7 +550,7 @@
       ctx.setTransform(K, 0, 0, K, 0, 0); ctx.clearRect(0, 0, W, H);
       const cur = o.steps[stepI];
       const hk = hints && cur ? (typeof cur.keys === 'function' ? cur.keys(st, api) : cur.keys) || [] : [];
-      drawInstrument(ctx, st, { hints: hk, arrows: o.arrows ? o.arrows(st, api) : null });
+      drawInstrument(ctx, st, { hints: hk, arrows: o.arrows ? o.arrows(st, api) : null, highlight: o.highlight ? o.highlight(st, api) : null });
       bctx.setTransform(BK, 0, 0, BK, 0, 0); bctx.clearRect(0, 0, 400, bc.height / BK);
       rects = drawBlock(bctx, { x: 0, y: 0, w: 400, h: bc.height / BK }, st, { hover, drag, glowProbe: hints && cur && cur.place != null && st.probe == null });
       if (hints && cur && cur.place != null && st.probe !== cur.place) {
@@ -701,14 +702,16 @@
   }
   function build(cfg) {
     const main = document.getElementById('app');
+    const hasVideo = !!cfg.video;                     // lessons can ship without a video
+    let n = 0;
     main.innerHTML = `
       <p class="lede">${cfg.lede}</p>
-      <h2><span class="n">1</span> Watch the lesson</h2>
+      ${hasVideo ? `<h2><span class="n">${++n}</span> Watch the lesson</h2>
       <div class="player">
         <div class="stage-wrap"><canvas id="vid" width="1920" height="1080" aria-label="Lesson video"></canvas><button class="bigplay" id="big" aria-label="Play">▶</button></div>
         <div class="controls"><button class="play" id="play">▶ Play</button><input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Seek"><span class="time" id="time"></span><label><input type="checkbox" id="subs" checked> Subtitles</label></div>
-      </div>
-      <h2><span class="n">2</span> Try it on the Epoch</h2>
+      </div>` : ''}
+      <h2><span class="n">${++n}</span> Try it on the Epoch</h2>
       <p class="lede">${cfg.tryIntro}</p>
       <div class="trainer">
         <div class="inst"><canvas id="inst" width="1500" height="900" aria-label="EPOCH 650-style flaw detector"></canvas>
@@ -722,18 +725,20 @@
           <div id="extra"></div>
         </aside>
       </div>
-      <h2><span class="n">3</span> Key points</h2>
+      <h2><span class="n">${++n}</span> Key points</h2>
       <div class="card">${cfg.keyPoints}</div>`;
     const trainer = mountTrainer({
       canvas: document.getElementById('inst'), blockCanvas: document.getElementById('block'),
       stepsEl: document.getElementById('steps'), doneEl: document.getElementById('done'),
-      initial: cfg.trainerInitial, steps: cfg.steps, onPlace: cfg.onPlace, guard: cfg.guard, arrows: cfg.arrows
+      initial: cfg.trainerInitial, steps: cfg.steps, onPlace: cfg.onPlace, guard: cfg.guard, arrows: cfg.arrows, highlight: cfg.highlight
     });
     document.getElementById('hints').addEventListener('change', e => trainer.setHints(e.target.checked));
     document.getElementById('reset').addEventListener('click', () => { if (cfg.onReset) cfg.onReset(); trainer.reset(); });
     if (cfg.extra) cfg.extra(document.getElementById('extra'), trainer);
     const params = new URLSearchParams(location.search);
     if (params.has('record')) document.body.classList.add('record');
+    window.__trainer = trainer;
+    if (!hasVideo) return;
     const video = mountVideo({
       canvas: document.getElementById('vid'), cfg: cfg.video, play: document.getElementById('play'), big: document.getElementById('big'),
       scrub: document.getElementById('scrub'), time: document.getElementById('time'), subs: document.getElementById('subs')
@@ -797,5 +802,41 @@
     };
   }
 
-  window.Epoch650 = { calCards, visibleBackwalls, toast, page, makeState, keyCenter, W, H, press, turn, place, echoes, reading, gateHit, sOf, TRUE_V, T0, STEPS, draw: { txt, rrect, wrap, font } };
+  // ================= Lesson helpers =================
+  // Floating question card on the instrument. Full card sits under the screen (over the P keys);
+  // a "mini" card sits over the right-hand keys below the knob. Neither covers the A-scan or the knob.
+  function questionCard() {
+    const el = document.createElement('div'); el.className = 'qpop'; el.hidden = true; el.setAttribute('aria-live', 'polite');
+    document.querySelector('.inst').appendChild(el);
+    function place() {
+      if (el.hidden) return;
+      if (matchMedia('(max-width: 900px)').matches) { el.style.left = el.style.top = el.style.width = ''; return; }
+      const cv = document.getElementById('inst'), w = cv.offsetWidth, h = cv.offsetHeight, mini = el.classList.contains('mini');
+      el.style.left = cv.offsetLeft + w * (mini ? 0.752 : 0.096) + 'px';
+      el.style.top = cv.offsetTop + h * (mini ? 0.375 : 0.805) + 'px';
+      el.style.width = w * (mini ? 0.236 : 0.63) + 'px';
+    }
+    addEventListener('resize', place);
+    return {
+      el,
+      show(html, mini) { el.className = mini ? 'qpop mini' : 'qpop'; el.hidden = false; el.innerHTML = html; place(); return el; },
+      hide() { el.hidden = true; }
+    };
+  }
+  // Knob rules for range lessons: fixed 0.01 in step (✓ does nothing), knob locked while a card asks
+  // something, and the knob stops exactly on the target range so nobody overshoots.
+  function fixedStepRangeGuard(o) {
+    return (hh, st) => {
+      if (hh.key === 'CHECK') { toast(st, 'The knob step stays at 0.01 in for this lesson'); return false; }
+      if (hh.knob == null) return;
+      const msg = o.locked && o.locked(); if (msg) { toast(st, msg, 'warn'); return false; }
+      const R = o.target && o.target();
+      if (R != null && st.sel === 'range') {
+        const nxt = st.range + hh.knob * 0.01;
+        if ((st.range < R - 1e-9 && nxt >= R - 1e-9) || (st.range > R + 1e-9 && nxt <= R + 1e-9)) { turn(st, Math.round((R - st.range) / 0.01)); return false; }
+      }
+    };
+  }
+
+  window.Epoch650 = { questionCard, fixedStepRangeGuard, calCards, visibleBackwalls, toast, page, makeState, keyCenter, W, H, press, turn, place, echoes, reading, gateHit, sOf, TRUE_V, T0, STEPS, draw: { txt, rrect, wrap, font } };
 })();
