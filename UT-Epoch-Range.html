@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UT Epoch Range</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="epoch650/sim.css">
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Ultrasonic Testing · Level I · Epoch 650 Trainer</div>
+    <h1>Range: How Much Sound Path Fits on the Screen</h1>
+    <a class="back" href="index.html">← Exercise Hub</a>
+  </div>
+</header>
+<main class="wrap" id="app"></main>
+<script src="epoch650/sim.js"></script>
+<script>
+(function () {
+  const E = Epoch650;
+  // Range targets: the first two are "set it, then count"; the rest are "guess first, then set it to check".
+  const ROWS = [
+    { R: 0.700, mode: 'observe' }, { R: 1.100, mode: 'observe' },
+    { R: 1.600, mode: 'predict' }, { R: 2.100, mode: 'predict' }, { R: 3.100, mode: 'predict' }, { R: 5.100, mode: 'predict' }
+  ];
+  const READ_RANGES = [2.500, 0.700, 4.000];   // last part: change the range a few times while watching the reading
+  const calibrated = extra => Object.assign({ vel: 0.2320, zero: 0.500, range: 1.000, gain: 42.7, probe: null, g1: { start: 0.450, width: 0.100, level: 40 } }, extra);
+  const at = (st, R) => Math.abs(st.range - R) < 5e-4;
+  const count = st => E.visibleBackwalls(st).length;
+  const plural = n => n === 1 ? 'echo' : 'echoes';
+  const freshQ = () => ({ row: -1, phase: 'idle', guess: null, tries: 0, fb: '', results: {}, rd: -1, readings: {}, rdDone: false, final: null });
+  let q = freshQ(), tr = null, card = null;
+
+  // Plain-language reason, no arithmetic: echoes come every 0.5 in; only those inside the screen show.
+  function explain(R, seen) {
+    const pos = k => (0.5 * k).toFixed(1);
+    const fits = seen === 1 ? 'only the echo at 0.5 in fits' : seen === 2 ? 'the echoes at 0.5 and 1.0 in fit' : `the echoes at 0.5, 1.0 … up to ${pos(seen)} in fit`;
+    return `Back-wall echoes from the 0.500 in step come every 0.5 in: at 0.5, 1.0, 1.5 in and so on. The screen now shows 0 to ${R.toFixed(1)} in, so ${fits}. The next one, at ${pos(seen + 1)} in, is past the right edge of the screen.`;
+  }
+
+  const steps = [
+    { text: 'Drag the probe onto the <b>0.500 in</b> step of the block.', place: 0.5, keys: [], check: st => st.probe === 0.5 },
+    { text: 'Press <b>F1</b> to open the <b>Basic</b> menu.', keys: ['F1'], check: st => st.menu === 'Basic' || q.row >= 0 },
+    { text: 'Press <b>P3</b> to select <b>Range</b>. Each knob click now changes Range by 0.01 in.', keys: ['P3'], check: st => st.sel === 'range' || q.row >= 0 },
+    ...ROWS.map((r, i) => ({
+      text: (st, api, done) => {
+        const res = q.results[i];
+        if (done && res) return `Range <b>${r.R.toFixed(3)} in</b>: ${res.seen} back-wall ${plural(res.seen)} ${res.correct ? '<span class="ok">✓</span>' : ''}`;
+        return r.mode === 'observe'
+          ? `Turn the knob to Range <b>${r.R.toFixed(3)} in</b>, then answer the question on the instrument.`
+          : `Answer the question on the instrument first, then turn the knob to Range <b>${r.R.toFixed(3)} in</b> to check.`;
+      },
+      keys: () => q.row === i && q.phase === 'turn' ? ['KNOB'] : [],
+      check: () => !!(q.results[i] && q.results[i].done)
+    })),
+    {
+      text: (st, api, done) => done
+        ? `Thickness reading at 3 ranges: ${READ_RANGES.map((R, i) => q.readings[i]).join(', ')} in`
+        : `Watch the glowing <b>G1 THICKNESS</b> box while you change the Range to <b>2.500</b>, <b>0.700</b> and <b>4.000 in</b>.` + (q.rd > 0 ? ` <span class="ok">(${Object.keys(q.readings).length} of 3)</span>` : ''),
+      keys: () => q.phase === 'rturn' ? ['KNOB'] : [],
+      check: () => q.rdDone
+    },
+    { text: 'Answer the last question on the instrument.', keys: [], check: () => q.final === 'no' }
+  ];
+
+  function startRow(i) { q.row = i; q.guess = null; q.tries = 0; q.fb = ''; q.phase = ROWS[i].mode === 'observe' ? 'turn' : 'ask'; }
+  function sync(st) {
+    if (q.row === -1 && st.probe === 0.5 && st.sel === 'range') startRow(0);
+    if (q.phase === 'rturn' && at(st, READ_RANGES[q.rd])) { const rd = E.reading(st); q.readings[q.rd] = rd == null ? '----' : rd.toFixed(3); q.phase = 'rnote'; }
+    const r = ROWS[q.row];
+    if (r && q.phase === 'turn' && at(st, r.R)) {
+      if (r.mode === 'observe') q.phase = 'ask';
+      else { const seen = count(st); q.results[q.row] = { seen, guess: q.guess, correct: q.guess === seen }; q.phase = 'reveal'; }
+    }
+    render(st);
+  }
+  function answer(n) {
+    const st = tr.state, i = q.row, r = ROWS[i];
+    if (r.mode === 'predict') { q.guess = n; q.phase = 'turn'; tr.poke(); return; }
+    const seen = count(st);
+    if (n === seen) { q.results[i] = { seen, guess: n, correct: q.tries === 0 }; q.phase = 'reveal'; }
+    else if (++q.tries >= 2) { q.results[i] = { seen, guess: n, correct: false }; q.phase = 'reveal'; }
+    else q.fb = `<span class="no">Not quite.</span> Count the glowing arrows again. Each arrow points at one back-wall echo.`;
+    tr.poke();
+  }
+  function next() {
+    q.results[q.row].done = true;
+    if (q.row + 1 < ROWS.length) startRow(q.row + 1); else q.phase = 'rintro';
+    tr.poke();
+  }
+  // Last part: watch the thickness reading while the range changes
+  function readAct(what, val) {
+    if (what === 'start') { q.rd = 0; q.phase = 'rturn'; }
+    if (what === 'next') { if (q.rd + 1 < READ_RANGES.length) { q.rd++; q.phase = 'rturn'; } else { q.rdDone = true; q.phase = 'final'; q.fb = ''; } }
+    if (what === 'final') {
+      if (val === 'no') { q.final = 'no'; q.phase = 'end'; }
+      else q.fb = '<span class="no">Look at your notes above.</span> The box read the same number at every range.';
+    }
+    tr.poke();
+  }
+  function notes() {
+    const rows = READ_RANGES.map((R, i) => q.readings[i] == null ? '' : `<tr><td>Range ${R.toFixed(3)} in</td><td><b>${q.readings[i]} in</b></td></tr>`).join('');
+    return rows ? `<table class="ws" style="margin-top:8px"><tbody>${rows}</tbody></table>` : '';
+  }
+
+  function render(st) {
+    if (!card) return;
+    const i = q.row, r = ROWS[i], label = r ? `Range ${i + 1} of ${ROWS.length}` : '';
+    const nums = `<div class="nums">${Array.from({ length: 10 }, (_, k) => `<button data-n="${k + 1}">${k + 1}</button>`).join('')}</div>`;
+    let el;
+    if (q.phase === 'idle') { card.hide(); return; }
+    if (q.phase === 'turn') {
+      el = card.show(`<div class="ql">${label}</div><div class="qq">${r.mode === 'predict' ? `Your guess: <b>${q.guess}</b>. ` : ''}Turn the knob to Range <b>${r.R.toFixed(3)} in</b>.</div><div class="qs">Now: ${st.range.toFixed(3)} in · hold the knob to turn faster</div>`, true);
+    } else if (q.phase === 'ask' && r.mode === 'observe') {
+      el = card.show(`<div class="ql">${label} · Range ${r.R.toFixed(3)} in</div><div class="qq">How many back-wall echoes do you see now?</div><div class="qs">The glowing arrows point at them.</div>${nums}<div class="fb">${q.fb}</div>`);
+    } else if (q.phase === 'ask') {
+      el = card.show(`<div class="ql">${label} · guess first</div><div class="qq">You're about to set Range to <b>${r.R.toFixed(3)} in</b>. How many back-wall echoes will you see?</div><div class="qs">The knob unlocks after you answer.</div>${nums}`);
+    } else if (q.phase === 'reveal') {
+      const res = q.results[i];
+      const verdict = r.mode === 'predict'
+        ? (res.correct ? `<span class="ok">Your guess of ${res.guess} was right.</span>` : `<span class="no">You guessed ${res.guess}.</span>`)
+        : (res.correct ? '<span class="ok">Right.</span>' : '<span class="no">Count the numbered arrows.</span>');
+      el = card.show(`<div class="ql">${label} · Range ${r.R.toFixed(3)} in</div><div class="qq"><span class="big">${res.seen}</span> back-wall ${plural(res.seen)} on screen</div><div class="fb">${verdict}</div><div class="ex">${explain(r.R, res.seen)}</div><button class="go" data-next>${i + 1 < ROWS.length ? 'Next →' : 'Finish →'}</button>`);
+    } else if (q.phase === 'rintro') {
+      const rd = E.reading(st);
+      el = card.show(`<div class="ql">One more thing to watch</div><div class="qq">Look at the glowing <b>G1 THICKNESS</b> box at the top of the screen.</div><div class="ex">Gate 1 (the red line) sits on the first back-wall echo, and this box shows the thickness it measures: <b>${rd == null ? '----' : rd.toFixed(3)} in</b>. Keep your eye on it while you change the Range a few more times.</div><button class="go" data-read="start">Got it →</button>`);
+    } else if (q.phase === 'rturn') {
+      el = card.show(`<div class="ql">Watch the reading · ${q.rd + 1} of ${READ_RANGES.length}</div><div class="qq">Turn the knob to Range <b>${READ_RANGES[q.rd].toFixed(3)} in</b>.</div><div class="qs">Now: ${st.range.toFixed(3)} in. Watch the echo move, and watch the G1 THICKNESS box.</div>`, true);
+    } else if (q.phase === 'rnote') {
+      el = card.show(`<div class="ql">Range ${READ_RANGES[q.rd].toFixed(3)} in</div><div class="qq">G1 THICKNESS reads <span class="big">${q.readings[q.rd]}</span> in</div>${notes()}<button class="go" data-read="next">${q.rd + 1 < READ_RANGES.length ? 'Next range →' : 'Continue →'}</button>`);
+    } else if (q.phase === 'final') {
+      el = card.show(`<div class="ql">Last question</div><div class="qq">Did the G1 THICKNESS reading change when you changed the Range?</div>${notes()}<div class="yn"><button data-final="yes">Yes</button><button data-final="no">No</button></div><div class="fb">${q.fb}</div>`);
+    } else if (q.phase === 'end') {
+      el = card.show(`<div class="ql">Exercise complete</div><div class="qq"><span class="ok">Right. It stayed ${q.readings[0]} in.</span></div><div class="ex">A bigger Range fits more back-wall echoes on the screen, and the echoes slide left or right as the screen gets wider or narrower. But the back wall is still 0.500 in below the probe, so the reading doesn't change. Range changes what you see, not what you measure.</div>`);
+    }
+    el.querySelectorAll('[data-n]').forEach(b => b.addEventListener('click', () => answer(+b.dataset.n)));
+    const nx = el.querySelector('[data-next]'); if (nx) nx.addEventListener('click', next);
+    el.querySelectorAll('[data-read]').forEach(b => b.addEventListener('click', () => readAct(b.dataset.read)));
+    el.querySelectorAll('[data-final]').forEach(b => b.addEventListener('click', () => readAct('final', b.dataset.final)));
+  }
+
+  const guard = E.fixedStepRangeGuard({
+    locked: () => q.row < 0 ? null : { ask: 'Answer the question first', final: 'Answer the question first', reveal: 'Press Next on the card to continue', rnote: 'Press Next on the card to continue', rintro: 'Press Got it on the card first' }[q.phase] || null,
+    target: () => q.phase === 'turn' ? ROWS[q.row].R : q.phase === 'rturn' ? READ_RANGES[q.rd] : null
+  });
+  const arrows = () => q.phase === 'ask' && ROWS[q.row] && ROWS[q.row].mode === 'observe' ? { numbered: false } : q.phase === 'reveal' ? { numbered: true } : null;
+
+  // ---- Lesson video: follows the exercise step by step ----
+  const knob = n => ['knob', n, Math.min(0.04, 1.8 / Math.abs(n))];   // smooth 0.01 in clicks, ~2 s max per turn
+  function bullets(ctx, h, b, arr, y0) { return h.bullets(ctx, b, arr, '#2a6fdb', y0); }
+  const cards = {
+    what(ctx, b, st, t, h) {
+      h.txt(ctx, 'RANGE', b.x + 18, b.y + 38, { size: 22, weight: 800, color: '#2a6fdb' });
+      h.txt(ctx, 'Basic menu · P3', b.x + 110, b.y + 38, { size: 13, weight: 700, color: '#8f8882', mono: true });
+      bullets(ctx, h, b, ['The distance shown across the screen, left edge to right edge.', 'Measured in inches of sound path in steel.', 'Each knob click: 0.01 in.']);
+    },
+    // number line: echoes every 0.5 in; the shaded part is what the screen shows
+    fit(ctx, b, st, t, h) {
+      h.txt(ctx, 'What fits on the screen', b.x + 18, b.y + 34, { size: 18, weight: 800, color: '#1f1d1b' });
+      h.txt(ctx, 'Back-wall echoes come every 0.5 in', b.x + 18, b.y + 56, { size: 13, weight: 700, color: '#57524d' });
+      const x0 = b.x + 22, x1 = b.x + b.w - 22, MAX = 5.5, X = v => x0 + v / MAX * (x1 - x0), y = b.y + 150;
+      ctx.fillStyle = 'rgba(42,111,219,0.13)'; ctx.fillRect(X(0), y - 46, X(Math.min(st.range, MAX)) - X(0), 70);
+      ctx.strokeStyle = '#2a6fdb'; ctx.lineWidth = 2; ctx.strokeRect(X(0), y - 46, X(Math.min(st.range, MAX)) - X(0), 70);
+      h.txt(ctx, 'SCREEN: 0 to ' + st.range.toFixed(2) + ' in', X(0), y - 54, { size: 12, weight: 800, color: '#2a6fdb', mono: true });
+      ctx.strokeStyle = '#1f1d1b'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+      let n = 0;
+      for (let k = 1; k <= 11; k++) {
+        const v = 0.5 * k, inside = v <= st.range + 1e-9; if (inside) n++;
+        ctx.beginPath(); ctx.arc(X(v), y, 6, 0, 7);
+        if (inside) { ctx.fillStyle = '#0d904f'; ctx.fill(); } else { ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = '#8f8882'; ctx.lineWidth = 1.5; ctx.stroke(); }
+        if (k % 2 === 0) h.txt(ctx, String(v), X(v), y + 24, { size: 11, weight: 600, color: '#57524d', mono: true, align: 'center' });
+      }
+      h.txt(ctx, n + (n === 1 ? ' echo fits' : ' echoes fit'), b.x + 18, y + 64, { size: 22, weight: 800, color: '#0d904f' });
+    },
+    reading(ctx, b, st, t, h) {
+      h.txt(ctx, 'G1 THICKNESS', b.x + 18, b.y + 38, { size: 13, weight: 700, color: '#d93025', mono: true });
+      const r = h.reading();
+      h.txt(ctx, r == null ? '----' : r.toFixed(3) + ' in', b.x + 18, b.y + 86, { size: 36, weight: 800, color: '#1f1d1b', mono: true });
+      h.txt(ctx, 'Range now: ' + st.range.toFixed(3) + ' in', b.x + 18, b.y + 120, { size: 15, weight: 700, color: '#2a6fdb', mono: true });
+      bullets(ctx, h, b, ['The echoes slide across the screen.', 'The back wall is still 0.500 in away.', 'So the reading stays the same.'], b.y + 162);
+    },
+    use(ctx, b, st, t, h) {
+      h.txt(ctx, 'Remember', b.x + 18, b.y + 36, { size: 19, weight: 800, color: '#1f1d1b' });
+      bullets(ctx, h, b, ['Bigger range: more back-wall echoes fit.', 'Range changes what you see, not what you measure.', 'Small range: one echo, spread out. Large range: several echoes, for a two-back-wall calibration.']);
+    }
+  };
+
+  const video = {
+    num: '01', title: 'Range: how much sound path fits on the screen',
+    initial: () => E.makeState(calibrated({ menu: 'Receiver', stepIdx: { range: 1 } })),
+    cards,
+    audio: 'video/audio/UT-Epoch-Range-voice.mp3',
+    voice: /*VOICE*/[5.56,6.82,5.16,8.84,4.83,2.51,7.76,7.49,6.02,4.07,6.94,4.69,6.61,9.72,4.06,1.4,1.17,8.69,2.58,9.53,2.04]/*END*/,
+    cues: [
+      { say: 'Range sets how much sound path the Epoch shows across the screen, from the left edge to the right edge.', card: 'what' },
+      { say: 'The Epoch is already calibrated for the steel step block. First, drag the probe onto the 0.500 inch step.',
+        speak: 'The Epoch is already calibrated for the steel step block. First, drag the probe onto the point five hundred inch step.', do: [[4.2, ['place', 0.5]]] },
+      { say: 'On the screen, the initial pulse is on the left, and the first back-wall echo is in the middle.' },
+      { say: 'Press F1 for the Basic menu, then P3 to select Range. Each click of the knob now changes the range by 0.01 inch.',
+        speak: 'Press F 1 for the Basic menu, then P 3 to select Range. Each click of the knob now changes the range by one hundredth of an inch.', do: [[1.2, 'F1'], [3.0, 'P3']] },
+      { say: 'Turn the knob down to 0.700 inch. You can hold the knob down to turn faster.',
+        speak: 'Turn the knob down to point seven hundred inch. You can hold the knob down to turn faster.', do: [[1.0, knob(-30)]], card: 'fit' },
+      { say: 'How many back-wall echoes do you see? Just one.', arrows: 'numbered' },
+      { say: 'Back-wall echoes from the 0.500 inch step come every half inch: at 0.5, 1.0, 1.5 inches, and so on.',
+        speak: 'Back-wall echoes from the point five hundred inch step come every half inch: at point five, one, one and a half inches, and so on.' },
+      { say: 'The screen now ends at 0.700. The echo at 0.5 fits. The next one, at 1.0, is past the right edge.',
+        speak: 'The screen now ends at point seven hundred. The echo at point five fits. The next one, at one inch, is past the right edge.' },
+      { say: 'Turn up to 1.100 inches. Now the echoes at 0.5 and 1.0 both fit. Two echoes.',
+        speak: 'Turn up to one point one inches. Now the echoes at point five and one inch both fit. Two echoes.', do: [[0.4, knob(40)]], arrows: 'numbered' },
+      { say: 'Now guess before you turn. At 1.600 inches, how many will fit?', speak: 'Now guess before you turn. At one point six inches, how many will fit?', arrows: null },
+      { say: 'The echoes at 0.5, 1.0 and 1.5 are all inside 1.6, so three. Turn the knob and check.',
+        speak: 'The echoes at point five, one, and one and a half are all inside one point six, so three. Turn the knob and check.', do: [[4.6, knob(50)]] },
+      { say: 'Three. At 3.100 inches, the echoes up to 3.0 fit: six of them.', speak: 'Three. At three point one inches, the echoes up to three inches fit: six of them.', do: [[1.2, knob(150)]], arrows: 'numbered' },
+      { say: 'And at 5.100 inches, ten. The last ones are small, because every trip through the steel loses a little energy.',
+        speak: 'And at five point one inches, ten. The last ones are small, because every trip through the steel loses a little energy.', do: [[0.4, knob(200)]] },
+      { say: 'One more thing to watch. Look at the G1 thickness box at the top of the screen. Gate 1 is on the first back-wall echo, and it reads 0.500 inch.',
+        speak: 'One more thing to watch. Look at the G 1 thickness box at the top of the screen. Gate 1 is on the first back-wall echo, and it reads point five hundred inch.', arrows: null, highlight: 'thickness', card: 'reading' },
+      { say: 'Keep your eye on it while we change the range. Down to 2.500 inches.', speak: 'Keep your eye on it while we change the range. Down to two and a half inches.', do: [[2.6, knob(-260)]] },
+      { say: 'Down to 0.700.', speak: 'Down to point seven hundred.', do: [[0.3, knob(-180)]] },
+      { say: 'And up to 4.000.', speak: 'And up to four inches.', do: [[0.3, knob(330)]] },
+      { say: 'The echoes slid across the screen, but the reading stayed 0.500 every time. The back wall is still 0.500 inch below the probe.',
+        speak: 'The echoes slid across the screen, but the reading stayed point five hundred every time. The back wall is still point five hundred inch below the probe.' },
+      { say: 'Range changes what you see, not what you measure.', card: 'use', highlight: null },
+      { say: 'A small range spreads one echo out so you can see it clearly. A large range shows several back-wall echoes, which you need for a two-back-wall calibration.' },
+      { say: 'Now try it yourself on the Epoch below.', hold: 1.5 }
+    ]
+  };
+
+  E.page({
+    lede: 'Range is the distance shown across the Epoch screen. Change it and see how many back-wall echoes from the 0.500&nbsp;in step fit on the screen, and what happens to the thickness reading.',
+    tryIntro: 'The Epoch is already calibrated for the steel step block. Follow the steps on the right; the keys you need next glow yellow, and questions pop up on the instrument.',
+    video,
+    trainerInitial: () => calibrated({ menu: 'Receiver', stepIdx: { range: 1 } }),
+    steps, guard, arrows,
+    highlight: () => ['rintro', 'rturn', 'rnote', 'final', 'end'].includes(q.phase) ? 'thickness' : null,
+    helpline: 'Drag the probe onto the block. Click keys to press them. Turn the knob by clicking its left or right half; hold it down to turn faster. You can also scroll over the knob.',
+    onPlace(st, th) { if (th !== 0.5) { E.toast(st, 'This lesson uses the 0.500 in step. Drag the probe there.', 'warn'); return false; } },
+    doneText: 'Range changes what you see, not what you measure.',
+    keyPoints: `<ul>
+      <li><b>Range</b> (Basic menu, P3) is the distance shown across the screen, from the left edge to the right edge.</li>
+      <li>On the 0.500&nbsp;in step, back-wall echoes come every 0.5&nbsp;in: at 0.5, 1.0, 1.5&nbsp;in and so on. Only the ones that fall inside the screen show up.</li>
+      <li>At Range 0.700&nbsp;in only the echo at 0.5 fits; the second one, at 1.0, is off the screen. At 1.100&nbsp;in, the echoes at 0.5 and 1.0 both fit.</li>
+      <li>Each later echo is smaller, because the sound has traveled farther and lost more energy along the way.</li>
+      <li>Range <b>does not</b> change the reading. The echoes slide across the screen, but the back wall is still 0.500&nbsp;in away, so the G1 THICKNESS box stays 0.500&nbsp;in at every range.</li>
+      <li>Use a small range to spread one echo out, and a large range to see several back walls (for example, for a two-back-wall calibration).</li></ul>`,
+    onReset() { q = freshQ(); },
+    extra(el, trainer) {
+      tr = trainer; card = E.questionCard();
+      tr.onChange(st => sync(st));
+      sync(tr.state);
+    }
+  });
+})();
+</script>
+</body>
+</html>
