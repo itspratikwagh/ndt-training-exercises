@@ -51,8 +51,9 @@
   .done[hidden] { display: none; }
   .row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 
-  /* question card: floats over the right half of the A-scan, which stays empty in this exercise */
-  .qpop { position: absolute; right: 2.4%; top: 61%; width: 44%; z-index: 2; background: #fff; border: 2px solid var(--yellow); border-radius: 12px; padding: 12px 14px; box-shadow: 0 10px 30px rgba(20,16,10,0.28); }
+  /* question card: top of the side column, so the plate and the A-scan stay in view */
+  .qpop { background: #fff; border: 2px solid var(--yellow); border-radius: 12px; padding: 12px 14px; box-shadow: 0 6px 18px rgba(20,16,10,0.16); animation: pop 0.25s ease-out; }
+  @keyframes pop { from { transform: scale(0.97); box-shadow: 0 0 0 6px rgba(232,185,35,0.45); } }
   .qpop[hidden] { display: none; }
   .qpop .ql { font: 700 10.5px 'JetBrains Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; color: var(--red); margin-bottom: 4px; }
   .qpop .qq { font-size: 15.5px; font-weight: 800; line-height: 1.3; text-wrap: balance; }
@@ -65,7 +66,6 @@
   .qpop table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13.5px; }
   .qpop td { padding: 4px 6px; border-bottom: 1px solid var(--rule); }
   .qpop td:last-child { text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; }
-  .qpop.mini { top: 61%; }
   .ok { color: var(--good); font-weight: 800; } .no { color: var(--bad); font-weight: 800; }
   .card { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 18px; }
   .card ul { padding-left: 1.2em; font-size: 15px; color: var(--ink-soft); display: grid; gap: 4px; }
@@ -73,7 +73,6 @@
   @media (max-width: 900px) {
     .trainer { grid-template-columns: 1fr; }
     main { padding: 1rem 0.6rem 3rem; }
-    .qpop, .qpop.mini { position: static; width: auto; margin-top: 10px; }
   }
 </style>
 </head>
@@ -95,9 +94,9 @@
         <span class="wedges" id="wedges"></span>
       </div>
       <div class="help">Drag the probe along the plate. Change the wedge with the buttons. The probe stays the same; only the wedge changes the angle: the sound leaves the probe at a shallow angle in the wedge and bends (refracts) to the steeper angle as it enters the steel.</div>
-      <div class="qpop" id="card" hidden aria-live="polite"></div>
     </div>
     <aside class="side">
+      <div class="qpop" id="card" hidden aria-live="polite"></div>
       <div class="panel">
         <div class="ph"><b>Steps</b></div>
         <ol class="steps" id="steps"></ol>
@@ -194,7 +193,7 @@
     document.getElementById('done').hidden = i !== -1;
   }
   function show(html, mini) {
-    card.hidden = false; card.className = mini ? 'qpop mini' : 'qpop'; card.innerHTML = html;
+    card.hidden = false; card.innerHTML = html;
     card.querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', () => act(b.dataset.a, b.dataset.v)));
   }
   const opts = (name, list) => `<div class="opts">${list.map(([v, t]) => `<button data-a="${name}" data-v="${v}">${t}</button>`).join('')}</div>`;
@@ -354,7 +353,7 @@
     ctx.fillStyle = g; ctx.fillRect(X(0), Y(0), L * S, T * S);
     ctx.strokeStyle = '#5f6b78'; ctx.lineWidth = 2; ctx.strokeRect(X(0), Y(0), L * S, T * S);
     txt('back wall', X(0.15), Y(T) - 8, { size: 12, w: 600, c: '#4b5563' });
-    txt('end of plate', X(L) - 4, Y(T) + 16, { size: 12, w: 600, c: '#4b5563', a: 'right' });
+    txt('end of plate', X(L) - 24, Y(T) + 16, { size: 12, w: 600, c: '#4b5563', a: 'right' });
     // thickness dimension
     ctx.strokeStyle = C.soft; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(X(L) + 22, Y(0)); ctx.lineTo(X(L) + 22, Y(T)); ctx.stroke();
     txt('1″', X(L) + 30, Y(T / 2) + 5, { size: 13, w: 700, c: C.soft });
