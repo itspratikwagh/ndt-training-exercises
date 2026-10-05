@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UT Weld Bevel and Wedge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page: #f6f3ee; --panel: #fff; --ink: #1f1d1b; --ink-soft: #57524d; --ink-faded: #8f8882; --rule: #ddd6cc;
+    --red: #A82020; --red-deep: #7a1818; --navy: #0f1c2b; --yellow: #e8b923; --blue: #2a6fdb;
+    --good: #0d904f; --good-tint: #e6f4ea; --bad: #d93025;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Manrope', system-ui, sans-serif; background: var(--page); color: var(--ink); line-height: 1.5; min-height: 100vh; }
+  header { background: linear-gradient(135deg, var(--red-deep), var(--red)); color: #fff; padding: 1.4rem 1.5rem 1.2rem; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  header .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; margin-bottom: 6px; }
+  header h1 { font-size: clamp(22px, 3.4vw, 30px); font-weight: 800; letter-spacing: -0.01em; line-height: 1.15; text-wrap: balance; }
+  header a.back { color: #fff; opacity: 0.8; font-size: 13px; text-decoration: none; display: inline-block; margin-top: 8px; }
+  header a.back:hover { opacity: 1; text-decoration: underline; }
+  body.embed header a.back { display: none; }
+  main { padding: 1.25rem 1rem 3rem; }
+  .lede { color: var(--ink-soft); font-size: 15px; max-width: 820px; margin-bottom: 0.9rem; }
+  h2 { font-size: 20px; font-weight: 800; margin: 2rem 0 0.5rem; }
+  button { font: 700 14px 'Manrope', sans-serif; border-radius: 8px; border: 1px solid var(--rule); background: #fff; color: var(--ink); cursor: pointer; padding: 8px 12px; touch-action: manipulation; }
+  button:hover { border-color: var(--red); }
+  button:focus-visible { outline: 3px solid rgba(42,111,219,0.4); outline-offset: 1px; }
+
+  .trainer { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 12px; align-items: start; }
+  .stage { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 10px; position: relative; }
+  .stage canvas { display: block; width: 100%; height: auto; border-radius: 8px; touch-action: none; outline: none; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+  .toolbar .lab { font: 700 11px 'JetBrains Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faded); }
+  .probes button.on { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .probes button.glow { box-shadow: 0 0 0 3px #ffd84d; animation: glow 1s ease-in-out infinite alternate; }
+  @keyframes glow { from { box-shadow: 0 0 0 2px rgba(255,216,77,0.5); } to { box-shadow: 0 0 0 5px #ffd84d; } }
+  /* the controls sit in the gap between the plate and the A-scan, right under the probe */
+  .cvwrap { position: relative; }
+  .cvwrap .toolbar { position: absolute; left: 5.4%; right: 5%; top: 48%; margin: 0; }
+  @media (max-width: 700px) {               /* small screens: controls go just above the plate */
+    .cvwrap { display: flex; flex-direction: column; }
+    .cvwrap .toolbar { position: static; order: -1; margin: 0 0 8px; }
+  }
+  .help { font-size: 13px; color: var(--ink-soft); margin-top: 8px; }
+
+  .side { display: grid; gap: 10px; }
+  .panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 12px; }
+  .ph { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .steps { list-style: none; counter-reset: s; display: grid; gap: 6px; }
+  .steps li { counter-increment: s; position: relative; padding: 7px 10px 7px 36px; border-radius: 8px; border: 1px solid transparent; font-size: 14px; color: var(--ink-faded); }
+  .steps li::before { content: counter(s); position: absolute; left: 8px; top: 7px; width: 20px; height: 20px; border-radius: 50%; border: 2px solid currentColor; display: grid; place-items: center; font: 700 11px 'JetBrains Mono', monospace; }
+  .steps li.now { color: var(--ink); border-color: var(--yellow); background: #fff8e1; font-weight: 600; }
+  .steps li.done { color: var(--good); }
+  .steps li.done::before { content: '✓'; background: var(--good); color: #fff; border-color: var(--good); }
+  .done { margin-top: 10px; padding: 10px 12px; border-radius: 8px; background: var(--good-tint); border: 1px solid var(--good); color: var(--good); font-weight: 700; font-size: 14px; }
+  .done[hidden] { display: none; }
+  .row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+  /* question card: top of the side column, so the plate and the A-scan stay in view */
+  .qpop { background: #fff; border: 2px solid var(--yellow); border-radius: 12px; padding: 12px 14px; box-shadow: 0 6px 18px rgba(20,16,10,0.16); animation: pop 0.25s ease-out; }
+  @keyframes pop { from { transform: scale(0.97); box-shadow: 0 0 0 6px rgba(232,185,35,0.45); } }
+  .qpop[hidden] { display: none; }
+  .qpop .ql { font: 700 10.5px 'JetBrains Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; color: var(--red); margin-bottom: 4px; }
+  .qpop .qq { font-size: 15.5px; font-weight: 800; line-height: 1.3; text-wrap: balance; }
+  .qpop .qs { font-size: 13px; color: var(--ink-soft); margin-top: 4px; }
+  .qpop .ex { font-size: 13.5px; color: var(--ink-soft); margin-top: 8px; }
+  .qpop .fb { font-size: 13.5px; margin-top: 8px; }
+  .qpop .opts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .qpop .opts button { flex: 1 1 auto; }
+  .qpop .opts button.sel { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .qpop .go { margin-top: 10px; width: 100%; background: var(--red); color: #fff; border-color: var(--red); }
+  .ok { color: var(--good); font-weight: 800; } .no { color: var(--bad); font-weight: 800; }
+  .card { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 18px; }
+  .card ul { padding-left: 1.2em; font-size: 15px; color: var(--ink-soft); display: grid; gap: 4px; }
+  .card b { color: var(--ink); }
+  @media (max-width: 900px) {
+    .trainer { grid-template-columns: 1fr; }
+    main { padding: 1rem 0.6rem 3rem; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Ultrasonic Testing · Level I · Angle Beam</div>
+    <h1>Weld Inspection: Match the Wedge to the Bevel</h1>
+    <a class="back" href="index.html">← Exercise Hub</a>
+  </div>
+</header>
+<main class="wrap">
+  <p class="lede">A single-V butt weld in 1 inch plate has lack of fusion on both fusion faces. Pick the wedge that faces the bevel, find out which leg reaches which face, and see why you scan from both sides of the weld.</p>
+  <div class="trainer">
+    <div class="stage" id="stage">
+      <div class="cvwrap">
+        <canvas id="cv" width="1500" height="1050" aria-label="Side view of a welded 1 inch plate with an angle-beam probe, and the A-scan below"></canvas>
+        <div class="toolbar">
+          <span class="lab">Wedge</span>
+          <span class="probes" id="wedges"><button data-w="45">45°</button> <button data-w="60">60°</button> <button data-w="70">70°</button></span>
+        </div>
+      </div>
+      <div class="help" id="help">Drag the probe along the plate. The probe stays the same; only the wedge changes the angle.</div>
+    </div>
+    <aside class="side">
+      <div class="qpop" id="card" hidden aria-live="polite"></div>
+      <div class="panel">
+        <div class="ph"><b>Steps</b></div>
+        <ol class="steps" id="steps"></ol>
+        <div class="done" id="done" hidden>✓ Exercise complete. Bevel + wedge = 90°: the beam meets the fusion face square-on.</div>
+        <div class="row"><button id="reset">Start over</button></div>
+      </div>
+    </aside>
+  </div>
+  <h2>Key points</h2>
+  <div class="card"><ul>
+    <li>Lack of fusion lies along the <b>fusion face</b>, so the beam has to meet the fusion face square-on (at 90°) to get a strong echo.</li>
+    <li>Rule of thumb: <b>bevel angle + wedge angle = 90°</b>. A 45° bevel takes a 45° wedge; a 30° bevel takes a 60° wedge.</li>
+    <li><b>Leg 2</b> (coming back up from the back wall) meets the <b>near-side</b> fusion face square-on.</li>
+    <li>With a 30° bevel and a 60° wedge, <b>leg 1</b> passes through the weld and meets the lower part of the <b>far-side</b> face square-on.</li>
+    <li>With a 45° bevel and a 45° wedge, leg 1 runs parallel to the near-side face and never gets into the weld, so you <b>scan from both sides</b> to cover both faces.</li>
+    <li>The wrong wedge still hits the flaw, but the sound bounces off to the side: a 45° wedge on a 30° bevel meets the face at 75° and gives only a small echo.</li>
+  </ul></div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  // ---------- geometry (inches) ----------
+  const T = 1.0, L = 10.0, WC = 5.5, GAP = 0.06;   // long enough for the 70° wedge's long skip on both sides   // plate thickness, length, weld centre, half the root gap
+  const FLAWS = [                                   // lack of fusion on each fusion face: depth of its centre, half-length along the face
+    { side: -1, y: 0.45, half: 0.15, name: 'left' },
+    { side: 1, y: 0.70, half: 0.15, name: 'right' }
+  ];
+  const BEAM_W = 0.12, RANGE = 5;
+  const W = 1000, H = 700, K = 1.5;
+  const PX = 52, S = 88, TOPY = 176;
+  const X = x => PX + x * S, Y = y => TOPY + y * S;
+  const AS = { x: 64, y: 500, w: 880, h: 168 };     // the gap above it holds the wedge buttons
+  const C = { ink: '#1f1d1b', soft: '#57524d', faded: '#8f8882', red: '#A82020', blue: '#2a6fdb', good: '#0d904f', orange: '#d9731a', navy: '#0b1320', trace: '#f5e663', flaw: '#b3121b' };
+  const SANS = "'Manrope', system-ui, sans-serif", MONO = "'JetBrains Mono', ui-monospace, monospace";
+  const IN = v => v.toFixed(3) + '″', RAD = Math.PI / 180;
+
+  const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  const card = document.getElementById('card'), stepsEl = document.getElementById('steps'), wedgesEl = document.getElementById('wedges');
+  const st = { xp: null, dir: 1, angle: 45, bevel: 45, drag: null, bevelAt: 0 };
+
+  // ---------- weld ----------
+  const tb = () => Math.tan(st.bevel * RAD);
+  const capL = () => WC - GAP - T * tb(), capR = () => WC + GAP + T * tb();
+  const faceX = (side, y) => WC + side * (GAP + (T - y) * tb());           // fusion face at depth y
+  function flawSeg(f) {                                                      // ends of the flaw, along its fusion face
+    const b = st.bevel * RAD, ux = f.side * Math.sin(b), uy = -Math.cos(b);  // unit vector up the face
+    const cx = faceX(f.side, f.y), cy = f.y;
+    return { cx, cy, ux, uy, x1: cx - ux * f.half, y1: cy - uy * f.half, x2: cx + ux * f.half, y2: cy + uy * f.half };
+  }
+  // ---------- sound path: legs 1 and 2 only (as in weld inspection), stopped by a flaw it runs into ----------
+  function legs(xp, dir, ang) {
+    const a = ang * RAD, out = [];
+    let x = xp, y = 0, dx = dir * Math.sin(a), dy = Math.cos(a), s = 0;
+    for (let leg = 1; leg <= 2; leg++) {
+      let t = dy > 0 ? (T - y) / dy : -y / dy;
+      const tX = dx > 0 ? (L - x) / dx : -x / dx; let end = false;
+      if (tX < t) { t = tX; end = true; }
+      let hit = null;
+      for (const f of FLAWS) {                     // centre line against the flaw's face line
+        const g = flawSeg(f), den = dx * g.uy - dy * g.ux;
+        if (Math.abs(den) < 1e-9) continue;        // running parallel to the face
+        const tt = ((g.cx - x) * g.uy - (g.cy - y) * g.ux) / den, u = ((g.cx - x) * dy - (g.cy - y) * dx) / den;
+        if (tt <= 1e-6 || tt > t) continue;
+        const out_ = Math.max(0, Math.abs(u) - f.half);
+        const cosd = Math.abs(dx * -g.uy + dy * g.ux);                       // beam vs face normal
+        const dev = Math.acos(Math.min(1, cosd)) / RAD;
+        const c = { f, t: tt, u, out: out_, dev, x: x + dx * tt, y: y + dy * tt };
+        if (out_ === 0) { if (!hit || hit.near || tt < hit.t) hit = c; }                  // runs into the flaw
+        else if (out_ < 0.3 && (!hit || (hit.near && tt < hit.t))) hit = Object.assign(c, { near: true });   // just misses it
+      }
+      const block = hit && !hit.near;
+      const tl = block ? hit.t : t;
+      out.push({ leg, x1: x, y1: y, x2: x + dx * tl, y2: y + dy * tl, s1: s, len: tl, hit, dx, dy });
+      if (block || end) break;
+      s += t; x += dx * t; y += dy * t; dy = -dy;
+    }
+    return out;
+  }
+  function echo() {                                 // the strongest flaw echo for the probe where it is
+    if (st.xp == null) return null;
+    let best = null;
+    for (const g of legs(st.xp, st.dir, st.angle)) {
+      if (!g.hit) continue;
+      const h = g.hit, s = g.s1 + h.t;
+      const amp = 100 * Math.exp(-Math.pow(h.dev / 10, 2)) * Math.exp(-Math.pow(h.u / 0.2, 2)) * Math.exp(-s / 14);
+      if (amp > 2 && (!best || amp > best.amp)) best = { s, amp, depth: h.y, leg: g.leg, f: h.f, dev: h.dev, x: h.x, y: h.y };
+    }
+    return best;
+  }
+  // exit point that puts the beam centre on the middle of a flaw with a given leg
+  const spotFor = (f, leg) => faceX(f.side, f.y) - st.dir * (leg === 1 ? f.y : 2 * T - f.y) * Math.tan(st.angle * RAD);
+  const nearFlaw = () => FLAWS.find(f => f.side === -st.dir), farFlaw = () => FLAWS.find(f => f.side === st.dir);
+
+  // ---------- lesson flow ----------
+  const fresh = () => ({ phase: 'pick', fb: '', answered: {}, scanned: 0, found: null, weak: null });
+  let q = fresh();
+  const STEPS = [
+    { text: 'Pick the wedge for a <b>45° bevel</b>.', done: () => !!q.answered.pick },
+    { text: 'Drag the probe onto the plate and find the flaw on the <b>near-side</b> fusion face.', done: () => !!q.answered.find1 },
+    { text: 'Try to find the <b>far-side</b> flaw from this side.', done: () => !!q.answered.far1 },
+    { text: 'Scan from the <b>other side</b> of the weld.', done: () => !!q.answered.find2 },
+    { text: 'New weld, <b>30° bevel</b>: find the near-side flaw with the 45° wedge.', done: () => !!q.answered.weak },
+    { text: 'Change to the wedge that faces the 30° bevel and find it again.', done: () => !!q.answered.find3 },
+    { text: 'Find the <b>far-side</b> flaw. Try leg 1.', done: () => !!q.answered.find4 }
+  ];
+  function renderSteps() {
+    const i = STEPS.findIndex(s => !s.done());
+    stepsEl.innerHTML = STEPS.map((s, j) => `<li class="${i === -1 || j < i ? 'done' : j === i ? 'now' : ''}">${s.text}</li>`).join('');
+    document.getElementById('done').hidden = !(i === -1 && q.phase === 'end');
+  }
+  function show(html) {
+    card.hidden = false; card.innerHTML = html;
+    card.querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', () => act(b.dataset.a, b.dataset.v)));
+  }
+  const opts = (name, list) => `<div class="opts">${list.map(([v, t]) => `<button data-a="${name}" data-v="${v}">${t}</button>`).join('')}</div>`;
+  const optsSel = (name, list, cur) => `<div class="opts">${list.map(([v, t]) => `<button data-a="${name}" data-v="${v}"${String(cur) === v ? ' class="sel"' : ''}>${t}</button>`).join('')}</div>`;
+  const pct = a => Math.round(a) + '%';
+  const live = () => { const e = echo(); return e && e.amp > 20 ? `Echo: <b>${pct(e.amp)}</b> at ${IN(e.s)}.` : e ? `Echo: <b>${pct(e.amp)}</b> (small).` : 'Echo: <b>none</b>.'; };
+  function render() {
+    renderSteps(); paintWedges();
+    switch (q.phase) {
+      case 'pick':
+        show(`<div class="ql">Pick the wedge</div><div class="qq">This weld has a <b>45° bevel</b>: each fusion face leans 45° from vertical. Lack of fusion lies along the fusion face. Which wedge makes the beam meet the fusion face square-on (at 90°)?</div>${opts('pick', [['45', '45° wedge'], ['60', '60° wedge'], ['70', '70° wedge']])}<div class="fb">${q.fb}</div>`); break;
+      case 'place':
+        show(`<div class="ql">Right: 45° + 45° = 90°</div><div class="qq">Drag the probe onto the plate, left of the weld, and find the flaw on the <b>near-side</b> fusion face (the face closest to you).</div><div class="qs">Follow the beam: leg 1 down to the back wall, leg 2 back up.</div>`); break;
+      case 'find1':
+        show(`<div class="ql">Find the near-side flaw</div><div class="qq">Slide the probe until the beam runs into the flaw on the <b>near-side</b> fusion face.</div><div class="qs">${live()}</div>`); break;
+      case 'find1-q':
+        show(`<div class="ql">An echo!</div><div class="qq">${pct(q.found.amp)} at ${IN(q.found.s)}. Which leg found it?</div>${opts('leg1', [['1', 'Leg 1'], ['2', 'Leg 2']])}<div class="fb">${q.fb}</div>`); break;
+      case 'find1-ok':
+        show(`<div class="ql">Leg 2 · near-side face</div><div class="qq"><span class="ok">Right, leg 2.</span></div><div class="ex">Leg 1 bounces off the back wall, and leg 2 comes back up and meets the near-side face square-on. Depth ${IN(q.found.depth)}.</div><button class="go" data-a="next" data-v="far1">Next →</button>`); break;
+      case 'far1':
+        show(`<div class="ql">Now the far side</div><div class="qq">The far-side fusion face has a flaw too. Try to find it <b>from this side</b>. Slide the probe all the way along and watch the beam.</div><div class="qs">${live()} Scanned ${Math.min(q.scanned, 2).toFixed(1)}″ of 2″.</div>${q.scanned >= 2 ? '<button class="go" data-a="next" data-v="far1-q">I\'ve scanned it →</button>' : ''}`); break;
+      case 'far1-q':
+        show(`<div class="ql">Question</div><div class="qq">Why can't the 45° beam find the far-side flaw from this side?</div>${opts('far', [['small', 'The far-side flaw is too small'], ['parallel', 'Leg 1 runs parallel to the near-side face and never gets into the weld'], ['gain', 'The gain is too low']])}<div class="fb">${q.fb}</div>`); break;
+      case 'far1-ok':
+        show(`<div class="ql">Scan from both sides</div><div class="qq"><span class="ok">Right.</span> With a 45° bevel, leg 1 runs alongside the near-side face and leg 2 runs alongside the far-side face.</div><div class="ex">From this side, the 45° beam never meets the far-side face square-on. So you scan from the other side, where that face is the near side.</div><button class="go" data-a="next" data-v="other">Scan from the other side →</button>`); break;
+      case 'find2':
+        show(`<div class="ql">Other side of the weld</div><div class="qq">The probe is now on the right of the weld, facing left. Find the flaw on the face nearest the probe.</div><div class="qs">${live()}</div>`); break;
+      case 'find2-q':
+        show(`<div class="ql">An echo!</div><div class="qq">${pct(q.found.amp)} at ${IN(q.found.s)}. Which leg found it?</div>${opts('leg2', [['1', 'Leg 1'], ['2', 'Leg 2']])}<div class="fb">${q.fb}</div>`); break;
+      case 'find2-ok':
+        show(`<div class="ql">Both faces covered</div><div class="qq"><span class="ok">Leg 2 again.</span> From this side, it's the near-side face.</div><div class="ex">For a 45° bevel and a 45° wedge: leg 2 checks the face nearest you, and scanning from both sides covers both faces.</div><button class="go" data-a="next" data-v="bevel30">Next: a 30° bevel →</button>`); break;
+      case 'find30w':
+        show(`<div class="ql">New weld · 30° bevel</div><div class="qq">This weld has a <b>30° bevel</b>, and you still have the <b>45° wedge</b> on. Find the flaw on the near-side face with leg 2.</div><div class="qs">${live()}</div>`); break;
+      case 'weak-q':
+        show(`<div class="ql">A small echo</div><div class="qq">The beam hits the flaw, but the echo is only ${pct(q.weak.amp)}. Why?</div>${opts('weak', [['angle', 'The beam doesn\'t meet the fusion face square-on'], ['small', 'This flaw is smaller'], ['far', 'Leg 2 is too far away']])}<div class="fb">${q.fb}</div>`); break;
+      case 'pick30':
+        show(`<div class="ql">Change the wedge</div><div class="qq">30° bevel + 45° wedge = 75°, not 90°, so most of the sound bounces off to the side. Pick the wedge that makes it add up to 90°.</div><div class="qs">Use the wedge buttons under the plate.</div><div class="fb">${q.fb}</div>`); break;
+      case 'find3':
+        show(`<div class="ql">60° wedge on</div><div class="qq">Now find the same near-side flaw again.</div><div class="qs">${live()} (It was ${pct(q.weak.amp)} with the 45° wedge.)</div>`); break;
+      case 'find3-ok':
+        show(`<div class="ql">Square-on</div><div class="qq"><span class="ok">${pct(q.found.amp)}, up from ${pct(q.weak.amp)}.</span></div><div class="ex">30° bevel + 60° wedge = 90°: leg 2 meets the near-side face square-on, so the sound comes straight back.</div><button class="go" data-a="next" data-v="find4">Next →</button>`); break;
+      case 'find4':
+        show(`<div class="ql">The far side</div><div class="qq">Now find the flaw on the <b>far-side</b> face from this side. Hint: try leg 1, with the probe closer to the weld.</div><div class="qs">${live()}</div>`); break;
+      case 'find4-q':
+        show(`<div class="ql">An echo!</div><div class="qq">${pct(q.found.amp)} at ${IN(q.found.s)}, depth ${IN(q.found.depth)}. Which leg and which face?</div>${opts('leg4', [['1f', 'Leg 1, far-side face'], ['2n', 'Leg 2, near-side face'], ['1n', 'Leg 1, near-side face']])}<div class="fb">${q.fb}</div>`); break;
+      case 'find4-ok':
+        show(`<div class="ql">Leg 1 · far-side face</div><div class="qq"><span class="ok">Right.</span> The 60° beam is flatter than the near-side face, so leg 1 passes through the weld and meets the far-side face square-on.</div><div class="ex">With a 30° bevel and a 60° wedge, one side covers both faces: leg 1 for the far side (lower part), leg 2 for the near side. You still scan from both sides.</div><button class="go" data-a="next" data-v="end">Finish →</button>`); break;
+      case 'end': {
+        const hit = legs(st.xp, st.dir, st.angle).find(g => g.hit && !g.hit.near), e = echo();
+        const meet = hit ? Math.round(90 - hit.hit.dev) : null;
+        show(`<div class="ql">Exercise complete · free play</div><div class="qq">Bevel + wedge = 90°.</div><div class="ex">Now try anything: any wedge (70° too), either bevel, either side. Slide the probe and watch where each leg goes.</div>
+          <div class="qs" style="margin-top:8px">Bevel</div>${optsSel('bevel', [['45', '45° bevel'], ['30', '30° bevel']], st.bevel)}
+          <div class="qs" style="margin-top:8px">Scan from</div>${optsSel('side', [['1', 'Left side'], ['-1', 'Right side']], st.dir)}
+          <div class="fb">${st.bevel}° bevel + ${st.angle}° wedge = <b>${st.bevel + st.angle}°</b>${st.bevel + st.angle === 90 ? ' <span class="ok">square-on</span>' : ''}. ${hit ? `Leg ${hit.leg} hits the ${hit.hit.f.side === -st.dir ? 'near' : 'far'}-side flaw at <b>${meet}°</b>: echo <b>${e ? pct(e.amp) : '0%'}</b>${meet < 85 ? ' (the sound bounces off to the side)' : ''}.` : 'The beam isn\'t hitting a flaw right now.'}</div>`);
+        break;
+      }
+    }
+  }
+  function act(a, v) {
+    if (a === 'pick') { if (v === '45') { q.answered.pick = true; q.fb = ''; st.angle = 45; q.phase = 'place'; } else q.fb = `<span class="no">${v}° + 45° = ${+v + 45}°.</span> The beam would meet the face at an angle, not square-on. Bevel + wedge should add up to 90°.`; }
+    if (a === 'leg1' || a === 'leg2') {
+      if (v === '2') { q.answered[a === 'leg1' ? 'find1' : 'find2'] = true; q.fb = ''; q.phase = a === 'leg1' ? 'find1-ok' : 'find2-ok'; }
+      else q.fb = '<span class="no">Count the legs.</span> Follow the beam from the probe: down to the back wall is leg 1, back up is leg 2.';
+    }
+    if (a === 'far') { if (v === 'parallel') { q.answered.far1 = true; q.fb = ''; q.phase = 'far1-ok'; } else q.fb = v === 'small' ? '<span class="no">It\'s the same size as the near-side one.</span> Look at the beam: does it ever get into the weld and reach the far-side face?' : '<span class="no">Gain only makes echoes taller.</span> No sound is coming back from that face at all. Look at where the beam goes.'; }
+    if (a === 'weak') { if (v === 'angle') { q.answered.weak = true; q.fb = ''; q.phase = 'pick30'; } else q.fb = v === 'small' ? '<span class="no">It\'s the same size.</span> Compare the beam with the fusion face: do they meet at 90°?' : '<span class="no">Leg 2 found a strong echo on the 45° bevel.</span> What changed is the bevel angle.'; }
+    if (a === 'leg4') { if (v === '1f') { q.answered.find4 = true; q.fb = ''; q.phase = 'find4-ok'; } else q.fb = '<span class="no">Follow the beam.</span> It hasn\'t reached the back wall yet (leg 1), and it crosses the weld to the face on the far side.'; }
+    if (a === 'bevel') { st.bevel = +v; st.bevelAt = performance.now(); setX(st.xp); return; }
+    if (a === 'side' && +v !== st.dir) { st.dir = +v; setX(2 * WC - st.xp); return; }
+    if (a === 'next') {
+      q.fb = ''; q.phase = v;
+      if (v === 'far1') q.scanned = 0;
+      if (v === 'other') { st.dir = -1; st.xp = 8.6; q.phase = 'find2'; }
+      if (v === 'bevel30') { st.dir = 1; st.bevel = 30; st.bevelAt = performance.now(); st.angle = 45; st.xp = 1.2; q.phase = 'find30w'; }
+    }
+    render();
+  }
+  const unlocked = () => ['place', 'find1', 'far1', 'find2', 'find30w', 'find3', 'find4', 'end'].includes(q.phase);
+  const lockMsg = () => q.phase === 'pick' ? 'Pick the wedge on the card first' : q.phase === 'pick30' ? 'Change the wedge first' : q.phase.endsWith('-ok') ? 'Press Next on the card to continue' : 'Answer the question first';
+  let toast = null;
+  const say = t => { toast = { t, at: performance.now() }; };
+
+  // ---------- input ----------
+  const pos = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height }; };
+  const parked = { x: 120, y: 132 };
+  const probeHit = p => { const px = st.xp == null ? parked.x : X(st.xp), py = st.xp == null ? parked.y : TOPY, d = st.dir; const a = px - (d > 0 ? 78 : 24), b = px + (d > 0 ? 24 : 78); return p.x > a && p.x < b && p.y > py - 112 && p.y < py + 6; };
+  const range = () => st.dir > 0 ? [0.55, capL() - 0.25] : [capR() + 0.25, L - 0.55];
+  const SNAP = 0.12;
+  function hunt() {                                 // the spot the student is looking for right now
+    if (q.phase === 'find1' || q.phase === 'find2') return spotFor(nearFlaw(), 2);
+    if (q.phase === 'find30w' || q.phase === 'find3') return spotFor(nearFlaw(), 2);
+    if (q.phase === 'find4') return spotFor(farFlaw(), 1);
+    return null;
+  }
+  function setX(x) {
+    const prev = st.xp, phase0 = q.phase, [lo0, hi0] = range();
+    x = Math.round(Math.min(hi0, Math.max(lo0, x)) * 100) / 100;
+    const spot = hunt();
+    if (spot != null) {
+      const lo = Math.min(prev == null ? x : prev, x), hi = Math.max(prev == null ? x : prev, x);
+      if (spot >= lo - SNAP && spot <= hi + SNAP) x = spot;
+    }
+    st.xp = x;
+    if (q.phase === 'place') q.phase = 'find1';
+    if (spot != null && Math.abs(st.xp - spot) < 1e-9) {
+      const e = echo();
+      if (q.phase === 'find30w') { q.weak = e; q.phase = 'weak-q'; }
+      else if (q.phase === 'find3') { q.found = e; q.answered.find3 = true; q.phase = 'find3-ok'; }
+      else { q.found = e; q.phase = q.phase + '-q'; }
+    }
+    if (q.phase === 'far1' && prev != null) q.scanned += Math.abs(st.xp - prev);
+    render();
+    if (!unlocked() || q.phase !== phase0) st.drag = null;
+  }
+  cv.addEventListener('pointerdown', e => {
+    const p = pos(e); if (!probeHit(p)) return;
+    if (!unlocked()) { say(lockMsg()); return; }
+    e.preventDefault(); cv.setPointerCapture(e.pointerId);
+    st.drag = { dx: (st.xp == null ? parked.x : X(st.xp)) - p.x, dy: (st.xp == null ? parked.y : TOPY) - p.y, x: p.x, y: p.y };
+  });
+  cv.addEventListener('pointermove', e => {
+    const p = pos(e);
+    cv.style.cursor = st.drag ? 'grabbing' : probeHit(p) ? 'grab' : 'default';
+    if (!st.drag) return;
+    st.drag.x = p.x; st.drag.y = p.y;
+    if (st.xp != null) setX((p.x + st.drag.dx - PX) / S);
+  });
+  cv.addEventListener('pointerup', e => {
+    if (!st.drag) return;
+    const p = pos(e), was = st.drag; st.drag = null;
+    if (st.xp == null && p.y + was.dy > TOPY - 70 && p.y + was.dy < Y(T) + 20 && p.x > PX && p.x < X(L)) setX((p.x + was.dx - PX) / S);
+  });
+  cv.tabIndex = 0;
+  cv.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    if (st.xp == null) { say(q.phase === 'place' ? 'Drag the probe onto the plate first' : lockMsg()); return; }
+    if (!unlocked()) { say(lockMsg()); return; }
+    setX(st.xp + (e.key === 'ArrowLeft' ? -0.05 : 0.05));
+  });
+  wedgesEl.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    const w = +b.dataset.w;
+    if (q.phase === 'end') { st.angle = w; setX(st.xp); return; }   // free play: any wedge
+    if (q.phase !== 'pick30') { say(q.phase === 'pick' ? 'Answer on the card: which wedge?' : 'Keep this wedge for now'); return; }
+    if (w === 60) { st.angle = 60; st.xp = 0.7; q.fb = ''; q.phase = 'find3'; }
+    else q.fb = `<span class="no">30° + ${w}° = ${30 + w}°.</span> Not 90° yet. Try another wedge.`;
+    render();
+  }));
+  function paintWedges() {
+    wedgesEl.querySelectorAll('button').forEach(b => { b.classList.toggle('on', +b.dataset.w === st.angle && q.phase !== 'pick'); b.classList.toggle('glow', q.phase === 'pick30'); });
+  }
+  document.getElementById('reset').addEventListener('click', () => { q = fresh(); Object.assign(st, { xp: null, dir: 1, angle: 45, bevel: 45, drag: null }); render(); });
+  if (new URLSearchParams(location.search).has('embed')) document.body.classList.add('embed');
+
+  // ---------- drawing ----------
+  function txt(s, x, y, o) { o = o || {}; ctx.font = `${o.w || 600} ${o.size || 14}px ${o.mono ? MONO : SANS}`; ctx.fillStyle = o.c || C.ink; ctx.textAlign = o.a || 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillText(s, x, y); }
+  function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+  function dashed(pts, col, w) { ctx.strokeStyle = col; ctx.lineWidth = w || 2; ctx.setLineDash([6, 5]); ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke(); ctx.setLineDash([]); }
+  // probe on its wedge, mirrored when it faces left (dir = -1); the sound refracts at the exit point (Rexolite -> steel shear)
+  const V_WEDGE = 2.337, V_STEEL = 3.23, WD = 60, HALF = 28;
+  function drawProbe(ex, ey, ang, dir, alpha, beam) {
+    const a = Math.asin(Math.sin(ang * RAD) * V_WEDGE / V_STEEL), m = x => ex + dir * (x - ex);
+    const P = { x: ex - WD * Math.sin(a), y: ey - WD * Math.cos(a) }, u = { x: Math.cos(a), y: -Math.sin(a) };
+    const Pa = { x: P.x - HALF * u.x, y: P.y - HALF * u.y }, Pb = { x: P.x + HALF * u.x, y: P.y + HALF * u.y }, front = ex + 16;
+    ctx.save(); ctx.globalAlpha = alpha == null ? 1 : alpha;
+    ctx.fillStyle = 'rgba(233,201,138,0.92)'; ctx.strokeStyle = '#a0824a'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(m(Pa.x), ey); ctx.lineTo(m(front), ey); ctx.lineTo(m(front), Pb.y); ctx.lineTo(m(Pb.x), Pb.y); ctx.lineTo(m(Pa.x), Pa.y); ctx.closePath(); ctx.fill(); ctx.stroke();
+    if (beam) {
+      ctx.fillStyle = 'rgba(255,170,40,0.28)';
+      ctx.beginPath(); ctx.moveTo(m(Pa.x), Pa.y); ctx.lineTo(m(Pb.x), Pb.y); ctx.lineTo(ex + 7, ey); ctx.lineTo(ex - 7, ey); ctx.closePath(); ctx.fill();
+      dashed([[m(P.x), P.y], [ex, ey]], C.orange);
+    }
+    txt(ang + '° wedge', m(front) + dir * 6, Pb.y + 12, { size: 12, w: 800, c: '#6b4f1d', a: dir > 0 ? 'left' : 'right' });
+    ctx.translate(m(P.x), P.y); ctx.scale(dir, 1); ctx.rotate(-a);
+    rr(-26, -36, 52, 36, 5); ctx.fillStyle = '#3a3f47'; ctx.fill();
+    ctx.fillStyle = '#d4a017'; ctx.fillRect(-26, -4, 52, 4);
+    ctx.strokeStyle = '#3a3f47'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-6, -36); ctx.quadraticCurveTo(-14, -58, -40, -64); ctx.stroke();
+    ctx.restore();
+    ctx.save(); ctx.globalAlpha = alpha == null ? 1 : alpha;
+    ctx.fillStyle = C.red; ctx.beginPath(); ctx.moveTo(ex, ey + 1); ctx.lineTo(ex - 6, ey + 11); ctx.lineTo(ex + 6, ey + 11); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  function drawWeld(tm) {
+    const b = tb(), tl = WC - GAP - T * b, tr = WC + GAP + T * b;
+    // weld metal, with a little cap and root reinforcement
+    ctx.fillStyle = '#c9b9a3';
+    ctx.beginPath(); ctx.moveTo(X(tl), Y(0)); ctx.quadraticCurveTo(X(WC), Y(-0.22), X(tr), Y(0)); ctx.lineTo(X(WC + GAP), Y(T));
+    ctx.quadraticCurveTo(X(WC), Y(T + 0.12), X(WC - GAP), Y(T)); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(110,90,60,0.25)'; ctx.lineWidth = 1;   // weld beads
+    for (let k = 1; k <= 4; k++) { const y = T - k * 0.2; ctx.beginPath(); ctx.moveTo(X(faceX(-1, y)), Y(y)); ctx.quadraticCurveTo(X(WC), Y(y - 0.08), X(faceX(1, y)), Y(y)); ctx.stroke(); }
+    ctx.strokeStyle = '#7a6a52'; ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
+    for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(X(faceX(sd, 0)), Y(0)); ctx.lineTo(X(faceX(sd, T)), Y(T)); ctx.stroke(); }
+    ctx.setLineDash([]);
+    if (st.bevelAt && performance.now() - st.bevelAt < 2600) {        // the bevel just changed: glow the faces
+      ctx.strokeStyle = '#ffd84d'; ctx.lineWidth = 10; ctx.globalAlpha = 0.4 + 0.3 * Math.sin(tm * 6);
+      for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(X(faceX(sd, 0)), Y(0)); ctx.lineTo(X(faceX(sd, T)), Y(T)); ctx.stroke(); }
+      ctx.globalAlpha = 1;
+    }
+    // bevel angle, measured from vertical, on the side away from the probe so it stays clear of the beam
+    const sd = st.dir, x0 = faceX(sd, 0), ang0 = Math.PI / 2, ang1 = Math.PI / 2 + sd * st.bevel * RAD;
+    ctx.strokeStyle = C.soft; ctx.lineWidth = 1.2; ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.moveTo(X(x0), Y(0)); ctx.lineTo(X(x0), Y(0.55)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(X(x0), Y(0), 38, Math.min(ang0, ang1), Math.max(ang0, ang1)); ctx.stroke();
+    txt(st.bevel + '° bevel', X(x0) + sd * 8, Y(0.62), { size: 12, w: 800, c: C.soft, a: sd > 0 ? 'left' : 'right' });
+    // the flaws
+    for (const f of FLAWS) {
+      const g = flawSeg(f);
+      ctx.strokeStyle = C.flaw; ctx.lineWidth = 5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(X(g.x1), Y(g.y1)); ctx.lineTo(X(g.x2), Y(g.y2)); ctx.stroke(); ctx.lineCap = 'butt';
+    }
+    // which face is which, from where the probe is
+    if (st.xp != null) {
+      const nf = nearFlaw(), ff = farFlaw();
+      txt('near-side face', X(faceX(nf.side, 0)), Y(T) + 18, { size: 12, w: 800, c: C.flaw, a: nf.side < 0 ? 'right' : 'left' });
+      txt('far-side face', X(faceX(ff.side, 0)), Y(T) + 18, { size: 12, w: 800, c: C.flaw, a: ff.side > 0 ? 'left' : 'right' });
+    }
+    txt('lack of fusion on both fusion faces', X(WC), Y(T) + 36, { size: 11, w: 700, c: C.flaw, a: 'center' });
+  }
+
+  function frame(now) {
+    const tm = now / 1000;
+    ctx.setTransform(K, 0, 0, K, 0, 0); ctx.clearRect(0, 0, W, H);
+    txt('1 INCH PLATE · SINGLE-V BUTT WELD · SIDE VIEW', X(L), 26, { size: 11, w: 700, c: C.faded, mono: true, a: 'right' });
+    const gr = ctx.createLinearGradient(0, Y(0), 0, Y(T)); gr.addColorStop(0, '#d3d9e0'); gr.addColorStop(1, '#a3adb9');
+    ctx.fillStyle = gr; ctx.fillRect(X(0), Y(0), L * S, T * S);
+    drawWeld(tm);
+    ctx.strokeStyle = '#5f6b78'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X(0), Y(0)); ctx.lineTo(X(capL()), Y(0)); ctx.moveTo(X(capR()), Y(0)); ctx.lineTo(X(L), Y(0)); ctx.moveTo(X(L), Y(0)); ctx.lineTo(X(L), Y(T)); ctx.lineTo(X(0), Y(T)); ctx.lineTo(X(0), Y(0)); ctx.stroke();
+    txt('back wall', X(0.1), Y(T) - 8, { size: 12, w: 600, c: '#4b5563' });
+    ctx.strokeStyle = C.soft; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(X(L) + 18, Y(0)); ctx.lineTo(X(L) + 18, Y(T)); ctx.stroke();
+    txt('1″', X(L) + 24, Y(T / 2) + 5, { size: 13, w: 700, c: C.soft });
+
+    const e = echo();
+    if (st.xp == null) {
+      const d = st.drag;
+      drawProbe(d ? d.x + d.dx : parked.x, d ? d.y + d.dy : parked.y, st.angle, 1, q.phase === 'place' ? (d ? 0.9 : 1) : 0.35);
+      if (!d && q.phase === 'place') { txt('← drag the probe onto the plate', parked.x + 46, parked.y - 40, { size: 14, w: 700, c: C.blue });
+        ctx.strokeStyle = '#ffd84d'; ctx.lineWidth = 4; ctx.globalAlpha = 0.55 + 0.45 * Math.sin(tm * 6); rr(parked.x - 84, parked.y - 116, 116, 124, 10); ctx.stroke(); ctx.globalAlpha = 1; }
+    } else {
+      drawProbe(X(st.xp), Y(0), st.angle, st.dir, 1, true);
+      // beam: legs 1 and 2, fading; stops at a flaw it runs into
+      const segs = legs(st.xp, st.dir, st.angle);
+      ctx.save(); ctx.beginPath(); ctx.rect(X(0), Y(0), L * S, T * S); ctx.clip();
+      for (const g of segs) { ctx.strokeStyle = `rgba(255,190,70,${(0.32 * Math.exp(-g.s1 / 6)).toFixed(3)})`; ctx.lineWidth = BEAM_W * 2 * S; ctx.beginPath(); ctx.moveTo(X(g.x1), Y(g.y1)); ctx.lineTo(X(g.x2), Y(g.y2)); ctx.stroke(); }
+      const route = [[X(segs[0].x1), Y(segs[0].y1)]].concat(segs.map(g => [X(g.x2), Y(g.y2)]));
+      dashed(route, C.orange);
+      ctx.restore();
+      segs.forEach(g => { if (g.len < 0.45) return; const mx = X((g.x1 + g.x2) / 2), my = Y((g.y1 + g.y2) / 2); ctx.fillStyle = 'rgba(255,255,255,0.85)'; const lx = mx - st.dir * 36; rr(lx - 24, my - 10, 48, 19, 5); ctx.fill(); txt('Leg ' + g.leg, lx, my + 4, { size: 11, w: 800, a: 'center' }); });
+      // square-on mark where a strong echo comes from
+      if (e && e.amp > 50) { ctx.strokeStyle = C.good; ctx.lineWidth = 3; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(tm * 6); ctx.beginPath(); ctx.arc(X(e.x), Y(e.y), 14, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
+      // pulse: out along the beam; back again (green) when a flaw sends it back
+      const back = e && e.amp > 20, pts = back ? [route[0]].concat(route.slice(1, e.leg)).concat([[X(e.x), Y(e.y)]]) : route;
+      const seg = []; let tot = 0;
+      for (let i = 1; i < pts.length; i++) { const l = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); seg.push(l); tot += l; }
+      const speed = 300, cycle = (back ? 2 * tot : tot) / speed + 0.8, u = (tm % cycle) * speed;
+      const at = s => { for (let i = 0; i < seg.length; i++) { if (s <= seg[i]) { const f = s / seg[i]; return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * f, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * f]; } s -= seg[i]; } return null; };
+      let p = null, ret = false;
+      if (u <= tot) p = at(u); else if (back && u <= 2 * tot) { p = at(2 * tot - u); ret = true; }
+      if (p) { ctx.fillStyle = ret ? C.good : C.red; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(p[0], p[1], 6, 0, 7); ctx.fill(); ctx.shadowBlur = 0; }
+    }
+
+    // ---------- A-scan ----------
+    txt('A-SCAN · SOUND PATH 0 TO 5″', AS.x, AS.y - 52, { size: 11, w: 700, c: C.faded, mono: true });
+    const show_ = e && e.amp > 20;
+    const sd = show_ ? e.s * Math.sin(st.angle * RAD) : 0;
+    const boxes = [['SOUND PATH', show_ ? IN(e.s) : '---'], ['SURFACE DIST.', show_ ? IN(sd) : '---'], ['DEPTH', show_ ? IN(e.depth) : '---'], ['WEDGE', st.angle + '°']];
+    boxes.forEach(([l, v], i) => {
+      const bx = AS.x + i * 222, by = AS.y - 44, bw = 212;
+      rr(bx, by, bw, 34, 6); ctx.fillStyle = '#16202e'; ctx.fill();
+      txt(l, bx + 10, by + 21, { size: 10, w: 700, c: '#9fb3c8', mono: true });
+      txt(v, bx + bw - 10, by + 24, { size: 17, w: 700, c: '#fff', mono: true, a: 'right' });
+    });
+    rr(AS.x - 4, AS.y - 4, AS.w + 8, AS.h + 8, 6); ctx.fillStyle = C.navy; ctx.fill();
+    ctx.strokeStyle = 'rgba(160,190,220,0.15)'; ctx.lineWidth = 1;
+    for (let i = 0; i <= 10; i++) { const gx = AS.x + i * AS.w / 10; ctx.beginPath(); ctx.moveTo(gx, AS.y); ctx.lineTo(gx, AS.y + AS.h); ctx.stroke(); }
+    for (let i = 0; i <= 5; i++) { const gy = AS.y + i * AS.h / 5; ctx.beginPath(); ctx.moveTo(AS.x, gy); ctx.lineTo(AS.x + AS.w, gy); ctx.stroke(); }
+    const bot = AS.y + AS.h - 2;
+    ctx.save(); ctx.beginPath(); ctx.rect(AS.x, AS.y, AS.w, AS.h); ctx.clip(); ctx.beginPath();
+    for (let px = 0; px <= AS.w; px++) {
+      const s = px / AS.w * RANGE;
+      let a = 1.2 + 1.8 * Math.abs(Math.sin(s * 74.2 + Math.sin(s * 18.6) * 3)) * (0.6 + 0.4 * Math.sin(tm * 9 + s * 10));
+      if (st.xp != null) a += 70 * Math.exp(-Math.max(s + 0.03, 0) / 0.05);
+      if (e) { const d = (s - e.s) / RANGE * AS.w, w = d < 0 ? 3 : 5; if (Math.abs(d) < 24) a += e.amp * Math.exp(-Math.pow(d / w, 2)) * (0.5 + 0.5 * Math.abs(Math.sin(d * 0.9))); }
+      const yv = bot - Math.min(a, 105) / 100 * (AS.h - 6);
+      px ? ctx.lineTo(AS.x + px, yv) : ctx.moveTo(AS.x, yv);
+    }
+    ctx.strokeStyle = C.trace; ctx.lineWidth = 1.6; ctx.stroke(); ctx.restore();
+    for (let i = 0; i <= 5; i++) txt(i + (i === 5 ? '″' : ''), AS.x + i * AS.w / 5, AS.y + AS.h + 18, { size: 11, w: 600, c: C.soft, mono: true, a: i === 0 ? 'left' : i === 5 ? 'right' : 'center' });
+    if (st.xp != null && !show_) txt(e ? 'small echo' : 'no echo', AS.x + 16, AS.y + 26, { size: 13, w: 700, c: '#8fa4bb', mono: true });
+    if (show_) txt('flaw echo · leg ' + e.leg, AS.x + e.s / RANGE * AS.w + 10, AS.y + 26, { size: 13, w: 800, c: '#7dffb0' });
+
+    if (toast && now - toast.at < 2600) {
+      ctx.font = `700 14px ${SANS}`; const tw = ctx.measureText(toast.t).width + 28;
+      ctx.globalAlpha = Math.min(1, (2600 - (now - toast.at)) / 300);
+      rr(W / 2 - tw / 2, 40, tw, 32, 8); ctx.fillStyle = '#6b2412'; ctx.fill();
+      txt(toast.t, W / 2, 61, { size: 14, w: 700, c: '#fff', a: 'center' }); ctx.globalAlpha = 1;
+    }
+    requestAnimationFrame(frame);
+  }
+  render();
+  (document.fonts ? Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 2000))]) : Promise.resolve()).then(() => requestAnimationFrame(frame));
+  window.__weld = { st, get q() { return q; }, echo, legs, spotFor, nearFlaw, farFlaw, setX, act };
+})();
+</script>
+</body>
+</html>
