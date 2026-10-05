@@ -70,6 +70,7 @@
   .qpop .fb { font-size: 13.5px; margin-top: 8px; }
   .qpop .opts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .qpop .opts button { flex: 1 1 auto; }
+  .qpop .opts button.sel { background: var(--navy); color: #fff; border-color: var(--navy); }
   .qpop .go { margin-top: 10px; width: 100%; background: var(--red); color: #fff; border-color: var(--red); }
   .ok { color: var(--good); font-weight: 800; } .no { color: var(--bad); font-weight: 800; }
   .card { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 18px; }
@@ -127,14 +128,14 @@
 (function () {
   'use strict';
   // ---------- geometry (inches) ----------
-  const T = 1.0, L = 8.5, WC = 4.25, GAP = 0.06;   // plate thickness, length, weld centre, half the root gap
+  const T = 1.0, L = 10.0, WC = 5.5, GAP = 0.06;   // long enough for the 70° wedge's long skip on both sides   // plate thickness, length, weld centre, half the root gap
   const FLAWS = [                                   // lack of fusion on each fusion face: depth of its centre, half-length along the face
     { side: -1, y: 0.45, half: 0.15, name: 'left' },
     { side: 1, y: 0.70, half: 0.15, name: 'right' }
   ];
   const BEAM_W = 0.12, RANGE = 5;
   const W = 1000, H = 700, K = 1.5;
-  const PX = 52, S = 104, TOPY = 176;
+  const PX = 52, S = 88, TOPY = 176;
   const X = x => PX + x * S, Y = y => TOPY + y * S;
   const AS = { x: 64, y: 500, w: 880, h: 168 };     // the gap above it holds the wedge buttons
   const C = { ink: '#1f1d1b', soft: '#57524d', faded: '#8f8882', red: '#A82020', blue: '#2a6fdb', good: '#0d904f', orange: '#d9731a', navy: '#0b1320', trace: '#f5e663', flaw: '#b3121b' };
@@ -220,6 +221,7 @@
     card.querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', () => act(b.dataset.a, b.dataset.v)));
   }
   const opts = (name, list) => `<div class="opts">${list.map(([v, t]) => `<button data-a="${name}" data-v="${v}">${t}</button>`).join('')}</div>`;
+  const optsSel = (name, list, cur) => `<div class="opts">${list.map(([v, t]) => `<button data-a="${name}" data-v="${v}"${String(cur) === v ? ' class="sel"' : ''}>${t}</button>`).join('')}</div>`;
   const pct = a => Math.round(a) + '%';
   const live = () => { const e = echo(); return e && e.amp > 20 ? `Echo: <b>${pct(e.amp)}</b> at ${IN(e.s)}.` : e ? `Echo: <b>${pct(e.amp)}</b> (small).` : 'Echo: <b>none</b>.'; };
   function render() {
@@ -263,8 +265,15 @@
         show(`<div class="ql">An echo!</div><div class="qq">${pct(q.found.amp)} at ${IN(q.found.s)}, depth ${IN(q.found.depth)}. Which leg and which face?</div>${opts('leg4', [['1f', 'Leg 1, far-side face'], ['2n', 'Leg 2, near-side face'], ['1n', 'Leg 1, near-side face']])}<div class="fb">${q.fb}</div>`); break;
       case 'find4-ok':
         show(`<div class="ql">Leg 1 · far-side face</div><div class="qq"><span class="ok">Right.</span> The 60° beam is flatter than the near-side face, so leg 1 passes through the weld and meets the far-side face square-on.</div><div class="ex">With a 30° bevel and a 60° wedge, one side covers both faces: leg 1 for the far side (lower part), leg 2 for the near side. You still scan from both sides.</div><button class="go" data-a="next" data-v="end">Finish →</button>`); break;
-      case 'end':
-        show(`<div class="ql">Exercise complete</div><div class="qq">Bevel + wedge = 90°.</div><div class="ex">Pick the wedge so the beam meets the fusion face square-on. Leg 2 checks the near-side face; leg 1 reaches the far-side face when the beam can pass through the weld; and you scan from both sides.</div>`); break;
+      case 'end': {
+        const hit = legs(st.xp, st.dir, st.angle).find(g => g.hit && !g.hit.near), e = echo();
+        const meet = hit ? Math.round(90 - hit.hit.dev) : null;
+        show(`<div class="ql">Exercise complete · free play</div><div class="qq">Bevel + wedge = 90°.</div><div class="ex">Now try anything: any wedge (70° too), either bevel, either side. Slide the probe and watch where each leg goes.</div>
+          <div class="qs" style="margin-top:8px">Bevel</div>${optsSel('bevel', [['45', '45° bevel'], ['30', '30° bevel']], st.bevel)}
+          <div class="qs" style="margin-top:8px">Scan from</div>${optsSel('side', [['1', 'Left side'], ['-1', 'Right side']], st.dir)}
+          <div class="fb">${st.bevel}° bevel + ${st.angle}° wedge = <b>${st.bevel + st.angle}°</b>${st.bevel + st.angle === 90 ? ' <span class="ok">square-on</span>' : ''}. ${hit ? `Leg ${hit.leg} hits the ${hit.hit.f.side === -st.dir ? 'near' : 'far'}-side flaw at <b>${meet}°</b>: echo <b>${e ? pct(e.amp) : '0%'}</b>${meet < 85 ? ' (the sound bounces off to the side)' : ''}.` : 'The beam isn\'t hitting a flaw right now.'}</div>`);
+        break;
+      }
     }
   }
   function act(a, v) {
@@ -276,15 +285,17 @@
     if (a === 'far') { if (v === 'parallel') { q.answered.far1 = true; q.fb = ''; q.phase = 'far1-ok'; } else q.fb = v === 'small' ? '<span class="no">It\'s the same size as the near-side one.</span> Look at the beam: does it ever get into the weld and reach the far-side face?' : '<span class="no">Gain only makes echoes taller.</span> No sound is coming back from that face at all. Look at where the beam goes.'; }
     if (a === 'weak') { if (v === 'angle') { q.answered.weak = true; q.fb = ''; q.phase = 'pick30'; } else q.fb = v === 'small' ? '<span class="no">It\'s the same size.</span> Compare the beam with the fusion face: do they meet at 90°?' : '<span class="no">Leg 2 found a strong echo on the 45° bevel.</span> What changed is the bevel angle.'; }
     if (a === 'leg4') { if (v === '1f') { q.answered.find4 = true; q.fb = ''; q.phase = 'find4-ok'; } else q.fb = '<span class="no">Follow the beam.</span> It hasn\'t reached the back wall yet (leg 1), and it crosses the weld to the face on the far side.'; }
+    if (a === 'bevel') { st.bevel = +v; st.bevelAt = performance.now(); setX(st.xp); return; }
+    if (a === 'side' && +v !== st.dir) { st.dir = +v; setX(2 * WC - st.xp); return; }
     if (a === 'next') {
       q.fb = ''; q.phase = v;
       if (v === 'far1') q.scanned = 0;
-      if (v === 'other') { st.dir = -1; st.xp = 7.4; q.phase = 'find2'; }
+      if (v === 'other') { st.dir = -1; st.xp = 8.6; q.phase = 'find2'; }
       if (v === 'bevel30') { st.dir = 1; st.bevel = 30; st.bevelAt = performance.now(); st.angle = 45; st.xp = 1.2; q.phase = 'find30w'; }
     }
     render();
   }
-  const unlocked = () => ['place', 'find1', 'far1', 'find2', 'find30w', 'find3', 'find4'].includes(q.phase);
+  const unlocked = () => ['place', 'find1', 'far1', 'find2', 'find30w', 'find3', 'find4', 'end'].includes(q.phase);
   const lockMsg = () => q.phase === 'pick' ? 'Pick the wedge on the card first' : q.phase === 'pick30' ? 'Change the wedge first' : q.phase.endsWith('-ok') ? 'Press Next on the card to continue' : 'Answer the question first';
   let toast = null;
   const say = t => { toast = { t, at: performance.now() }; };
@@ -293,7 +304,7 @@
   const pos = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height }; };
   const parked = { x: 120, y: 132 };
   const probeHit = p => { const px = st.xp == null ? parked.x : X(st.xp), py = st.xp == null ? parked.y : TOPY, d = st.dir; const a = px - (d > 0 ? 78 : 24), b = px + (d > 0 ? 24 : 78); return p.x > a && p.x < b && p.y > py - 112 && p.y < py + 6; };
-  const range = () => st.dir > 0 ? [0.7, capL() - 0.25] : [capR() + 0.25, L - 0.7];
+  const range = () => st.dir > 0 ? [0.55, capL() - 0.25] : [capR() + 0.25, L - 0.55];
   const SNAP = 0.12;
   function hunt() {                                 // the spot the student is looking for right now
     if (q.phase === 'find1' || q.phase === 'find2') return spotFor(nearFlaw(), 2);
@@ -349,6 +360,7 @@
   });
   wedgesEl.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
     const w = +b.dataset.w;
+    if (q.phase === 'end') { st.angle = w; setX(st.xp); return; }   // free play: any wedge
     if (q.phase !== 'pick30') { say(q.phase === 'pick' ? 'Answer on the card: which wedge?' : 'Keep this wedge for now'); return; }
     if (w === 60) { st.angle = 60; st.xp = 0.7; q.fb = ''; q.phase = 'find3'; }
     else q.fb = `<span class="no">30° + ${w}° = ${30 + w}°.</span> Not 90° yet. Try another wedge.`;
