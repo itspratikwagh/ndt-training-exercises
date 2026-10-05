@@ -205,7 +205,8 @@
   let q = fresh();
   const STEPS = [
     { text: 'Drag the <b>straight-beam</b> probe onto the plate.', done: () => q.phase !== 'place' },
-    { text: 'Slide the probe over the crack, and on and off it. Is there a crack echo?', done: () => !!q.answered.over },
+    { text: 'Read the echo positions on the A-scan.', done: () => !!q.answered.observe },
+    { text: 'Drag the probe along the plate, over the crack and off it. Does anything change?', done: () => !!q.answered.over },
     { text: 'Put on the <b>45° wedge</b> and slide the probe until the crack gives an echo.', done: () => !!q.answered.find },
     { text: 'Watch the crack move to the middle of the plate, then scan it with the <b>45° wedge</b>.', done: () => !!q.answered.scan },
     { text: 'Guess which tilt of the flaw gives the biggest echo.', done: () => q.guess != null },
@@ -231,8 +232,12 @@
     const dist = st.xp == null ? 0 : st.xp - CRACK.x;
     switch (q.phase) {
       case 'place': card.hidden = true; break;
+      case 'observe':
+        show(`<div class="ql">Read the A-scan</div><div class="qq">Before you move the probe, look at the A-scan. Where is the first echo?</div><div class="qs">Use the numbers under the screen (inches of sound path).</div>${opts('observe', [['0.5', '0.500″'], ['1', '1.000″'], ['2', '2.000″']])}<div class="fb">${q.fb}</div>`); break;
+      case 'observe-ok':
+        show(`<div class="ql">Echo positions</div><div class="qq"><span class="ok">Right: 1.000″, the back wall.</span></div><div class="ex">The plate is 1″ thick, so the back wall echo is at 1.000″. The smaller echoes at 2.000″, 3.000″ and 4.000″ are the same sound bouncing between the surfaces again. Remember this picture.</div><button class="go" data-a="next" data-v="over">Now scan →</button>`); break;
       case 'over':
-        show(`<div class="ql">Find the crack</div><div class="qq">Slide the probe until it sits right over the crack.</div><div class="qs">The crack is ${IN(Math.abs(dist))} ${dist < 0 ? 'to the right of' : 'to the left of'} the probe.</div>`); break;
+        show(`<div class="ql">Scan the plate</div><div class="qq">Drag the probe along the plate, over the crack, and watch the echoes. Does anything change?</div><div class="qs">The crack is ${IN(Math.abs(dist))} ${dist < 0 ? 'to the right of' : 'to the left of'} the probe.</div>`); break;
       case 'over-q':
         show(`<div class="ql">Question</div><div class="qq">Is there an echo from the crack?</div><div class="qs">Before you answer, you can keep sliding the probe on and off the crack and watch the A-scan. ${where()}</div>${opts('over', [['yes', 'Yes, the echo at 1.000″'], ['no', 'No, only the back wall']])}<div class="fb">${q.fb}</div>`); break;
       case 'over-check':
@@ -270,6 +275,7 @@
     }
   }
   function act(a, v) {
+    if (a === 'observe') { if (v === '1') { q.answered.observe = true; q.phase = 'observe-ok'; } else q.fb = v === '0.5' ? '<span class="no">Nothing there.</span> Look again: the first tall echo is further right.' : '<span class="no">That\'s the second one.</span> There\'s an echo before it.'; }
     if (a === 'over') { if (v === 'no') { q.answered.over = true; q.phase = 'over-ok'; } else { q.fb = ''; q.wentOff = Math.abs(st.xp - CRACK.x) >= 0.5; q.phase = 'over-check'; } }
     if (a === 'find') { if (v === 'corner') { q.answered.find = true; q.phase = 'find-ok'; } else q.fb = v === 'bw' ? '<span class="no">Not the back wall.</span> On its own, the back wall sends the angled sound away from the probe, so it gives no echo.' : '<span class="no">Not the top.</span> Look where the beam runs in: the bottom of the crack, where it meets the back wall.'; }
     if (a === 'scan') { if (v === 'side') { q.answered.scan = true; q.phase = 'scan2-ok'; } else q.fb = v === 'small' ? '<span class="no">It\'s the same crack that gave a big corner echo a moment ago.</span> Follow the green line: the sound does bounce off it, just not back to the probe.' : '<span class="no">It does reach it.</span> Look at the plate: the orange beam runs right into the crack.'; }
@@ -307,7 +313,7 @@
       if (spot >= lo - SNAP && spot <= hi + SNAP) x = spot;
     }
     st.xp = x;
-    if (q.phase === 'place') q.phase = 'over';
+    if (q.phase === 'place') q.phase = 'observe';
     if (q.phase === 'over' && st.xp === CRACK.x) q.phase = 'over-q';
     if (q.phase === 'over-check') {
       if (Math.abs(st.xp - CRACK.x) >= 0.5) q.wentOff = true;
