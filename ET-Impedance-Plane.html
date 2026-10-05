@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ET: The Impedance Plane</title>
+<style>
+  :root {
+    --bg: #f7f5f0;
+    --panel: #ffffff;
+    --panel2: #f1eee7;
+    --ink: #1b1d22;
+    --ink-soft: #4b4f58;
+    --ink-faded: #8a8e96;
+    --rule: #dcd7cc;
+    --grid: #e7e3da;
+    --accent: #b54515;
+    --accent-soft: #fbeee4;
+    --hl: #d9480f;
+    --locus: #c2551b;
+    --lift: #0b7f8f;
+    --dot: #2847c4;
+    --field: #2f6fd6;
+    --eddy: #e07b12;
+    --heat: #d62f2f;
+    --good: #23784a;
+    --good-soft: #e5f4ea;
+    --bad: #b8322a;
+    --bad-soft: #fbe9e7;
+    --coil: #5a5f6b;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 10px 28px -14px rgba(40,30,20,0.22);
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161b; --panel: #1c1f26; --panel2: #232731; --ink: #eceef2; --ink-soft: #b7bcc7;
+      --ink-faded: #7d8391; --rule: #333846; --grid: #262a34; --accent: #f08a4b; --accent-soft: #3a2a20;
+      --hl: #ff8c4a; --locus: #f0904f; --lift: #43c4d3; --dot: #8ea6ff; --field: #6fa0ff; --eddy: #ffae4d;
+      --heat: #ff6b60; --good: #5fd08f; --good-soft: #1d3327; --bad: #ff7b70; --bad-soft: #3a2222; --coil: #9aa1af;
+      --shadow: 0 1px 0 rgba(0,0,0,0.3), 0 10px 28px -14px rgba(0,0,0,0.6);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161b; --panel: #1c1f26; --panel2: #232731; --ink: #eceef2; --ink-soft: #b7bcc7;
+    --ink-faded: #7d8391; --rule: #333846; --grid: #262a34; --accent: #f08a4b; --accent-soft: #3a2a20;
+    --hl: #ff8c4a; --locus: #f0904f; --lift: #43c4d3; --dot: #8ea6ff; --field: #6fa0ff; --eddy: #ffae4d;
+    --heat: #ff6b60; --good: #5fd08f; --good-soft: #1d3327; --bad: #ff7b70; --bad-soft: #3a2222; --coil: #9aa1af;
+    --shadow: 0 1px 0 rgba(0,0,0,0.3), 0 10px 28px -14px rgba(0,0,0,0.6);
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { font: 16px/1.5 var(--sans); -webkit-text-size-adjust: 100%; }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 12px 16px 48px; }
+
+  header.top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; justify-content: space-between; margin-bottom: 10px; }
+  .titles { min-width: 0; }
+  .eyebrow { font: 600 11px/1.2 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
+  h1 { font-size: clamp(20px, 3.4vw, 28px); line-height: 1.15; margin: 4px 0 0; letter-spacing: -.01em; }
+  a.back { font: 500 12px var(--mono); color: var(--ink-faded); text-decoration: none; }
+  a.back:hover { color: var(--accent); }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .tab, .iconbtn {
+    border: 1px solid var(--rule); background: var(--panel); border-radius: 999px; padding: 6px 12px;
+    font-size: 14px; cursor: pointer; white-space: nowrap;
+  }
+  .tab[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .tab:disabled { opacity: .45; cursor: not-allowed; }
+  .tab:focus-visible, .iconbtn:focus-visible, .chap:focus-visible, .opt:focus-visible, .btn:focus-visible, .ctl:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .chapters { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 8px; scrollbar-width: thin; }
+  .chap {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 6px; border: 1px solid var(--rule);
+    background: var(--panel); border-radius: 10px; padding: 6px 10px; font-size: 13px; cursor: pointer;
+  }
+  .chap .n { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font: 600 11px var(--mono); border: 1px solid var(--ink-faded); color: var(--ink-soft); }
+  .chap.done .n { background: var(--good); border-color: var(--good); color: var(--bg); }
+  .chap.current { border-color: var(--accent); background: var(--accent-soft); }
+  .chap.current .n { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+  .chap:disabled { opacity: .45; cursor: not-allowed; }
+
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 16px; align-items: start; }
+  @media (max-width: 920px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+  .stage { background: var(--panel); border: 1px solid var(--rule); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+  .video { position: relative; width: 100%; aspect-ratio: 4 / 3; max-height: 64vh; background: var(--panel); }
+  .plotbox { position: absolute; inset: 0; }
+  @media (max-width: 600px) { .video { aspect-ratio: auto; max-height: none; } .plotbox { position: relative; inset: auto; width: 100%; aspect-ratio: 1 / 1.05; } }
+  #plane { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: manipulation; }
+  #inset { position: absolute; top: 8px; right: 8px; width: clamp(112px, 30%, 200px); height: auto; transition: opacity .3s; pointer-events: none; }
+  .hud { position: absolute; right: 8px; bottom: 44px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; pointer-events: none; max-width: 60%; }
+  .chip { background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--rule); border-radius: 8px; padding: 4px 8px; font-size: 12px; line-height: 1.3; }
+  .chip b { font-family: var(--mono); font-size: 15px; }
+  .modelnote { font-size: 11.5px; color: var(--ink-soft); padding: 5px 14px; border-top: 1px solid var(--rule); background: var(--panel2); }
+  @media (max-width: 600px) {
+    .hud { position: static; flex-direction: row; flex-wrap: wrap; max-width: none; align-items: center; padding: 0 8px 6px; }
+    .chip b { font-size: 13px; }
+  }
+  .depthbar { width: 120px; height: 8px; border-radius: 4px; background: var(--grid); overflow: hidden; margin-top: 3px; }
+  .depthbar i { display: block; height: 100%; background: var(--field); width: 50%; }
+  .hidden { display: none !important; }
+  .titlecard {
+    position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); text-align: center;
+    background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--rule); border-radius: 12px;
+    padding: 12px 20px; box-shadow: var(--shadow); pointer-events: none; max-width: 86%;
+  }
+  .titlecard .eyebrow { margin-bottom: 4px; }
+  .titlecard div:last-child { font-size: clamp(18px, 3vw, 26px); font-weight: 650; }
+  .startover {
+    position: absolute; inset: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--panel) 80%, transparent);
+    backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); text-align: center; padding: 16px;
+  }
+  .startover .box { max-width: 420px; }
+  .startover p { color: var(--ink-soft); margin: 8px 0 14px; font-size: 14px; }
+  .bigplay { font-size: 18px; font-weight: 650; padding: 12px 22px; border-radius: 999px; border: 0; background: var(--accent); color: #fff; cursor: pointer; }
+
+  .caption { padding: 10px 14px 8px; min-height: 4.6em; font-size: 17px; line-height: 1.45; border-top: 1px solid var(--rule); }
+  .caption .w { color: var(--ink-faded); transition: color .12s; }
+  .caption .w.on { color: var(--ink); }
+  .controls { display: flex; align-items: center; gap: 8px; padding: 6px 10px 10px; flex-wrap: wrap; }
+  .ctl { border: 1px solid var(--rule); background: var(--panel2); border-radius: 8px; height: 36px; min-width: 40px; padding: 0 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; }
+  .ctl:disabled { opacity: .45; cursor: not-allowed; }
+  .ctl svg { width: 18px; height: 18px; }
+  .prog { flex: 1 1 100px; height: 6px; background: var(--grid); border-radius: 3px; overflow: hidden; min-width: 60px; }
+  .prog i { display: block; height: 100%; width: 0; background: var(--accent); }
+  select.ctl { appearance: auto; }
+
+  .side { display: flex; flex-direction: column; gap: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--rule); border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .card h2 { font-size: 17px; margin: 2px 0 8px; line-height: 1.35; }
+  .card p { margin: 6px 0; }
+  .card.ask { border-color: var(--accent); }
+  .muted { color: var(--ink-soft); font-size: 14px; }
+  .opts { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+  .opt {
+    display: flex; gap: 10px; align-items: flex-start; text-align: left; width: 100%; border: 1.5px solid var(--rule);
+    background: var(--panel); border-radius: 10px; padding: 10px 12px; cursor: pointer; font-size: 15px; line-height: 1.35;
+  }
+  .opt .k { flex: 0 0 auto; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--ink-faded); font: 600 12px var(--mono); }
+  .opt[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .opt[aria-checked="true"] .k { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .opt.tried { opacity: .5; text-decoration: line-through; }
+  .opt.right { border-color: var(--good); background: var(--good-soft); }
+  .opt:disabled { cursor: default; }
+  textarea { width: 100%; min-height: 54px; border: 1px solid var(--rule); border-radius: 8px; background: var(--panel2); padding: 8px; font-size: 14px; resize: vertical; }
+  .btn { border: 0; border-radius: 10px; padding: 9px 16px; font-weight: 600; cursor: pointer; background: var(--accent); color: #fff; font-size: 15px; }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--rule); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+  .fb { border-radius: 10px; padding: 10px 12px; margin-top: 10px; font-size: 15px; }
+  .fb.good { background: var(--good-soft); border-left: 4px solid var(--good); }
+  .fb.bad { background: var(--bad-soft); border-left: 4px solid var(--bad); }
+  .fb .tag { font: 700 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  .fb.good .tag { color: var(--good); } .fb.bad .tag { color: var(--bad); }
+  .fb .note { margin-top: 6px; font-size: 13px; color: var(--ink-soft); }
+
+  .slider { margin: 12px 0; }
+  .slider label { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; }
+  .slider label span { font-family: var(--mono); font-weight: 500; color: var(--accent); }
+  .slider input[type=range] { width: 100%; accent-color: var(--accent); height: 28px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; }
+  .presets button { border: 1px solid var(--rule); background: var(--panel2); border-radius: 999px; padding: 4px 10px; font-size: 13px; cursor: pointer; }
+  .readout { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 14px; margin-top: 8px; }
+  .readout b { font-family: var(--mono); font-weight: 600; text-align: right; }
+  .readout .big { color: var(--accent); font-size: 17px; }
+
+  .view { margin-top: 4px; }
+  .recap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .recap-card { background: var(--panel); border: 1px solid var(--rule); border-radius: 14px; padding: 12px; box-shadow: var(--shadow); display: flex; gap: 12px; align-items: center; }
+  .recap-card svg { flex: 0 0 120px; width: 120px; height: 110px; background: var(--panel2); border-radius: 10px; }
+  .recap-card h3 { margin: 0 0 4px; font-size: 15px; }
+  .recap-card p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+  .quiz { max-width: 720px; margin: 0 auto; }
+  .qmeta { font: 600 12px var(--mono); color: var(--ink-faded); letter-spacing: .08em; text-transform: uppercase; }
+  .qprog { height: 6px; border-radius: 3px; background: var(--grid); overflow: hidden; margin: 8px 0 12px; }
+  .qprog i { display: block; height: 100%; background: var(--accent); }
+  .key { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .key .item { border: 1px solid var(--rule); border-radius: 12px; padding: 10px 12px; background: var(--panel); }
+  .key .item.ok { border-left: 4px solid var(--good); }
+  .key .item.no { border-left: 4px solid var(--bad); }
+  .key .ans { font-size: 14px; margin: 4px 0; }
+  .score { font-size: 34px; font-weight: 700; }
+  .toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; box-shadow: var(--shadow); z-index: 10; max-width: calc(100% - 32px); }
+
+  svg text { font-family: var(--sans); }
+  .t-tick { font-size: 11px; fill: var(--ink-faded); font-family: var(--mono); }
+  .t-axis { font-size: 13px; fill: var(--ink-soft); font-weight: 600; }
+  .t-lbl { font-size: 12.5px; fill: var(--ink); font-weight: 600; paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
+  .t-ang { font-size: 13px; font-weight: 700; fill: var(--ink); font-family: var(--mono); paint-order: stroke; stroke: var(--panel); stroke-width: 4px; }
+  .gl { stroke: var(--grid); stroke-width: 1; }
+  .ax { stroke: var(--ink-soft); stroke-width: 1.6; }
+  .p-locus { stroke: var(--locus); fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .p-lift { stroke: var(--lift); fill: none; stroke-width: 3; stroke-linecap: round; }
+  .p-guide { stroke: var(--ink-faded); fill: none; stroke-width: 1.5; stroke-dasharray: 5 5; }
+  .p-faint { opacity: .35; }
+  .p-dash { stroke-dasharray: 6 6; }
+  .p-thin { stroke-width: 2; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="titles">
+      <a class="back" href="index.html">&larr; All exercises</a>
+      <div class="eyebrow" style="margin-top:6px">Eddy Current Testing</div>
+      <h1>The Impedance Plane, Step by Step</h1>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Mode">
+      <button class="tab" role="tab" id="tabLesson" aria-selected="true">Lesson</button>
+      <button class="tab" role="tab" id="tabSandbox" aria-selected="false" disabled title="Unlocks after Step 4">Sandbox &#128274;</button>
+      <button class="tab" role="tab" id="tabRecap" aria-selected="false" disabled title="Unlocks after Step 6">Recap</button>
+      <button class="tab" role="tab" id="tabQuiz" aria-selected="false" disabled title="Unlocks after Step 6">Quiz</button>
+      <button class="iconbtn" id="themeBtn" aria-label="Color theme">Theme: auto</button>
+    </nav>
+  </header>
+
+  <nav class="chapters" id="chapters" aria-label="Lesson steps"></nav>
+
+  <section id="viewPlayer" class="layout">
+    <div class="stage">
+      <div class="video" id="video">
+        <div class="plotbox" id="plotbox">
+        <svg id="plane" role="img" aria-label="Impedance plane diagram"></svg>
+        <svg id="inset" viewBox="0 0 200 150" aria-hidden="true"></svg>
+        </div>
+        <div class="hud" id="hud">
+          <div class="chip hidden" id="freqChip">Test frequency <b id="freqVal">100 kHz</b></div>
+          <div class="chip hidden" id="depthChip">Standard depth <b id="depthVal">2.1 mm</b><div class="depthbar"><i id="depthBar"></i></div></div>
+          <div class="chip hidden" id="meterChip">Magnitude-only meter: |Z| = <b id="meterVal">0.000</b><div id="phaseLine" class="hidden">Phase display: direction <b id="phaseVal">0&deg;</b></div></div>
+        </div>
+        <div class="titlecard hidden" id="titleCard"><div class="eyebrow" id="titleEyebrow">Step 1</div><div id="titleText"></div></div>
+        <div class="startover" id="startOver">
+          <div class="box">
+            <div class="eyebrow">Interactive lesson &middot; about 10 minutes</div>
+            <h2 style="margin:6px 0 0;font-size:22px">How the dot moves on the impedance plane</h2>
+            <p>Narration plays if your device has speech. Captions are always on, so the lesson works fully with the sound off. The lesson pauses at six checkpoints to ask you a question.</p>
+            <button class="bigplay" id="startBtn">&#9654; Start lesson</button>
+          </div>
+        </div>
+      </div>
+      <div class="modelnote">Simplified model for understanding trends, not for reading real instrument values</div>
+      <div class="caption" id="caption" aria-live="polite"></div>
+      <div class="controls" id="controls">
+        <button class="ctl" id="playBtn" aria-label="Pause"></button>
+        <button class="ctl" id="replayBtn" aria-label="Replay segment" title="Replay segment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg><span>Replay</span></button>
+        <div class="prog" aria-hidden="true"><i id="progBar"></i></div>
+        <select class="ctl" id="speedSel" aria-label="Playback speed">
+          <option value="0.75">0.75x</option><option value="1" selected>1x</option><option value="1.25">1.25x</option><option value="1.5">1.5x</option>
+        </select>
+        <button class="ctl" id="muteBtn" aria-label="Mute narration"></button>
+      </div>
+    </div>
+    <aside class="side" id="side">
+      <div class="card" id="infoCard"></div>
+      <div class="card ask hidden" id="askCard" aria-live="polite"></div>
+      <div class="card hidden" id="sbCard"></div>
+    </aside>
+  </section>
+
+  <section id="viewRecap" class="view hidden"></section>
+  <section id="viewQuiz" class="view hidden"></section>
+</div>
+<div class="toast hidden" id="toast" role="status"></div>
+
+<script id="physics">
+/* ===== Physics: Forster normalized impedance of a coil around a solid nonferromagnetic cylinder =====
+   Z_norm = (1 - eta) j + eta j mu_eff,  mu_eff = (2/(ka)) J1(ka)/J0(ka),  ka = sqrt(-j f/fg)          */
+var Cx = {
+  c: function (re, im) { return { re: re, im: im || 0 }; },
+  add: function (a, b) { return { re: a.re + b.re, im: a.im + b.im }; },
+  sub: function (a, b) { return { re: a.re - b.re, im: a.im - b.im }; },
+  mul: function (a, b) { return { re: a.re * b.re - a.im * b.im, im: a.re * b.im + a.im * b.re }; },
+  scale: function (a, s) { return { re: a.re * s, im: a.im * s }; },
+  div: function (a, b) { var d = b.re * b.re + b.im * b.im; return { re: (a.re * b.re + a.im * b.im) / d, im: (a.im * b.re - a.re * b.im) / d }; },
+  abs: function (a) { return Math.hypot(a.re, a.im); },
+  sqrt: function (a) { var r = Cx.abs(a); var re = Math.sqrt((r + a.re) / 2); var im = Math.sqrt(Math.max(0, (r - a.re) / 2)); return { re: re, im: a.im < 0 ? -im : im }; }
+};
+/* J_n(z) for n = 0, 1 by power series: sum_k (-1)^k (z/2)^(2k+n) / (k! (k+n)!) */
+function besselJ(n, z) {
+  var h = Cx.scale(z, 0.5), h2 = Cx.mul(h, h);
+  var term = n === 0 ? Cx.c(1, 0) : h;
+  var sum = term;
+  for (var k = 1; k < 400; k++) {
+    term = Cx.scale(Cx.mul(term, h2), -1 / (k * (k + n)));
+    sum = Cx.add(sum, term);
+    if (k > 4 && Cx.abs(term) < 1e-17 * Cx.abs(sum)) break;
+  }
+  return sum;
+}
+var FMAX = 3000; /* series stays accurate (|ka| < 55) well past where the curve has flattened out */
+function muEff(f) {
+  if (f <= 1e-9) return Cx.c(1, 0);
+  f = Math.min(f, FMAX);
+  var ka = Cx.sqrt(Cx.c(0, -f));
+  return Cx.mul(Cx.div(Cx.c(2, 0), ka), Cx.div(besselJ(1, ka), besselJ(0, ka)));
+}
+/* normalized impedance: R horizontal, X vertical; air point is (0, 1) */
+function Zn(f, eta) {
+  var mu = muEff(f);
+  return { R: -eta * mu.im, X: (1 - eta) + eta * mu.re };
+}
+/* Map %IACS and test frequency to f/fg: f/fg = 0.3 x %IACS x (frequency / 100 kHz) */
+function fOf(iacs, kHz) { return 0.3 * iacs * (kHz / 100); }
+/* Standard depth of penetration in mm (nonmagnetic): 503 / sqrt(f sigma), sigma = %IACS x 0.58 MS/m */
+function depthMM(iacs, kHz) { return 503 / Math.sqrt(kHz * 1e3 * iacs * 0.58e6) * 1000; }
+/* Unit directions at a point on the locus: toward the air point (lift-off) and along the locus toward lower conductivity.
+   In this model both directions are independent of the fill factor, so the angle depends on f/fg only. */
+function sepDirs(f) {
+  var eta = 0.9, P = Zn(f, eta);
+  var l = { R: -P.R, X: 1 - P.X }, ln = Math.hypot(l.R, l.X);
+  var A = Zn(f * 0.999, eta), B = Zn(f * 1.001, eta);
+  var c = { R: A.R - B.R, X: A.X - B.X }, cn = Math.hypot(c.R, c.X);
+  l = { R: l.R / ln, X: l.X / ln }; c = { R: c.R / cn, X: c.X / cn };
+  var d = Math.max(-1, Math.min(1, l.R * c.R + l.X * c.X));
+  var ang = Math.acos(d) * 180 / Math.PI;
+  if (ang > 90) { ang = 180 - ang; c = { R: -c.R, X: -c.X }; }
+  return { lift: l, loc: c, deg: ang };
+}
+function sepAngle(f) { return sepDirs(f).deg; }
+</script>
+
+<script>
+"use strict";
+/* ===================== constants ===================== */
+var ETA = 0.9;
+var MATS = {
+  ti:  { name: 'Titanium (Ti-6Al-4V)', short: 'Ti', iacs: 1.0,  color: '#8e9096' },
+  ss:  { name: 'Stainless steel 304',  short: 'SS', iacs: 2.5,  color: '#a6acb2' },
+  al2: { name: 'Aluminum 2024',        short: 'Al 2024', iacs: 30, color: '#b3bcc5' },
+  al:  { name: 'Aluminum 6061',        short: 'Al', iacs: 43,   color: '#c3ccd4' },
+  cu:  { name: 'Copper',               short: 'Cu', iacs: 100,  color: '#c87533' }
+};
+var FM = { ti: fOf(1, 100), ss: fOf(2.5, 100), al: fOf(43, 100), cu: fOf(100, 100) };
+var CAM = {
+  full:  { r0: -0.04, r1: 0.62, x0: -0.04, x1: 1.10 },
+  locus: { r0: -0.02, r1: 0.50, x0: 0.06, x1: 1.07 },
+  top:   { r0: -0.01, r1: 0.23, x0: 0.86, x1: 1.03 }
+};
+var STEP_TITLES = ['The two axes', 'Air, then metal', 'Conductivity locus', 'Lift-off', 'Separation angle', 'Instruments and frequency'];
+
+/* lift-off of 0.6 on aluminum gives |Z| that a conductivity drop also reaches: find that f/fg */
+var LO_ETA = 0.6;
+var F_SAME = (function () {
+  var P = Zn(FM.al, LO_ETA), r = Math.hypot(P.R, P.X), lo = 0.05, hi = FM.al;
+  for (var i = 0; i < 80; i++) { var m = Math.sqrt(lo * hi), z = Zn(m, ETA); if (Math.hypot(z.R, z.X) > r) lo = m; else hi = m; }
+  return Math.sqrt(lo * hi);
+})();
+
+/* ===================== small helpers ===================== */
+function $(id) { return document.getElementById(id); }
+function clone(o) { return o === undefined ? undefined : JSON.parse(JSON.stringify(o)); }
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function ease(t, k) { if (k === 'lin') return t; return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+function getP(o, k) { return k.split('.').reduce(function (a, s) { return a == null ? undefined : a[s]; }, o); }
+function setP(o, k, v) { var ks = k.split('.'), a = o; for (var i = 0; i < ks.length - 1; i++) { if (a[ks[i]] == null) a[ks[i]] = {}; a = a[ks[i]]; } a[ks[ks.length - 1]] = v; }
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function fmt(v, d) { return (Math.round(v * Math.pow(10, d)) / Math.pow(10, d)).toFixed(d); }
+var store = {
+  get: function () { try { return JSON.parse(localStorage.getItem('et-ip-progress') || '{}'); } catch (e) { return {}; } },
+  set: function (v) { try { localStorage.setItem('et-ip-progress', JSON.stringify(v)); } catch (e) {} }
+};
+
+/* ===================== timeline item constructors ===================== */
+/* T: tween a value, SET: assign at a moment, FN: custom per-frame function */
+function T(k, to, a, b, e, log) { return { k: k, to: to, a: a == null ? 0 : a, b: b == null ? 1 : b, e: e || 'io', log: !!log }; }
+function SET(k, v, at) { return { k: k, set: v, at: at || 0 }; }
+function say(text, anims, opt) { var o = { type: 'say', text: text, anims: anims || [] }; if (opt) for (var x in opt) o[x] = opt[x]; return o; }
+function ask(node) { return { type: 'ask', node: node }; }
+
+/* ===================== visual state ===================== */
+function baseState() {
+  return {
+    cam: clone(CAM.full), axes: 1, grid: 1, hiR: 0, hiX: 0, noteR: 0, noteX: 0, air: 0,
+    dot: { show: 0, f: FM.al, eta: ETA, R: null, X: null, iacs: null },
+    arrow: 0, ghosts: {}, paths: {}, angles: {}, arcZ: { show: 0, r: 0.5 },
+    inset: { show: 0, lift: 1, mat: null, field: 0, eddy: 0, heat: 0, oppose: 0, gap: 0 },
+    meter: { show: 0, phase: 0 }, freq: { show: 0, kHz: 100 }, depth: { show: 0, iacs: 1 },
+    title: { show: 0, n: '', text: '' }
+  };
+}
+function matGhosts(which, eta) {
+  var g = {};
+  var lay = { ti: [0, 18, 'middle'], ss: [9, 4, 'start'], al: [10, 4, 'start'], cu: [10, 5, 'start'], al2: [10, 4, 'start'] };
+  which.forEach(function (m) {
+    g[m] = { f: fOf(MATS[m].iacs, 100), eta: eta == null ? ETA : eta, label: MATS[m].short, show: 1, dx: lay[m][0], dy: lay[m][1], anchor: lay[m][2] };
+  });
+  return g;
+}
+function locusPath(extra) { var p = { type: 'locus', eta: ETA, f0: 0.02, f1: FMAX, cls: 'p-locus', show: 1 }; for (var k in extra) p[k] = extra[k]; return p; }
+
+var S = baseState();
+var dirty = true;
+
+/* ===================== rendering ===================== */
+var svg = $('plane'), insetSvg = $('inset');
+function mapper(W, H, cam) {
+  var pad = { l: 46, r: 12, t: 12, b: 38 };
+  var pw = Math.max(40, W - pad.l - pad.r), ph = Math.max(40, H - pad.t - pad.b);
+  var s = Math.min(pw / (cam.r1 - cam.r0), ph / (cam.x1 - cam.x0));
+  var cr = (cam.r0 + cam.r1) / 2, cx = (cam.x0 + cam.x1) / 2, ox = pad.l + pw / 2, oy = pad.t + ph / 2;
+  return {
+    s: s, pad: pad, pw: pw, ph: ph, W: W, H: H,
+    px: function (R) { return ox + (R - cr) * s; }, py: function (X) { return oy - (X - cx) * s; },
+    Rmin: cr - pw / 2 / s, Rmax: cr + pw / 2 / s, Xmin: cx - ph / 2 / s, Xmax: cx + ph / 2 / s
+  };
+}
+function dotPos(st) {
+  var d = st.dot;
+  if (d.R != null) return { R: d.R, X: d.X };
+  return Zn(dotF(st), d.eta);
+}
+function dotF(st) { var d = st.dot; return d.iacs != null ? fOf(d.iacs, st.freq.kHz) : d.f; }
+function pathPoints(p) {
+  var pts = [], i, n;
+  if (p.type === 'locus') {
+    var a = Math.log(p.f0), b = Math.log(p.fEnd != null ? p.fEnd : p.f1);
+    n = Math.max(2, Math.round(Math.abs(b - a) * 22));
+    for (i = 0; i <= n; i++) pts.push(Zn(Math.exp(a + (b - a) * i / n), p.eta));
+  } else if (p.type === 'lift') {
+    pts.push(Zn(p.f, p.e0)); pts.push(Zn(p.f, p.eEnd != null ? p.eEnd : p.e1));
+  } else if (p.type === 'seg') {
+    var pr = p.prog == null ? 1 : p.prog;
+    pts.push({ R: p.R0, X: p.X0 }); pts.push({ R: lerp(p.R0, p.R1, pr), X: lerp(p.X0, p.X1, pr) });
+  }
+  return pts;
+}
+function polyline(pts, m) { return pts.map(function (q, i) { return (i ? 'L' : 'M') + m.px(q.R).toFixed(1) + ' ' + m.py(q.X).toFixed(1); }).join(''); }
+function angleMarkup(P, dirs, m, opacity) {
+  var x = m.px(P.R), y = m.py(P.X), L = 44, r = 24;
+  /* near the air point both directions aim left at the axis; flip them (same angle) so the marker sits in open space */
+  var sg = P.X > 0.75 ? -1 : 1;
+  var u1 = { x: sg * dirs.lift.R, y: -sg * dirs.lift.X }, u2 = { x: sg * dirs.loc.R, y: -sg * dirs.loc.X };
+  var a1 = { x: x + u1.x * r, y: y + u1.y * r }, a2 = { x: x + u2.x * r, y: y + u2.y * r };
+  var sweep = (u1.x * u2.y - u1.y * u2.x) > 0 ? 1 : 0;
+  var bx = u1.x + u2.x, by = u1.y + u2.y, bl = Math.hypot(bx, by) || 1;
+  var lx = x + bx / bl * (L + 14), ly = y + by / bl * (L + 14);
+  return '<g opacity="' + opacity + '">' +
+    '<line x1="' + x + '" y1="' + y + '" x2="' + (x + u1.x * L) + '" y2="' + (y + u1.y * L) + '" style="stroke:var(--lift);stroke-width:2.5" stroke-dasharray="4 3"/>' +
+    '<line x1="' + x + '" y1="' + y + '" x2="' + (x + u2.x * L) + '" y2="' + (y + u2.y * L) + '" style="stroke:var(--locus);stroke-width:2.5" stroke-dasharray="4 3"/>' +
+    '<path d="M' + a1.x + ' ' + a1.y + 'A' + r + ' ' + r + ' 0 0 ' + sweep + ' ' + a2.x + ' ' + a2.y + '" style="fill:none;stroke:var(--ink);stroke-width:1.5"/>' +
+    '<text class="t-ang" x="' + lx + '" y="' + (ly + 4) + '" text-anchor="middle">' + Math.round(dirs.deg) + '&deg;</text></g>';
+}
+function niceStep(s) {
+  var c = [0.01, 0.02, 0.05, 0.1, 0.2, 0.25, 0.5];
+  for (var i = 0; i < c.length; i++) if (c[i] * s >= 44) return c[i];
+  return 0.5;
+}
+function render() {
+  var W = svg.clientWidth, H = svg.clientHeight;
+  if (!W || !H) return;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  var st = S, m = mapper(W, H, st.cam), out = [];
+  var L = m.pad.l, T0 = m.pad.t, Rr = m.pad.l + m.pw, B = m.pad.t + m.ph;
+  out.push('<defs><clipPath id="clipA"><rect x="' + L + '" y="' + T0 + '" width="' + m.pw + '" height="' + m.ph + '"/></clipPath>' +
+    '<marker id="ahead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill:var(--dot)"/></marker></defs>');
+  /* grid */
+  var step = niceStep(m.s), dec = step < 0.1 ? 2 : (step === 0.25 ? 2 : 1);
+  if (st.grid > 0) {
+    var g = '<g opacity="' + st.grid + '">';
+    var rs = Math.max(0, Math.ceil(m.Rmin / step) * step), xs = Math.max(0, Math.ceil(m.Xmin / step) * step);
+    var yTop = Math.max(T0, m.py(m.Xmax)), yBot = Math.min(B, m.py(0)), xL = Math.max(L, m.px(0));
+    for (var r = rs; r <= m.Rmax + 1e-9; r += step) { var X = m.px(r); g += '<line class="gl" x1="' + X + '" y1="' + yTop + '" x2="' + X + '" y2="' + yBot + '"/>'; g += '<text class="t-tick" x="' + X + '" y="' + (B + 14) + '" text-anchor="middle">' + fmt(r, dec) + '</text>'; }
+    for (var xx = xs; xx <= m.Xmax + 1e-9; xx += step) { var Y = m.py(xx); g += '<line class="gl" x1="' + xL + '" y1="' + Y + '" x2="' + Rr + '" y2="' + Y + '"/>'; g += '<text class="t-tick" x="' + (L - 6) + '" y="' + (Y + 4) + '" text-anchor="end">' + fmt(xx, dec) + '</text>'; }
+    out.push(g + '</g>');
+  }
+  /* axes */
+  if (st.axes > 0) {
+    var ox = m.px(0), oy = m.py(0), a = st.axes;
+    var rEnd = lerp(0, m.Rmax, a), xEnd = lerp(0, m.Xmax, a);
+    out.push('<g clip-path="url(#clipA)">' +
+      '<line class="ax" x1="' + ox + '" y1="' + oy + '" x2="' + m.px(rEnd) + '" y2="' + oy + '" style="stroke-width:' + (1.6 + 3 * st.hiR) + 'px;' + (st.hiR > 0.05 ? 'stroke:var(--hl)' : '') + '"/>' +
+      '<line class="ax" x1="' + ox + '" y1="' + oy + '" x2="' + ox + '" y2="' + m.py(xEnd) + '" style="stroke-width:' + (1.6 + 3 * st.hiX) + 'px;' + (st.hiX > 0.05 ? 'stroke:var(--hl)' : '') + '"/></g>');
+    var narrow = m.ph < 420;
+    var rt = 'Resistance R' + (st.noteR ? ' (heat lost)' : '') + ' →';
+    var xt = (narrow ? 'Reactance X' : 'Inductive reactance X') + (st.noteX ? ' (energy stored)' : '') + ' →';
+    out.push('<text class="t-axis" opacity="' + a + '" x="' + (L + m.pw / 2) + '" y="' + (m.H - 6) + '" text-anchor="middle" style="' + (st.hiR > 0.05 ? 'fill:var(--hl)' : '') + '">' + esc(rt) + '</text>');
+    out.push('<text class="t-axis" opacity="' + a + '" transform="translate(13 ' + (T0 + m.ph / 2) + ') rotate(-90)" text-anchor="middle" style="' + (st.hiX > 0.05 ? 'fill:var(--hl)' : '') + '">' + esc(xt) + '</text>');
+  }
+  var body = '<g clip-path="url(#clipA)">';
+  /* |Z| circle */
+  if (st.arcZ.show > 0) {
+    var cr = st.arcZ.r * m.s;
+    body += '<circle cx="' + m.px(0) + '" cy="' + m.py(0) + '" r="' + cr + '" class="p-guide" opacity="' + st.arcZ.show + '"/>';
+  }
+  /* paths */
+  Object.keys(st.paths).forEach(function (id) {
+    var p = st.paths[id]; if (!p || !p.show) return;
+    var pts = pathPoints(p);
+    body += '<path d="' + polyline(pts, m) + '" class="' + (p.cls || 'p-locus') + '" opacity="' + p.show + '"/>';
+    if (p.label) {
+      var q = pts[p.lat === 'start' ? 0 : pts.length - 1];
+      body += '<text class="t-lbl" x="' + (m.px(q.R) + (p.dx || 8)) + '" y="' + (m.py(q.X) + (p.dy || 0)) + '" text-anchor="' + (p.anchor || 'start') + '" opacity="' + p.show + '" style="fill:' + (p.color || 'var(--ink)') + '">' + esc(p.label) + '</text>';
+    }
+  });
+  /* air point */
+  if (st.air > 0) {
+    body += '<g opacity="' + st.air + '"><circle cx="' + m.px(0) + '" cy="' + m.py(1) + '" r="6" style="fill:var(--panel);stroke:var(--ink);stroke-width:2"/>' +
+      '<text class="t-lbl" x="' + (m.px(0) + 8) + '" y="' + (m.py(1) - 10) + '">air point</text></g>';
+  }
+  /* ghosts (material markers and helpers) */
+  Object.keys(st.ghosts).forEach(function (id) {
+    var gh = st.ghosts[id]; if (!gh || !gh.show) return;
+    var P = gh.R != null ? { R: gh.R, X: gh.X } : Zn(gh.f, gh.eta);
+    var x = m.px(P.R), y = m.py(P.X);
+    body += '<g opacity="' + gh.show + '"><circle cx="' + x + '" cy="' + y + '" r="' + (gh.big ? 6.5 : 4.5) + '" style="fill:' + (gh.fill || 'var(--panel)') + ';stroke:' + (gh.stroke || 'var(--ink)') + ';stroke-width:2"/>';
+    if (gh.label) body += '<text class="t-lbl" x="' + (x + (gh.dx == null ? 9 : gh.dx)) + '" y="' + (y + (gh.dy == null ? 4 : gh.dy)) + '" text-anchor="' + (gh.anchor || 'start') + '">' + esc(gh.label) + '</text>';
+    body += '</g>';
+  });
+  /* angle markers */
+  Object.keys(st.angles).forEach(function (id) {
+    var an = st.angles[id]; if (!an || !an.show) return;
+    var f = an.dot ? dotF(st) : an.f;
+    var P = an.dot ? dotPos(st) : Zn(f, an.eta == null ? ETA : an.eta);
+    body += angleMarkup(P, sepDirs(f), m, an.show);
+  });
+  /* arrow and dot */
+  if (st.dot.show > 0) {
+    var D = dotPos(st), dx = m.px(D.R), dy = m.py(D.X);
+    if (st.arrow > 0) {
+      var ox2 = m.px(0), oy2 = m.py(0), len = Math.hypot(dx - ox2, dy - oy2), k = len > 12 ? (len - 9) / len : 0;
+      body += '<line x1="' + ox2 + '" y1="' + oy2 + '" x2="' + (ox2 + (dx - ox2) * k * st.arrow) + '" y2="' + (oy2 + (dy - oy2) * k * st.arrow) + '" style="stroke:var(--dot);stroke-width:2.5" opacity="' + (0.85 * st.dot.show) + '" marker-end="url(#ahead)"/>';
+    }
+    body += '<g opacity="' + st.dot.show + '"><circle cx="' + dx + '" cy="' + dy + '" r="13" style="fill:var(--dot)" opacity="0.18"/><circle cx="' + dx + '" cy="' + dy + '" r="7" style="fill:var(--dot);stroke:var(--panel);stroke-width:2"/></g>';
+  }
+  body += '</g>';
+  out.push(body);
+  svg.innerHTML = out.join('');
+  renderHud(st);
+  renderInset(st.inset);
+}
+function renderHud(st) {
+  var D = dotPos(st);
+  $('freqChip').classList.toggle('hidden', !(st.freq.show > 0.5));
+  $('freqVal').textContent = st.freq.kHz >= 1000 ? fmt(st.freq.kHz / 1000, 2).replace(/\.?0+$/, '') + ' MHz' : Math.round(st.freq.kHz) + ' kHz';
+  $('depthChip').classList.toggle('hidden', !(st.depth.show > 0.5));
+  var dm = depthMM(st.depth.iacs, st.freq.kHz);
+  $('depthVal').textContent = (dm < 1 ? fmt(dm, 2) : fmt(dm, 1)) + ' mm';
+  $('depthBar').style.width = clamp(dm / 4 * 100, 2, 100) + '%';
+  $('meterChip').classList.toggle('hidden', !(st.meter.show > 0.5));
+  $('meterVal').textContent = fmt(Math.hypot(D.R, D.X), 3);
+  $('phaseLine').classList.toggle('hidden', !(st.meter.phase > 0.5));
+  $('phaseVal').innerHTML = fmt(Math.atan2(D.X, D.R) * 180 / Math.PI, 1) + '&deg;';
+  var tc = $('titleCard');
+  tc.classList.toggle('hidden', !(st.title.show > 0.02));
+  tc.style.opacity = st.title.show;
+  $('titleEyebrow').textContent = st.title.n; $('titleText').textContent = st.title.text;
+}
+function renderInset(ins) {
+  insetSvg.style.opacity = ins.show;
+  if (ins.show <= 0) { insetSvg.innerHTML = ''; return; }
+  var t = performance.now() / 1000;
+  var mat = ins.mat ? (MATS[ins.mat] || ins.mat) : null;
+  var coilBottom = 100 - ins.lift * 56, cy = coilBottom - 11;
+  var h = '<defs><radialGradient id="heatG"><stop offset="0" stop-color="#ff3b2f" stop-opacity="0.85"/><stop offset="1" stop-color="#ff3b2f" stop-opacity="0"/></radialGradient></defs>';
+  h += '<rect x="1" y="1" width="198" height="148" rx="10" style="fill:var(--panel2);stroke:var(--rule)"/>';
+  h += '<text x="10" y="17" style="font-size:11px;fill:var(--ink-soft);font-weight:600">Probe view</text>';
+  if (mat) {
+    h += '<rect x="14" y="104" width="172" height="38" rx="3" style="fill:' + mat.color + '"/>';
+    h += '<text x="20" y="137" style="font-size:11px;fill:#1b1d22;font-weight:600">' + esc(mat.label || mat.name) + '</text>';
+    if (ins.heat > 0) h += '<ellipse cx="100" cy="114" rx="60" ry="12" fill="url(#heatG)" opacity="' + ins.heat + '"/>';
+    if (ins.eddy > 0) {
+      var off = (-t * 30) % 20;
+      h += '<ellipse cx="100" cy="112" rx="' + (44 + 6 * ins.eddy) + '" ry="5.5" style="fill:none;stroke:var(--eddy);stroke-width:2.6" stroke-dasharray="9 5" stroke-dashoffset="' + off + '" opacity="' + ins.eddy + '"/>';
+    }
+  } else {
+    h += '<text x="100" y="128" text-anchor="middle" style="font-size:12px;fill:var(--ink-faded)">air, no metal nearby</text>';
+  }
+  if (ins.field > 0) {
+    var sq = 1 - 0.38 * ins.oppose * (mat ? 1 : 0);
+    [[22, 20], [36, 32], [52, 44]].forEach(function (e, i) {
+      h += '<ellipse cx="100" cy="' + cy + '" rx="' + e[0] + '" ry="' + (e[1] * sq) + '" style="fill:none;stroke:var(--field);stroke-width:1.6" opacity="' + (ins.field * (0.9 - i * 0.2)) + '"/>';
+    });
+  }
+  if (ins.oppose > 0 && mat) {
+    [76, 124].forEach(function (x) {
+      h += '<g opacity="' + ins.oppose + '" style="stroke:var(--eddy);stroke-width:2.4;fill:none"><line x1="' + x + '" y1="106" x2="' + x + '" y2="' + (coilBottom + 4) + '"/><path d="M' + (x - 5) + ' ' + (coilBottom + 10) + 'L' + x + ' ' + (coilBottom + 3) + 'L' + (x + 5) + ' ' + (coilBottom + 10) + '"/></g>';
+    });
+  }
+  h += '<line x1="100" y1="0" x2="100" y2="' + (coilBottom - 22) + '" style="stroke:var(--coil);stroke-width:3"/>';
+  h += '<rect x="80" y="' + (coilBottom - 22) + '" width="40" height="22" rx="4" style="fill:var(--panel);stroke:var(--coil);stroke-width:2"/>';
+  for (var i = 0; i < 6; i++) { var xw = 84 + i * 6.4; h += '<line x1="' + xw + '" y1="' + (coilBottom - 20) + '" x2="' + (xw + 4) + '" y2="' + (coilBottom - 2) + '" style="stroke:var(--coil);stroke-width:1.6"/>'; }
+  if (mat && ins.lift > 0.12) {
+    h += '<g style="stroke:var(--lift);stroke-width:1.4"><line x1="132" y1="' + coilBottom + '" x2="132" y2="104"/><line x1="128" y1="' + coilBottom + '" x2="136" y2="' + coilBottom + '"/><line x1="128" y1="104" x2="136" y2="104"/></g>';
+    h += '<text x="139" y="' + ((coilBottom + 104) / 2 + 4) + '" style="font-size:11px;fill:var(--lift);font-weight:700">lift-off</text>';
+  }
+  insetSvg.innerHTML = h;
+}
+
+/* ===================== speech ===================== */
+var synth = window.speechSynthesis || null;
+var voice = null, muted = false, speed = 1, curU = null, speechStarted = false;
+function pickVoice() {
+  if (!synth) return;
+  var vs = synth.getVoices().filter(function (v) { return /^en/i.test(v.lang); });
+  var pref = [/natural/i, /google us english/i, /samantha/i, /aria/i, /jenny/i, /daniel/i, /google uk english/i];
+  for (var i = 0; i < pref.length && !voice; i++) voice = vs.find(function (v) { return pref[i].test(v.name); }) || null;
+  if (!voice) voice = vs.find(function (v) { return /en-US/i.test(v.lang); }) || vs[0] || null;
+}
+if (synth) { pickVoice(); if (synth.addEventListener) synth.addEventListener('voiceschanged', function () { voice = null; pickVoice(); }); }
+function speechText(t) {
+  return t.replace(/%IACS/g, ' percent I A C S').replace(/\bkHz\b/g, 'kilohertz').replace(/\bMHz\b/g, 'megahertz')
+    .replace(/\bStep (\d)\b/g, function (_, d) { return 'Step ' + ['zero', 'one', 'two', 'three', 'four', 'five', 'six'][+d] + '.'; });
+}
+function stopSpeech() { curU = null; if (synth) try { synth.cancel(); } catch (e) {} }
+function speak(text, onEnd, onBoundary) {
+  stopSpeech();
+  if (muted || !synth || !text) return false;
+  var u = new SpeechSynthesisUtterance(speechText(text));
+  u.rate = speed; if (voice) { u.voice = voice; u.lang = voice.lang; } else u.lang = 'en-US';
+  speechStarted = false;
+  u.onstart = function () { if (curU === u) speechStarted = true; };
+  u.onend = u.onerror = function () { if (curU === u) { curU = null; onEnd(); } };
+  u.onboundary = function (e) { if (curU === u && onBoundary) onBoundary(e.charIndex); };
+  curU = u;
+  setTimeout(function () { if (curU === u) synth.speak(u); }, 60);
+  return true;
+}
+
+/* ===================== player: plays a list of 'say' items ===================== */
+var paused = false;
+var P = { items: null, i: 0, t: 0, dur: 1, onDone: null, speechDone: true, enterSnap: null, froms: null, applied: null, bChar: -1, words: [], lastW: -2 };
+function durOf(it) {
+  var w = it.text ? it.text.split(/\s+/).length : 0;
+  return Math.max(it.dur || 0, w / 2.5 + 0.6);
+}
+function setCaption(text) {
+  var cap = $('caption');
+  if (!text) { P.words = []; return; }
+  P.words = []; var html = '', pos = 0;
+  text.split(/(\s+)/).forEach(function (tok) {
+    if (/^\s+$/.test(tok) || !tok) { html += tok; } else { P.words.push(pos); html += '<span class="w">' + esc(tok) + '</span>'; }
+    pos += tok.length;
+  });
+  cap.innerHTML = html; P.lastW = -2;
+}
+function updateCaption(p) {
+  if (!P.words.length) return;
+  var idx;
+  if (P.bChar >= 0) { idx = 0; for (var i = 0; i < P.words.length; i++) if (P.words[i] <= P.bChar) idx = i; }
+  else idx = Math.floor(p * P.words.length * 1.02);
+  if (idx === P.lastW) return; P.lastW = idx;
+  var sp = $('caption').querySelectorAll('.w');
+  for (var j = 0; j < sp.length; j++) sp[j].classList.toggle('on', j <= idx);
+}
+function enterItem(fresh) {
+  var it = P.items[P.i];
+  if (fresh) P.enterSnap = clone(S); else S = clone(P.enterSnap);
+  P.applied = {};
+  P.froms = {};
+  it.anims.forEach(function (a, j) { if ('set' in a && a.at <= 0) { setP(S, a.k, clone(a.set)); P.applied[j] = 1; } });
+  /* chained tweens on one key: each starts where the previous one ends, and only runs once its window opens */
+  var lastTo = {};
+  P.first = {};
+  it.anims.forEach(function (a, j) {
+    if ('set' in a || a.fn) return;
+    if (a.k in lastTo) P.froms[j] = clone(lastTo[a.k]); else { P.froms[j] = clone(getP(S, a.k)); P.first[j] = 1; }
+    if (P.froms[j] !== undefined) lastTo[a.k] = typeof a.to === 'object' ? Object.assign({}, P.froms[j], a.to) : a.to;
+  });
+  P.t = 0; P.real = 0; P.dur = durOf(it); P.bChar = -1;
+  setCaption(it.text);
+  P.speechDone = true;
+  if (!paused) startItemSpeech();
+  if (it.onEnter) it.onEnter();
+  dirty = true;
+}
+function startItemSpeech() {
+  var it = P.items[P.i];
+  P.speechDone = !speak(it.text, function () { P.speechDone = true; }, function (c) { P.bChar = c; });
+}
+function frameItem(p) {
+  var it = P.items[P.i];
+  it.anims.forEach(function (a, j) {
+    if ('set' in a) { if (!P.applied[j] && p >= a.at) { setP(S, a.k, clone(a.set)); P.applied[j] = 1; } return; }
+    if (a.fn) { a.fn(S, p); return; }
+    var q = ease(clamp((p - a.a) / Math.max(1e-6, a.b - a.a), 0, 1), a.e), from = P.froms[j];
+    if (from == null || (!P.first[j] && p < a.a)) return;
+    if (typeof a.to === 'object') {
+      var o = getP(S, a.k) || {};
+      for (var kk in a.to) o[kk] = a.log ? Math.exp(lerp(Math.log(from[kk]), Math.log(a.to[kk]), q)) : lerp(from[kk], a.to[kk], q);
+      setP(S, a.k, o);
+    } else setP(S, a.k, a.log ? Math.exp(lerp(Math.log(from), Math.log(a.to), q)) : lerp(from, a.to, q));
+  });
+}
+function playerStart(items, onDone) {
+  P.items = items; P.i = 0; P.onDone = onDone; enterItem(true); updateControls();
+}
+function playerStop() { P.items = null; stopSpeech(); updateControls(); }
+function playerTick(dt) {
+  if (!P.items || paused) return;
+  P.t += dt * speed; P.real += dt;
+  /* some browsers silently drop an utterance; if it never starts, fall back to caption timing */
+  if (!P.speechDone && !speechStarted && P.real > 2.5) P.speechDone = true;
+  var p = Math.min(1, P.t / P.dur);
+  frameItem(p); updateCaption(p); dirty = true;
+  if (p >= 1 && (P.speechDone || muted || P.t > P.dur * 2.2 + 4)) {
+    frameItem(1); updateCaption(1);
+    P.i++;
+    if (P.i < P.items.length) enterItem(true);
+    else { var cb = P.onDone; P.items = null; updateControls(); if (cb) cb(); }
+  }
+  if (Lesson.mode === 'play' && P.items) {
+    var n = Lesson.items.length, frac = (Lesson.idx + p) / n;
+    $('progBar').style.width = (frac * 100).toFixed(1) + '%';
+  }
+}
+function setPaused(v) {
+  paused = v;
+  if (v) stopSpeech();
+  else if (P.items) enterItem(false);
+  updateControls();
+}
+
+/* ===================== lesson controller ===================== */
+var progress = store.get();
+progress.done = progress.done || [];
+if (/[?&]unlock=all/.test(location.search)) { progress.done = [0, 1, 2, 3, 4, 5]; }
+var Lesson = { step: -1, items: [], idx: 0, sceneIdx: 0, sceneSnap: null, mode: 'idle', started: false };
+
+function runStep(n) {
+  playerStop(); hideAsk();
+  Lesson.step = n; S = STEPS[n].setup(); Lesson.items = STEPS[n].items; Lesson.idx = 0;
+  Lesson.mode = 'play';
+  renderChapters(); renderInfo();
+  $('progBar').style.width = '0%';
+  if (paused) setPaused(false);
+  advance();
+}
+function advance() {
+  var items = Lesson.items;
+  if (Lesson.idx >= items.length) { stepDone(); return; }
+  if (Lesson.idx === 0 || items[Lesson.idx - 1].type === 'ask') { Lesson.sceneIdx = Lesson.idx; Lesson.sceneSnap = clone(S); }
+  var it = items[Lesson.idx];
+  if (it.type === 'ask') {
+    Lesson.mode = 'ask';
+    $('progBar').style.width = ((Lesson.idx / items.length) * 100).toFixed(1) + '%';
+    showAsk(it.node, function () { hideAsk(); Lesson.mode = 'play'; Lesson.idx++; advance(); }, { top: true });
+  } else {
+    Lesson.mode = 'play';
+    playerStart([it], function () { Lesson.idx++; advance(); });
+  }
+  updateControls();
+}
+function replaySegment() {
+  if (Lesson.mode === 'idle' || !Lesson.sceneSnap) return;
+  playerStop(); hideAsk();
+  S = clone(Lesson.sceneSnap); Lesson.idx = Lesson.sceneIdx;
+  if (paused) setPaused(false);
+  advance();
+}
+function stepDone() {
+  var n = Lesson.step;
+  var fresh = progress.done.indexOf(n) < 0;
+  if (fresh) progress.done.push(n);
+  store.set(progress);
+  if (n === 3 && fresh) toast('Sandbox mode unlocked. Try it from the tabs at the top.');
+  renderChapters(); renderTabs();
+  if (n < 5) { Lesson.mode = 'between'; setTimeout(function () { if (Lesson.mode === 'between' && Lesson.step === n) runStep(n + 1); }, 900); }
+  else { Lesson.mode = 'finished'; $('progBar').style.width = '100%'; renderInfo(); updateControls(); toast('Lesson complete. Recap and Quiz are unlocked.'); }
+}
+function maxReachable() { var m = 0; for (var i = 0; i < 6; i++) if (progress.done.indexOf(i) >= 0) m = i + 1; return Math.min(5, m); }
+
+/* ===================== checkpoint (ask) UI ===================== */
+var reasonText = '';
+var askState = null;
+function wide() { return window.matchMedia('(min-width: 921px)').matches; }
+function hideAsk() { $('askCard').classList.add('hidden'); $('askCard').innerHTML = ''; askState = null; $('infoCard').classList.remove('hidden'); }
+function showAsk(node, cont, opt) {
+  opt = opt || {};
+  playerStop();
+  if (opt.top && !opt.tried) reasonText = '';
+  askState = { node: node, cont: cont, tried: opt.tried || [], sel: -1, snap: clone(S), opt: opt };
+  var c = $('askCard');
+  c.classList.remove('hidden');
+  $('infoCard').classList.add('hidden');
+  var html = '<div class="eyebrow">' + esc(node.label || 'Checkpoint') + '</div><h2>' + esc(node.q) + '</h2>';
+  if (opt.note) html += '<p class="muted">' + esc(opt.note) + '</p>';
+  html += '<div class="opts" role="radiogroup" aria-label="Answer choices">';
+  node.opts.forEach(function (o, i) {
+    var tried = askState.tried.indexOf(i) >= 0;
+    html += '<button class="opt' + (tried ? ' tried' : '') + '" role="radio" aria-checked="false" data-i="' + i + '"' + (tried ? ' disabled' : '') + '><span class="k">' + 'ABCD'[i] + '</span><span>' + esc(o.t) + '</span></button>';
+  });
+  html += '</div>';
+  if (node.reason !== false) html += '<label class="muted" for="reasonBox">Your reasoning (optional)</label><textarea id="reasonBox" placeholder="Why do you think so?"></textarea>';
+  html += '<div class="row"><button class="btn" id="checkBtn" disabled>Check answer</button></div><div id="fbArea"></div>';
+  c.innerHTML = html;
+  var rb = $('reasonBox'); if (rb) { rb.value = reasonText; rb.addEventListener('input', function () { reasonText = rb.value; }); }
+  c.querySelectorAll('.opt').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (askState.locked) return;
+      askState.sel = +b.dataset.i;
+      c.querySelectorAll('.opt').forEach(function (x) { x.setAttribute('aria-checked', x === b ? 'true' : 'false'); });
+      $('checkBtn').disabled = false;
+    });
+  });
+  $('checkBtn').addEventListener('click', checkAnswer);
+  setCaption(node.q);
+  var sp = $('caption').querySelectorAll('.w'); for (var j = 0; j < sp.length; j++) sp[j].classList.add('on');
+  speak(node.q, function () {}, null);
+  updateControls();
+  if (!window.matchMedia('(min-width: 921px)').matches && Lesson.started) setTimeout(function () { c.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 80);
+}
+function checkAnswer() {
+  var st = askState; if (!st || st.sel < 0) return;
+  var node = st.node, o = node.opts[st.sel];
+  st.locked = true;
+  var c = $('askCard');
+  c.querySelectorAll('.opt').forEach(function (b) { b.disabled = true; if (+b.dataset.i === st.sel && o.ok) b.classList.add('right'); });
+  $('checkBtn').classList.add('hidden');
+  var rb = $('reasonBox'); if (rb) rb.disabled = true;
+  var notes = [];
+  var rt = (reasonText || '').trim();
+  if (rt && node.reason !== false) {
+    notes.push('You wrote: “' + rt.slice(0, 220) + (rt.length > 220 ? '…' : '') + '”');
+    (node.rules || []).forEach(function (r) { if (r.re.test(rt) && (!r.opts || r.opts.indexOf(st.sel) >= 0)) notes.push(r.note); });
+  }
+  $('fbArea').innerHTML = '<div class="fb ' + (o.ok ? 'good' : 'bad') + '"><span class="tag">' + (o.ok ? 'Correct' : 'Not quite') + '</span>' + esc(o.fb) +
+    notes.map(function (n) { return '<div class="note">' + esc(n) + '</div>'; }).join('') + '</div><div class="row" id="fbBtns"><span class="muted" id="fbWait">Watch the diagram&hellip;</span></div>';
+  var items = [say(o.fb, [])].concat(o.demo || []);
+  var snap = clone(S);
+  if (paused) paused = false;
+  if (!wide() && Lesson.started) $('video').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  playerStart(items, function () {
+    if (!o.ok && !o.keep) { S = snap; dirty = true; }
+    afterFeedback(st, o);
+  });
+}
+function afterFeedback(st, o) {
+  var node = st.node, btns = $('fbBtns'); if (!btns || askState !== st) return;
+  var b = document.createElement('button'); b.className = 'btn';
+  if (o.ok) {
+    if (node.next) { b.textContent = 'Next question →'; b.onclick = function () { showAsk(node.next, st.cont, {}); }; }
+    else { b.textContent = st.opt.top ? 'Continue lesson ▶' : 'Back to the question →'; b.onclick = function () { st.cont(); }; }
+  } else if (o.sub) {
+    b.textContent = 'Think it through →';
+    b.onclick = function () {
+      var tried = st.tried.concat([st.sel]);
+      showAsk(o.sub, function () { showAsk(node, st.cont, { tried: tried, top: st.opt.top, note: 'Now try the original question again.' }); }, {});
+    };
+  } else {
+    b.textContent = 'Try again';
+    b.onclick = function () { showAsk(node, st.cont, { tried: st.tried.concat([st.sel]), top: st.opt.top }); };
+  }
+  btns.innerHTML = ''; btns.appendChild(b); b.focus({ preventScroll: true });
+  if (!wide()) setTimeout(function () { btns.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60);
+}
+
+/* ===================== lesson script ===================== */
+function titleItem(n) {
+  return say('Step ' + (n + 1) + '. ' + STEP_TITLES[n] + '.', [SET('title', { show: 1, n: 'Step ' + (n + 1) + ' of 6', text: STEP_TITLES[n] }), T('title.show', 0, 0.75, 1)], { dur: 2.2 });
+}
+var demoAxes = [
+  say('Store more energy in the magnetic field, and the dot climbs.', [T('dot', { R: 0.25, X: 0.6 }, 0, 0.2), T('hiX', 1, 0.1, 0.3), T('dot.X', 0.88, 0.3, 0.9), T('hiX', 0, 0.9, 1)]),
+  say('Lose more energy as heat, and the dot slides to the right.', [T('dot.X', 0.6, 0, 0.2), T('hiR', 1, 0.1, 0.3), T('dot.R', 0.5, 0.3, 0.9), T('hiR', 0, 0.9, 1)])
+];
+var demoLenz = [
+  say('The coil field is blue. The eddy currents in the aluminum, shown in orange, make their own field that points the other way.', [T('inset.eddy', 1, 0, 0.4), T('inset.oppose', 1, 0.3, 0.8)]),
+  say('That opposing field cancels part of the coil field, so less energy is stored. At the same time the currents heat the metal.', [T('inset.heat', 1, 0.4, 1)])
+];
+function bothPathsDemo(keepDot) {
+  return [say('Copper never changes during lift-off. Watch the two routes side by side.', [
+    SET('paths.ret', locusPath({ f0: FM.cu, f1: 0.02, fEnd: FM.cu, label: 'conductivity route', color: 'var(--locus)', dx: 8, dy: -4 })),
+    SET('paths.lo', { type: 'lift', f: FM.cu, e0: ETA, e1: 0, eEnd: ETA, cls: 'p-lift', show: 1, label: 'lift-off route', color: 'var(--lift)', dx: 10, dy: 16 }),
+    SET('ghosts.via', { f: FM.cu, eta: ETA, show: 1, fill: 'var(--locus)', stroke: 'var(--locus)' }),
+    T('paths.ret.fEnd', 0.02, 0.05, 0.95, 'io', true), T('ghosts.via.f', 0.02, 0.05, 0.95, 'io', true),
+    T('paths.lo.eEnd', 0, 0.05, 0.95), T('dot.eta', 0, 0.05, 0.95), T('inset.lift', 1, 0.05, 0.95), T('inset.eddy', 0.1, 0.05, 0.95), T('inset.heat', 0, 0.05, 0.95), T('inset.oppose', 0, 0.05, 0.95)
+  ], { dur: 6 }),
+  say('The conductivity route swings out through the heat bulge. The lift-off route heads straight for the air point.', [T('ghosts.via.show', 0, 0.7, 1)])];
+}
+
+var STEPS = [
+/* ---------- Step 1 ---------- */
+{ setup: function () { var s = baseState(); s.axes = 0; s.grid = 0; return s; },
+  items: [
+    titleItem(0),
+    say('Every eddy current coil has an impedance. That is a measure of how strongly the coil resists alternating current. We can split it into two parts that behave very differently.', [T('grid', 1, 0, 0.4), T('axes', 1, 0.1, 0.7)]),
+    say('The horizontal axis is resistance. It counts energy that is lost for good, turned into heat. Move to the right and more energy is being burned off.', [T('hiR', 1, 0, 0.15), SET('noteR', 1, 0.1), T('hiR', 0, 0.9, 1)]),
+    say('The vertical axis is inductive reactance. It counts energy that is stored in the magnetic field and handed back every cycle. Move up and the coil is storing more energy in its field.', [T('hiX', 1, 0, 0.15), SET('noteX', 1, 0.1), T('hiX', 0, 0.9, 1)]),
+    say('So the coil’s impedance is one arrow from the origin to a dot. The dot’s position tells two stories at once: how much energy is stored, and how much is lost.', [SET('dot', { show: 0, R: 0.25, X: 0.6, f: 1, eta: ETA, iacs: null }), T('dot.show', 1, 0, 0.3), T('arrow', 1, 0.1, 0.6)]),
+    say('Watch the dot.', [T('dot.R', 0.45, 0.2, 1)], { dur: 2.6 }),
+    ask({ label: 'Checkpoint 1', q: 'The dot just moved straight to the right. What changed?',
+      rules: [{ re: /field|magnet|induct/i, opts: [1], note: 'You were thinking about the magnetic field. That is the vertical axis, which did not change here.' }, { re: /heat|loss|lost|resist/i, opts: [0], note: 'Good: you tied the horizontal axis to heat loss.' }],
+      opts: [
+        { t: 'More energy is being turned into heat.', ok: true, fb: 'Right. The horizontal axis is energy lost as heat. Up and down is the energy stored in the magnetic field.', demo: [say('', [T('hiR', 1, 0, 0.3), T('hiR', 0, 0.7, 1)], { dur: 1.4 })] },
+        { t: 'The coil’s magnetic field got stronger.', fb: 'Not quite. A stronger field means more stored energy, and stored energy is the vertical axis. Watch.', demo: demoAxes },
+        { t: 'The coil got physically longer.', fb: 'The dot shows energy, not the coil’s size. Moving right means one specific kind of energy. Watch.', demo: demoAxes }
+      ] }),
+    say('Right means heat. Up means stored field. Keep those two ideas in mind for the rest of the lesson.', [T('hiR', 1, 0, 0.2), T('hiR', 0, 0.4, 0.5), T('hiX', 1, 0.5, 0.7), T('hiX', 0, 0.9, 1)])
+  ] },
+/* ---------- Step 2 ---------- */
+{ setup: function () {
+    var s = baseState(); s.noteR = 1; s.noteX = 1;
+    s.dot = { show: 1, f: FM.al, eta: 0, R: null, X: null, iacs: null }; s.arrow = 1;
+    s.inset = { show: 0, lift: 1, mat: null, field: 0.6, eddy: 0, heat: 0, oppose: 0 };
+    return s; },
+  items: [
+    titleItem(1),
+    say('Hold the coil in air. There is nothing nearby to heat up, so resistance is almost zero.', [T('inset.show', 1, 0, 0.3), T('inset.field', 1, 0.2, 0.6)]),
+    say('All of the coil’s field is stored, so reactance is at its highest. We call this spot the air point: far left and high up.', [T('air', 1, 0, 0.3)]),
+    say('We scale the plane so the air point sits at exactly one on the reactance axis. Every other reading is compared to the coil in air.', [SET('paths.one', { type: 'seg', R0: 0, X0: 1, R1: 0.6, X1: 1, prog: 0, cls: 'p-guide', show: 1 }), T('paths.one.prog', 1, 0, 0.6)]),
+    say('Now bring the coil down onto a block of aluminum. Before we look at the dot, make a prediction.', [T('paths.one.show', 0, 0, 0.3), SET('inset.mat', 'al'), T('inset.lift', 0, 0.2, 0.8)]),
+    ask({ label: 'Checkpoint 2', q: 'Place the coil on aluminum. Using Lenz’s law, does the dot move up or down?',
+      rules: [{ re: /resist/i, opts: [1], note: 'You mentioned resistance. That part of your thinking is right: resistance does go up. It just lives on the horizontal axis, so it moves the dot right, not up.' },
+              { re: /lenz|oppos|against|cancel/i, note: 'Bringing in Lenz’s law and an opposing field is exactly the right tool here.' }],
+      opts: [
+        { t: 'Down and to the right.', ok: true, fb: 'Yes. The eddy currents in the aluminum make their own field, and by Lenz’s law it pushes against the coil’s field. Less energy is stored, so reactance drops and the dot moves down. Those currents flow through metal that has resistance, so they make heat and the dot moves right.',
+          demo: [say('', [SET('paths.place', { type: 'lift', f: FM.al, e0: 0, e1: ETA, eEnd: 0, cls: 'p-lift p-thin', show: 1 }), T('inset.eddy', 1, 0, 0.3), T('inset.oppose', 1, 0.1, 0.4), T('inset.heat', 0.8, 0.2, 0.9), T('dot.eta', ETA, 0.15, 0.95), T('paths.place.eEnd', ETA, 0.15, 0.95)], { dur: 3.4 })] },
+        { t: 'Up, because resistance goes up.', fb: 'Resistance does go up, but resistance is the horizontal axis, so it moves the dot right, not up. Up and down is the stored magnetic field. Lenz’s law says the eddy current field opposes the coil’s field. Does an opposing field leave more stored energy, or less?', demo: demoLenz },
+        { t: 'Up, because the metal adds to the coil’s field.', fb: 'Lenz’s law says induced currents always oppose the change that made them. In a nonmagnetic metal like aluminum, the eddy currents push back against the coil’s field instead of adding to it.', demo: demoLenz },
+        { t: 'It does not move.', fb: 'Watch the block. Currents start flowing in the aluminum as soon as the coil arrives, so something must change.', demo: [say('Eddy currents appear in the aluminum the moment the coil arrives.', [T('inset.eddy', 1, 0, 0.5), T('inset.heat', 0.6, 0.3, 1)])] }
+      ] }),
+    say('Down and right. Hold on to that: down means the coil’s field was pushed back, and right means heat was made in the part.', [SET('ghosts.al', { f: FM.al, eta: ETA, label: 'aluminum', show: 1, dx: 12, dy: 4 })]),
+    say('Notice that the dot took a straight route as the coil came down onto the metal. Remember that route. It comes back in Step 4.', [T('paths.place.show', 1, 0, 0.2), T('paths.place.show', 0.4, 0.8, 1)])
+  ] },
+/* ---------- Step 3 ---------- */
+{ setup: function () {
+    var s = baseState(); s.air = 1; s.noteR = 1; s.noteX = 1;
+    s.dot = { show: 1, f: FM.al, eta: ETA, R: null, X: null, iacs: null }; s.arrow = 1;
+    s.inset = { show: 1, lift: 0, mat: 'al', field: 1, eddy: 1, heat: 0.7, oppose: 0.7 };
+    return s; },
+  items: [
+    titleItem(2),
+    say('Now let’s change the metal. Copper conducts electricity more than twice as well as this aluminum.', [T('cam', CAM.locus, 0, 1), SET('ghosts.al', { f: FM.al, eta: ETA, label: 'aluminum', show: 1, dx: 12, dy: 4 })]),
+    say('Slide a copper block under the coil. Predict before you look.', [SET('inset.mat', 'cu', 0.3), T('inset.eddy', 1, 0.3, 0.6)]),
+    ask({ label: 'Checkpoint 3A', q: 'Swap aluminum for copper. Does the dot sit higher or lower on reactance?',
+      opts: [
+        { t: 'Higher.', fb: 'Better conductivity means stronger eddy currents, and stronger eddy currents push back harder on the coil’s field. Which way did pushing back move the dot in Step 2?', demo: [say('A stronger opposing field leaves even less energy stored in the coil’s field.', [T('inset.oppose', 1, 0, 0.4), T('inset.field', 0.5, 0.3, 0.9)])] },
+        { t: 'Lower.', ok: true, fb: 'Right. Better conductivity means stronger eddy currents and a stronger opposing field, so even less energy is stored. Copper sits somewhere on this lower line.',
+          demo: [say('', [SET('paths.cuLine', { type: 'seg', R0: 0, X0: Zn(FM.cu, ETA).X, R1: 0.5, X1: Zn(FM.cu, ETA).X, prog: 0, cls: 'p-guide', show: 1, label: 'copper is on this line', lat: 'start', dx: 6, dy: -8 }), T('paths.cuLine.prog', 1, 0, 0.8)], { dur: 2 })] },
+        { t: 'About the same height.', fb: 'Copper is a much better conductor, so its eddy currents are stronger and push back harder on the coil’s field. Which way does pushing back move the dot?', demo: [say('A stronger opposing field leaves even less energy stored in the coil’s field.', [T('inset.oppose', 1, 0, 0.4), T('inset.field', 0.5, 0.3, 0.9)])] }
+      ] }),
+    say('So copper is lower. Now for the harder question.', []),
+    ask({ label: 'Checkpoint 3B', q: 'Does copper also sit further to the right than aluminum?',
+      rules: [{ re: /strong|more current|bigger current/i, opts: [0], note: 'Stronger currents is a good instinct. The catch is that heat needs resistance too, not just current.' }],
+      opts: [
+        { t: 'Yes, further to the right.', fb: 'Many people expect that, because copper makes stronger eddy currents. Let’s test the idea with an extreme case.', sub: null },
+        { t: 'No, a little further to the left.', ok: true, fb: 'Exactly. Copper’s eddy currents are strong, but copper barely resists them, so very little of their energy turns into heat.',
+          demo: [say('', [SET('paths.toCu', locusPath({ f0: FM.al, f1: FM.cu, fEnd: FM.al, cls: 'p-locus p-thin' })), T('dot.f', FM.cu, 0.1, 0.9, 'io', true), T('paths.toCu.fEnd', FM.cu, 0.1, 0.9, 'io', true), SET('ghosts.cu', { f: FM.cu, eta: ETA, label: 'copper', show: 1, dx: 12, dy: 4 }, 0.9)], { dur: 2.8 })] },
+        { t: 'Exactly the same distance to the right.', fb: 'Close, but the heat does not stay constant. Think about the two extremes: a metal that barely conducts, and one that conducts perfectly.', sub: null }
+      ] }),
+    say('Now sweep conductivity from very low to very high and trace the dot.', [T('paths.cuLine.show', 0, 0, 0.3), T('paths.toCu.show', 0, 0, 0.3), T('paths.perf.show', 0, 0, 0.3), T('ghosts.perfect.show', 0, 0, 0.3), T('ghosts.sweep.show', 0, 0, 0.3), SET('paths.loc', locusPath({ fEnd: 0.02 })), T('dot.f', 0.02, 0.2, 1, 'io', true), T('inset.show', 0, 0, 0.5)], { dur: 3.5 }),
+    say('At low conductivity barely any current flows, so there is little heat. The dot stays close to the air point.', [T('dot.f', 1.5, 0.1, 1, 'io', true), T('paths.loc.fEnd', 1.5, 0.1, 1, 'io', true)]),
+    say('In the middle, current flows freely and the metal still resists it, so the heat peaks and the curve bulges furthest to the right.', [T('dot.f', 8, 0, 0.8, 'io', true), T('paths.loc.fEnd', 8, 0, 0.8, 'io', true), SET('ghosts.peak', { f: 6, eta: ETA, label: 'most heat', show: 1, dx: 12, dy: 4, fill: 'var(--heat)', stroke: 'var(--heat)' }, 0.6)]),
+    say('At very high conductivity the currents are huge but meet almost no resistance, so the heat falls again and the curve turns down and back to the left.', [T('dot.f', FMAX, 0, 0.85, 'io', true), T('paths.loc.fEnd', FMAX, 0, 0.85, 'io', true), SET('paths.perf2', { type: 'seg', R0: Zn(FMAX, ETA).R, X0: Zn(FMAX, ETA).X, R1: 0, X1: 1 - ETA, prog: 0, cls: 'p-locus p-dash p-thin', show: 1 }, 0.85), T('paths.perf2.prog', 1, 0.85, 1)]),
+    say('This curve is the conductivity locus. Titanium and stainless steel sit near the top. Aluminum sits just past the bulge. Copper sits lower and further left.', [
+      T('ghosts.peak.show', 0, 0, 0.1), T('dot.f', FM.cu, 0.6, 1, 'io', true),
+      SET('ghosts.ti', matGhosts(['ti']).ti, 0.1), SET('ghosts.ss', matGhosts(['ss']).ss, 0.2), SET('ghosts.al', matGhosts(['al']).al, 0.45), SET('ghosts.cu', matGhosts(['cu']).cu, 0.65)])
+  ] },
+/* ---------- Step 4 ---------- */
+{ setup: function () {
+    var s = baseState(); s.air = 1; s.noteR = 1; s.noteX = 1; s.cam = clone(CAM.locus);
+    s.paths.loc = locusPath({ cls: 'p-locus p-faint' });
+    s.ghosts = matGhosts(['ti', 'ss', 'al', 'cu']);
+    s.dot = { show: 1, f: FM.cu, eta: ETA, R: null, X: null, iacs: null }; s.arrow = 1;
+    s.inset = { show: 1, lift: 0, mat: 'cu', field: 1, eddy: 1, heat: 0.4, oppose: 0.8 };
+    return s; },
+  items: [
+    titleItem(3),
+    say('Real parts are not perfectly flat, and paint or coatings add a gap between the coil and the metal. Pulling the coil away from the metal is called lift-off.', [T('inset.lift', 0.3, 0.3, 0.6), T('inset.lift', 0, 0.75, 1)]),
+    say('Here is the coil sitting on copper. Predict what happens as it lifts away.', []),
+    ask({ label: 'Checkpoint 4', q: 'Lift the coil off the copper. Does the dot retrace the conductivity curve back toward the air point, or take another path?',
+      rules: [{ re: /less|weak|coupl|farther|distance/i, note: 'Thinking in terms of weaker coupling is the key idea here.' }],
+      opts: [
+        { t: 'It retraces the conductivity curve.', fb: 'The conductivity curve was made by changing the metal. During lift-off the copper never changes. Only the coupling gets weaker, as less of the coil’s field reaches the part. Does a weaker coupling create a heat bulge?', demo: bothPathsDemo() },
+        { t: 'It takes a different, more direct path to the air point.', ok: true, fb: 'Yes. The metal is still copper, so there is no detour through a heat bulge. The copper’s effect simply fades as the coil moves away.', demo: bothPathsDemo() },
+        { t: 'It does not move.', fb: 'Pull the coil far enough away and it is back in air. Where must the dot end up then?', demo: [say('Far enough away, the coil is back in air, so the dot must end at the air point.', [T('inset.lift', 1, 0, 0.9), T('dot.eta', 0, 0, 0.9), T('inset.eddy', 0, 0, 0.9), T('inset.oppose', 0, 0, 0.9)])] }
+      ] }),
+    say('In this model the lift-off route is a straight line aimed at the air point. Real probes give a gently curved line, but the lesson is the same: two different causes, two different directions.', [T('dot.eta', ETA, 0, 0.5), T('inset.lift', 0, 0, 0.5), T('inset.eddy', 1, 0, 0.5), T('inset.oppose', 0.8, 0, 0.5)]),
+    say('That difference in direction is what lets an inspector tell the two apart. Sandbox mode is now unlocked, so you can try this yourself whenever you like.', [])
+  ] },
+/* ---------- Step 5 ---------- */
+{ setup: function () {
+    var s = baseState(); s.air = 1; s.noteR = 1; s.noteX = 1; s.cam = clone(CAM.locus);
+    s.paths.loc = locusPath({});
+    s.ghosts = matGhosts(['ti', 'ss', 'al', 'cu']);
+    s.dot = { show: 0, f: FM.cu, eta: ETA, R: null, X: null, iacs: null };
+    return s; },
+  items: [
+    titleItem(4),
+    say('At every point on the conductivity locus, lift-off pulls the dot one way, and a change in conductivity pulls it another way.', [
+      SET('paths.l_cu', { type: 'lift', f: FM.cu, e0: ETA, e1: 0.5, eEnd: ETA, cls: 'p-lift', show: 1 }), SET('paths.l_al', { type: 'lift', f: FM.al, e0: ETA, e1: 0.5, eEnd: ETA, cls: 'p-lift', show: 1 }),
+      SET('paths.l_ss', { type: 'lift', f: FM.ss, e0: ETA, e1: 0.5, eEnd: ETA, cls: 'p-lift', show: 1 }), SET('paths.l_ti', { type: 'lift', f: FM.ti, e0: ETA, e1: 0.5, eEnd: ETA, cls: 'p-lift', show: 1 }),
+      T('paths.l_cu.eEnd', 0.5, 0.1, 0.6), T('paths.l_al.eEnd', 0.5, 0.2, 0.7), T('paths.l_ss.eEnd', 0.5, 0.3, 0.8), T('paths.l_ti.eEnd', 0.5, 0.4, 0.9)]),
+    say('The angle between those two directions decides how easy it is to tell them apart.', [SET('angles.cu', { f: FM.cu, show: 0 }), T('angles.cu.show', 1, 0, 0.4)]),
+    ask({ label: 'Checkpoint 5', q: 'To tell lift-off from a conductivity change, do you want the angle between them small or large?',
+      opts: [
+        { t: 'Small.', fb: 'Picture two arrows lying almost on top of each other. If the dot moves along one of them, can you tell which one it was? Watch titanium, then copper.', demo: [
+          say('At titanium the two directions nearly overlap. Was that wobble lift-off or a conductivity change? Hard to say.', [T('cam', CAM.top, 0, 0.3), SET('angles.ti', { f: FM.ti, show: 1 }), SET('ghosts.w', { f: FM.ti, eta: ETA, show: 1, fill: 'var(--dot)', stroke: 'var(--dot)', big: 1 }),
+            T('ghosts.w.eta', 0.45, 0.35, 0.6), T('ghosts.w.eta', ETA, 0.6, 0.85)]),
+          say('At copper the directions are far apart, so a lift-off wobble is obvious.', [SET('ghosts.w.f', FM.cu), T('cam', CAM.locus, 0, 0.3), T('ghosts.w.eta', 0.6, 0.35, 0.6), T('ghosts.w.eta', ETA, 0.6, 0.85)])] },
+        { t: 'Large.', ok: true, fb: 'Right. When the two directions point well apart, a lift-off wobble and a conductivity change look clearly different on the screen.' },
+        { t: 'It does not matter.', fb: 'It matters a lot. Picture two arrows lying almost on top of each other. If the dot moves along one of them, can you tell which one it was? Watch titanium, then copper.', demo: [
+          say('At titanium the two directions nearly overlap. Was that wobble lift-off or a conductivity change? Hard to say.', [T('cam', CAM.top, 0, 0.3), SET('angles.ti', { f: FM.ti, show: 1 }), SET('ghosts.w', { f: FM.ti, eta: ETA, show: 1, fill: 'var(--dot)', stroke: 'var(--dot)', big: 1 }),
+            T('ghosts.w.eta', 0.45, 0.35, 0.6), T('ghosts.w.eta', ETA, 0.6, 0.85)]),
+          say('At copper the directions are far apart, so a lift-off wobble is obvious.', [SET('ghosts.w.f', FM.cu), T('cam', CAM.locus, 0, 0.3), T('ghosts.w.eta', 0.6, 0.35, 0.6), T('ghosts.w.eta', ETA, 0.6, 0.85)])] }
+      ] }),
+    say('Now read the angles. At the high conductivity end, for copper and aluminum, the angle opens up to roughly fifty degrees.', [SET('angles.al', { f: FM.al, show: 0 }), T('angles.al.show', 1, 0.2, 0.5)]),
+    say('Zoom in at the low conductivity end. For titanium and stainless steel, the two directions almost overlap. The angle is only a few degrees.', [T('cam', CAM.top, 0, 0.35), SET('angles.ti', { f: FM.ti, show: 0 }), SET('angles.ss', { f: FM.ss, show: 0 }), T('angles.ss.show', 1, 0.35, 0.55), T('angles.ti.show', 1, 0.55, 0.75)]),
+    say('So at one test frequency, the low conductivity metals are the hard ones. There, lift-off can easily be mistaken for a change in conductivity.', [T('cam', CAM.locus, 0.3, 0.9)])
+  ] },
+/* ---------- Step 6 ---------- */
+{ setup: function () {
+    var s = baseState(); s.air = 1; s.noteR = 1; s.noteX = 1; s.cam = clone(CAM.locus);
+    s.paths.loc = locusPath({ cls: 'p-locus p-faint' });
+    s.ghosts = matGhosts(['ti', 'ss', 'cu']);
+    s.ghosts.start = { f: FM.al, eta: ETA, label: 'Al', show: 1, dx: 10, dy: 4 };
+    s.dot = { show: 1, f: FM.al, eta: ETA, R: null, X: null, iacs: null }; s.arrow = 1;
+    return s; },
+  items: [
+    titleItem(5),
+    say('Some simple instruments measure only the impedance magnitude, which is the length of the arrow. Watch the meter as the dot moves.', [T('meter.show', 1, 0, 0.2)]),
+    say('First, a little lift-off.', [SET('paths.lo', { type: 'lift', f: FM.al, e0: ETA, e1: LO_ETA, eEnd: ETA, cls: 'p-lift', show: 1, label: 'lift-off', color: 'var(--lift)', dx: -8, dy: -6, anchor: 'end' }), T('dot.eta', LO_ETA, 0.1, 0.9), T('paths.lo.eEnd', LO_ETA, 0.1, 0.9)], { dur: 2.6 }),
+    say('Now go back, and instead lower the conductivity until the meter shows the same number.', [T('dot.eta', ETA, 0, 0.3), SET('paths.cd', locusPath({ f0: FM.al, f1: F_SAME, fEnd: FM.al, show: 1, label: 'lower conductivity', color: 'var(--locus)', dx: 10, dy: 0 })), T('dot.f', F_SAME, 0.35, 1, 'io', true), T('paths.cd.fEnd', F_SAME, 0.35, 1, 'io', true)], { dur: 4 }),
+    say('Same reading, two very different causes. Both end points sit on the same circle around the origin, so a magnitude-only meter cannot tell them apart.', [SET('arcZ', { show: 0, r: Math.hypot(Zn(FM.al, LO_ETA).R, Zn(FM.al, LO_ETA).X) }), T('arcZ.show', 1, 0, 0.3), SET('ghosts.e1', { f: FM.al, eta: LO_ETA, show: 1, fill: 'var(--lift)', stroke: 'var(--lift)' })]),
+    say('A phase instrument shows the dot itself, so it sees the direction of the move as well as its size. That is why the impedance plane display is so useful.', [T('meter.phase', 1, 0, 0.1), T('dot.f', FM.al, 0.2, 0.45, 'io', true), T('dot.eta', LO_ETA, 0.5, 0.75), T('dot.eta', ETA, 0.8, 1)]),
+    say('Now remember that the dot’s place on the curve depends on frequency times conductivity. Raise either one and the dot slides down the curve. Lower it and the dot climbs back up.', [
+      T('arcZ.show', 0, 0, 0.1), T('paths.lo.show', 0, 0, 0.1), T('paths.cd.show', 0, 0, 0.1), T('ghosts.e1.show', 0, 0, 0.1), T('meter.show', 0, 0, 0.1),
+      SET('dot.iacs', 43), SET('freq', { show: 1, kHz: 100 }), T('freq.kHz', 300, 0.15, 0.5, 'io', true), T('freq.kHz', 35, 0.55, 0.85, 'io', true), T('freq.kHz', 100, 0.9, 1, 'io', true)], { dur: 9 }),
+    say('Back to titanium, where the angle is tiny at one hundred kilohertz.', [SET('dot.iacs', 1), T('cam', CAM.top, 0, 0.5), SET('angles.d', { dot: true, show: 0 }), T('angles.d.show', 1, 0.4, 0.7), SET('depth', { show: 1, iacs: 1 }, 0.4)]),
+    ask({ label: 'Checkpoint 6', q: 'You are inspecting titanium, where the angle is small. What setting do you change, and what do you give up?',
+      rules: [{ re: /depth|penetrat|deep|surface/i, note: 'You were already thinking about depth. That trade is the heart of this question.' }],
+      opts: [
+        { t: 'Raise the frequency. You give up depth of penetration.', ok: true, fb: 'Yes. A higher frequency moves titanium down the curve, where the angle opens up. But a higher frequency also crowds the eddy currents toward the surface, so you see less deep into the part.',
+          demo: [say('', [T('freq.kHz', 1000, 0, 0.9, 'io', true), T('cam', { r0: -0.02, r1: 0.4, x0: 0.6, x1: 1.04 }, 0, 0.9)], { dur: 4 })] },
+        { t: 'Lower the frequency. You give up sensitivity.', fb: 'Lower frequency moves the dot up the curve, toward the air point. Is the angle bigger or smaller up there? Watch.', demo: [say('Lower frequency: the dot climbs and the angle closes even further.', [T('freq.kHz', 30, 0, 0.8, 'io', true)])] },
+        { t: 'Raise the frequency. You give up nothing.', fb: 'The angle part is right. But frequency also controls how deep the eddy currents reach. Watch the depth gauge as the frequency rises.', demo: [say('The angle opens, but the standard depth shrinks from about two millimeters to under one.', [T('freq.kHz', 1000, 0, 0.8, 'io', true), T('cam', { r0: -0.02, r1: 0.4, x0: 0.6, x1: 1.04 }, 0, 0.8)])] },
+        { t: 'Turn up the gain. You give up nothing.', fb: 'Gain makes everything on the screen bigger, including the lift-off signal. Scaling both arrows up does not change the angle between them.', demo: [say('Zooming in works like adding gain. The picture grows, and the angle stays exactly the same.', [T('cam', { r0: 0.0, r1: 0.08, x0: 0.96, x1: 1.01 }, 0, 0.6)])] }
+      ] }),
+    say('That trade is fine when you only care about the surface, such as surface breaking cracks, or sorting metals by conductivity.', []),
+    say('It is not fine when the flaw is below the surface, like corrosion on the far side of a skin, or a subsurface crack. Those need a low frequency, so you accept a smaller angle and control lift-off carefully instead.', [T('freq.kHz', 100, 0, 0.6, 'io', true), T('cam', CAM.top, 0, 0.6)]),
+    say('You have finished the lesson. Open the recap for a one screen summary, then try the quiz.', [])
+  ] }
+];
+/* Socratic chain for Checkpoint 3B wrong answers */
+(function () {
+  var sub2 = { label: 'Think it through', q: 'So where does the dot sit for a perfect conductor?', reason: false,
+    opts: [
+      { t: 'On the reactance axis, below the air point.', ok: true, keep: true, fb: 'Yes. Zero heat puts it back on the left edge, and its field is pushed out of the metal, so it sits well below the air point. Watch where the curve heads as conductivity climbs.',
+        demo: [say('', [SET('paths.perf', locusPath({ f0: FM.al, f1: FMAX, fEnd: FM.al, cls: 'p-locus p-thin p-dash' })), SET('ghosts.sweep', { f: FM.al, eta: ETA, show: 1, fill: 'var(--locus)', stroke: 'var(--locus)' }),
+          T('paths.perf.fEnd', FMAX, 0, 0.85, 'io', true), T('ghosts.sweep.f', FMAX, 0, 0.85, 'io', true),
+          SET('ghosts.perfect', { R: 0, X: 1 - ETA, show: 1, label: 'perfect conductor', dx: 10, dy: 4, fill: 'var(--locus)', stroke: 'var(--locus)' }, 0.85)], { dur: 4 })] },
+      { t: 'Far to the right, where the heat is highest.', fb: 'Far right means lots of heat, and we just agreed that a perfect conductor makes none.' },
+      { t: 'Exactly at the air point.', fb: 'Right on the left to right part, since there is no heat. But the eddy currents still push the coil’s field out of the metal, so less energy is stored than in air. The dot sits lower.' }
+    ] };
+  var sub1 = { label: 'Think it through', q: 'Picture a perfect conductor with zero resistance. How much heat can its eddy currents make?', reason: false, next: sub2,
+    opts: [
+      { t: 'A lot, because the currents are huge.', fb: 'The currents are huge, but heat comes from current flowing through resistance. With zero resistance, nothing turns into heat.' },
+      { t: 'Some, but less than copper.', fb: 'Heat needs resistance. A perfect conductor has none at all, so the heat is not just smaller. It is gone.' },
+      { t: 'None at all.', ok: true, fb: 'Right. No resistance, no heat.' }
+    ] };
+  var cp = STEPS[2].items.filter(function (it) { return it.type === 'ask'; })[1].node;
+  cp.opts[0].sub = sub1; cp.opts[2].sub = sub1;
+})();
+
+/* ===================== info card ===================== */
+var KEY_IDEAS = [
+  'Right means energy lost as heat. Up means energy stored in the magnetic field.',
+  'On a conductor the dot moves down (field pushed back) and right (heat).',
+  'The conductivity locus bulges right in the middle and curls back left at high conductivity.',
+  'Lift-off takes its own, more direct path to the air point.',
+  'A large angle between lift-off and the locus makes them easy to separate.',
+  'Higher frequency widens the angle for low conductivity metals but reduces depth.'
+];
+function renderInfo() {
+  var n = Lesson.step, h = '';
+  if (Lesson.mode === 'finished') {
+    h = '<div class="eyebrow">Lesson complete</div><h2>Nice work.</h2><p class="muted">Review the six ideas on the recap screen, then take the 10 question quiz.</p><div class="row"><button class="btn" onclick="setView(\'recap\')">Open recap</button><button class="btn ghost" onclick="setView(\'quiz\')">Take the quiz</button></div>';
+  } else if (n < 0) {
+    h = '<div class="eyebrow">How this works</div><h2>Watch, predict, then check.</h2><p class="muted">The lesson plays like a short video and stops at checkpoints. Pick an answer, and if you like, type your reasoning. Wrong answers get a hint and a short animation before you try again.</p><p class="muted">Use the step bar to go back to any step you have finished.</p>';
+  } else {
+    h = '<div class="eyebrow">Step ' + (n + 1) + ' of 6</div><h2>' + esc(STEP_TITLES[n]) + '</h2>';
+    var done = progress.done.indexOf(n) >= 0;
+    h += done ? '<p class="muted"><b>Key idea:</b> ' + esc(KEY_IDEAS[n]) + '</p>' : '<p class="muted">A checkpoint question is coming up in this step. It will appear here.</p>';
+    h += '<p class="muted" style="font-size:12.5px">The diagram uses the classic normalized model of a coil around a solid nonmagnetic rod. Lift-off is modeled as weaker coupling between coil and part.</p>';
+  }
+  $('infoCard').innerHTML = h;
+}
+
+/* ===================== chapters, tabs, controls ===================== */
+function renderChapters() {
+  var nav = $('chapters'), mr = maxReachable(), h = '';
+  STEP_TITLES.forEach(function (t, i) {
+    var done = progress.done.indexOf(i) >= 0, cur = i === Lesson.step && view === 'lesson';
+    var allowed = done || i === Lesson.step || i <= mr;
+    h += '<button class="chap' + (done ? ' done' : '') + (cur ? ' current' : '') + '" data-i="' + i + '"' + (allowed ? '' : ' disabled') + ' aria-current="' + (cur ? 'step' : 'false') + '"><span class="n">' + (done ? '✓' : i + 1) + '</span>' + esc(t) + '</button>';
+  });
+  nav.innerHTML = h;
+  nav.querySelectorAll('.chap').forEach(function (b) {
+    b.addEventListener('click', function () { var i = +b.dataset.i; setView('lesson'); startIfNeeded(); runStep(i); });
+  });
+  var cur = nav.querySelector('.current'); if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+function renderTabs() {
+  var sbOpen = progress.done.indexOf(3) >= 0, allDone = progress.done.indexOf(5) >= 0;
+  $('tabSandbox').disabled = !sbOpen; $('tabSandbox').innerHTML = 'Sandbox' + (sbOpen ? '' : ' &#128274;');
+  $('tabRecap').disabled = !allDone; $('tabQuiz').disabled = !allDone;
+  ['Lesson', 'Sandbox', 'Recap', 'Quiz'].forEach(function (n) { $('tab' + n).setAttribute('aria-selected', view === n.toLowerCase() ? 'true' : 'false'); });
+}
+var ICON = {
+  play: '<svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z" fill="currentColor"/></svg>',
+  pause: '<svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg>',
+  sound: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/></svg>',
+  mute: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 9l6 6M22 9l-6 6"/></svg>'
+};
+function updateControls() {
+  var pb = $('playBtn');
+  var canPlay = !!P.items;
+  pb.innerHTML = (paused || !canPlay) ? ICON.play : ICON.pause;
+  pb.setAttribute('aria-label', paused ? 'Play' : 'Pause');
+  pb.disabled = !canPlay && !paused;
+  $('replayBtn').disabled = !(Lesson.mode === 'play' || Lesson.mode === 'ask');
+  var mb = $('muteBtn'); mb.innerHTML = muted ? ICON.mute : ICON.sound; mb.setAttribute('aria-label', muted ? 'Unmute narration' : 'Mute narration');
+  mb.title = synth ? (muted ? 'Narration off' : 'Narration on') : 'Narration is not available in this browser. Captions are shown.';
+}
+var toastT = null;
+function toast(msg) { var t = $('toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toastT); toastT = setTimeout(function () { t.classList.add('hidden'); }, 3600); }
+
+/* ===================== sandbox ===================== */
+var SB = { iacs: 43, lift: 0, kHz: 100, zoom: false };
+var lessonSnapshot = null;
+function logSlider(v, lo, hi) { return Math.exp(Math.log(lo) + (Math.log(hi) - Math.log(lo)) * v / 1000); }
+function logPos(x, lo, hi) { return Math.round((Math.log(x) - Math.log(lo)) / (Math.log(hi) - Math.log(lo)) * 1000); }
+function nearestMat(iacs) {
+  var best = null, bd = 1e9;
+  Object.keys(MATS).forEach(function (k) { var d = Math.abs(Math.log(MATS[k].iacs / iacs)); if (d < bd) { bd = d; best = k; } });
+  return bd < 0.18 ? best : null;
+}
+function sbState() {
+  var s = baseState(); s.air = 1; s.noteR = 0; s.noteX = 0;
+  var eta = ETA * (1 - SB.lift / 100), f = fOf(SB.iacs, SB.kHz), P0 = Zn(f, eta);
+  if (SB.lift > 0) s.paths.contact = locusPath({ cls: 'p-locus p-faint p-thin' });
+  if (eta > 0.01) s.paths.loc = locusPath({ eta: eta });
+  s.paths.lift = { type: 'lift', f: f, e0: ETA, e1: 0, cls: 'p-lift p-thin', show: 1 };
+  ['ti', 'ss', 'al2', 'al', 'cu'].forEach(function (k) {
+    s.ghosts[k] = { f: fOf(MATS[k].iacs, SB.kHz), eta: ETA, label: MATS[k].short, show: 0.9, dx: k === 'ti' ? 0 : 9, dy: k === 'ti' ? 18 : (k === 'al2' ? -6 : 8), anchor: k === 'ti' ? 'middle' : 'start' };
+  });
+  s.dot = { show: 1, f: f, eta: eta, R: null, X: null, iacs: null }; s.arrow = 1;
+  s.angles.a = { dot: true, show: 1 };
+  var mk = nearestMat(SB.iacs);
+  var col = mk ? MATS[mk].color : '#b7bec6';
+  s.inset = { show: 1, lift: SB.lift / 100, mat: { name: '', color: col, label: (mk ? MATS[mk].short + ', ' : '') + fmt(SB.iacs, SB.iacs < 10 ? 1 : 0) + ' %IACS' }, field: 1, eddy: clamp(1 - SB.lift / 100, 0, 1), heat: clamp(P0.R / 0.34, 0, 1) * (1 - SB.lift / 100), oppose: clamp(1 - P0.X, 0, 1) };
+  if (SB.zoom) { var w = 0.11; s.cam = { r0: P0.R - w, r1: P0.R + w, x0: P0.X - w * 0.9, x1: P0.X + w * 0.9 }; }
+  else s.cam = clone(CAM.locus);
+  return s;
+}
+function buildSandbox() {
+  var c = $('sbCard');
+  c.innerHTML = '<div class="eyebrow">Sandbox</div><h2>Move the sliders and watch the plane</h2>' +
+    '<div class="slider"><label for="sbI">Conductivity <span id="sbIv"></span></label><input type="range" id="sbI" min="0" max="1000"><div class="presets" id="sbPresets"></div></div>' +
+    '<div class="slider"><label for="sbL">Lift-off <span id="sbLv"></span></label><input type="range" id="sbL" min="0" max="100"></div>' +
+    '<div class="slider"><label for="sbF">Test frequency <span id="sbFv"></span></label><input type="range" id="sbF" min="0" max="1000"></div>' +
+    '<label class="muted" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="sbZ"> Zoom in around the dot</label>' +
+    '<p class="muted" style="font-size:13px;margin:8px 0 0"><span style="color:var(--locus);font-weight:700">Orange</span>: conductivity locus (faint: at contact). <span style="color:var(--lift);font-weight:700">Teal</span>: lift-off line to the air point. Open circles: materials at this frequency.</p>' +
+    '<div class="readout" id="sbOut"></div>' +
+    '<p class="muted" style="font-size:12.5px;margin-top:10px">Try this: pick titanium, then raise the frequency and watch the angle open and the depth shrink. Notice that frequency slides every material along the same curve.</p>';
+  var pre = $('sbPresets');
+  ['ti', 'ss', 'al2', 'al', 'cu'].forEach(function (k) {
+    var b = document.createElement('button'); b.textContent = MATS[k].short === 'Al' ? 'Al 6061' : MATS[k].short;
+    b.title = MATS[k].name + ', ' + MATS[k].iacs + ' %IACS';
+    b.onclick = function () { SB.iacs = MATS[k].iacs; syncSandbox(); }; pre.appendChild(b);
+  });
+  $('sbI').oninput = function () { SB.iacs = logSlider(+this.value, 0.8, 100); syncSandbox(true); };
+  $('sbL').oninput = function () { SB.lift = +this.value; syncSandbox(true); };
+  $('sbF').oninput = function () { SB.kHz = logSlider(+this.value, 10, 2000); syncSandbox(true); };
+  $('sbZ').onchange = function () { SB.zoom = this.checked; syncSandbox(); };
+}
+function syncSandbox(fromSlider) {
+  if (!fromSlider) { $('sbI').value = logPos(SB.iacs, 0.8, 100); $('sbL').value = SB.lift; $('sbF').value = logPos(SB.kHz, 10, 2000); }
+  var mk = nearestMat(SB.iacs);
+  $('sbIv').textContent = fmt(SB.iacs, SB.iacs < 10 ? 1 : 0) + ' %IACS' + (mk ? ' (' + MATS[mk].name + ')' : '');
+  $('sbLv').textContent = SB.lift === 0 ? 'contact' : SB.lift === 100 ? 'coil in air' : SB.lift + '%';
+  $('sbFv').textContent = SB.kHz >= 1000 ? fmt(SB.kHz / 1000, 2) + ' MHz' : fmt(SB.kHz, 0) + ' kHz';
+  S = sbState(); dirty = true;
+  var f = fOf(SB.iacs, SB.kHz), Z = dotPos(S);
+  $('sbOut').innerHTML =
+    '<span>Angle between lift-off and locus</span><b class="big">' + fmt(sepAngle(f), 1) + '&deg;</b>' +
+    '<span>f/fg (frequency x conductivity)</span><b>' + (f < 10 ? fmt(f, 2) : fmt(f, 1)) + '</b>' +
+    '<span>Normalized R</span><b>' + fmt(Z.R, 3) + '</b><span>Normalized X</span><b>' + fmt(Z.X, 3) + '</b>' +
+    '<span>Standard depth</span><b>' + fmt(depthMM(SB.iacs, SB.kHz), 2) + ' mm</b>';
+}
+
+/* ===================== views ===================== */
+var view = 'lesson';
+function setView(v) {
+  if (v === view) return;
+  if (view === 'lesson') { lessonSnapshot = S; if (!paused && P.items) setPaused(true); stopSpeech(); }
+  if (view === 'sandbox') { /* nothing to save */ }
+  view = v;
+  $('viewPlayer').classList.toggle('hidden', !(v === 'lesson' || v === 'sandbox'));
+  $('viewRecap').classList.toggle('hidden', v !== 'recap');
+  $('viewQuiz').classList.toggle('hidden', v !== 'quiz');
+  var lessonish = v === 'lesson';
+  $('caption').classList.toggle('hidden', !lessonish); $('controls').classList.toggle('hidden', !lessonish);
+  $('infoCard').classList.toggle('hidden', !lessonish || !!askState);
+  $('askCard').classList.toggle('hidden', !lessonish || !askState);
+  $('sbCard').classList.toggle('hidden', v !== 'sandbox');
+  $('startOver').classList.toggle('hidden', !(lessonish && !Lesson.started));
+  if (v === 'sandbox') { if (!$('sbCard').innerHTML) buildSandbox(); syncSandbox(); }
+  if (v === 'lesson' && lessonSnapshot) { S = lessonSnapshot; }
+  if (v === 'recap') buildRecap();
+  if (v === 'quiz') buildQuiz();
+  renderTabs(); renderChapters(); dirty = true;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function startIfNeeded() {
+  if (Lesson.started) return;
+  Lesson.started = true; $('startOver').classList.add('hidden');
+}
+
+/* ===================== recap ===================== */
+var recapOn = false;
+var RECAP = [
+  { t: '1. Two axes', d: 'Right means energy lost as heat (resistance). Up means energy stored in the magnetic field (reactance).' },
+  { t: '2. Air, then metal', d: 'In air the dot sits high and far left. On a conductor it moves down (field pushed back) and right (heat).' },
+  { t: '3. Conductivity locus', d: 'Little heat at low conductivity, most in the middle, little again at very high conductivity, so the curve curls back left.' },
+  { t: '4. Lift-off', d: 'The metal does not change, only the coupling. The dot takes its own direct path to the air point.' },
+  { t: '5. Separation angle', d: 'You want a large angle. It is small for titanium and stainless, large for aluminum and copper.' },
+  { t: '6. Instruments and frequency', d: 'Magnitude alone hides direction. Raising frequency widens the angle but costs depth of penetration.' }
+];
+function buildRecap() {
+  var v = $('viewRecap');
+  v.innerHTML = '<div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0;font-size:20px">Recap: six ideas</h2><button class="btn" onclick="setView(\'quiz\')">Take the quiz &rarr;</button></div><div class="recap-grid">' +
+    RECAP.map(function (r, i) { return '<div class="recap-card"><svg id="mini' + i + '" viewBox="0 0 120 110" aria-hidden="true"></svg><div><h3>' + esc(r.t) + '</h3><p>' + esc(r.d) + '</p></div></div>'; }).join('') +
+    '</div><p class="muted" style="margin-top:12px">Simplified model for understanding trends, not for reading real instrument values.</p>';
+}
+function miniMap(cam) {
+  var W = 120, H = 110, pad = 8, s = Math.min((W - 2 * pad) / (cam.r1 - cam.r0), (H - 2 * pad) / (cam.x1 - cam.x0));
+  var cr = (cam.r0 + cam.r1) / 2, cx = (cam.x0 + cam.x1) / 2;
+  return { s: s, px: function (R) { return W / 2 + (R - cr) * s; }, py: function (X) { return H / 2 - (X - cx) * s; } };
+}
+function miniLocus(m, f1, eta, cls) {
+  var pts = [], a = Math.log(0.02), b = Math.log(f1 || FMAX);
+  for (var i = 0; i <= 120; i++) pts.push(Zn(Math.exp(a + (b - a) * i / 120), eta || ETA));
+  return '<path d="' + polyline(pts, m) + '" class="' + (cls || 'p-locus p-thin') + '"/>';
+}
+function miniDot(m, P, col) { return '<circle cx="' + m.px(P.R) + '" cy="' + m.py(P.X) + '" r="4.5" style="fill:' + (col || 'var(--dot)') + ';stroke:var(--panel);stroke-width:1.5"/>'; }
+function miniAxes(m) { return '<line class="ax" x1="' + m.px(0) + '" y1="' + m.py(0) + '" x2="' + m.px(0.75) + '" y2="' + m.py(0) + '"/><line class="ax" x1="' + m.px(0) + '" y1="' + m.py(0) + '" x2="' + m.px(0) + '" y2="' + m.py(1.08) + '"/>'; }
+function miniAngle(m, f) {
+  var P = Zn(f, ETA), d = sepDirs(f), x = m.px(P.R), y = m.py(P.X), L = 20;
+  return '<line x1="' + x + '" y1="' + y + '" x2="' + (x + d.lift.R * L) + '" y2="' + (y - d.lift.X * L) + '" style="stroke:var(--lift);stroke-width:2"/>' +
+    '<line x1="' + x + '" y1="' + y + '" x2="' + (x + d.loc.R * L) + '" y2="' + (y - d.loc.X * L) + '" style="stroke:var(--locus);stroke-width:2"/>' +
+    '<text x="' + (x + 8) + '" y="' + (y + 14) + '" style="font:700 10px var(--mono);fill:var(--ink)">' + Math.round(d.deg) + '&deg;</text>';
+}
+function renderRecap(t) {
+  var full = { r0: -0.05, r1: 0.75, x0: -0.04, x1: 1.08 }, loc = { r0: -0.03, r1: 0.5, x0: 0.05, x1: 1.06 };
+  var h, m, ph, P;
+  m = miniMap(full); ph = (t % 4) / 4;
+  var e = $('mini0'); if (!e) return;
+  P = ph < 0.5 ? { R: lerp(0.15, 0.5, ease(ph * 2)), X: 0.45 } : { R: 0.5, X: lerp(0.45, 0.85, ease((ph - 0.5) * 2)) };
+  h = miniAxes(m) + '<text x="' + m.px(0.3) + '" y="' + (m.py(0) - 4) + '" style="font-size:9px;fill:' + (ph < 0.5 ? 'var(--hl)' : 'var(--ink-faded)') + '">heat &rarr;</text>' +
+    '<text x="' + (m.px(0) + 4) + '" y="' + m.py(1.0) + '" style="font-size:9px;fill:' + (ph >= 0.5 ? 'var(--hl)' : 'var(--ink-faded)') + '">stored &uarr;</text>' + miniDot(m, P);
+  e.innerHTML = h;
+  ph = (t % 3) / 3; P = Zn(FM.al, ETA * ease(clamp(ph * 1.4, 0, 1)));
+  $('mini1').innerHTML = miniAxes(m) + '<circle cx="' + m.px(0) + '" cy="' + m.py(1) + '" r="4" style="fill:var(--panel);stroke:var(--ink);stroke-width:1.5"/>' + miniDot(m, P);
+  m = miniMap(loc); ph = (t % 5) / 5;
+  var fe = Math.exp(lerp(Math.log(0.03), Math.log(FMAX), ease(clamp(ph * 1.25, 0, 1))));
+  $('mini2').innerHTML = miniAxes(m) + miniLocus(m, fe) + miniDot(m, Zn(fe, ETA));
+  ph = (t % 3.5) / 3.5;
+  $('mini3').innerHTML = miniAxes(m) + miniLocus(m, null, ETA, 'p-locus p-thin p-faint') + '<line x1="' + m.px(Zn(FM.cu, ETA).R) + '" y1="' + m.py(Zn(FM.cu, ETA).X) + '" x2="' + m.px(0) + '" y2="' + m.py(1) + '" class="p-lift p-thin" stroke-dasharray="3 3"/>' + miniDot(m, Zn(FM.cu, ETA * (1 - ease(clamp(ph * 1.3, 0, 1)))));
+  $('mini4').innerHTML = miniAxes(m) + miniLocus(m, null, ETA, 'p-locus p-thin p-faint') + miniAngle(m, FM.cu) + miniAngle(m, FM.ti);
+  ph = (t % 5) / 5; var kHz = Math.exp(lerp(Math.log(100), Math.log(1000), ph < 0.5 ? ease(ph * 2) : 1 - ease((ph - 0.5) * 2)));
+  var fT = fOf(1, kHz), dm = depthMM(1, kHz);
+  $('mini5').innerHTML = miniAxes(m) + miniLocus(m, null, ETA, 'p-locus p-thin p-faint') + miniAngle(m, fT) + miniDot(m, Zn(fT, ETA)) +
+    '<rect x="70" y="92" width="44" height="6" rx="3" style="fill:var(--grid)"/><rect x="70" y="92" width="' + (44 * dm / 2.2) + '" height="6" rx="3" style="fill:var(--field)"/><text x="70" y="88" style="font-size:9px;fill:var(--ink-soft)">depth</text>' +
+    '<text x="70" y="106" style="font-size:9px;fill:var(--ink-soft)">' + (kHz >= 1000 ? '1 MHz' : Math.round(kHz) + ' kHz') + '</text>';
+}
+
+/* ===================== quiz ===================== */
+var QUIZ = [
+  { s: 0, q: 'On the impedance plane, what does moving the dot to the right mean?', o: ['More energy is stored in the coil’s magnetic field.', 'More energy is lost as heat.', 'The test frequency went up.', 'The coil’s inductance went up.'], a: 1,
+    x: 'The horizontal axis is resistance, which counts energy lost as heat. Stored field energy is on the vertical axis, and inductance is part of reactance, which is also vertical.' },
+  { s: 1, q: 'With the coil held in air, far from any metal, where does the dot sit?', o: ['At the origin.', 'Far right and low.', 'High on reactance, with almost no resistance.', 'At the furthest right point of the conductivity curve.'], a: 2,
+    x: 'In air nothing is heated, so resistance is near zero, and all of the field is stored, so reactance is at its highest. This is the air point, at one on the normalized reactance axis.' },
+  { s: 1, q: 'A coil is placed on a nonmagnetic conductor. Which way does the dot move from the air point?', o: ['Up and to the right.', 'Straight up.', 'Down and to the right.', 'Straight to the left.'], a: 2,
+    x: 'By Lenz’s law the eddy current field opposes the coil’s field, so stored energy and reactance drop (down). The eddy currents heat the part, which adds resistance (right).' },
+  { s: 2, q: 'Where on the conductivity locus does a material with extremely high conductivity sit?', o: ['At the furthest right point of the curve.', 'Low on the curve, curling back toward the reactance axis.', 'At the air point.', 'At the origin.'], a: 1,
+    x: 'Very high conductivity means huge eddy currents that meet almost no resistance. The field is pushed out strongly (low reactance) but little heat is made, so the curve turns back toward the left edge. It does not reach the origin, because the coil’s field outside the part is still stored.' },
+  { s: 2, q: 'Along the conductivity locus, where is the energy lost as heat greatest?', o: ['At very low conductivity.', 'At very high conductivity.', 'Somewhere in the middle of the curve.', 'It is the same everywhere on the curve.'], a: 2,
+    x: 'At low conductivity little current flows, and at very high conductivity the current meets almost no resistance. Heat peaks in between, which is why the curve bulges to the right in the middle.' },
+  { s: 3, q: 'As the coil lifts away from a conductive part, what does the dot do?', o: ['It retraces the conductivity curve back to the air point.', 'It moves toward the air point along its own, more direct path.', 'It moves away from the air point.', 'It stays put, because the part has not changed.'], a: 1,
+    x: 'Lift-off weakens the coupling without changing the metal, so there is no trip through the heat bulge. The dot heads toward the air point along a separate, more direct route.' },
+  { s: 3, q: 'The paint on a test panel is thicker in one area. On the impedance plane, this mostly looks like:', o: ['A conductivity increase.', 'A higher test frequency.', 'More lift-off.', 'No change, since paint does not conduct.'], a: 2,
+    x: 'A nonconductive coating holds the coil further from the metal. That is lift-off, which is also why eddy currents can measure paint and coating thickness.' },
+  { s: 4, q: 'At one test frequency, which material shows the smallest angle between the lift-off direction and the conductivity locus?', o: ['Copper.', '6061 aluminum.', '2024 aluminum.', 'Titanium.'], a: 3,
+    x: 'Low conductivity metals sit near the top of the curve, where lift-off and conductivity changes point in almost the same direction. Titanium is the hardest of these four to separate from lift-off.' },
+  { s: 5, q: 'Why does an instrument that reads only impedance magnitude struggle with lift-off?', o: ['It cannot detect conductivity changes at all.', 'It sees only the arrow’s length, so a lift-off change and a conductivity change can give the same reading.', 'Lift-off does not change the impedance magnitude.', 'It shows phase but not magnitude.'], a: 1,
+    x: 'Two different moves can end on the same circle around the origin and so give the same magnitude. Only the direction of the move tells them apart, and a magnitude-only instrument cannot see direction.' },
+  { s: 5, q: 'You need to find corrosion on the far side of a thick aluminum skin. What is the best approach?', o: ['Use a high frequency to widen the separation angle.', 'Use a low frequency for deeper penetration, and control lift-off carefully.', 'Keep the frequency and turn up the gain.', 'Any frequency works, because depth does not depend on frequency.'], a: 1,
+    x: 'Far side corrosion is below the surface, so the eddy currents must reach deep, and that needs a low frequency. The price is a smaller separation angle, so lift-off has to be controlled carefully. Gain does not change the angle.' }
+];
+var QZ = { i: 0, ans: [], done: false };
+function buildQuiz() {
+  var v = $('viewQuiz');
+  if (QZ.done) { showResults(); return; }
+  var q = QUIZ[QZ.i], sel = QZ.ans[QZ.i];
+  var h = '<div class="quiz card"><div class="qmeta">Question ' + (QZ.i + 1) + ' of ' + QUIZ.length + '</div><div class="qprog"><i style="width:' + (QZ.i / QUIZ.length * 100) + '%"></i></div>' +
+    '<h2>' + esc(q.q) + '</h2><div class="opts" role="radiogroup">' +
+    q.o.map(function (t, i) { return '<button class="opt" role="radio" aria-checked="' + (sel === i) + '" data-i="' + i + '"><span class="k">' + 'ABCD'[i] + '</span><span>' + esc(t) + '</span></button>'; }).join('') +
+    '</div><div class="row"><button class="btn ghost" id="qBack"' + (QZ.i ? '' : ' disabled') + '>Back</button><button class="btn" id="qNext"' + (sel == null ? ' disabled' : '') + '>' + (QZ.i === QUIZ.length - 1 ? 'Submit quiz' : 'Next') + '</button></div>' +
+    '<p class="muted" style="font-size:13px">Answers and explanations appear after you submit the last question.</p></div>';
+  v.innerHTML = h;
+  v.querySelectorAll('.opt').forEach(function (b) { b.onclick = function () { QZ.ans[QZ.i] = +b.dataset.i; buildQuiz(); }; });
+  $('qBack').onclick = function () { QZ.i--; buildQuiz(); };
+  $('qNext').onclick = function () { if (QZ.i < QUIZ.length - 1) { QZ.i++; buildQuiz(); } else { QZ.done = true; showResults(); } };
+}
+function showResults() {
+  var score = 0, miss = {};
+  QUIZ.forEach(function (q, i) { if (QZ.ans[i] === q.a) score++; else miss[q.s] = 1; });
+  var steps = Object.keys(miss).map(Number).sort();
+  var h = '<div class="quiz"><div class="card"><div class="eyebrow">Quiz results</div><div class="score">' + score + ' / ' + QUIZ.length + '</div>' +
+    (steps.length ? '<p>Steps to revisit:</p><div class="row">' + steps.map(function (s) { return '<button class="btn ghost" data-s="' + s + '">Step ' + (s + 1) + ': ' + esc(STEP_TITLES[s]) + '</button>'; }).join('') + '</div>'
+      : '<p>Perfect score. Every step is solid.</p>') +
+    '<div class="row"><button class="btn" id="qRetry">Retake quiz</button></div></div><h2 style="font-size:18px;margin:18px 0 6px">Answer key</h2><div class="key">';
+  QUIZ.forEach(function (q, i) {
+    var ok = QZ.ans[i] === q.a;
+    h += '<div class="item ' + (ok ? 'ok' : 'no') + '"><b>' + (i + 1) + '. ' + esc(q.q) + '</b>' +
+      '<div class="ans">Your answer: ' + esc(q.o[QZ.ans[i]] || 'none') + (ok ? ' ✓' : ' ✗') + '</div>' +
+      (ok ? '' : '<div class="ans">Correct answer: <b>' + esc(q.o[q.a]) + '</b></div>') +
+      '<div class="muted">' + esc(q.x) + ' <span style="white-space:nowrap">(Step ' + (q.s + 1) + ')</span></div></div>';
+  });
+  h += '</div></div>';
+  $('viewQuiz').innerHTML = h;
+  $('viewQuiz').querySelectorAll('[data-s]').forEach(function (b) { b.onclick = function () { setView('lesson'); startIfNeeded(); runStep(+b.dataset.s); }; });
+  $('qRetry').onclick = function () { QZ.i = 0; QZ.ans = []; QZ.done = false; buildQuiz(); };
+}
+
+/* ===================== wiring ===================== */
+$('startBtn').onclick = function () {
+  startIfNeeded();
+  if (synth) { try { var u = new SpeechSynthesisUtterance(' '); u.volume = 0; synth.speak(u); } catch (e) {} }
+  var mr = maxReachable(); runStep(progress.done.length && mr < 6 && progress.done.indexOf(mr) < 0 ? mr : 0);
+};
+$('playBtn').onclick = function () { if (P.items) setPaused(!paused); else if (paused) setPaused(false); };
+$('replayBtn').onclick = replaySegment;
+$('speedSel').onchange = function () { speed = +this.value; };
+$('muteBtn').onclick = function () { muted = !muted; if (muted) { stopSpeech(); P.speechDone = true; } updateControls(); };
+['Lesson', 'Sandbox', 'Recap', 'Quiz'].forEach(function (n) { $('tab' + n).onclick = function () { setView(n.toLowerCase()); }; });
+var themes = ['auto', 'light', 'dark'], themeI = 0;
+try { themeI = Math.max(0, themes.indexOf(localStorage.getItem('et-ip-theme') || 'auto')); } catch (e) {}
+function applyTheme() {
+  var t = themes[themeI];
+  if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
+  $('themeBtn').textContent = 'Theme: ' + t; dirty = true;
+}
+$('themeBtn').onclick = function () { themeI = (themeI + 1) % 3; try { localStorage.setItem('et-ip-theme', themes[themeI]); } catch (e) {} applyTheme(); };
+document.addEventListener('keydown', function (e) {
+  if (view !== 'lesson' || /input|textarea|select/i.test(e.target.tagName)) return;
+  if (e.code === 'Space' && e.target.tagName !== 'BUTTON') { e.preventDefault(); $('playBtn').click(); }
+});
+if (window.ResizeObserver) new ResizeObserver(function () { dirty = true; }).observe($('video'));
+window.addEventListener('resize', function () { dirty = true; });
+document.addEventListener('visibilitychange', function () { if (document.hidden && P.items && !paused) setPaused(true); });
+
+var lastT = performance.now();
+function loop(now) {
+  var dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
+  if (view === 'lesson') playerTick(dt);
+  if (view === 'lesson' || view === 'sandbox') {
+    if (dirty || S.inset.eddy > 0) { render(); dirty = false; }
+  }
+  if (view === 'recap') renderRecap(now / 1000);
+  requestAnimationFrame(loop);
+}
+applyTheme(); renderChapters(); renderTabs(); renderInfo(); updateControls();
+/* show the air point and axes behind the start screen */
+S = STEPS[1].setup(); S.air = 1;
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
