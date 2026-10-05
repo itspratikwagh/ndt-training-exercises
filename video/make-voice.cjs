@@ -8,8 +8,12 @@
 // 3. Mixes one narration track: video/audio/<page>-voice.mp3, which the page's player and
 //    video/record.cjs (AUDIO=...) use.
 //
-// Voices (TTS env): pico (default, SVOX Pico en-US), slt (Festival HTS), mbrola (espeak-ng + mbrola us1).
-// Needs: apt install libttspico-utils festival festvox-us-slt-hts espeak-ng mbrola-us1, and ffmpeg (FFMPEG=...).
+// Voices (TTS env):
+//   kokoro (default) - Kokoro v1.0 via kokoro-onnx, voice af_heart (KOKORO_VOICE), offline, Apache 2.0.
+//                      Needs: pip install kokoro-onnx soundfile, and KOKORO_DIR with kokoro-v1.0.onnx +
+//                      voices-v1.0.bin (github.com/thewh1teagle/kokoro-onnx releases, model-files-v1.0).
+//   pico / slt / mbrola - older offline voices (apt: libttspico-utils, festvox-us-slt-hts, mbrola-us1).
+// Also needs ffmpeg (FFMPEG=...).
 const { chromium } = require('playwright');
 const { execFileSync } = require('child_process');
 const fs = require('fs');
@@ -20,7 +24,7 @@ if (!pageFile) { console.error('usage: make-voice.cjs <page.html>'); process.exi
 const ROOT = path.resolve(__dirname, '..');
 const base = path.basename(pageFile, '.html');
 const FFMPEG = process.env.FFMPEG || 'ffmpeg';
-const TTS = process.env.TTS || 'pico';
+const TTS = process.env.TTS || 'kokoro';
 const work = path.join(process.env.TMPDIR || '/tmp', 'voice-' + base);
 fs.mkdirSync(work, { recursive: true });
 fs.mkdirSync(path.join(__dirname, 'audio'), { recursive: true });
@@ -53,9 +57,11 @@ async function readVideo(browser) {
 
   // 1. speak each line (trimmed of the TTS engine's leading/trailing silence)
   const files = [], lens = [];
+  if (TTS === 'kokoro')                          // one model load for all lines
+    execFileSync('python3', [path.join(__dirname, 'kokoro_say.py')], { input: JSON.stringify(v.all.map((c, i) => ({ text: c.speak, out: path.join(work, `raw${i}.wav`) }))), stdio: ['pipe', 'inherit', 'inherit'] });
   v.all.forEach((c, i) => {
     const raw = path.join(work, `raw${i}.wav`), clip = path.join(work, `cue${i}.wav`);
-    speak(c.speak, raw);
+    if (TTS !== 'kokoro') speak(c.speak, raw);
     execFileSync(FFMPEG, ['-y', '-loglevel', 'error', '-i', raw, '-af',
       'silenceremove=start_periods=1:start_threshold=-50dB,areverse,silenceremove=start_periods=1:start_threshold=-50dB,areverse',
       '-ar', '44100', '-ac', '1', clip]);

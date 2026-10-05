@@ -1,83 +1,83 @@
 1
-00:00:00,600 --> 00:00:07,260
+00:00:00,600 --> 00:00:06,960
 Range sets how much sound path the Epoch shows across the screen, from the left edge to the right edge.
 
 2
-00:00:07,260 --> 00:00:15,500
+00:00:06,960 --> 00:00:14,580
 The Epoch is already calibrated for the steel step block. First, drag the probe onto the 0.500 inch step.
 
 3
-00:00:15,500 --> 00:00:21,610
+00:00:14,580 --> 00:00:20,540
 On the screen, the initial pulse is on the left, and the first back-wall echo is in the middle.
 
 4
-00:00:21,610 --> 00:00:30,720
+00:00:20,540 --> 00:00:30,180
 Press F1 for the Basic menu, then P3 to select Range. Each click of the knob now changes the range by 0.01 inch.
 
 5
-00:00:30,720 --> 00:00:37,050
+00:00:30,180 --> 00:00:35,810
 Turn the knob down to 0.700 inch. You can hold the knob down to turn faster.
 
 6
-00:00:37,050 --> 00:00:41,190
+00:00:35,810 --> 00:00:39,120
 How many back-wall echoes do you see? Just one.
 
 7
-00:00:41,190 --> 00:00:50,870
+00:00:39,120 --> 00:00:47,680
 Back-wall echoes from the 0.500 inch step come every half inch: at 0.5, 1.0, 1.5 inches, and so on.
 
 8
-00:00:50,870 --> 00:01:00,480
+00:00:47,680 --> 00:00:55,970
 The screen now ends at 0.700. The echo at 0.5 fits. The next one, at 1.0, is past the right edge.
 
 9
-00:01:00,480 --> 00:01:07,820
+00:00:55,970 --> 00:01:02,790
 Turn up to 1.100 inches. Now the echoes at 0.5 and 1.0 both fit. Two echoes.
 
 10
-00:01:07,820 --> 00:01:13,650
+00:01:02,790 --> 00:01:07,660
 Now guess before you turn. At 1.600 inches, how many will fit?
 
 11
-00:01:13,650 --> 00:01:22,380
+00:01:07,660 --> 00:01:15,400
 The echoes at 0.5, 1.0 and 1.5 are all inside 1.6, so three. Turn the knob and check.
 
 12
-00:01:22,380 --> 00:01:28,880
+00:01:15,400 --> 00:01:20,890
 Three. At 3.100 inches, the echoes up to 3.0 fit: six of them.
 
 13
-00:01:28,880 --> 00:01:37,430
+00:01:20,890 --> 00:01:28,300
 And at 5.100 inches, ten. The last ones are small, because every trip through the steel loses a little energy.
 
 14
-00:01:37,430 --> 00:01:48,360
+00:01:28,300 --> 00:01:38,820
 One more thing to watch. Look at the G1 thickness box at the top of the screen. Gate 1 is on the first back-wall echo, and it reads 0.500 inch.
 
 15
-00:01:48,360 --> 00:01:53,810
+00:01:38,820 --> 00:01:44,270
 Keep your eye on it while we change the range. Down to 2.500 inches.
 
 16
-00:01:53,810 --> 00:01:56,960
+00:01:44,270 --> 00:01:47,420
 Down to 0.700.
 
 17
-00:01:56,960 --> 00:02:00,110
+00:01:47,420 --> 00:01:50,570
 And up to 4.000.
 
 18
-00:02:00,110 --> 00:02:09,560
+00:01:50,570 --> 00:02:00,060
 The echoes slid across the screen, but the reading stayed 0.500 every time. The back wall is still 0.500 inch below the probe.
 
 19
-00:02:09,560 --> 00:02:13,530
+00:02:00,060 --> 00:02:03,440
 Range changes what you see, not what you measure.
 
 20
-00:02:13,530 --> 00:02:23,910
+00:02:03,440 --> 00:02:13,770
 A small range spreads one echo out so you can see it clearly. A large range shows several back-wall echoes, which you need for a two-back-wall calibration.
 
 21
-00:02:23,910 --> 00:02:28,040
+00:02:13,770 --> 00:02:17,760
 Now try it yourself on the Epoch below.
