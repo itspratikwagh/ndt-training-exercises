@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UT Third Leg Scan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page: #f6f3ee; --panel: #fff; --ink: #1f1d1b; --ink-soft: #57524d; --ink-faded: #8f8882; --rule: #ddd6cc;
+    --red: #A82020; --red-deep: #7a1818; --navy: #0f1c2b; --yellow: #e8b923; --blue: #2a6fdb;
+    --good: #0d904f; --good-tint: #e6f4ea; --bad: #d93025;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Manrope', system-ui, sans-serif; background: var(--page); color: var(--ink); line-height: 1.5; min-height: 100vh; }
+  header { background: linear-gradient(135deg, var(--red-deep), var(--red)); color: #fff; padding: 1.4rem 1.5rem 1.2rem; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  header .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; margin-bottom: 6px; }
+  header h1 { font-size: clamp(22px, 3.4vw, 30px); font-weight: 800; letter-spacing: -0.01em; line-height: 1.15; text-wrap: balance; }
+  header a.back { color: #fff; opacity: 0.8; font-size: 13px; text-decoration: none; display: inline-block; margin-top: 8px; }
+  header a.back:hover { opacity: 1; text-decoration: underline; }
+  body.embed header a.back { display: none; }
+  main { padding: 1.25rem 1rem 3rem; }
+  .lede { color: var(--ink-soft); font-size: 15px; max-width: 820px; margin-bottom: 0.9rem; }
+  h2 { font-size: 20px; font-weight: 800; margin: 2rem 0 0.5rem; }
+  button { font: 700 14px 'Manrope', sans-serif; border-radius: 8px; border: 1px solid var(--rule); background: #fff; color: var(--ink); cursor: pointer; padding: 8px 12px; touch-action: manipulation; }
+  button:hover { border-color: var(--red); }
+  button:focus-visible { outline: 3px solid rgba(42,111,219,0.4); outline-offset: 1px; }
+
+  .trainer { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 12px; align-items: start; }
+  .stage { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 10px; position: relative; }
+  .stage canvas { display: block; width: 100%; height: auto; border-radius: 8px; touch-action: none; outline: none; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+  .toolbar .lab { font: 700 11px 'JetBrains Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faded); }
+  .probes button.on { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .probes button.glow { box-shadow: 0 0 0 3px #ffd84d; animation: glow 1s ease-in-out infinite alternate; }
+  @keyframes glow { from { box-shadow: 0 0 0 2px rgba(255,216,77,0.5); } to { box-shadow: 0 0 0 5px #ffd84d; } }
+  /* the controls sit in the gap between the plate and the A-scan, right under the probe */
+  .cvwrap { position: relative; }
+  .cvwrap .toolbar { position: absolute; left: 5.4%; right: 5%; top: 48%; margin: 0; }
+  @media (max-width: 700px) {               /* small screens: controls go just above the plate */
+    .cvwrap { display: flex; flex-direction: column; }
+    .cvwrap .toolbar { position: static; order: -1; margin: 0 0 8px; }
+  }
+  .help { font-size: 13px; color: var(--ink-soft); margin-top: 8px; }
+
+  .side { display: grid; gap: 10px; }
+  .panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 12px; }
+  .ph { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .steps { list-style: none; counter-reset: s; display: grid; gap: 6px; }
+  .steps li { counter-increment: s; position: relative; padding: 7px 10px 7px 36px; border-radius: 8px; border: 1px solid transparent; font-size: 14px; color: var(--ink-faded); }
+  .steps li::before { content: counter(s); position: absolute; left: 8px; top: 7px; width: 20px; height: 20px; border-radius: 50%; border: 2px solid currentColor; display: grid; place-items: center; font: 700 11px 'JetBrains Mono', monospace; }
+  .steps li.now { color: var(--ink); border-color: var(--yellow); background: #fff8e1; font-weight: 600; }
+  .steps li.done { color: var(--good); }
+  .steps li.done::before { content: '✓'; background: var(--good); color: #fff; border-color: var(--good); }
+  .done { margin-top: 10px; padding: 10px 12px; border-radius: 8px; background: var(--good-tint); border: 1px solid var(--good); color: var(--good); font-weight: 700; font-size: 14px; }
+  .done[hidden] { display: none; }
+  .row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+  /* question card: top of the side column, so the plate and the A-scan stay in view */
+  .qpop { background: #fff; border: 2px solid var(--yellow); border-radius: 12px; padding: 12px 14px; box-shadow: 0 6px 18px rgba(20,16,10,0.16); animation: pop 0.25s ease-out; }
+  @keyframes pop { from { transform: scale(0.97); box-shadow: 0 0 0 6px rgba(232,185,35,0.45); } }
+  .qpop[hidden] { display: none; }
+  .qpop .ql { font: 700 10.5px 'JetBrains Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; color: var(--red); margin-bottom: 4px; }
+  .qpop .qq { font-size: 15.5px; font-weight: 800; line-height: 1.3; text-wrap: balance; }
+  .qpop .qs { font-size: 13px; color: var(--ink-soft); margin-top: 4px; }
+  .qpop .ex { font-size: 13.5px; color: var(--ink-soft); margin-top: 8px; }
+  .qpop .fb { font-size: 13.5px; margin-top: 8px; }
+  .qpop .opts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .qpop .opts button { flex: 1 1 auto; }
+  .qpop .opts button.sel { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .qpop .go { margin-top: 10px; width: 100%; background: var(--red); color: #fff; border-color: var(--red); }
+  .ok { color: var(--good); font-weight: 800; } .no { color: var(--bad); font-weight: 800; }
+  .card { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 18px; }
+  .card ul { padding-left: 1.2em; font-size: 15px; color: var(--ink-soft); display: grid; gap: 4px; }
+  .card b { color: var(--ink); }
+  @media (max-width: 900px) {
+    .trainer { grid-template-columns: 1fr; }
+    main { padding: 1rem 0.6rem 3rem; }
+  }
+  .rng { display: flex; align-items: center; gap: 10px; flex: 1 1 300px; margin-left: 18px; padding-left: 18px; border-left: 1px solid var(--rule); }
+  @media (max-width: 700px) { .rng { margin-left: 0; padding-left: 0; border-left: 0; } }
+  .rng input { flex: 1; accent-color: var(--red); height: 28px; }
+  .rng output { font: 700 15px 'JetBrains Mono', monospace; min-width: 3.2em; text-align: right; }
+  .rng.glow { outline: 3px solid #ffd84d; outline-offset: 4px; border-radius: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Ultrasonic Testing · Level I · Angle Beam</div>
+    <h1>One-Sided Access: Find the Far Side with Leg 3</h1>
+    <a class="back" href="index.html">← Exercise Hub</a>
+  </div>
+</header>
+<main class="wrap">
+  <p class="lede">A stiffener next to this weld means you can only scan from one side. With a 30° bevel and a 60° wedge, legs 1 and 2 can't reach the top of the far-side fusion face from the base metal, but leg 3 can, as long as the A-scan range is long enough to show it. Then compare it with leg 1 from the flush cap.</p>
+  <div class="trainer">
+    <div class="stage" id="stage">
+      <div class="cvwrap">
+        <canvas id="cv" width="1500" height="1050" aria-label="Side view of a welded 1 inch plate with a stiffener, an angle-beam probe, and the A-scan below"></canvas>
+        <div class="toolbar">
+          <span class="lab">60° wedge · 30° bevel</span>
+          <label class="rng" id="rngBox"><span class="lab">A-scan range</span><input type="range" id="rng" min="2" max="8" step="0.5" value="4" aria-label="A-scan range in inches of sound path"><output id="rngOut">4.0″</output></label>
+        </div>
+      </div>
+      <div class="help" id="help">Drag the probe along the plate. Change the A-scan range with the slider.</div>
+    </div>
+    <aside class="side">
+      <div class="qpop" id="card" hidden aria-live="polite"></div>
+      <div class="panel">
+        <div class="ph"><b>Steps</b></div>
+        <ol class="steps" id="steps"></ol>
+        <div class="done" id="done" hidden>✓ Exercise complete. One side only: leg 1 from a flush cap, or leg 3 with a longer range.</div>
+        <div class="row"><button id="reset">Start over</button></div>
+      </div>
+    </aside>
+  </div>
+  <h2>Key points</h2>
+  <div class="card"><ul>
+    <li>Sometimes you can only scan from <b>one side</b> of a weld: a stiffener, flange, nozzle or other structure is in the way.</li>
+    <li>With a 30° bevel and a 60° wedge, <b>leg 1</b> meets only the <b>lower</b> part of the far-side fusion face. To reach higher, the probe would have to sit on the weld.</li>
+    <li><b>Leg 3</b> runs the same way as leg 1 (down at 60°) after leg 2 bounces off the top surface, so it meets the <b>upper</b> far-side face square-on. It bounces off the top surface right where leg 1's probe would sit, so it needs the cap ground flush.</li>
+    <li>With the cap ground flush, <b>leg 1 from the cap</b> reaches the same flaw with a much shorter sound path and a stronger echo, if your procedure allows scanning on the weld.</li>
+    <li>One skip (leg 1 + leg 2) at 60° in 1 inch plate is <b>4.000″</b> of sound path. A leg 3 echo comes after that, so <b>set the range past one skip</b> or the echo is off the screen.</li>
+    <li>On leg 3 the sound is heading down from the top again: depth = sound path × cos 60° − 2 × thickness. The instrument's leg and depth readouts do this for you.</li>
+  </ul></div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  // ---------- geometry (inches) ----------
+  const T = 1.0, L = 7.5, WC = 4.6, GAP = 0.06, BEVEL = 30, ANG = 60;
+  const FLAW = { side: 1, y: 0.30, half: 0.15 };       // lack of fusion on the upper part of the far-side fusion face
+  const BEAM_W = 0.12;
+  const W = 1000, H = 700, K = 1.5;
+  const PX = 52, S = 110, TOPY = 176;
+  const X = x => PX + x * S, Y = y => TOPY + y * S;
+  const AS = { x: 64, y: 500, w: 880, h: 168 };
+  const C = { ink: '#1f1d1b', soft: '#57524d', faded: '#8f8882', red: '#A82020', blue: '#2a6fdb', good: '#0d904f', orange: '#d9731a', navy: '#0b1320', trace: '#f5e663', flaw: '#b3121b' };
+  const SANS = "'Manrope', system-ui, sans-serif", MONO = "'JetBrains Mono', ui-monospace, monospace";
+  const IN = v => v.toFixed(3) + '″', RAD = Math.PI / 180;
+  const SKIP_S = 2 * T / Math.cos(ANG * RAD);           // one skip (legs 1 + 2) of sound path: 4.000″
+
+  const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  const card = document.getElementById('card'), stepsEl = document.getElementById('steps');
+  const rngEl = document.getElementById('rng'), rngOut = document.getElementById('rngOut'), rngBox = document.getElementById('rngBox');
+  const st = { xp: null, legs: 2, range: 4, drag: null };
+
+  // ---------- weld ----------
+  const tb = Math.tan(BEVEL * RAD);
+  const capL = WC - GAP - T * tb, capR = WC + GAP + T * tb;
+  const STIFF = { x1: capR + 0.25, x2: capR + 0.55, h: 1.05 };
+  const faceX = (side, y) => WC + side * (GAP + (T - y) * tb);
+  const flawSeg = () => {
+    const b = BEVEL * RAD, ux = FLAW.side * Math.sin(b), uy = -Math.cos(b), cx = faceX(FLAW.side, FLAW.y), cy = FLAW.y;
+    return { cx, cy, ux, uy, x1: cx - ux * FLAW.half, y1: cy - uy * FLAW.half, x2: cx + ux * FLAW.half, y2: cy + uy * FLAW.half };
+  };
+  // ---------- sound path: legs 1..n, stopped by the flaw if it runs into it ----------
+  function legs(xp, n) {
+    const a = ANG * RAD, out = [], g = flawSeg();
+    let x = xp, y = 0, dx = Math.sin(a), dy = Math.cos(a), s = 0;
+    for (let leg = 1; leg <= n; leg++) {
+      let t = dy > 0 ? (T - y) / dy : -y / dy;
+      const tX = (L - x) / dx; let end = false;
+      if (tX < t) { t = tX; end = true; }
+      let hit = null;
+      const den = dx * g.uy - dy * g.ux;
+      if (Math.abs(den) > 1e-9) {
+        const tt = ((g.cx - x) * g.uy - (g.cy - y) * g.ux) / den, u = ((g.cx - x) * dy - (g.cy - y) * dx) / den;
+        if (tt > 1e-6 && tt <= t && Math.abs(u) < FLAW.half + 0.3) {
+          const dev = Math.acos(Math.min(1, Math.abs(dx * -g.uy + dy * g.ux))) / RAD;
+          hit = { t: tt, u, dev, x: x + dx * tt, y: y + dy * tt, near: Math.abs(u) > FLAW.half };
+        }
+      }
+      const tl = hit && !hit.near ? hit.t : t;
+      out.push({ leg, x1: x, y1: y, x2: x + dx * tl, y2: y + dy * tl, s1: s, len: tl, hit });
+      if ((hit && !hit.near) || end) break;
+      s += t; x += dx * t; y += dy * t; dy = -dy;
+    }
+    return out;
+  }
+  function echo() {                                     // the flaw echo for the probe where it is (whether or not it fits on the screen)
+    if (st.xp == null) return null;
+    for (const g of legs(st.xp, st.legs)) {
+      if (!g.hit) continue;
+      const h = g.hit, s = g.s1 + h.t;
+      const amp = 100 * Math.exp(-Math.pow(h.dev / 10, 2)) * Math.exp(-Math.pow(h.u / 0.2, 2)) * Math.exp(-s / 14);
+      if (amp > 2) return { s, amp, depth: h.y, leg: g.leg, x: h.x, y: h.y, dev: h.dev };
+    }
+    return null;
+  }
+  const onScreen = e => e && e.amp > 20 && e.s <= st.range - 0.05;
+  const capSpot = () => faceX(FLAW.side, FLAW.y) - FLAW.y * Math.tan(ANG * RAD);             // leg 1 onto the middle of the flaw, probe on the cap
+  const maxX = () => ['cap', 'end'].includes(q.phase) ? STIFF.x1 - 0.2 : capL - 0.25;
+  const legSpot = () => faceX(FLAW.side, FLAW.y) - (2 * T + FLAW.y) * Math.tan(ANG * RAD);   // leg 3 onto the middle of the flaw
+
+  // ---------- lesson flow ----------
+  const fresh = () => ({ phase: 'why', fb: '', answered: {}, scanned: 0, leg3: null, leg1: null });
+  let q = fresh();
+  const STEPS = [
+    { text: 'Why can you only scan from one side?', done: () => !!q.answered.why },
+    { text: 'Scan with <b>legs 1 and 2</b> for the flaw on the upper far-side face.', done: () => !!q.answered.scan12 },
+    { text: 'Slide the probe back until <b>leg 3</b> hits the flaw. Why is the screen flat?', done: () => !!q.answered.leg3 },
+    { text: 'Increase the <b>A-scan range</b> until the echo shows up.', done: () => !!q.answered.range },
+    { text: 'Which leg is the echo on?', done: () => !!q.answered.leg },
+    { text: 'The cap is flush: put the probe <b>on the weld</b> and compare leg 1 with leg 3.', done: () => !!q.answered.cap }
+  ];
+  function renderSteps() {
+    const i = STEPS.findIndex(s => !s.done());
+    stepsEl.innerHTML = STEPS.map((s, j) => `<li class="${i === -1 || j < i ? 'done' : j === i ? 'now' : ''}">${s.text}</li>`).join('');
+    document.getElementById('done').hidden = !(i === -1 && q.phase === 'end');
+  }
+  function show(html) {
+    card.hidden = false; card.innerHTML = html;
+    card.querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', () => act(b.dataset.a, b.dataset.v)));
+  }
+  const opts = (name, list) => `<div class="opts">${list.map(([v, t]) => `<button data-a="${name}" data-v="${v}">${t}</button>`).join('')}</div>`;
+  const pct = a => Math.round(a) + '%';
+  const live = () => {
+    const e = echo(), g = st.xp == null ? null : legs(st.xp, st.legs).find(g => g.hit && !g.hit.near && g.hit.dev > 5);
+    const glance = g ? ` Leg ${g.leg} hits the flaw at ${Math.round(90 - g.hit.dev)}°, not 90°: follow the green line.` : '';
+    return (onScreen(e) ? `Echo: <b>${pct(e.amp)}</b> at ${IN(e.s)}.` : 'Echo on screen: <b>none</b>.') + glance;
+  };
+  function render() {
+    renderSteps(); paintTools();
+    switch (q.phase) {
+      case 'why':
+        show(`<div class="ql">One-sided access</div><div class="qq">This weld can only be scanned from the left. Why?</div>${opts('why', [['stiff', 'A stiffener is welded right next to the weld: no room for the probe'], ['thick', 'The plate on the right is thicker'], ['dir', 'Sound can only travel left to right']])}<div class="fb">${q.fb}</div>`); break;
+      case 'why-ok':
+        show(`<div class="ql">Right</div><div class="qq"><span class="ok">The stiffener is in the way.</span></div><div class="ex">One-sided access is common: stiffeners, flanges, nozzles, or a structure next to the weld. The weld cap here has been ground flush.</div><button class="go" data-a="next" data-v="place">Next →</button>`); break;
+      case 'place':
+        show(`<div class="ql">Legs 1 and 2</div><div class="qq">Drag the probe onto the plate, left of the weld.</div><div class="qs">The A-scan range is ${st.range.toFixed(1)}″: exactly one skip (legs 1 and 2) of a 60° beam in 1 inch plate.</div>`); break;
+      case 'scan12':
+        show(`<div class="ql">Scan with legs 1 and 2</div><div class="qq">Look for the flaw on the <b>upper</b> part of the far-side fusion face. Slide the probe all the way along and watch where legs 1 and 2 go.</div><div class="qs">${live()} Scanned ${Math.min(q.scanned, 2).toFixed(1)}″ of 2″.</div>${q.scanned >= 2 ? '<button class="go" data-a="next" data-v="scan12-q">I\'ve scanned it →</button>' : ''}`); break;
+      case 'scan12-q':
+        show(`<div class="ql">Question</div><div class="qq">Legs 1 and 2 never found it. Why?</div>${opts('s12', [['low', 'Leg 1 only reaches the lower part of the far-side face, and leg 2 hits the flaw at a glancing angle'], ['gain', 'The gain is too low'], ['wedge', 'The 60° wedge is wrong for a 30° bevel']])}<div class="fb">${q.fb}</div>`); break;
+      case 'scan12-ok':
+        show(`<div class="ql">Out of reach</div><div class="qq"><span class="ok">Right.</span> To reach the upper far-side face with leg 1 from here, the probe would have to sit on the weld (you will try that at the end). Leg 2 does reach the flaw, but it meets it at 30°, so the sound bounces off toward the top surface instead of coming back.</div><div class="ex">But the sound keeps going. After leg 2 bounces off the top surface (the ground-flush cap), <b>leg 3</b> heads down again at 60°, the same way as leg 1.</div><button class="go" data-a="next" data-v="leg3">Show leg 3 →</button>`); break;
+      case 'leg3':
+        show(`<div class="ql">Leg 3</div><div class="qq">Slide the probe <b>back, away from the weld</b>, until leg 3 runs into the flaw.</div><div class="qs">${live()}</div>`); break;
+      case 'leg3-q':
+        show(`<div class="ql">Question</div><div class="qq">Leg 3 hits the flaw square-on (green circle), but the A-scan is flat. Why?</div>${opts('l3', [['range', 'The echo is past the right edge of the screen'], ['weak', 'Leg 3 has lost too much energy to give an echo'], ['angle', 'Leg 3 doesn\'t meet the face square-on']])}<div class="fb">${q.fb}</div>`); break;
+      case 'range':
+        show(`<div class="ql">Increase the range</div><div class="qq">The screen shows only ${st.range.toFixed(1)}″ of sound path. Turn the <b>A-scan range</b> slider up until the echo shows up.</div><div class="qs">Leg 1 + leg 2 = ${IN(SKIP_S)}; leg 3 comes after that.</div>`); break;
+      case 'leg-q': {
+        const e = echo();
+        show(`<div class="ql">There it is</div><div class="qq">${pct(e.amp)} at ${IN(e.s)}. Which leg is this echo on?</div><div class="qs">The dashed line on the screen marks the end of leg 2 (${IN(SKIP_S)}).</div>${opts('leg', [['1', 'Leg 1'], ['2', 'Leg 2'], ['3', 'Leg 3']])}<div class="fb">${q.fb}</div>`); break;
+      }
+      case 'leg-ok': {
+        const e = echo();
+        show(`<div class="ql">Leg 3</div><div class="qq"><span class="ok">Right: past ${IN(SKIP_S)} is leg 3.</span></div><div class="ex">On leg 3 the sound is heading down from the top again, so the DEPTH readout shows ${IN(e.depth)} below the surface: the upper part of the far-side face. With one-sided access, set the range past one skip and use leg 3. It's weaker (it has traveled farther) and needs a flat cap to bounce off.</div><button class="go" data-a="next" data-v="cap">Next →</button>`); break;
+      }
+      case 'cap':
+        show(`<div class="ql">Leg 1 from the cap</div><div class="qq">The cap is ground flush, so the probe can sit <b>on the weld</b>. Slide the probe onto the cap until leg 1 hits the same flaw.</div><div class="qs">${live()} Leg 3 gave ${pct(q.leg3.amp)}.</div>`); break;
+      case 'cap-q':
+        show(`<div class="ql">Compare</div><div class="qq">Leg 1: <b>${pct(q.leg1.amp)}</b> at ${IN(q.leg1.s)}. Leg 3: <b>${pct(q.leg3.amp)}</b> at ${IN(q.leg3.s)}. Same flaw, same depth (${IN(q.leg1.depth)}). Why is leg 1 stronger?</div>${opts('cap', [['path', 'Its sound path is much shorter, so less spread and attenuation'], ['square', 'Leg 1 meets the face more square-on'], ['cap', 'The weld metal makes the echo louder']])}<div class="fb">${q.fb}</div>`); break;
+      case 'cap-ok':
+        show(`<div class="ql">Leg 1 or leg 3?</div><div class="qq"><span class="ok">Right.</span> Both meet the face square-on, but leg 3 traveled almost 8 times as far.</div><div class="ex">Leg 3 bounces off the top surface at the same spot where leg 1's probe sits, so both need the flush cap. If your procedure lets you scan on a flush weld, leg 1 from the cap gives the stronger echo. If it doesn't, or the cap isn't smooth enough to couple to, leg 3 from the base metal still finds the flaw: sound bounces off a surface you couldn't couple a probe to. Either way, set the range to fit the leg you use.</div><button class="go" data-a="next" data-v="end">Finish →</button>`); break;
+      case 'end': {
+        const e = echo();
+        show(`<div class="ql">Exercise complete · free play</div><div class="qq">One side only? Leg 1 from a flush cap, or leg 3 with the range set past one skip.</div><div class="ex">Keep playing: slide the probe (on the base metal or the cap) and change the range. Watch which leg each echo is on, and what happens to the echo when the range is too short.</div><div class="fb">${onScreen(e) ? `Echo ${pct(e.amp)} on leg ${e.leg}, depth ${IN(e.depth)}.` : e && e.amp > 20 ? `Leg ${e.leg} hits the flaw, but the echo at ${IN(e.s)} is off the screen (range ${st.range.toFixed(1)}″).` : 'No flaw echo here.'}</div>`); break;
+      }
+    }
+  }
+  function act(a, v) {
+    if (a === 'why') { if (v === 'stiff') { q.answered.why = true; q.fb = ''; q.phase = 'why-ok'; } else q.fb = v === 'thick' ? '<span class="no">Both plates are 1 inch.</span> Look at what\'s sitting on top of the plate, right of the weld.' : '<span class="no">Sound goes whichever way the wedge points.</span> Turn the probe around and it scans right to left. Look at the plate, right of the weld.'; }
+    if (a === 's12') { if (v === 'low') { q.answered.scan12 = true; q.fb = ''; q.phase = 'scan12-ok'; } else q.fb = v === 'gain' ? '<span class="no">More gain only makes echoes taller.</span> No sound is coming back at all. Look at where legs 1 and 2 go.' : '<span class="no">It\'s the right wedge:</span> 30° + 60° = 90°. The problem is where the legs can reach.'; }
+    if (a === 'l3') { if (v === 'range') { q.answered.leg3 = true; q.fb = ''; q.phase = 'range'; } else q.fb = v === 'weak' ? '<span class="no">It has lost some, not all.</span> Leg 1 + leg 2 is already ' + IN(SKIP_S) + ' of sound path, and leg 3 adds more. Where would that land on a ' + st.range.toFixed(1) + '″ screen?' : '<span class="no">It does:</span> leg 3 runs the same way as leg 1, square-on to the far-side face. See the green circle.'; }
+    if (a === 'cap') { if (v === 'path') { q.answered.cap = true; q.fb = ''; q.phase = 'cap-ok'; } else q.fb = v === 'square' ? '<span class="no">Both are square-on:</span> leg 3 runs exactly the same way as leg 1. Compare the sound paths.' : '<span class="no">Weld metal doesn\'t add energy.</span> Compare how far the sound traveled each time.'; }
+    if (a === 'leg') { if (v === '3') { q.answered.leg = true; q.fb = ''; q.phase = 'leg-ok'; } else q.fb = '<span class="no">Look at the dashed line on the screen.</span> Everything past ' + IN(SKIP_S) + ' is after leg 1 and leg 2.'; }
+    if (a === 'next') { q.fb = ''; q.phase = v; if (v === 'scan12') q.scanned = 0; if (v === 'leg3') { st.legs = 3; st.xp = 3.0; } }
+    render();
+  }
+  const unlocked = () => ['place', 'scan12', 'leg3', 'cap', 'end'].includes(q.phase);
+  const lockMsg = () => q.phase === 'range' ? 'Turn up the A-scan range first' : q.phase.endsWith('-ok') ? 'Press Next on the card to continue' : 'Answer the question first';
+  let toast = null;
+  const say = t => { toast = { t, at: performance.now() }; };
+
+  // ---------- input ----------
+  const pos = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height }; };
+  const parked = { x: 120, y: 132 };
+  const probeHit = p => { const px = st.xp == null ? parked.x : X(st.xp), py = st.xp == null ? parked.y : TOPY; return p.x > px - 78 && p.x < px + 24 && p.y > py - 112 && p.y < py + 6; };
+  const SNAP = 0.12;
+  function setX(x) {
+    const prev = st.xp, phase0 = q.phase;
+    x = Math.round(Math.min(maxX(), Math.max(0.55, x)) * 100) / 100;
+    const spot = q.phase === 'leg3' ? legSpot() : q.phase === 'cap' ? capSpot() : null;
+    if (spot != null) {
+      const lo = Math.min(prev == null ? x : prev, x), hi = Math.max(prev == null ? x : prev, x);
+      if (spot >= lo - SNAP && spot <= hi + SNAP) x = spot;
+    }
+    st.xp = x;
+    if (q.phase === 'place') q.phase = 'scan12';
+    else if (q.phase === 'scan12' && prev != null) q.scanned += Math.abs(st.xp - prev);
+    if (spot != null && Math.abs(st.xp - spot) < 1e-9) { if (q.phase === 'leg3') { q.leg3 = echo(); q.phase = 'leg3-q'; } else { q.leg1 = echo(); q.phase = 'cap-q'; } }
+    render();
+    if (!unlocked() || q.phase !== phase0) st.drag = null;
+  }
+  cv.addEventListener('pointerdown', e => {
+    const p = pos(e); if (!probeHit(p)) return;
+    if (!unlocked()) { say(lockMsg()); return; }
+    e.preventDefault(); cv.setPointerCapture(e.pointerId);
+    st.drag = { dx: (st.xp == null ? parked.x : X(st.xp)) - p.x, dy: (st.xp == null ? parked.y : TOPY) - p.y, x: p.x, y: p.y };
+  });
+  cv.addEventListener('pointermove', e => {
+    const p = pos(e);
+    cv.style.cursor = st.drag ? 'grabbing' : probeHit(p) ? 'grab' : 'default';
+    if (!st.drag) return;
+    st.drag.x = p.x; st.drag.y = p.y;
+    if (st.xp != null) setX((p.x + st.drag.dx - PX) / S);
+  });
+  cv.addEventListener('pointerup', e => {
+    if (!st.drag) return;
+    const p = pos(e), was = st.drag; st.drag = null;
+    if (st.xp == null && p.y + was.dy > TOPY - 70 && p.y + was.dy < Y(T) + 20 && p.x > PX && p.x < X(maxX())) setX((p.x + was.dx - PX) / S);
+  });
+  cv.tabIndex = 0;
+  cv.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    if (st.xp == null || !unlocked()) { say(st.xp == null && q.phase === 'place' ? 'Drag the probe onto the plate first' : lockMsg()); return; }
+    setX(st.xp + (e.key === 'ArrowLeft' ? -0.05 : 0.05));
+  });
+  const rangeFree = () => ['range', 'end'].includes(q.phase);
+  function paintTools() {
+    rngEl.disabled = !rangeFree();
+    rngBox.classList.toggle('glow', q.phase === 'range');
+  }
+  rngEl.addEventListener('input', () => {
+    st.range = +rngEl.value; rngOut.textContent = st.range.toFixed(1) + '″';
+    if (q.phase === 'range' && onScreen(echo())) { q.answered.range = true; q.phase = 'leg-q'; }
+    render();
+  });
+  document.getElementById('reset').addEventListener('click', () => { q = fresh(); Object.assign(st, { xp: null, legs: 2, range: 4, drag: null }); rngEl.value = 4; rngOut.textContent = '4.0″'; render(); });
+  if (new URLSearchParams(location.search).has('embed')) document.body.classList.add('embed');
+
+  // ---------- drawing ----------
+  function txt(s, x, y, o) { o = o || {}; ctx.font = `${o.w || 600} ${o.size || 14}px ${o.mono ? MONO : SANS}`; ctx.fillStyle = o.c || C.ink; ctx.textAlign = o.a || 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillText(s, x, y); }
+  function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+  // the sound that hits the flaw at an angle: mirror it off the fusion face and follow it to the next surface
+  function bounceOff(g) {
+    const f = flawSeg(), len = Math.hypot(g.x2 - g.x1, g.y2 - g.y1), d0 = { x: (g.x2 - g.x1) / len, y: (g.y2 - g.y1) / len };
+    const n = { x: -f.uy, y: f.ux }, dot = d0.x * n.x + d0.y * n.y;
+    let d = { x: d0.x - 2 * dot * n.x, y: d0.y - 2 * dot * n.y }, p = { x: g.x2, y: g.y2 };
+    const pts = [[X(p.x), Y(p.y)]];
+    for (let i = 0; i < 1; i++) {                  // to the first surface it reaches
+      const tY = d.y > 1e-9 ? (T - p.y) / d.y : d.y < -1e-9 ? -p.y / d.y : Infinity;
+      const tX = d.x > 1e-9 ? (L - p.x) / d.x : d.x < -1e-9 ? -p.x / d.x : Infinity;
+      const t = Math.min(tY, tX, 2.2); p = { x: p.x + d.x * t, y: p.y + d.y * t }; pts.push([X(p.x), Y(p.y)]);
+      if (t === tX || t === 2.2) break;
+      d = { x: d.x, y: -d.y };
+    }
+    return pts;
+  }
+  function dashed(pts, col, w) { ctx.strokeStyle = col; ctx.lineWidth = w || 2; ctx.setLineDash([6, 5]); ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke(); ctx.setLineDash([]); }
+  const V_WEDGE = 2.337, V_STEEL = 3.23, WD = 60, HALF = 28;
+  function drawProbe(ex, ey, alpha, beam) {
+    const a = Math.asin(Math.sin(ANG * RAD) * V_WEDGE / V_STEEL);
+    const P = { x: ex - WD * Math.sin(a), y: ey - WD * Math.cos(a) }, u = { x: Math.cos(a), y: -Math.sin(a) };
+    const Pa = { x: P.x - HALF * u.x, y: P.y - HALF * u.y }, Pb = { x: P.x + HALF * u.x, y: P.y + HALF * u.y }, front = ex + 16;
+    ctx.save(); ctx.globalAlpha = alpha == null ? 1 : alpha;
+    ctx.fillStyle = 'rgba(233,201,138,0.92)'; ctx.strokeStyle = '#a0824a'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(Pa.x, ey); ctx.lineTo(front, ey); ctx.lineTo(front, Pb.y); ctx.lineTo(Pb.x, Pb.y); ctx.lineTo(Pa.x, Pa.y); ctx.closePath(); ctx.fill(); ctx.stroke();
+    if (beam) {
+      ctx.fillStyle = 'rgba(255,170,40,0.28)';
+      ctx.beginPath(); ctx.moveTo(Pa.x, Pa.y); ctx.lineTo(Pb.x, Pb.y); ctx.lineTo(ex + 7, ey); ctx.lineTo(ex - 7, ey); ctx.closePath(); ctx.fill();
+      dashed([[P.x, P.y], [ex, ey]], C.orange);
+    }
+    txt('60° wedge', front + 6, Pb.y + 12, { size: 12, w: 800, c: '#6b4f1d' });
+    ctx.translate(P.x, P.y); ctx.rotate(-a);
+    rr(-26, -36, 52, 36, 5); ctx.fillStyle = '#3a3f47'; ctx.fill();
+    ctx.fillStyle = '#d4a017'; ctx.fillRect(-26, -4, 52, 4);
+    ctx.strokeStyle = '#3a3f47'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-6, -36); ctx.quadraticCurveTo(-14, -58, -40, -64); ctx.stroke();
+    ctx.restore();
+    ctx.save(); ctx.globalAlpha = alpha == null ? 1 : alpha;
+    ctx.fillStyle = C.red; ctx.beginPath(); ctx.moveTo(ex, ey + 1); ctx.lineTo(ex - 6, ey + 11); ctx.lineTo(ex + 6, ey + 11); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  function drawWeld() {
+    // weld metal, cap ground flush, small root bead
+    ctx.fillStyle = '#c9b9a3';
+    ctx.beginPath(); ctx.moveTo(X(capL), Y(0)); ctx.lineTo(X(capR), Y(0)); ctx.lineTo(X(WC + GAP), Y(T));
+    ctx.quadraticCurveTo(X(WC), Y(T + 0.1), X(WC - GAP), Y(T)); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(110,90,60,0.25)'; ctx.lineWidth = 1;
+    for (let k = 1; k <= 4; k++) { const y = T - k * 0.2; ctx.beginPath(); ctx.moveTo(X(faceX(-1, y)), Y(y)); ctx.quadraticCurveTo(X(WC), Y(y - 0.08), X(faceX(1, y)), Y(y)); ctx.stroke(); }
+    ctx.strokeStyle = '#7a6a52'; ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
+    for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(X(faceX(sd, 0)), Y(0)); ctx.lineTo(X(faceX(sd, T)), Y(T)); ctx.stroke(); }
+    ctx.setLineDash([]);
+    if (st.xp == null || st.xp < capL - 0.6) txt('cap ground flush', X(WC), Y(0) - 6, { size: 11, w: 700, c: '#7a6a52', a: 'center' });
+    // bevel angle on the far side
+    const x0 = capR;
+    ctx.strokeStyle = C.soft; ctx.lineWidth = 1.2; ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.moveTo(X(x0), Y(0)); ctx.lineTo(X(x0), Y(0.55)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(X(x0), Y(0), 38, Math.PI / 2, Math.PI / 2 + BEVEL * RAD); ctx.stroke();
+    txt('30° bevel', X(x0) + 8, Y(0.62), { size: 12, w: 800, c: C.soft });
+    // the flaw
+    const g = flawSeg();
+    ctx.strokeStyle = C.flaw; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(X(g.x1), Y(g.y1)); ctx.lineTo(X(g.x2), Y(g.y2)); ctx.stroke(); ctx.lineCap = 'butt';
+    txt('near-side face', X(capL), Y(T) + 18, { size: 12, w: 800, c: C.flaw, a: 'right' });
+    txt('far-side face', X(capR), Y(T) + 18, { size: 12, w: 800, c: C.flaw });
+    txt('lack of fusion on the upper far-side face', X(WC), Y(T) + 36, { size: 11, w: 700, c: C.flaw, a: 'center' });
+    // the stiffener that blocks the right side
+    ctx.fillStyle = '#9aa5b1'; ctx.strokeStyle = '#5f6b78'; ctx.lineWidth = 2;
+    ctx.fillRect(X(STIFF.x1), Y(-STIFF.h), (STIFF.x2 - STIFF.x1) * S, STIFF.h * S); ctx.strokeRect(X(STIFF.x1), Y(-STIFF.h), (STIFF.x2 - STIFF.x1) * S, STIFF.h * S);
+    ctx.fillStyle = '#c9b9a3';
+    for (const [x, d] of [[STIFF.x1, -1], [STIFF.x2, 1]]) { ctx.beginPath(); ctx.moveTo(X(x), Y(0)); ctx.lineTo(X(x) + d * 12, Y(0)); ctx.lineTo(X(x), Y(0) - 12); ctx.closePath(); ctx.fill(); }
+    txt('stiffener', X(STIFF.x2) + 10, Y(-STIFF.h) + 14, { size: 12, w: 800, c: '#4b5563' });
+    txt('no room for the probe', X(STIFF.x2) + 10, Y(-STIFF.h) + 30, { size: 11, w: 700, c: C.red });
+  }
+
+  function frame(now) {
+    const tm = now / 1000;
+    ctx.setTransform(K, 0, 0, K, 0, 0); ctx.clearRect(0, 0, W, H);
+    txt('1 INCH PLATE · SINGLE-V BUTT WELD · SIDE VIEW', PX, 26, { size: 11, w: 700, c: C.faded, mono: true });
+    const gr = ctx.createLinearGradient(0, Y(0), 0, Y(T)); gr.addColorStop(0, '#d3d9e0'); gr.addColorStop(1, '#a3adb9');
+    ctx.fillStyle = gr; ctx.fillRect(X(0), Y(0), L * S, T * S);
+    drawWeld();
+    ctx.strokeStyle = '#5f6b78'; ctx.lineWidth = 2; ctx.strokeRect(X(0), Y(0), L * S, T * S);
+    txt('back wall', X(0.1), Y(T) - 8, { size: 12, w: 600, c: '#4b5563' });
+    ctx.strokeStyle = C.soft; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(X(L) + 18, Y(0)); ctx.lineTo(X(L) + 18, Y(T)); ctx.stroke();
+    txt('1″', X(L) + 24, Y(T / 2) + 5, { size: 13, w: 700, c: C.soft });
+
+    const e = echo(), vis = onScreen(e);
+    if (st.xp == null) {
+      const d = st.drag, active = q.phase === 'place';
+      drawProbe(d ? d.x + d.dx : parked.x, d ? d.y + d.dy : parked.y, active ? (d ? 0.9 : 1) : 0.35);
+      if (!d && active) { txt('← drag the probe onto the plate', parked.x + 46, parked.y - 40, { size: 14, w: 700, c: C.blue });
+        ctx.strokeStyle = '#ffd84d'; ctx.lineWidth = 4; ctx.globalAlpha = 0.55 + 0.45 * Math.sin(tm * 6); rr(parked.x - 84, parked.y - 116, 116, 124, 10); ctx.stroke(); ctx.globalAlpha = 1; }
+    } else {
+      drawProbe(X(st.xp), Y(0), 1, true);
+      const segs = legs(st.xp, st.legs);
+      ctx.save(); ctx.beginPath(); ctx.rect(X(0), Y(0), L * S, T * S); ctx.clip();
+      // while only legs 1 and 2 are in play, show faintly where the sound goes next (it keeps bouncing)
+      if (st.legs === 2 && segs.length === 2 && !segs[1].hit) {
+        const g3 = legs(st.xp, 3)[2];
+        if (g3) { ctx.strokeStyle = 'rgba(217,115,26,0.35)'; ctx.lineWidth = 1.6; ctx.setLineDash([2, 6]); ctx.beginPath(); ctx.moveTo(X(g3.x1), Y(g3.y1)); ctx.lineTo(X(g3.x2), Y(g3.y2)); ctx.stroke(); ctx.setLineDash([]); }
+      }
+      for (const g of segs) { ctx.strokeStyle = `rgba(255,190,70,${(0.32 * Math.exp(-g.s1 / 7)).toFixed(3)})`; ctx.lineWidth = BEAM_W * 2 * S; ctx.beginPath(); ctx.moveTo(X(g.x1), Y(g.y1)); ctx.lineTo(X(g.x2), Y(g.y2)); ctx.stroke(); }
+      const route = [[X(segs[0].x1), Y(segs[0].y1)]].concat(segs.map(g => [X(g.x2), Y(g.y2)]));
+      dashed(route, C.orange);
+      // a leg that runs into the flaw at an angle: show the sound bouncing off it, away from the probe
+      const glance = segs.find(g => g.hit && !g.hit.near && g.hit.dev > 5);
+      let away = null;
+      if (glance) {
+        away = bounceOff(glance);
+        ctx.strokeStyle = C.good; ctx.lineWidth = 2.5; ctx.setLineDash([6, 5]); ctx.beginPath(); away.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke(); ctx.setLineDash([]);
+        const a = away[away.length - 2], b = away[away.length - 1], ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+        ctx.fillStyle = C.good; ctx.save(); ctx.translate(b[0], b[1]); ctx.rotate(ang); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-11, -5); ctx.lineTo(-11, 5); ctx.closePath(); ctx.fill(); ctx.restore();
+      }
+      ctx.restore();
+      if (glance) txt(`leg ${glance.leg} hits it at ${Math.round(90 - glance.hit.dev)}°: sound bounces away`, X(glance.x2) + 14, Y(glance.y2) - 6, { size: 11, w: 800, c: C.good });
+      segs.forEach(g => { if (g.len < (g.leg === 3 ? 0.2 : 0.6)) return; const mx = X((g.x1 + g.x2) / 2) - 36, my = Y((g.y1 + g.y2) / 2); ctx.fillStyle = g.leg === 3 ? 'rgba(255,240,200,0.95)' : 'rgba(255,255,255,0.85)'; rr(mx - 24, my - 10, 48, 19, 5); ctx.fill(); txt('Leg ' + g.leg, mx, my + 4, { size: 11, w: 800, a: 'center' }); });
+      if (e && e.amp > 50) { ctx.strokeStyle = C.good; ctx.lineWidth = 3; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(tm * 6); ctx.beginPath(); ctx.arc(X(e.x), Y(e.y), 14, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
+      // pulse: out along the beam; back again (green) when the flaw sends it back
+      const back = e && e.amp > 20, pts = back ? route.slice(0, e.leg).concat([[X(e.x), Y(e.y)]]) : away ? route.concat(away.slice(1)) : route;
+      const seg = []; let tot = 0;
+      for (let i = 1; i < pts.length; i++) { const l = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); seg.push(l); tot += l; }
+      const speed = 340, cycle = (back ? 2 * tot : tot) / speed + 0.8, u = (tm % cycle) * speed;
+      const at = s => { for (let i = 0; i < seg.length; i++) { if (s <= seg[i]) { const f = s / seg[i]; return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * f, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * f]; } s -= seg[i]; } return null; };
+      let p = null, ret = false;
+      if (u <= tot) p = at(u); else if (back && u <= 2 * tot) { p = at(2 * tot - u); ret = true; }
+      if (p) { ctx.fillStyle = ret ? C.good : C.red; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(p[0], p[1], 6, 0, 7); ctx.fill(); ctx.shadowBlur = 0; }
+    }
+
+    // ---------- A-scan ----------
+    const R = st.range;
+    txt(`A-SCAN · SOUND PATH 0 TO ${R.toFixed(1)}″`, AS.x, AS.y - 52, { size: 11, w: 700, c: C.faded, mono: true });
+    const boxes = [['SOUND PATH', vis ? IN(e.s) : '---'], ['SURFACE DIST.', vis ? IN(e.s * Math.sin(ANG * RAD)) : '---'], ['DEPTH', vis ? IN(e.depth) : '---'], ['LEG', vis ? String(e.leg) : '---']];
+    boxes.forEach(([l, v], i) => {
+      const bx = AS.x + i * 222, by = AS.y - 44, bw = 212;
+      rr(bx, by, bw, 34, 6); ctx.fillStyle = '#16202e'; ctx.fill();
+      txt(l, bx + 10, by + 21, { size: 10, w: 700, c: '#9fb3c8', mono: true });
+      txt(v, bx + bw - 10, by + 24, { size: 17, w: 700, c: '#fff', mono: true, a: 'right' });
+    });
+    rr(AS.x - 4, AS.y - 4, AS.w + 8, AS.h + 8, 6); ctx.fillStyle = C.navy; ctx.fill();
+    ctx.strokeStyle = 'rgba(160,190,220,0.15)'; ctx.lineWidth = 1;
+    for (let i = 0; i <= 10; i++) { const gx = AS.x + i * AS.w / 10; ctx.beginPath(); ctx.moveTo(gx, AS.y); ctx.lineTo(gx, AS.y + AS.h); ctx.stroke(); }
+    for (let i = 0; i <= 5; i++) { const gy = AS.y + i * AS.h / 5; ctx.beginPath(); ctx.moveTo(AS.x, gy); ctx.lineTo(AS.x + AS.w, gy); ctx.stroke(); }
+    // where each leg ends on the screen
+    for (let n = 1; n * SKIP_S / 2 <= R + 1e-9; n++) {
+      const gx = AS.x + (n * SKIP_S / 2) / R * AS.w;
+      ctx.strokeStyle = n % 2 === 0 ? 'rgba(125,255,176,0.55)' : 'rgba(160,190,220,0.35)'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(gx, AS.y); ctx.lineTo(gx, AS.y + AS.h); ctx.stroke(); ctx.setLineDash([]);
+    }
+    for (let n = 1; (n - 1) * SKIP_S / 2 < R - 0.2; n++) {
+      const mid = Math.min(((n - 0.5) * SKIP_S / 2), R - 0.25);
+      txt('LEG ' + n, AS.x + mid / R * AS.w, AS.y + AS.h - 24, { size: 10, w: 700, c: '#6f86a0', mono: true, a: 'center' });
+    }
+    const bot = AS.y + AS.h - 2;
+    ctx.save(); ctx.beginPath(); ctx.rect(AS.x, AS.y, AS.w, AS.h); ctx.clip(); ctx.beginPath();
+    for (let px = 0; px <= AS.w; px++) {
+      const s = px / AS.w * R;
+      let a = 1.2 + 1.8 * Math.abs(Math.sin(s * 74.2 + Math.sin(s * 18.6) * 3)) * (0.6 + 0.4 * Math.sin(tm * 9 + s * 10));
+      if (st.xp != null) a += 70 * Math.exp(-Math.max(s + 0.03, 0) / (0.05 * R / 5));
+      if (e && e.amp > 2) { const d = (s - e.s) / R * AS.w, w = d < 0 ? 3 : 5; if (Math.abs(d) < 24) a += e.amp * Math.exp(-Math.pow(d / w, 2)) * (0.5 + 0.5 * Math.abs(Math.sin(d * 0.9))); }
+      const yv = bot - Math.min(a, 105) / 100 * (AS.h - 6);
+      px ? ctx.lineTo(AS.x + px, yv) : ctx.moveTo(AS.x, yv);
+    }
+    ctx.strokeStyle = C.trace; ctx.lineWidth = 1.6; ctx.stroke(); ctx.restore();
+    const step = R > 5 ? 1 : 0.5;
+    for (let v = 0; v <= R + 1e-9; v += step) txt(v.toFixed(step < 1 ? 1 : 0) + (Math.abs(v - R) < 1e-9 ? '″' : ''), AS.x + v / R * AS.w, AS.y + AS.h + 18, { size: 11, w: 600, c: C.soft, mono: true, a: v === 0 ? 'left' : Math.abs(v - R) < 1e-9 ? 'right' : 'center' });
+    if (st.xp != null && !vis) txt(e && e.amp > 20 ? 'no echo on screen' : 'no echo', AS.x + 16, AS.y + 26, { size: 13, w: 700, c: '#8fa4bb', mono: true });
+    if (e && e.amp > 20 && !vis) { txt('echo is past the edge →', AS.x + AS.w - 12, AS.y + 26, { size: 12, w: 700, c: q.phase === 'range' ? '#ffb3a6' : 'rgba(0,0,0,0)', mono: true, a: 'right' }); }
+    if (vis) txt('flaw echo · leg ' + e.leg, Math.min(AS.x + e.s / R * AS.w + 10, AS.x + AS.w - 150), AS.y + 26, { size: 13, w: 800, c: '#7dffb0' });
+
+    if (toast && now - toast.at < 2600) {
+      ctx.font = `700 14px ${SANS}`; const tw = ctx.measureText(toast.t).width + 28;
+      ctx.globalAlpha = Math.min(1, (2600 - (now - toast.at)) / 300);
+      rr(W / 2 - tw / 2, 40, tw, 32, 8); ctx.fillStyle = '#6b2412'; ctx.fill();
+      txt(toast.t, W / 2, 61, { size: 14, w: 700, c: '#fff', a: 'center' }); ctx.globalAlpha = 1;
+    }
+    requestAnimationFrame(frame);
+  }
+  render();
+  (document.fonts ? Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 2000))]) : Promise.resolve()).then(() => requestAnimationFrame(frame));
+  window.__leg3 = { st, get q() { return q; }, echo, legs, legSpot, setX, act };
+})();
+</script>
+</body>
+</html>
