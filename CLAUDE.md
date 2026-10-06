@@ -19,6 +19,9 @@ python3 tools/voiceover/kokoro_say.py "Text to speak." video/audio/clip.mp3
 python3 tools/voiceover/kokoro_say.py --json lines.json   # [{"text": ..., "out": ...}, ...]
 ```
 
+- Narrated lesson pages play pre-recorded clips (see `ET-Impedance-Plane.html`). After changing any
+  narration or feedback text, rerun `node tools/voiceover/build_lesson_audio.cjs <page> <audio dir>`:
+  it records only new or changed lines, deletes unused clips and updates the page's clip manifest.
 - Do not commit the model files (`kokoro-v1.0.onnx`, `voices-v1.0.bin`, about 350 MB). They live in
   `~/.cache/kokoro` (or `KOKORO_DIR`).
 - Commit the generated audio (mp3, mono 64 kbps) next to the page or under `video/audio/`.

@@ -237,7 +237,7 @@
           <div class="box">
             <div class="eyebrow">Interactive lesson &middot; about 10 minutes</div>
             <h2 style="margin:6px 0 0;font-size:22px">How the dot moves on the impedance plane</h2>
-            <p>Narration plays if your device has speech. Captions are always on, so the lesson works fully with the sound off. The lesson pauses at six checkpoints to ask you a question.</p>
+            <p>Turn your sound on for narration. Captions are always on, so the lesson works fully with the sound off too. The lesson pauses at six checkpoints to ask you a question.</p>
             <button class="bigplay" id="startBtn">&#9654; Start lesson</button>
           </div>
         </div>
@@ -591,42 +591,68 @@ function renderInset(ins) {
   insetSvg.innerHTML = h;
 }
 
-/* ===================== speech ===================== */
-var synth = window.speechSynthesis || null;
-var voice = null, muted = false, speed = 1, curU = null, speechStarted = false;
-function pickVoice() {
-  if (!synth) return;
-  var vs = synth.getVoices().filter(function (v) { return /^en/i.test(v.lang); });
-  var pref = [/natural/i, /google us english/i, /samantha/i, /aria/i, /jenny/i, /daniel/i, /google uk english/i];
-  for (var i = 0; i < pref.length && !voice; i++) voice = vs.find(function (v) { return pref[i].test(v.name); }) || null;
-  if (!voice) voice = vs.find(function (v) { return /en-US/i.test(v.lang); }) || vs[0] || null;
+/* ===================== voice-over: pre-recorded Kokoro clips =====================
+   Every spoken line is a clip recorded offline with Kokoro v1.0, voice af_heart, speed 1.0
+   (tools/voiceover/build_lesson_audio.cjs). A clip's file name is a hash of its caption text,
+   and VO maps that hash to the clip length in seconds, so timing matches the voice even when muted. */
+var VO_DIR = 'video/audio/ET-Impedance-Plane/';
+/*VO-MANIFEST*/var VO = {"49915709":8.78,"57108249":5.23,"eba0258e":1.73,"437fbccc":10.58,"b3f525f3":9.46,"2ab1c59f":11.71,"e4e265b8":10.32,"fc77c24e":1.08,"fb1bc293":2.93,"aec744a5":7.25,"cb15fc96":6.79,"c07e7f4c":3.5,"93cd899a":3.31,"8278c1cf":6.41,"47072d7e":5.74,"82bfebb9":1.85,"2b7edce4":5.35,"d2cfbcfc":7.03,"e651ef40":7.85,"063ed47f":5.3,"7cadec3b":4.9,"f5385e2f":17.14,"c7a0f396":17.5,"bfea9c7a":7.34,"c868b732":7.34,"ebec7cde":11.86,"9a49afee":6.29,"f9ddc827":3.77,"0e495cdd":6.89,"3321922a":7.25,"172d7367":2.11,"73093ee7":5.88,"303c9153":3.41,"3ad4c27c":4.73,"32b25650":9.86,"d2b52340":4.58,"e19b39c0":9.79,"57792cde":8.52,"8e2282d3":2.88,"c20cf4f2":2.98,"52932dad":6.72,"37f1ede4":7.56,"5d36b1ea":6.53,"8ad0a6ae":1.87,"116be572":2.54,"e8187fc7":10.46,"3698de93":4.9,"03e5586a":10.7,"0f8a1dd4":7.51,"a307c629":7.87,"e3c6d2d3":4.22,"a1ebe040":6.29,"6a09de41":7.08,"5880165c":9.02,"63ba8af9":10.27,"206855f2":1.58,"58cbe3cb":9.36,"c8214092":4.15,"2f3d3b87":7.18,"e0d68fe1":13.15,"bfe23ddc":4.49,"8354ffac":5.69,"828eaf5a":7.82,"071f2825":4.85,"af85e588":4.68,"68c81d43":11.54,"99d88787":8.95,"3c0efec9":2.09,"25a23f69":7.73,"4ae021c4":4.82,"de96f35e":5.38,"5b3079ff":9.26,"622ca25b":7.2,"bdeb4343":4.49,"1638b9e0":7.85,"a270296c":10.75,"030b7c47":7.8,"bd9594b5":9.46,"2f962b50":9.22,"5265ac4a":2.42,"68d85de0":7.92,"54186a11":1.49,"334e4226":5.04,"3c8d1392":9.22,"08b3616c":9.43,"0ed6a41d":11.16,"29f8d60c":4.13,"bff80731":6.31,"b511a109":11.57,"5a6b3c2d":6.98,"e73dfee6":4.46,"25da0197":4.92,"010e4416":8.04,"538ffeb7":5.64,"03135426":7.37,"116c8009":13.7,"6c4f7139":5.09};/*END-VO-MANIFEST*/
+var muted = false, speed = 1, speechStarted = false, curClip = null, prefetched = {};
+var voiceEl = typeof Audio !== 'undefined' ? new Audio() : null;
+if (voiceEl) voiceEl.preload = 'auto';
+function clipId(text) {
+  var h = 0x811c9dc5;
+  for (var i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return ('0000000' + h.toString(16)).slice(-8);
 }
-if (synth) { pickVoice(); if (synth.addEventListener) synth.addEventListener('voiceschanged', function () { voice = null; pickVoice(); }); }
+/* what the voice actually says: units and symbols spelled out */
 function speechText(t) {
-  return t.replace(/%IACS/g, ' percent I A C S').replace(/\bkHz\b/g, 'kilohertz').replace(/\bMHz\b/g, 'megahertz')
-    .replace(/\bStep (\d)\b/g, function (_, d) { return 'Step ' + ['zero', 'one', 'two', 'three', 'four', 'five', 'six'][+d] + '.'; });
+  return t.replace(/’/g, "'").replace(/%IACS/g, ' percent I A C S').replace(/\bkHz\b/g, 'kilohertz').replace(/\bMHz\b/g, 'megahertz')
+    .replace(/\bStep (\d)\b/g, function (_, d) { return 'Step ' + ['zero', 'one', 'two', 'three', 'four', 'five', 'six'][+d]; });
 }
-function stopSpeech() { curU = null; if (synth) try { synth.cancel(); } catch (e) {} }
-function speak(text, onEnd, onBoundary) {
+function clipDur(text) { return text ? VO[clipId(text)] || 0 : 0; }
+function stopSpeech() { curClip = null; if (voiceEl) try { voiceEl.pause(); } catch (e) {} }
+function speak(text, onEnd) {
   stopSpeech();
-  if (muted || !synth || !text) return false;
-  var u = new SpeechSynthesisUtterance(speechText(text));
-  u.rate = speed; if (voice) { u.voice = voice; u.lang = voice.lang; } else u.lang = 'en-US';
-  speechStarted = false;
-  u.onstart = function () { if (curU === u) speechStarted = true; };
-  u.onend = u.onerror = function () { if (curU === u) { curU = null; onEnd(); } };
-  u.onboundary = function (e) { if (curU === u && onBoundary) onBoundary(e.charIndex); };
-  curU = u;
-  setTimeout(function () { if (curU === u) synth.speak(u); }, 60);
+  if (muted || !voiceEl || !text) return false;
+  var id = clipId(text);
+  if (!VO[id]) return false;
+  var token = {}; curClip = token; speechStarted = false;
+  var fin = function () { if (curClip === token) { curClip = null; onEnd(); } };
+  voiceEl.onplaying = function () { if (curClip === token) speechStarted = true; };
+  voiceEl.onended = fin; voiceEl.onerror = fin;
+  voiceEl.defaultPlaybackRate = speed;
+  voiceEl.src = VO_DIR + id + '.mp3';
+  voiceEl.playbackRate = speed;
+  var pr = voiceEl.play(); if (pr && pr.catch) pr.catch(fin);
   return true;
+}
+function voiceProgress() {
+  return (curClip && speechStarted && voiceEl.duration > 0) ? voiceEl.currentTime / voiceEl.duration : -1;
+}
+function prefetch(text) {
+  if (!text || muted || typeof Audio === 'undefined') return;
+  var id = clipId(text);
+  if (!VO[id] || prefetched[id]) return;
+  var a = new Audio(); a.preload = 'auto'; a.src = VO_DIR + id + '.mp3'; prefetched[id] = a;
+}
+/* iOS only lets audio play after a tap: play a silent clip on the Start tap to unlock the element */
+function unlockAudio() {
+  if (!voiceEl) return;
+  var b = new Uint8Array(44 + 800), v = new DataView(b.buffer), str = function (o, t) { for (var i = 0; i < t.length; i++) b[o + i] = t.charCodeAt(i); };
+  str(0, 'RIFF'); v.setUint32(4, 36 + 800, true); str(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); str(36, 'data'); v.setUint32(40, 800, true);
+  for (var i = 44; i < b.length; i++) b[i] = 128;
+  var bin = ''; for (var j = 0; j < b.length; j++) bin += String.fromCharCode(b[j]);
+  try { voiceEl.src = 'data:audio/wav;base64,' + btoa(bin); var p = voiceEl.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
 }
 
 /* ===================== player: plays a list of 'say' items ===================== */
 var paused = false;
-var P = { items: null, i: 0, t: 0, dur: 1, onDone: null, speechDone: true, enterSnap: null, froms: null, applied: null, bChar: -1, words: [], lastW: -2 };
+var P = { items: null, i: 0, t: 0, dur: 1, onDone: null, speechDone: true, enterSnap: null, froms: null, applied: null, words: [], lastW: -2 };
 function durOf(it) {
-  var w = it.text ? it.text.split(/\s+/).length : 0;
-  return Math.max(it.dur || 0, w / 2.5 + 0.6);
+  var w = it.text ? it.text.split(/\s+/).length : 0, c = clipDur(it.text);
+  return Math.max(it.dur || 0, c ? c + 0.35 : w / 2.5 + 0.6);
 }
 function setCaption(text) {
   var cap = $('caption');
@@ -641,8 +667,8 @@ function setCaption(text) {
 function updateCaption(p) {
   if (!P.words.length) return;
   var idx;
-  if (P.bChar >= 0) { idx = 0; for (var i = 0; i < P.words.length; i++) if (P.words[i] <= P.bChar) idx = i; }
-  else idx = Math.floor(p * P.words.length * 1.02);
+  var vp = voiceProgress();
+  idx = Math.floor((vp >= 0 ? vp : p) * P.words.length * 1.02);
   if (idx === P.lastW) return; P.lastW = idx;
   var sp = $('caption').querySelectorAll('.w');
   for (var j = 0; j < sp.length; j++) sp[j].classList.toggle('on', j <= idx);
@@ -661,16 +687,18 @@ function enterItem(fresh) {
     if (a.k in lastTo) P.froms[j] = clone(lastTo[a.k]); else { P.froms[j] = clone(getP(S, a.k)); P.first[j] = 1; }
     if (P.froms[j] !== undefined) lastTo[a.k] = typeof a.to === 'object' ? Object.assign({}, P.froms[j], a.to) : a.to;
   });
-  P.t = 0; P.real = 0; P.dur = durOf(it); P.bChar = -1;
+  P.t = 0; P.real = 0; P.dur = durOf(it);
   setCaption(it.text);
   P.speechDone = true;
   if (!paused) startItemSpeech();
   if (it.onEnter) it.onEnter();
+  var nx = P.items[P.i + 1] || (P.items.length === 1 && Lesson.items[Lesson.idx + 1]);
+  if (nx) prefetch(nx.type === 'ask' ? nx.node.q : nx.text);
   dirty = true;
 }
 function startItemSpeech() {
   var it = P.items[P.i];
-  P.speechDone = !speak(it.text, function () { P.speechDone = true; }, function (c) { P.bChar = c; });
+  P.speechDone = !speak(it.text, function () { P.speechDone = true; });
 }
 function frameItem(p) {
   var it = P.items[P.i];
@@ -694,7 +722,7 @@ function playerTick(dt) {
   if (!P.items || paused) return;
   P.t += dt * speed; P.real += dt;
   /* some browsers silently drop an utterance; if it never starts, fall back to caption timing */
-  if (!P.speechDone && !speechStarted && P.real > 2.5) P.speechDone = true;
+  if (!P.speechDone && !speechStarted && P.real > 6) P.speechDone = true;
   var p = Math.min(1, P.t / P.dur);
   frameItem(p); updateCaption(p); dirty = true;
   if (p >= 1 && (P.speechDone || muted || P.t > P.dur * 2.2 + 4)) {
@@ -800,7 +828,8 @@ function showAsk(node, cont, opt) {
   $('checkBtn').addEventListener('click', checkAnswer);
   setCaption(node.q);
   var sp = $('caption').querySelectorAll('.w'); for (var j = 0; j < sp.length; j++) sp[j].classList.add('on');
-  speak(node.q, function () {}, null);
+  speak(node.q, function () {});
+  node.opts.forEach(function (o) { prefetch(o.fb); });
   updateControls();
   if (!window.matchMedia('(min-width: 921px)').matches && Lesson.started) setTimeout(function () { c.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 80);
 }
@@ -1056,6 +1085,21 @@ var STEPS = [
   cp.opts[0].sub = sub1; cp.opts[2].sub = sub1;
 })();
 
+/* every line the lesson can speak; used by tools/voiceover/build_lesson_audio.cjs */
+function allSpokenLines() {
+  var seen = {}, out = [];
+  function add(t) { if (!t) return; var id = clipId(t); if (seen[id]) return; seen[id] = 1; out.push({ id: id, caption: t, speak: speechText(t) }); }
+  function items(list) { (list || []).forEach(function (it) { if (it.type === 'ask') node(it.node); else add(it.text); }); }
+  function node(n) {
+    if (!n || seen['node:' + n.q]) return; seen['node:' + n.q] = 1;
+    add(n.q);
+    n.opts.forEach(function (o) { add(o.fb); items(o.demo); node(o.sub); });
+    node(n.next);
+  }
+  STEPS.forEach(function (st) { items(st.items); });
+  return out;
+}
+
 /* ===================== info card ===================== */
 var KEY_IDEAS = [
   'Right means energy lost as heat. Up means energy stored in the magnetic field.',
@@ -1114,7 +1158,7 @@ function updateControls() {
   pb.disabled = !canPlay && !paused;
   $('replayBtn').disabled = !(Lesson.mode === 'play' || Lesson.mode === 'ask');
   var mb = $('muteBtn'); mb.innerHTML = muted ? ICON.mute : ICON.sound; mb.setAttribute('aria-label', muted ? 'Unmute narration' : 'Mute narration');
-  mb.title = synth ? (muted ? 'Narration off' : 'Narration on') : 'Narration is not available in this browser. Captions are shown.';
+  mb.title = muted ? 'Narration off' : 'Narration on';
 }
 var toastT = null;
 function toast(msg) { var t = $('toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toastT); toastT = setTimeout(function () { t.classList.add('hidden'); }, 3600); }
@@ -1331,12 +1375,12 @@ function showResults() {
 /* ===================== wiring ===================== */
 $('startBtn').onclick = function () {
   startIfNeeded();
-  if (synth) { try { var u = new SpeechSynthesisUtterance(' '); u.volume = 0; synth.speak(u); } catch (e) {} }
+  unlockAudio();
   var mr = maxReachable(); runStep(progress.done.length && mr < 6 && progress.done.indexOf(mr) < 0 ? mr : 0);
 };
 $('playBtn').onclick = function () { if (P.items) setPaused(!paused); else if (paused) setPaused(false); };
 $('replayBtn').onclick = replaySegment;
-$('speedSel').onchange = function () { speed = +this.value; };
+$('speedSel').onchange = function () { speed = +this.value; if (voiceEl) { voiceEl.defaultPlaybackRate = speed; voiceEl.playbackRate = speed; } };
 $('muteBtn').onclick = function () { muted = !muted; if (muted) { stopSpeech(); P.speechDone = true; } updateControls(); };
 ['Lesson', 'Sandbox', 'Recap', 'Quiz'].forEach(function (n) { $('tab' + n).onclick = function () { setView(n.toLowerCase()); }; });
 var themes = ['auto', 'light', 'dark'], themeI = 0;
