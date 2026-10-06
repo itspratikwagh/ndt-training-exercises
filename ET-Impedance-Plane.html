@@ -145,6 +145,9 @@
   .opt[aria-checked="true"] .k { background: var(--accent); border-color: var(--accent); color: #fff; }
   .opt.tried { opacity: .5; text-decoration: line-through; }
   .opt.right { border-color: var(--good); background: var(--good-soft); }
+  .opt.wrong { border-color: var(--bad); background: var(--bad-soft); }
+  .opt.right .k { background: var(--good); border-color: var(--good); color: #fff; }
+  .opt.wrong .k { background: var(--bad); border-color: var(--bad); color: #fff; }
   .opt:disabled { cursor: default; }
   textarea { width: 100%; min-height: 54px; border: 1px solid var(--rule); border-radius: 8px; background: var(--panel2); padding: 8px; font-size: 14px; resize: vertical; }
   .btn { border: 0; border-radius: 10px; padding: 9px 16px; font-weight: 600; cursor: pointer; background: var(--accent); color: #fff; font-size: 15px; }
@@ -1336,20 +1339,32 @@ var QUIZ = [
   { s: 5, q: 'You need to find corrosion on the far side of a thick aluminum skin. What is the best approach?', o: ['Use a high frequency to widen the separation angle.', 'Use a low frequency for deeper penetration, and control lift-off carefully.', 'Keep the frequency and turn up the gain.', 'Any frequency works, because depth does not depend on frequency.'], a: 1,
     x: 'Far side corrosion is below the surface, so the eddy currents must reach deep, and that needs a low frequency. The price is a smaller separation angle, so lift-off has to be controlled carefully. Gain does not change the angle.' }
 ];
-var QZ = { i: 0, ans: [], done: false };
+var QZ = { i: 0, ans: [], checked: [], done: false };
 function buildQuiz() {
   var v = $('viewQuiz');
   if (QZ.done) { showResults(); return; }
-  var q = QUIZ[QZ.i], sel = QZ.ans[QZ.i];
-  var h = '<div class="quiz card"><div class="qmeta">Question ' + (QZ.i + 1) + ' of ' + QUIZ.length + '</div><div class="qprog"><i style="width:' + (QZ.i / QUIZ.length * 100) + '%"></i></div>' +
+  var q = QUIZ[QZ.i], sel = QZ.ans[QZ.i], chk = !!QZ.checked[QZ.i], ok = sel === q.a, last = QZ.i === QUIZ.length - 1;
+  var score = 0, done = 0;
+  QUIZ.forEach(function (x, i) { if (QZ.checked[i]) { done++; if (QZ.ans[i] === x.a) score++; } });
+  var h = '<div class="quiz card"><div class="qmeta">Question ' + (QZ.i + 1) + ' of ' + QUIZ.length + (done ? ' &middot; score so far ' + score + ' / ' + done : '') + '</div><div class="qprog"><i style="width:' + (done / QUIZ.length * 100) + '%"></i></div>' +
     '<h2>' + esc(q.q) + '</h2><div class="opts" role="radiogroup">' +
-    q.o.map(function (t, i) { return '<button class="opt" role="radio" aria-checked="' + (sel === i) + '" data-i="' + i + '"><span class="k">' + 'ABCD'[i] + '</span><span>' + esc(t) + '</span></button>'; }).join('') +
-    '</div><div class="row"><button class="btn ghost" id="qBack"' + (QZ.i ? '' : ' disabled') + '>Back</button><button class="btn" id="qNext"' + (sel == null ? ' disabled' : '') + '>' + (QZ.i === QUIZ.length - 1 ? 'Submit quiz' : 'Next') + '</button></div>' +
-    '<p class="muted" style="font-size:13px">Answers and explanations appear after you submit the last question.</p></div>';
+    q.o.map(function (t, i) {
+      var cls = chk && i === q.a ? ' right' : (chk && i === sel ? ' wrong' : '');
+      return '<button class="opt' + cls + '" role="radio" aria-checked="' + (sel === i) + '" data-i="' + i + '"' + (chk ? ' disabled' : '') + '><span class="k">' + 'ABCD'[i] + '</span><span>' + esc(t) + '</span></button>';
+    }).join('') + '</div>';
+  if (chk) {
+    h += '<div class="fb ' + (ok ? 'good' : 'bad') + '"><span class="tag">' + (ok ? 'Correct' : 'Wrong') + '</span>' +
+      (ok ? '' : 'The correct answer is <b>' + 'ABCD'[q.a] + ': ' + esc(q.o[q.a]) + '</b> ') + esc(q.x) +
+      '<div class="note">Covered in Step ' + (q.s + 1) + ': ' + esc(STEP_TITLES[q.s]) + '.</div></div>';
+  }
+  h += '<div class="row"><button class="btn ghost" id="qBack"' + (QZ.i ? '' : ' disabled') + '>Back</button>' +
+    (chk ? '<button class="btn" id="qNext">' + (last ? 'See results' : 'Next question') + '</button>'
+         : '<button class="btn" id="qCheck"' + (sel == null ? ' disabled' : '') + '>Check answer</button>') + '</div></div>';
   v.innerHTML = h;
-  v.querySelectorAll('.opt').forEach(function (b) { b.onclick = function () { QZ.ans[QZ.i] = +b.dataset.i; buildQuiz(); }; });
+  v.querySelectorAll('.opt').forEach(function (b) { b.onclick = function () { if (QZ.checked[QZ.i]) return; QZ.ans[QZ.i] = +b.dataset.i; buildQuiz(); }; });
   $('qBack').onclick = function () { QZ.i--; buildQuiz(); };
-  $('qNext').onclick = function () { if (QZ.i < QUIZ.length - 1) { QZ.i++; buildQuiz(); } else { QZ.done = true; showResults(); } };
+  if (chk) $('qNext').onclick = function () { if (!last) { QZ.i++; buildQuiz(); } else { QZ.done = true; showResults(); } };
+  else $('qCheck').onclick = function () { QZ.checked[QZ.i] = true; buildQuiz(); var f = v.querySelector('.fb'); if (f) f.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); };
 }
 function showResults() {
   var score = 0, miss = {};
@@ -1369,7 +1384,7 @@ function showResults() {
   h += '</div></div>';
   $('viewQuiz').innerHTML = h;
   $('viewQuiz').querySelectorAll('[data-s]').forEach(function (b) { b.onclick = function () { setView('lesson'); startIfNeeded(); runStep(+b.dataset.s); }; });
-  $('qRetry').onclick = function () { QZ.i = 0; QZ.ans = []; QZ.done = false; buildQuiz(); };
+  $('qRetry').onclick = function () { QZ.i = 0; QZ.ans = []; QZ.checked = []; QZ.done = false; buildQuiz(); };
 }
 
 /* ===================== wiring ===================== */
