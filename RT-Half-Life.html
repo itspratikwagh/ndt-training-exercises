@@ -291,7 +291,7 @@ canvas{display:block;width:100%}
   <div class="text">
     <div class="eyebrow rv">The experiment</div>
     <h2 class="rv">Watch a source decay</h2>
-    <p class="muted rv">512 atoms. Advance one half-life at a time.</p>
+    <p class="muted rv">A pellet of 512 radioactive atoms. Advance one half-life at a time.</p>
     <div class="q" id="q-predict"></div>
     <div class="row rv">
       <button class="btn accent" id="step4" disabled>+1 half-life</button>
@@ -305,10 +305,15 @@ canvas{display:block;width:100%}
       <button data-iso="ir" class="on">Ir-192</button><button data-iso="co">Co-60</button>
     </div>
     <canvas id="pel4" style="height:270px" aria-label="Source pellet decaying"></canvas>
+    <div class="legend">
+      <span><i class="dot" style="background:var(--ir)" id="lg4-dot"></i><span id="lg4-a">Ir-192 (radioactive): 512</span></span>
+      <span><i class="dot" style="background:var(--daughter)"></i><span id="lg4-b">Stable Pt-192 / Os-192: 0</span></span>
+      <span>Total in pellet: 512</span>
+    </div>
     <div class="reads">
       <div class="read"><span class="k">Elapsed</span><span class="v" id="rd-t">0 days</span></div>
       <div class="read"><span class="k">Half-lives</span><span class="v" id="rd-n">0.00</span></div>
-      <div class="read"><span class="k">Atoms left</span><span class="v" id="rd-a">512</span></div>
+      <div class="read"><span class="k" id="rd-ak">Ir-192 left</span><span class="v" id="rd-a">512</span></div>
       <div class="read"><span class="k">Activity</span><span class="v" id="rd-c">100 Ci</span></div>
     </div>
     <canvas id="ch4" style="height:180px" aria-label="Activity versus half-lives chart"></canvas>
@@ -524,8 +529,8 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTokens
 new MutationObserver(readTokens).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
 const ISO = {
-  ir: { name: 'Ir-192', hlDays: 75, hlLabel: '75 days', energy: 'Gamma energy 0.31–0.61 MeV, unchanged', k: 0.5, len: 24 },
-  co: { name: 'Co-60', hlDays: 5.27 * 365.25, hlLabel: '5.27 years', energy: 'Gamma energy 1.17 & 1.33 MeV, unchanged', k: 0.95, len: 32 },
+  ir: { name: 'Ir-192', hlDays: 75, hlLabel: '75 days', energy: 'Gamma energy 0.31–0.61 MeV, unchanged', daughter: 'Pt-192 / Os-192', k: 0.5, len: 24 },
+  co: { name: 'Co-60', hlDays: 5.27 * 365.25, hlLabel: '5.27 years', energy: 'Gamma energy 1.17 & 1.33 MeV, unchanged', daughter: 'Ni-60', k: 0.95, len: 32 },
 };
 const fmt = (v, d = 2) => String(+(+v).toFixed(d));
 const sup = n => String(n).replace(/[-0-9.]/g, c => '⁻⁰¹²³⁴⁵⁶⁷⁸⁹·'['-0123456789.'.indexOf(c)]);
@@ -678,12 +683,13 @@ const QZ = {
     right: 'Correct. Decayed atoms become stable Pt-192 or Os-192 and stay in the pellet. Same size, same focal spot. Only the activity drops.',
     wrong: 'Look at the gray dots. Decayed atoms don\'t leave the pellet.', onDone: () => setMode2('fresh') },
   'q-fresh': { after: 'q-size', ask: 'Now a <b>brand-new</b> 50 Ci source. It has half the Ir-192 atoms of a new 100 Ci source. How big is it?', opts: ['Half the width', 'About 80% of the width', 'The same size'], ans: 1,
-    right: 'Right. Half the atoms means about half the metal. Half the volume is only about 20% narrower, since 0.5<sup>⅓</sup> ≈ 0.8.',
-    wrong: 'Half the atoms means half the <i>volume</i>. Shrinking a shape to half its volume shrinks each side by less than half.' },
+    right: 'Right. Half the Ir-192 atoms means about half the metal. Half the volume is only about 20% narrower, since 0.5<sup>⅓</sup> ≈ 0.8.',
+    wrong: 'Half the Ir-192 atoms means half the <i>volume</i>. Shrinking a shape to half its volume shrinks each side by less than half.' },
   'q-bq': { ask: 'How many becquerels is a 100 Ci source?', opts: ['3.7 × 10<sup>10</sup>', '3.7 × 10<sup>12</sup>', '3.7 × 10<sup>14</sup>', '100'], ans: 1,
     right: '100 × 3.7 × 10<sup>10</sup> = 3.7 × 10<sup>12</sup> Bq.', wrong: 'Multiply 100 by 3.7 × 10<sup>10</sup>. Try the slider.' },
-  'q-predict': { ask: '<span class="tag">Predict first</span>After one half-life, how many of the 512 atoms are left?', opts: ['512', '384', '256', '0'], ans: 2,
-    right: 'Now test it. Press +1 half-life.', wrong: 'Think about the name: half-life.', onDone: () => S4.unlock() },
+  'q-predict': { ask: '<span class="tag">Predict first</span>After one half-life, how many of the 512 atoms are still radioactive Ir-192?', opts: ['512', '384', '256', '0'], ans: 2,
+    right: 'Now test it. Press +1 half-life. All 512 atoms stay in the pellet, but the decayed ones turn gray: they are now stable.',
+    wrong: 'All 512 atoms are still in the pellet, but not all of them are still Ir-192. Think about the name: half-life.', onDone: () => S4.unlock() },
   'q-energy': { ask: 'Each half-life, what happens to the energy of each gamma ray?', opts: ['Halves', 'Stays the same', 'Doubles'], ans: 1,
     right: 'Right. Fewer rays, same energy each. It still penetrates the same thickness.', wrong: 'Energy is set by the isotope. Did the isotope change?' },
   'q-time': { after: 'q-energy', ask: 'A shot takes 2 min with a fresh source. One half-life later, how long for the same exposure?', opts: ['1 min', '2 min', '4 min'], ans: 2,
@@ -926,7 +932,7 @@ $$('#isoSeg button').forEach(b => b.onclick = () => {
   const iso = ISO[S4.iso];
   $('#chipHL').textContent = 'Half-life ' + iso.hlLabel; $('#chipE').textContent = iso.energy;
 });
-const ordinal = ['', 'Exactly half.', 'A quarter left.', 'An eighth left.', 'A sixteenth left.', '1/32 left.', '1/64 left.'];
+const ordinal = ['', 'Exactly half still radioactive.', 'A quarter still radioactive.', 'An eighth still radioactive.', 'A sixteenth still radioactive.', '1/32 still radioactive.', '1/64 still radioactive.'];
 ctrl.sim = {
   leave: () => { S4.playing = false; S4.btns(); },
   tick: dt => {
@@ -943,12 +949,17 @@ ctrl.sim = {
     const A = 100 * Math.pow(2, -S4.t);
     $('#rd-t').textContent = S4.time(S4.t);
     $('#rd-n').textContent = S4.t.toFixed(2);
+    const iso4 = ISO[S4.iso];
     $('#rd-a').textContent = p4.alive;
+    $('#rd-ak').textContent = iso4.name + ' left';
+    $('#lg4-a').textContent = `${iso4.name} (radioactive): ${p4.alive}`;
+    $('#lg4-b').textContent = `Stable ${iso4.daughter}: ${512 - p4.alive}`;
+    $('#lg4-dot').style.background = `var(--${S4.iso})`;
     $('#rd-c').textContent = (A >= 10 ? A.toFixed(1) : A.toFixed(2)) + ' Ci';
     const k = Math.floor(S4.t + 1e-6);
     if (k > S4.k) {
       S4.k = k;
-      $('#log4').textContent = `${k} half-li${k > 1 ? 'ves' : 'fe'} (${S4.time(k)}): ${512 >> k} atoms, ${fmt(100 / 2 ** k)} Ci. ${ordinal[k]}`;
+      $('#log4').textContent = `${k} half-li${k > 1 ? 'ves' : 'fe'} (${S4.time(k)}): ${512 >> k} ${ISO[S4.iso].name} atoms left, ${512 - (512 >> k)} now stable. ${fmt(100 / 2 ** k)} Ci. ${ordinal[k]}`;
     }
     // chart
     const [w, h, x] = fit($('#ch4'));
