@@ -1,0 +1,1060 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Half-Life Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one idea per screen, stepped like a lab procedure. Words on the left, an instrument panel on the right. */
+:root{
+  --bg:#EDF0F2; --surface:#FFFFFF; --ink:#141D25; --muted:#5A6772; --line:#D2D9DF;
+  --accent:#D69A00; --accent-ink:#875C00; --on-accent:#141D25;
+  --ir:#D8612A; --co:#2D68D2; --daughter:#BCC4CB; --gamma:#E0AA00;
+  --good:#23824F; --on-good:#FFFFFF; --bad:#C0392F;
+  --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1418; --surface:#161F26; --ink:#E5EBEF; --muted:#94A2AD; --line:#29353F;
+  --accent:#F2B630; --accent-ink:#F2B630; --on-accent:#141D25;
+  --ir:#F2864A; --co:#5E97F2; --daughter:#36434E; --gamma:#FFD24A;
+  --good:#58C487; --on-good:#0E1418; --bad:#EE6A62; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1418; --surface:#161F26; --ink:#E5EBEF; --muted:#94A2AD; --line:#29353F;
+  --accent:#F2B630; --accent-ink:#F2B630; --on-accent:#141D25;
+  --ir:#F2864A; --co:#5E97F2; --daughter:#36434E; --gamma:#FFD24A;
+  --good:#58C487; --on-good:#0E1418; --bad:#EE6A62; color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 var(--f-body);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:12px 16px}
+.top .in{max-width:1040px;margin:0 auto;display:flex;align-items:center;gap:16px}
+.brand{font-family:var(--f-display);font-weight:700;font-size:17px;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.brand svg{color:var(--accent)}
+.prog{flex:1;display:flex;gap:4px;min-width:0}
+.prog button{flex:1;height:6px;padding:0;border:0;border-radius:3px;background:var(--line);cursor:pointer;transition:background .3s}
+.prog button.done{background:var(--accent)}
+.prog button.cur{background:var(--ink)}
+.count{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+main{max-width:1040px;margin:0 auto;padding:40px 16px 128px}
+.scene{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:48px;align-items:start}
+.scene.solo{grid-template-columns:minmax(0,1fr)}
+@media (max-width:840px){.scene{grid-template-columns:minmax(0,1fr);gap:28px}}
+.text{display:flex;flex-direction:column;gap:18px;min-width:0}
+.text p{margin:0;max-width:42ch}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--accent-ink)}
+h1,h2{font-family:var(--f-display);text-wrap:balance;margin:0}
+h1{font-size:clamp(54px,10vw,96px);line-height:.92;letter-spacing:-.035em;font-weight:700}
+h2{font-size:clamp(30px,4.6vw,42px);line-height:1.05;letter-spacing:-.02em;font-weight:700}
+.lead{font-size:19px;color:var(--muted)}
+.big{font-family:var(--f-display);font-size:clamp(22px,3vw,28px);line-height:1.2;font-weight:500;letter-spacing:-.01em}
+.big b{color:var(--accent-ink);font-weight:700}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+sup{font-size:.62em;line-height:0}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;min-width:0;display:flex;flex-direction:column;gap:14px}
+canvas{display:block;width:100%}
+.cap{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.04em;color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.wave{width:18px;height:8px;display:inline-block}
+
+/* questions */
+.q{border-top:1px solid var(--line);padding-top:18px;display:flex;flex-direction:column;gap:12px}
+.q .ask{font-weight:600;font-size:17px;line-height:1.4;max-width:44ch}
+.q .ask .tag{display:block;font-family:var(--f-mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--accent-ink);font-weight:500;margin-bottom:4px}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opt{font-size:15px;padding:9px 16px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);cursor:pointer;transition:border-color .15s,background .15s,transform .15s}
+.opt:hover:not(:disabled){border-color:var(--ink)}
+.opt:disabled{cursor:default}
+.opt.right{background:var(--good);border-color:var(--good);color:var(--on-good)}
+.opt.picked{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.opt.wrong{border-color:var(--bad);color:var(--bad);text-decoration:line-through;animation:shake .35s}
+.opts.locked .opt:not(.right):not(.picked):not(.wrong){opacity:.45}
+.numrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.numrow input{width:120px;font:500 17px var(--f-mono);padding:8px 12px;border-radius:8px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink)}
+.numrow input:focus{border-color:var(--ink);outline:none}
+.numrow .unit{color:var(--muted);font-size:15px}
+.fb{font-size:15px;min-height:0;max-width:46ch}
+.fb:empty{display:none}
+.fb.good{color:var(--good)}
+.fb.bad{color:var(--bad)}
+.fb.neutral{color:var(--muted)}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+.btn{font-size:15px;font-weight:500;padding:10px 18px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.btn:hover:not(:disabled){border-color:var(--ink)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.btn.accent{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:999px;padding:3px;gap:2px;align-self:flex-start}
+.seg button{border:0;background:none;padding:6px 14px;border-radius:999px;cursor:pointer;font-size:14px;font-weight:500;color:var(--muted)}
+.seg button.on{background:var(--ink);color:var(--bg)}
+.seg button.done:not(.on){color:var(--good)}
+
+.reads{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:520px){.reads{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.read{display:flex;flex-direction:column;gap:2px;min-width:0}
+.read .k{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.read .v{font-family:var(--f-display);font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em;white-space:nowrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--f-mono);font-size:12px;padding:4px 10px;border-radius:999px;background:var(--bg);color:var(--muted)}
+.log{font-family:var(--f-mono);font-size:13.5px;color:var(--ink);min-height:1.5em;border-left:3px solid var(--accent);padding-left:10px}
+.log:empty{display:none}
+
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.duo figure{margin:0;display:flex;flex-direction:column;gap:6px;align-items:center}
+.duo .lbl{font-family:var(--f-display);font-weight:700;font-size:22px}
+.duo .dim{font-family:var(--f-mono);font-size:12px;color:var(--ink)}
+.duo .rate{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+.def{display:flex;flex-direction:column;gap:10px}
+.def .eq{font-family:var(--f-mono);font-size:clamp(16px,2.2vw,19px);padding:12px 14px;border-radius:10px;background:var(--surface);border:1px solid var(--line)}
+.meter{display:flex;flex-direction:column;gap:6px}
+.meter input[type=range]{width:100%;accent-color:var(--accent)}
+.meter .val{font-family:var(--f-display);font-weight:700;font-size:clamp(30px,5vw,44px);letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
+
+.bars2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.bars{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;height:170px;align-items:end;border-bottom:1.5px solid var(--muted)}
+.bcol{display:flex;flex-direction:column;justify-content:flex-end;height:100%;gap:4px;text-align:center}
+.bcol span{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.bar{height:var(--h);border-radius:4px 4px 0 0;transform-origin:bottom}
+.bars.count .bar{background:var(--accent)}
+.bars.energy .bar{background:var(--muted)}
+.bx{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-family:var(--f-mono);font-size:11px;color:var(--muted);text-align:center;margin-top:6px}
+
+.steps{display:flex;flex-direction:column;gap:8px;font-family:var(--f-mono);font-size:clamp(15px,2vw,18px)}
+.steps div{display:grid;grid-template-columns:7.5em 1fr;gap:12px;padding:10px 14px;border-radius:10px;background:var(--surface);border:1px solid var(--line)}
+.steps div span:first-child{color:var(--muted)}
+.formula{font-family:var(--f-display);font-size:clamp(26px,4vw,38px);font-weight:700;letter-spacing:-.02em;line-height:1.1;padding:20px 22px;border-radius:14px;background:var(--accent);color:var(--on-accent)}
+.formula small{display:block;font-family:var(--f-body);font-size:15px;font-weight:500;letter-spacing:0;margin-top:6px}
+
+.given{display:flex;flex-wrap:wrap;gap:8px}
+.given span{font-family:var(--f-mono);font-size:14px;padding:6px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--line)}
+.work{font-family:var(--f-mono);font-size:15px;line-height:1.7;padding:16px 18px;border-radius:12px;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;gap:14px}
+.wl{display:flex;flex-direction:column;gap:2px;padding-left:12px;border-left:3px solid var(--line);transition:border-color .3s}
+.wl.ok{border-left-color:var(--good)}
+.wk{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink)}
+.wf{color:var(--muted)}
+.slot{display:inline-block;min-width:1.6em;text-align:center;border-bottom:1.5px dashed var(--muted);color:var(--muted);font-weight:500}
+.slot.ok{border-bottom-color:transparent;color:var(--ink);font-weight:600}
+.work .ans{font-weight:600;color:var(--good)}
+
+.calc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:520px){.calc{grid-template-columns:minmax(0,1fr)}}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.field input,.field select{font:500 16px var(--f-mono);padding:8px 10px;border-radius:8px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);width:100%;min-width:0}
+.field .pair{display:flex;gap:6px}
+.result{font-family:var(--f-display);font-weight:700;font-size:clamp(34px,5vw,48px);letter-spacing:-.02em;line-height:1}
+.recap{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.recap li{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:baseline}
+.recap li b{font-family:var(--f-mono);color:var(--accent-ink);font-weight:500}
+.ref{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-family:var(--f-mono);font-size:14px}
+.ref span:nth-child(odd){color:var(--muted)}
+.foot{font-size:13px;color:var(--muted);max-width:52ch}
+
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:5;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--line)}
+.nav .in{max-width:1040px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.nav .hint{font-size:13px;color:var(--muted);text-align:center;flex:1}
+.btn.ready{animation:nudge 1.8s ease-in-out infinite}
+@keyframes nudge{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 35%,transparent)}}
+
+/* reveal */
+.scene.on .rv{animation:rise .65s cubic-bezier(.2,.75,.2,1) backwards;animation-delay:calc(var(--i,0) * 120ms)}
+.pop{animation:rise .55s cubic-bezier(.2,.75,.2,1) backwards}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}}
+.scene.on .bar{animation:grow .9s cubic-bezier(.2,.75,.2,1) backwards;animation-delay:calc(var(--j) * 160ms + 400ms)}
+@keyframes grow{from{transform:scaleY(0)}}
+@media (prefers-reduced-motion: reduce){
+  .scene.on .rv,.pop,.scene.on .bar,.opt.wrong,.btn.ready{animation:none}
+}
+</style>
+</head>
+<body>
+
+
+<header class="top">
+  <div class="in">
+    <div class="brand">
+      <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="8" stroke-dasharray="7.33 7.33" transform="rotate(-120 12 12)"/><circle cx="12" cy="12" r="3.2" fill="var(--bg)"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>
+      Half-Life Lab
+    </div>
+    <nav class="prog" id="prog" aria-label="Lesson progress"></nav>
+    <div class="count" id="count">1 / 13</div>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- 0 · Intro -->
+<section class="scene" data-key="intro">
+  <div class="text">
+    <div class="eyebrow rv">Industrial radiography · Gamma sources</div>
+    <h1 class="rv">Half&#8209;life</h1>
+    <p class="lead rv">What happens inside a gamma source as it ages, and how to work out what's left.</p>
+    <div class="q" id="q-guess"></div>
+  </div>
+  <div class="panel rv">
+    <canvas id="pel0" style="height:320px" aria-label="Magnified gamma source pellet with atoms flashing as they decay"></canvas>
+    <div class="cap">An Ir-192 pellet, magnified. Each flash is one atom decaying.</div>
+  </div>
+</section>
+
+<!-- 1 · Inside the capsule -->
+<section class="scene" data-key="inside" hidden>
+  <div class="text">
+    <div class="eyebrow rv">Zoom in</div>
+    <h2 class="rv">A source is a pellet of unstable atoms</h2>
+    <p class="big rv">Each atom decays <b>once</b>.</p>
+    <p class="muted rv">When it does, it releases gamma rays. Watch the dots.</p>
+    <div class="q" id="q-once"></div>
+  </div>
+  <div class="panel rv">
+    <canvas id="pel1" style="height:320px" aria-label="Pellet where atoms turn gray after decaying"></canvas>
+    <div class="legend">
+      <span><i class="dot" style="background:var(--ir)"></i>Ir-192, unstable</span>
+      <span><i class="dot" style="background:var(--daughter)"></i>Decayed, now stable</span>
+      <span><svg class="wave" viewBox="0 0 18 8"><path d="M0 4 Q2.25 0 4.5 4 T9 4 T13.5 4 T18 4" fill="none" stroke="var(--gamma)" stroke-width="1.6"/></svg>Gamma ray</span>
+    </div>
+    <div class="row"><span class="cap" id="dec1">Decayed: 0 of 420</span><button class="btn" id="re1" style="margin-left:auto;padding:6px 14px;font-size:13px">Restart</button></div>
+  </div>
+</section>
+
+<!-- 2 · Activity -->
+<section class="scene" data-key="activity" hidden>
+  <div class="text">
+    <div class="eyebrow rv">Activity</div>
+    <h2 class="rv">Activity = disintegrations per second</h2>
+    <p class="muted rv">Activity = λ × N. For one isotope, λ is fixed, so activity depends only on <b>N, the number of radioactive atoms</b>.</p>
+    <div class="q" id="q-more"></div>
+    <div class="q" id="q-pen"></div>
+    <div class="q" id="q-size"></div>
+    <div class="q" id="q-fresh"></div>
+  </div>
+  <div class="panel rv">
+    <div class="seg" id="mode2" role="group" aria-label="Which 50 Ci source">
+      <button data-m="aged" class="on">100 Ci, 75 days later</button><button data-m="fresh">Brand-new 50 Ci</button>
+    </div>
+    <div class="duo">
+      <figure><canvas id="pel2a" style="height:230px" aria-label="100 curie source"></canvas><div class="lbl">100 Ci</div><div class="dim">Pellet ≈ 3.0 mm</div><div class="rate" id="r2a">0 flashes / s</div></figure>
+      <figure><canvas id="pel2b" style="height:230px" aria-label="50 curie source"></canvas><div class="lbl">50 Ci</div><div class="dim" id="dim2b">Pellet ≈ 3.0 mm</div><div class="rate" id="r2b">0 flashes / s</div></figure>
+    </div>
+    <div class="legend">
+      <span><i class="dot" style="background:var(--ir)"></i>Ir-192</span>
+      <span><i class="dot" style="background:var(--daughter)"></i>Decayed: stable Pt-192 / Os-192</span>
+    </div>
+    <p class="small" id="cap2" style="margin:0;max-width:52ch">Same pellet, same size, same focal spot. Half its Ir-192 atoms have decayed into stable atoms that stay inside.</p>
+    <div class="cap">Ir-192 · each dot = billions of atoms · pellet sizes for natural Ir-192</div>
+  </div>
+</section>
+
+<!-- 3 · Units -->
+<section class="scene" data-key="units" hidden>
+  <div class="text">
+    <div class="eyebrow rv">Units</div>
+    <h2 class="rv">Curies and becquerels</h2>
+    <div class="def rv">
+      <div class="eq">1 Bq = 1 disintegration / second</div>
+      <div class="eq">1 Ci = 3.7 × 10<sup>10</sup> Bq</div>
+    </div>
+    <div class="q" id="q-bq"></div>
+  </div>
+  <div class="panel rv">
+    <div class="meter">
+      <label class="cap" for="ciRange">Drag to set source activity</label>
+      <div class="val" id="ciVal">100 Ci</div>
+      <input type="range" id="ciRange" min="1" max="150" value="100">
+    </div>
+    <div class="meter">
+      <div class="cap">Equals</div>
+      <div class="val" id="bqVal">3.7 × 10<sup>12</sup> Bq</div>
+      <div class="muted" id="bqWords">About 3.7 trillion atoms decaying every second.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 · Watch it decay -->
+<section class="scene" data-key="sim" hidden>
+  <div class="text">
+    <div class="eyebrow rv">The experiment</div>
+    <h2 class="rv">Watch a source decay</h2>
+    <p class="muted rv">512 atoms. Advance one half-life at a time.</p>
+    <div class="q" id="q-predict"></div>
+    <div class="row rv">
+      <button class="btn accent" id="step4" disabled>+1 half-life</button>
+      <button class="btn" id="play4" disabled>Play</button>
+      <button class="btn" id="reset4" disabled>Reset</button>
+    </div>
+    <div class="log" id="log4" aria-live="polite"></div>
+  </div>
+  <div class="panel rv">
+    <div class="seg" id="isoSeg" role="group" aria-label="Isotope">
+      <button data-iso="ir" class="on">Ir-192</button><button data-iso="co">Co-60</button>
+    </div>
+    <canvas id="pel4" style="height:270px" aria-label="Source pellet decaying"></canvas>
+    <div class="reads">
+      <div class="read"><span class="k">Elapsed</span><span class="v" id="rd-t">0 days</span></div>
+      <div class="read"><span class="k">Half-lives</span><span class="v" id="rd-n">0.00</span></div>
+      <div class="read"><span class="k">Atoms left</span><span class="v" id="rd-a">512</span></div>
+      <div class="read"><span class="k">Activity</span><span class="v" id="rd-c">100 Ci</span></div>
+    </div>
+    <canvas id="ch4" style="height:180px" aria-label="Activity versus half-lives chart"></canvas>
+    <div class="chips"><span class="chip" id="chipHL">Half-life 75 days</span><span class="chip" id="chipE">Gamma energy 0.31–0.61 MeV, unchanged</span></div>
+  </div>
+</section>
+
+<!-- 5 · What changes -->
+<section class="scene" data-key="changes" hidden>
+  <div class="text">
+    <div class="eyebrow rv">What actually changes</div>
+    <h2 class="rv">Fewer gamma rays. Same energy.</h2>
+    <div class="q" id="q-energy"></div>
+    <div class="q" id="q-time"></div>
+  </div>
+  <div class="panel rv">
+    <div class="bars2">
+      <div>
+        <div class="cap" style="margin-bottom:10px">Gamma rays per second</div>
+        <div class="bars count">
+          <div class="bcol"><span>100%</span><div class="bar" style="--h:100%;--j:0"></div></div>
+          <div class="bcol"><span>50%</span><div class="bar" style="--h:50%;--j:1"></div></div>
+          <div class="bcol"><span>25%</span><div class="bar" style="--h:25%;--j:2"></div></div>
+          <div class="bcol"><span>12.5%</span><div class="bar" style="--h:12.5%;--j:3"></div></div>
+        </div>
+        <div class="bx"><span>New</span><span>1 HL</span><span>2 HL</span><span>3 HL</span></div>
+      </div>
+      <div>
+        <div class="cap" style="margin-bottom:10px">Energy of each ray</div>
+        <div class="bars energy">
+          <div class="bcol"><span>100%</span><div class="bar" style="--h:100%;--j:0"></div></div>
+          <div class="bcol"><span>100%</span><div class="bar" style="--h:100%;--j:1"></div></div>
+          <div class="bcol"><span>100%</span><div class="bar" style="--h:100%;--j:2"></div></div>
+          <div class="bcol"><span>100%</span><div class="bar" style="--h:100%;--j:3"></div></div>
+        </div>
+        <div class="bx"><span>New</span><span>1 HL</span><span>2 HL</span><span>3 HL</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6 · The curve -->
+<section class="scene" data-key="curve" hidden>
+  <div class="text">
+    <div class="eyebrow rv">The decay curve</div>
+    <h2 class="rv">Half-life: the time for activity to drop by half</h2>
+    <p class="muted rv">Ir-192, starting at 100 Ci.</p>
+    <div class="q" id="q-zero"></div>
+  </div>
+  <div class="panel rv">
+    <canvas id="ch6" style="height:300px" aria-label="Ir-192 decay curve from 100 curies"></canvas>
+    <div class="row"><span class="cap">Activity (Ci) vs. days</span><button class="btn" id="re6" style="margin-left:auto;padding:6px 14px;font-size:13px">Replay</button></div>
+  </div>
+</section>
+
+<!-- 7 · Formula -->
+<section class="scene" data-key="formula" hidden>
+  <div class="text">
+    <div class="eyebrow rv">Spot the pattern</div>
+    <h2 class="rv">Divide by 2, again and again</h2>
+    <div class="steps rv" id="steps7">
+      <div><span>After 1 HL</span><span>A<sub>0</sub> ÷ 2</span></div>
+      <div hidden><span>After 2 HL</span><span>A<sub>0</sub> ÷ (2 × 2)</span></div>
+      <div hidden><span>After 3 HL</span><span>A<sub>0</sub> ÷ (2 × 2 × 2)</span></div>
+    </div>
+    <p class="small muted rv" style="margin:0">A<sub>0</sub> = Original Activity</p>
+    <div class="row rv"><button class="btn" id="more7">Next half-life</button></div>
+  </div>
+  <div class="text">
+    <div class="q" id="q-n" style="border-top:0;padding-top:0"></div>
+    <div class="formula" data-after="q-n" hidden>New Activity = Original Activity (A<sub>0</sub>) ÷ 2<sup>n</sup><small>n = No. of days ÷ Half-life</small></div>
+    <p class="muted" data-after="q-n" hidden>Three steps every time: find n, work out 2<sup>n</sup>, then divide.</p>
+  </div>
+</section>
+
+<!-- 8 · Practice 1 -->
+<section class="scene" data-key="p1" hidden>
+  <div class="text">
+    <div class="eyebrow rv">Your turn · 1</div>
+    <h2 class="rv">150 days later</h2>
+    <div class="given rv"><span>Ir-192</span><span>Half-life = 75 days</span><span>Original Activity (A<sub>0</sub>) = 100 Ci</span></div>
+    <div class="q" id="q-p1a"></div>
+    <div class="q" id="q-p1b"></div>
+    <div class="q" id="q-p1c"></div>
+  </div>
+  <div class="text">
+    <div class="work rv">
+      <div class="wl" id="w1-l1"><span class="wk">Step 1 · Number of half-lives</span><span class="wf">n = No. of days ÷ Half-life of Ir-192</span><span>n = 150 ÷ 75 = <b class="slot" id="w1-n">?</b></span></div>
+      <div class="wl" id="w1-l2"><span class="wk">Step 2 · Work out 2<sup>n</sup></span><span>2<sup>n</sup> = 2<sup id="w1-e">n</sup> = <b class="slot" id="w1-p">?</b></span></div>
+      <div class="wl" id="w1-l3"><span class="wk">Step 3 · New activity</span><span class="wf">New Activity = Original Activity (A<sub>0</sub>) ÷ 2<sup>n</sup></span><span>New Activity = 100 ÷ <span id="w1-d">2<sup>n</sup></span> = <b class="slot" id="w1-a">?</b> Ci</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 9 · Practice 2 -->
+<section class="scene" data-key="p2" hidden>
+  <div class="text">
+    <div class="eyebrow rv">Your turn · 2</div>
+    <h2 class="rv">What about 112 days?</h2>
+    <div class="given rv"><span>Ir-192</span><span>Half-life = 75 days</span><span>Original Activity (A<sub>0</sub>) = 100 Ci</span></div>
+    <p class="muted rv">n doesn't have to be a whole number.</p>
+    <div class="q" id="q-p2a"></div>
+    <div class="q" id="q-p2b"></div>
+    <div class="q" id="q-p2c"></div>
+  </div>
+  <div class="text">
+    <div class="work rv">
+      <div class="wl" id="w2-l1"><span class="wk">Step 1 · Number of half-lives</span><span class="wf">n = No. of days ÷ Half-life of Ir-192</span><span>n = 112 ÷ 75 = <b class="slot" id="w2-n">?</b></span></div>
+      <div class="wl" id="w2-l2"><span class="wk">Step 2 · Work out 2<sup>n</sup></span><span>2<sup>n</sup> = 2<sup id="w2-e">n</sup> = <b class="slot" id="w2-p">?</b></span></div>
+      <div class="wl" id="w2-l3"><span class="wk">Step 3 · New activity</span><span class="wf">New Activity = Original Activity (A<sub>0</sub>) ÷ 2<sup>n</sup></span><span>New Activity = 100 ÷ <span id="w2-d">2<sup>n</sup></span> = <b class="slot" id="w2-a">?</b> Ci</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 10 · Co-60 practice -->
+<section class="scene" data-key="p3" hidden>
+  <div class="text">
+    <div class="eyebrow rv">Your turn · 3</div>
+    <h2 class="rv">Cobalt-60 works the same way</h2>
+    <div class="given rv"><span>Co-60</span><span>Half-life = 5.27 years</span><span>Original Activity (A<sub>0</sub>) = 40 Ci</span><span>New Activity = 5 Ci</span></div>
+    <p class="muted rv">This time, work backwards: how long until it reads 5 Ci?</p>
+    <div class="q" id="q-p3a"></div>
+    <div class="q" id="q-p3b"></div>
+    <div class="q" id="q-p3c"></div>
+  </div>
+  <div class="text">
+    <div class="work rv">
+      <div class="wl" id="w3-l1"><span class="wk">Step 1 · Work out 2<sup>n</sup></span><span class="wf">2<sup>n</sup> = Original Activity (A<sub>0</sub>) ÷ New Activity</span><span>2<sup>n</sup> = 40 ÷ 5 = <b class="slot" id="w3-p">?</b></span></div>
+      <div class="wl" id="w3-l2"><span class="wk">Step 2 · Number of half-lives</span><span>2<sup>n</sup> = <span id="w3-p2">?</span>, so n = <b class="slot" id="w3-n">?</b></span></div>
+      <div class="wl" id="w3-l3"><span class="wk">Step 3 · Time</span><span class="wf">Time = n × Half-life of Co-60</span><span>Time = <span id="w3-n2">n</span> × 5.27 = <b class="slot" id="w3-t">?</b> years</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- Practice set -->
+<section class="scene" data-key="set" hidden>
+  <div class="text">
+    <div class="eyebrow rv">Practice set</div>
+    <h2 class="rv">Five more, same three steps</h2>
+    <div class="row rv"><span class="cap">Problem</span><div class="seg" id="setTabs" role="group" aria-label="Problem"></div></div>
+    <div id="setQ" style="display:flex;flex-direction:column;gap:18px"></div>
+  </div>
+  <div class="text" id="setW"></div>
+</section>
+
+<!-- 11 · Race -->
+<section class="scene" data-key="race" hidden>
+  <div class="text">
+    <div class="eyebrow rv">Ir-192 vs. Co-60</div>
+    <h2 class="rv">One year on the shelf</h2>
+    <div class="q" id="q-race"></div>
+    <p class="muted" data-after="q-race" hidden>Ir-192 has a short half-life, so shops replace it every few months. Co-60 stays useful for years.</p>
+  </div>
+  <div class="panel rv">
+    <canvas id="ch11" style="height:300px" aria-label="Ir-192 and Co-60 decay over one year"></canvas>
+    <div class="row"><span class="cap">Activity (Ci) vs. days, both starting at 100 Ci</span><button class="btn" id="re11" style="margin-left:auto;padding:6px 14px;font-size:13px" disabled>Replay</button></div>
+  </div>
+</section>
+
+<!-- 12 · Calculator + recap -->
+<section class="scene" data-key="calc" hidden>
+  <div class="text">
+    <div class="eyebrow rv">Wrap-up</div>
+    <h2 class="rv">Try any source</h2>
+    <div class="panel rv">
+      <div class="calc">
+        <div class="field"><label for="cIso">Isotope</label><select id="cIso"><option value="ir">Ir-192 (75 d)</option><option value="co">Co-60 (5.27 y)</option></select></div>
+        <div class="field"><label for="cA0">Start (Ci)</label><input id="cA0" type="number" inputmode="decimal" value="100" min="0"></div>
+        <div class="field"><label for="cT">Elapsed</label><div class="pair"><input id="cT" type="number" inputmode="decimal" value="75" min="0"><select id="cU" aria-label="Time unit"><option value="d">days</option><option value="y">years</option></select></div></div>
+      </div>
+      <div class="result" id="cRes">50 Ci</div>
+      <div class="cap" id="cWork">n = 75 ÷ 75 = 1 · A = 100 ÷ 2¹</div>
+      <canvas id="ch12" style="height:170px" aria-label="Decay curve for the calculator"></canvas>
+    </div>
+  </div>
+  <div class="text">
+    <p class="big rv" id="guessRecap">Your opening guess: none. After 75 days an Ir-192 source reads <b>50 Ci</b>.</p>
+    <ul class="recap rv">
+      <li><b>1</b><span>Activity = disintegrations per second, in Ci or Bq.</span></li>
+      <li><b>2</b><span>Each half-life halves the activity. Energy and pellet size stay the same.</span></li>
+      <li><b>3</b><span>New Activity = Original Activity (A<sub>0</sub>) ÷ 2<sup>n</sup>, with n = No. of days ÷ Half-life.</span></li>
+    </ul>
+    <div class="ref rv"><span>Ir-192</span><span>75 days</span><span>Co-60</span><span>5.27 years</span><span>1 Ci</span><span>3.7 × 10<sup>10</sup> Bq</span></div>
+    <p class="cap rv" id="scoreLine"></p>
+    <p class="foot rv">Ir-192's measured half-life is 73.8 days. Training and exam problems round it to 75.</p>
+  </div>
+</section>
+
+</main>
+
+<footer class="nav">
+  <div class="in">
+    <button class="btn" id="prev">Back</button>
+    <span class="hint" id="navHint">Answer, then continue</span>
+    <button class="btn primary" id="next">Next</button>
+  </div>
+</footer>
+
+<script>
+(() => {
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- theme tokens for canvas ---------- */
+const T = {};
+function readTokens() {
+  const cs = getComputedStyle(document.documentElement);
+  ['bg','surface','ink','muted','line','accent','ir','co','daughter','gamma'].forEach(n => T[n] = cs.getPropertyValue('--' + n).trim());
+}
+readTokens();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTokens);
+new MutationObserver(readTokens).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+const ISO = {
+  ir: { name: 'Ir-192', hlDays: 75, hlLabel: '75 days', energy: 'Gamma energy 0.31–0.61 MeV, unchanged', k: 0.5, len: 24 },
+  co: { name: 'Co-60', hlDays: 5.27 * 365.25, hlLabel: '5.27 years', energy: 'Gamma energy 1.17 & 1.33 MeV, unchanged', k: 0.95, len: 32 },
+};
+const fmt = (v, d = 2) => String(+(+v).toFixed(d));
+const sup = n => String(n).replace(/[-0-9.]/g, c => '⁻⁰¹²³⁴⁵⁶⁷⁸⁹·'['-0123456789.'.indexOf(c)]);
+
+function fit(c) {
+  const r = c.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+  const w = Math.max(1, Math.round(r.width * d)), h = Math.max(1, Math.round(r.height * d));
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+  const x = c.getContext('2d'); x.setTransform(d, 0, 0, d, 0, 0); x.clearRect(0, 0, r.width, r.height);
+  return [r.width, r.height, x];
+}
+
+/* ---------- pellet: close-up of a source ---------- */
+class Pellet {
+  constructor(canvas, o) {
+    this.c = canvas;
+    this.o = Object.assign({ n: 300, iso: 'ir', mode: 'ambient', rate: 5, k: 0.01, scale: 0.3 }, o);
+    this.reset();
+  }
+  reset() {
+    const n = this.o.n;
+    this.atoms = [];
+    for (let i = 0; i < n; i++) {
+      const f = Math.sqrt((i + 0.5) / n), a = i * 2.399963;
+      this.atoms.push({ fx: f * Math.cos(a), fy: f * Math.sin(a), alive: true, flash: 0, ph: Math.random() * 6.28 });
+    }
+    this.alive = n; this.target = n; this.gam = []; this.acc = 0; this.events = []; this.clock = 0;
+    const spent = Math.round(n * (this.o.spent || 0)), idx = [...this.atoms.keys()].sort(() => Math.random() - .5);
+    for (let i = 0; i < spent; i++) { this.atoms[idx[i]].alive = false; this.alive--; }
+  }
+  pick() {
+    if (!this.alive) return null;
+    for (let t = 0; t < 40; t++) { const a = this.atoms[(Math.random() * this.atoms.length) | 0]; if (a.alive) return a; }
+    return this.atoms.find(a => a.alive);
+  }
+  decay(a, consume) {
+    if (consume) { a.alive = false; this.alive--; }
+    a.flash = 1;
+    if (this.gam.length < 240) this.gam.push({ fx: a.fx, fy: a.fy, ang: Math.random() * 6.283, d: 0 });
+    this.events.push(this.clock);
+  }
+  update(dt) {
+    const o = this.o; this.clock += dt;
+    if (o.mode === 'ambient') {
+      this.acc += o.rate * dt * (0.6 + Math.random() * 0.8);
+      while (this.acc >= 1) { this.acc--; const a = this.pick(); if (a) this.decay(a, false); }
+    } else if (o.mode === 'prop') {
+      this.acc += this.alive * o.k * dt;
+      while (this.acc >= 1) { this.acc--; const a = this.pick(); if (a) this.decay(a, true); }
+    } else {
+      let ex = this.alive - this.target;
+      while (ex-- > 0) { const a = this.pick(); if (a) this.decay(a, true); }
+    }
+    for (const a of this.atoms) if (a.flash > 0) a.flash = Math.max(0, a.flash - dt * 2.2);
+    for (const g of this.gam) g.d += dt * 1.5;
+    this.gam = this.gam.filter(g => g.d < 2.6);
+    while (this.events.length && this.clock - this.events[0] > 1) this.events.shift();
+  }
+  draw() {
+    const [w, h, x] = fit(this.c), o = this.o, iso = ISO[o.iso];
+    const cx = w / 2, cy = h / 2, R = Math.min(w, h) * o.scale;
+    // capsule wall
+    x.lineWidth = 2; x.strokeStyle = T.line;
+    x.beginPath(); x.arc(cx, cy, R * 1.22, 0, 6.283); x.stroke();
+    x.lineWidth = 1; x.setLineDash([3, 4]);
+    x.beginPath(); x.arc(cx, cy, R * 1.1, 0, 6.283); x.stroke(); x.setLineDash([]);
+    // atoms
+    const ar = o.dot ? Math.min(w, h) * o.dot : Math.max(1.4, R * Math.sqrt(Math.PI / this.atoms.length) * 0.34);
+    const col = T[o.iso], t = this.clock;
+    for (const a of this.atoms) {
+      const j = a.alive ? 0.9 : 0;
+      const px = cx + a.fx * R + Math.sin(t * 9 + a.ph) * j, py = cy + a.fy * R + Math.cos(t * 8 + a.ph * 1.3) * j;
+      x.fillStyle = a.alive ? col : T.daughter;
+      x.beginPath(); x.arc(px, py, ar, 0, 6.283); x.fill();
+      if (a.flash > 0) {
+        x.strokeStyle = T.gamma; x.globalAlpha = a.flash; x.lineWidth = 1.5;
+        x.beginPath(); x.arc(px, py, ar + (1 - a.flash) * ar * 4, 0, 6.283); x.stroke(); x.globalAlpha = 1;
+      }
+    }
+    // gamma rays: wave packets travelling outward
+    x.strokeStyle = T.gamma; x.lineWidth = 1.6;
+    const L = iso.len, k = iso.k, amp = 3;
+    for (const g of this.gam) {
+      const dx = Math.cos(g.ang), dy = Math.sin(g.ang), sx = cx + g.fx * R, sy = cy + g.fy * R;
+      const travel = g.d * R; const len = Math.min(L, travel);
+      if (len < 2) continue;
+      x.globalAlpha = Math.max(0, 1 - g.d / 2.6);
+      x.beginPath();
+      for (let s = 0; s <= len; s += 1.5) {
+        const along = travel - s, off = amp * Math.sin(s * k - g.d * 18) * Math.min(1, s / 4, (len - s) / 4 + 0.2);
+        const px = sx + dx * along - dy * off, py = sy + dy * along + dx * off;
+        s === 0 ? x.moveTo(px, py) : x.lineTo(px, py);
+      }
+      x.stroke();
+    }
+    x.globalAlpha = 1;
+  }
+}
+
+/* ---------- chart helpers ---------- */
+function axes(x, w, h, o) {
+  const L = 40, B = 26, Tp = 12, Rt = 14;
+  const X = v => L + (w - L - Rt) * v / o.xmax, Y = v => h - B - (h - B - Tp) * v / o.ymax;
+  x.font = '11px "IBM Plex Mono", ui-monospace, monospace';
+  x.lineWidth = 1;
+  for (const v of o.yticks) {
+    x.strokeStyle = T.line; x.beginPath(); x.moveTo(L, Y(v)); x.lineTo(w - Rt, Y(v)); x.stroke();
+    x.fillStyle = T.muted; x.textAlign = 'right'; x.textBaseline = 'middle'; x.fillText(o.yfmt ? o.yfmt(v) : v, L - 7, Y(v));
+  }
+  for (const v of o.xticks) {
+    x.fillStyle = T.muted; x.textAlign = v === o.xmax ? 'right' : v === 0 ? 'left' : 'center'; x.textBaseline = 'top'; x.fillText(o.xfmt ? o.xfmt(v) : v, X(v), h - B + 7);
+  }
+  x.strokeStyle = T.muted; x.beginPath(); x.moveTo(L, h - B + .5); x.lineTo(w - Rt, h - B + .5); x.stroke();
+  return { X, Y, L, B, Tp, Rt };
+}
+function curve(x, A, f, x0, x1, color, lw = 2.5, dash) {
+  x.strokeStyle = color; x.lineWidth = lw; x.lineJoin = 'round'; if (dash) x.setLineDash(dash);
+  x.beginPath();
+  const n = 140;
+  for (let i = 0; i <= n; i++) { const v = x0 + (x1 - x0) * i / n; i ? x.lineTo(A.X(v), A.Y(f(v))) : x.moveTo(A.X(v), A.Y(f(v))); }
+  x.stroke(); x.setLineDash([]);
+}
+function marker(x, A, xv, yv, color, label, side = 'right') {
+  x.strokeStyle = T.muted; x.setLineDash([3, 3]); x.lineWidth = 1;
+  x.beginPath(); x.moveTo(A.X(xv), A.Y(0)); x.lineTo(A.X(xv), A.Y(yv)); x.lineTo(A.L, A.Y(yv)); x.stroke(); x.setLineDash([]);
+  x.fillStyle = color; x.beginPath(); x.arc(A.X(xv), A.Y(yv), 4, 0, 6.283); x.fill();
+  if (label) {
+    x.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; x.fillStyle = T.ink; x.textBaseline = 'bottom';
+    x.textAlign = side === 'right' ? 'left' : 'right';
+    x.fillText(label, A.X(xv) + (side === 'right' ? 7 : -7), A.Y(yv) - 4);
+  }
+}
+const ease = p => p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+
+/* ---------- quizzes ---------- */
+const state = { guess: null };
+const score = { total: 0, first: 0 };
+const QZ = {
+  'q-guess': { type: 'guess', ask: '<span class="tag">Quick guess</span>A new Ir-192 source arrives at 100 Ci. What will it read 75 days later?',
+    opts: ['100 Ci', '75 Ci', '50 Ci', '0 Ci'], right: 'Noted. We will check your guess at the end.' },
+  'q-once': { ask: 'After an atom decays, can it decay again?', opts: ['Yes', 'No'], ans: 1,
+    right: 'Right. It becomes a stable atom (Ir-192 → Pt-192, Co-60 → Ni-60). Gray dots are spent.',
+    wrong: 'Watch a gray dot. Does it ever flash again?' },
+  'q-more': { ask: 'Which source sends out more gamma rays?', opts: ['100 Ci', '50 Ci', 'The same'], ans: 0,
+    right: 'Yes. Double the activity, double the gamma rays.', wrong: 'Count the flashes under each one.' },
+  'q-pen': { after: 'q-more', ask: 'Which one penetrates deeper into steel?', opts: ['100 Ci', '50 Ci', 'The same'], ans: 2,
+    right: 'Correct. Penetration depends on gamma energy, which the isotope sets. Activity only sets the quantity.',
+    wrong: 'Both are Ir-192, so each gamma ray has the same energy.' },
+  'q-size': { after: 'q-pen', ask: 'This 50 Ci source used to be 100 Ci. As it decayed, did the pellet shrink?', opts: ['Yes, to half', 'A little', 'No'], ans: 2,
+    right: 'Correct. Decayed atoms become stable Pt-192 or Os-192 and stay in the pellet. Same size, same focal spot. Only the activity drops.',
+    wrong: 'Look at the gray dots. Decayed atoms don\'t leave the pellet.', onDone: () => setMode2('fresh') },
+  'q-fresh': { after: 'q-size', ask: 'Now a <b>brand-new</b> 50 Ci source. It has half the Ir-192 atoms of a new 100 Ci source. How big is it?', opts: ['Half the width', 'About 80% of the width', 'The same size'], ans: 1,
+    right: 'Right. Half the atoms means about half the metal. Half the volume is only about 20% narrower, since 0.5<sup>⅓</sup> ≈ 0.8.',
+    wrong: 'Half the atoms means half the <i>volume</i>. Shrinking a shape to half its volume shrinks each side by less than half.' },
+  'q-bq': { ask: 'How many becquerels is a 100 Ci source?', opts: ['3.7 × 10<sup>10</sup>', '3.7 × 10<sup>12</sup>', '3.7 × 10<sup>14</sup>', '100'], ans: 1,
+    right: '100 × 3.7 × 10<sup>10</sup> = 3.7 × 10<sup>12</sup> Bq.', wrong: 'Multiply 100 by 3.7 × 10<sup>10</sup>. Try the slider.' },
+  'q-predict': { ask: '<span class="tag">Predict first</span>After one half-life, how many of the 512 atoms are left?', opts: ['512', '384', '256', '0'], ans: 2,
+    right: 'Now test it. Press +1 half-life.', wrong: 'Think about the name: half-life.', onDone: () => S4.unlock() },
+  'q-energy': { ask: 'Each half-life, what happens to the energy of each gamma ray?', opts: ['Halves', 'Stays the same', 'Doubles'], ans: 1,
+    right: 'Right. Fewer rays, same energy each. It still penetrates the same thickness.', wrong: 'Energy is set by the isotope. Did the isotope change?' },
+  'q-time': { after: 'q-energy', ask: 'A shot takes 2 min with a fresh source. One half-life later, how long for the same exposure?', opts: ['1 min', '2 min', '4 min'], ans: 2,
+    right: 'Yes. Half the gamma rays, so you need twice the time.', wrong: 'Fewer gamma rays per second means you wait longer to collect the same dose.' },
+  'q-zero': { ask: 'Does the activity ever reach exactly zero?', opts: ['Yes', 'No'], ans: 1,
+    right: 'Correct. It keeps halving. In practice, it just becomes too weak to be useful.', wrong: 'Half of something is never nothing. Watch the tail.' },
+  'q-n': { ask: 'After <b>n</b> half-lives, what is the new activity?', opts: ['A<sub>0</sub> ÷ 2n', 'A<sub>0</sub> ÷ 2<sup>n</sup>', 'A<sub>0</sub> × 2<sup>n</sup>', 'A<sub>0</sub> − 2n'], ans: 1,
+    right: 'That is the half-life equation.', wrong: '2 × 2 × 2 is 2 multiplied by itself 3 times.', hidden: true },
+  'q-p1a': { type: 'num', ask: '<span class="tag">Step 1</span>n = No. of days ÷ Half-life of Ir-192.<br>How many half-lives is 150 days?', ans: 2, tol: 0.01, unit: 'half-lives', hint: 'n = 150 ÷ 75', show: 'n = 150 ÷ 75 = 2.',
+    onDone: () => { fill('w1-n', '2'); fill('w1-e', '2', true); ok('w1-l1'); } },
+  'q-p1b': { type: 'num', after: 'q-p1a', ask: '<span class="tag">Step 2</span>Work out 2<sup>n</sup>. What is 2<sup>2</sup>?', ans: 4, tol: 0.01, unit: '', hint: '2<sup>2</sup> = 2 × 2', show: '2<sup>2</sup> = 2 × 2 = 4.',
+    onDone: () => { fill('w1-p', '4'); fill('w1-d', '4', true); ok('w1-l2'); } },
+  'q-p1c': { type: 'num', after: 'q-p1b', ask: '<span class="tag">Step 3</span>New Activity = Original Activity (A<sub>0</sub>) ÷ 2<sup>n</sup> = 100 ÷ 4', ans: 25, tol: 0.1, unit: 'Ci', hint: 'Divide 100 by 4.', show: '100 ÷ 4 = 25 Ci.',
+    onDone: () => { fill('w1-a', '25'); ok('w1-l3'); } },
+  'q-p2a': { type: 'num', ask: '<span class="tag">Step 1</span>n = No. of days ÷ Half-life of Ir-192.<br>How many half-lives is 112 days? (1 decimal)', ans: 1.5, tol: 0.06, unit: 'half-lives', hint: 'n = 112 ÷ 75', show: 'n = 112 ÷ 75 = 1.49, about 1.5.',
+    onDone: () => { fill('w2-n', '1.5'); fill('w2-e', '1.5', true); ok('w2-l1'); } },
+  'q-p2b': { type: 'num', after: 'q-p2a', ask: '<span class="tag">Step 2</span>Work out 2<sup>n</sup>. What is 2<sup>1.5</sup>? (3 decimals)', ans: 2.828, tol: 0.03, unit: '', hint: '2<sup>1.5</sup> = 2<sup>1</sup> × 2<sup>0.5</sup> = 2 × √2 = 2 × 1.414. Or use the x<sup>y</sup> key on a calculator.', show: '2<sup>1.5</sup> = 2 × 1.414 = 2.828.',
+    onDone: () => { fill('w2-p', '2.828'); fill('w2-d', '2.828', true); ok('w2-l2'); } },
+  'q-p2c': { type: 'num', after: 'q-p2b', ask: '<span class="tag">Step 3</span>New Activity = Original Activity (A<sub>0</sub>) ÷ 2<sup>n</sup> = 100 ÷ 2.828', ans: 35.36, tol: 0.5, unit: 'Ci', hint: 'Divide 100 by 2.828.', show: '100 ÷ 2.828 = 35.36 Ci. Between 50 Ci (1 HL) and 25 Ci (2 HL), as expected.',
+    onDone: () => { fill('w2-a', '35.36'); ok('w2-l3'); } },
+  'q-p3a': { type: 'num', ask: '<span class="tag">Step 1</span>2<sup>n</sup> = Original Activity ÷ New Activity = 40 ÷ 5', ans: 8, tol: 0.01, unit: '', hint: 'Divide 40 by 5.', show: '2<sup>n</sup> = 40 ÷ 5 = 8.',
+    onDone: () => { fill('w3-p', '8'); fill('w3-p2', '8', true); ok('w3-l1'); } },
+  'q-p3b': { type: 'num', after: 'q-p3a', ask: '<span class="tag">Step 2</span>2<sup>n</sup> = 8. What is n?', ans: 3, tol: 0.01, unit: 'half-lives', hint: 'How many 2s multiply to 8? 2 × 2 × 2 …', show: '2 × 2 × 2 = 8, so n = 3.',
+    onDone: () => { fill('w3-n', '3'); fill('w3-n2', '3', true); ok('w3-l2'); } },
+  'q-p3c': { type: 'num', after: 'q-p3b', ask: '<span class="tag">Step 3</span>Time = n × Half-life of Co-60 = 3 × 5.27', ans: 15.81, tol: 0.1, unit: 'years', hint: 'Multiply 3 by 5.27.', show: '3 × 5.27 = 15.81 years.',
+    onDone: () => { fill('w3-t', '15.81'); ok('w3-l3'); } },
+  'q-race': { ask: 'Both start at 100 Ci. After one year, which is stronger?', opts: ['Ir-192', 'Co-60', 'Equal'], ans: 1,
+    right: 'Yes. Co-60 is still about 88 Ci. Ir-192 is down to about 3.4 Ci.', wrong: 'Compare half-lives: 75 days vs. 5.27 years.', onDone: () => race.run() },
+};
+
+function buildQuiz(id, cfg) {
+  const el = document.getElementById(id);
+  el.classList.add('rv');
+  if (cfg.after || cfg.hidden) el.hidden = true;
+  el.innerHTML = `<div class="ask">${cfg.ask}</div>`;
+  const fb = document.createElement('div'); fb.className = 'fb'; fb.setAttribute('aria-live', 'polite');
+  let tries = 0, done = false;
+  const finish = ok => {
+    done = true; el.dataset.done = '1';
+    if (cfg.type !== 'guess') { score.total++; if (ok && tries === 1) score.first++; }
+    cfg.onDone && cfg.onDone();
+    revealAfter(id); checkDone();
+  };
+  if (cfg.type === 'num') {
+    const row = document.createElement('div'); row.className = 'numrow';
+    row.innerHTML = `<input id="${id}-in" type="text" inputmode="decimal" autocomplete="off" aria-label="Your answer"><span class="unit">${cfg.unit}</span><button class="btn">Check</button>`;
+    const inp = row.querySelector('input'), b = row.querySelector('button');
+    const check = () => {
+      if (done) return;
+      const v = parseFloat(inp.value.replace(',', '.'));
+      if (isNaN(v)) { fb.className = 'fb neutral'; fb.textContent = 'Enter a number.'; return; }
+      tries++;
+      if (Math.abs(v - cfg.ans) <= cfg.tol) {
+        fb.className = 'fb good'; fb.innerHTML = 'Correct. ' + cfg.show; inp.disabled = b.disabled = true; finish(true);
+      } else if (tries < 2) {
+        fb.className = 'fb bad'; fb.innerHTML = 'Not quite. ' + cfg.hint;
+      } else {
+        fb.className = 'fb bad'; fb.innerHTML = 'Answer: ' + cfg.show; inp.disabled = b.disabled = true; finish(false);
+      }
+    };
+    b.onclick = check; inp.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+    el.append(row);
+  } else {
+    const wrap = document.createElement('div'); wrap.className = 'opts';
+    cfg.opts.forEach((o, i) => {
+      const b = document.createElement('button'); b.className = 'opt'; b.innerHTML = o;
+      b.onclick = () => {
+        if (done) return; tries++;
+        if (cfg.type === 'guess') {
+          b.classList.add('picked'); state.guess = b.textContent; lock(); fb.className = 'fb neutral'; fb.innerHTML = cfg.right; finish(true); return;
+        }
+        if (i === cfg.ans) { b.classList.add('right'); lock(); fb.className = 'fb good'; fb.innerHTML = cfg.right; finish(true); }
+        else { b.classList.add('wrong'); b.disabled = true; fb.className = 'fb bad'; fb.innerHTML = cfg.wrong; }
+      };
+      wrap.append(b);
+    });
+    const lock = () => { wrap.classList.add('locked'); $$('.opt', wrap).forEach(x => x.disabled = true); };
+    el.append(wrap);
+  }
+  el.append(fb);
+}
+function fill(id, html, plain) { const e = document.getElementById(id); e.innerHTML = html; if (!plain) e.classList.add('ok'); }
+function ok(id) { document.getElementById(id).classList.add('ok'); }
+function show(el) { el.hidden = false; el.classList.remove('pop'); void el.offsetWidth; if (!RM) el.classList.add('pop'); }
+function revealAfter(id) {
+  for (const [k, c] of Object.entries(QZ)) if (c.after === id) show(document.getElementById(k));
+  $$(`[data-after="${id}"]`).forEach(show);
+}
+/* practice set: five problems, same three steps */
+const SET = [
+  { iso: 'Ir-192', hl: 75, u: 'days', a0: 80, t: 225, n: 3, nT: .01, nS: '3', p: 8, pT: .01, pS: '8', a: 10, aT: .1, aS: '10' },
+  { iso: 'Ir-192', hl: 75, u: 'days', a0: 120, t: 30, n: 0.4, nT: .01, nS: '0.4', p: 1.32, pT: .01, pS: '1.32', a: 90.9, aT: .5, aS: '90.9', dec: 2 },
+  { iso: 'Co-60', hl: 5.27, u: 'years', a0: 60, t: 10.54, n: 2, nT: .01, nS: '2', p: 4, pT: .01, pS: '4', a: 15, aT: .1, aS: '15' },
+  { iso: 'Co-60', hl: 5.27, u: 'years', a0: 25, t: 8, n: 1.52, nT: .02, nS: '1.52', p: 2.87, pT: .03, pS: '2.87', a: 8.71, aT: .15, aS: '8.71', dec: 2 },
+  { iso: 'Ir-192', hl: 75, u: 'days', a0: 90, t: 375, n: 5, nT: .01, nS: '5', p: 32, pT: .01, pS: '32', a: 2.81, aT: .03, aS: '2.81' },
+];
+function setPick(k) {
+  $$('#setTabs button').forEach(b => b.classList.toggle('on', +b.dataset.k === k));
+  $$('[data-prob]').forEach(el => el.hidden = +el.dataset.prob !== k);
+  const w = $(`#setW [data-prob="${k}"]`), q = $(`#setQ [data-prob="${k}"]`);
+  [w, q].forEach(el => { el.classList.remove('pop'); void el.offsetWidth; if (!RM) el.classList.add('pop'); });
+}
+SET.forEach((P, i) => {
+  const k = i + 1, id = 's' + k, W = 'w' + id, whole = Number.isInteger(P.n);
+  const tab = document.createElement('button'); tab.dataset.k = k; tab.textContent = k; tab.setAttribute('aria-label', 'Problem ' + k); tab.onclick = () => setPick(k);
+  $('#setTabs').append(tab);
+  const q = document.createElement('div'); q.dataset.prob = k; q.style.cssText = 'display:flex;flex-direction:column;gap:18px';
+  q.innerHTML = `<div class="given"><span>${P.iso}</span><span>Half-life = ${P.hl} ${P.u}</span><span>Original Activity (A<sub>0</sub>) = ${P.a0} Ci</span><span>Elapsed = ${P.t} ${P.u}</span></div>
+    <div class="q" id="q-${id}a"></div><div class="q" id="q-${id}b"></div><div class="q" id="q-${id}c"></div>
+    ${k < SET.length ? `<div class="row" data-after="q-${id}c" hidden><button class="btn accent">Next problem</button></div>` : `<p class="fb good" data-after="q-${id}c" hidden>Practice set complete.</p>`}`;
+  q.querySelector('.btn')?.addEventListener('click', () => setPick(k + 1));
+  $('#setQ').append(q);
+  const w = document.createElement('div'); w.dataset.prob = k; w.className = 'work';
+  w.innerHTML = `<div class="wl" id="${W}-l1"><span class="wk">Step 1 · Number of half-lives</span><span class="wf">n = No. of ${P.u} ÷ Half-life of ${P.iso}</span><span>n = ${P.t} ÷ ${P.hl} = <b class="slot" id="${W}-n">?</b></span></div>
+    <div class="wl" id="${W}-l2"><span class="wk">Step 2 · Work out 2<sup>n</sup></span><span>2<sup>n</sup> = 2<sup id="${W}-e">n</sup> = <b class="slot" id="${W}-p">?</b></span></div>
+    <div class="wl" id="${W}-l3"><span class="wk">Step 3 · New activity</span><span class="wf">New Activity = Original Activity (A<sub>0</sub>) ÷ 2<sup>n</sup></span><span>New Activity = ${P.a0} ÷ <span id="${W}-d">2<sup>n</sup></span> = <b class="slot" id="${W}-a">?</b> Ci</span></div>`;
+  $('#setW').append(w);
+  const dec = P.dec ? ` (${P.dec} decimals)` : '';
+  QZ[`q-${id}a`] = { type: 'num', ask: `<span class="tag">Step 1</span>n = No. of ${P.u} ÷ Half-life of ${P.iso}.<br>How many half-lives is ${P.t} ${P.u}?${dec}`,
+    ans: P.n, tol: P.nT, unit: 'half-lives', hint: `n = ${P.t} ÷ ${P.hl}`, show: `n = ${P.t} ÷ ${P.hl} = ${P.nS}.`,
+    onDone: () => { fill(`${W}-n`, P.nS); fill(`${W}-e`, P.nS, true); ok(`${W}-l1`); } };
+  QZ[`q-${id}b`] = { type: 'num', after: `q-${id}a`, ask: `<span class="tag">Step 2</span>Work out 2<sup>n</sup>. What is 2<sup>${P.nS}</sup>?${dec}`,
+    ans: P.p, tol: P.pT, unit: '',
+    hint: whole ? `2<sup>${P.n}</sup> = ${Array(P.n).fill(2).join(' × ')}` : `Use your calculator's x<sup>y</sup> (or ^) key: 2 ^ ${P.nS}`,
+    show: whole ? `2<sup>${P.n}</sup> = ${Array(P.n).fill(2).join(' × ')} = ${P.pS}.` : `2<sup>${P.nS}</sup> = ${P.pS}.`,
+    onDone: () => { fill(`${W}-p`, P.pS); fill(`${W}-d`, P.pS, true); ok(`${W}-l2`); } };
+  QZ[`q-${id}c`] = { type: 'num', after: `q-${id}b`, ask: `<span class="tag">Step 3</span>New Activity = Original Activity (A<sub>0</sub>) ÷ 2<sup>n</sup> = ${P.a0} ÷ ${P.pS}`,
+    ans: P.a, tol: P.aT, unit: 'Ci', hint: `Divide ${P.a0} by ${P.pS}.`, show: `${P.a0} ÷ ${P.pS} = ${P.aS} Ci.`,
+    onDone: () => { fill(`${W}-a`, P.aS); ok(`${W}-l3`); $(`#setTabs [data-k="${k}"]`).classList.add('done'); } };
+});
+Object.entries(QZ).forEach(([k, c]) => buildQuiz(k, c));
+setPick(1);
+
+/* ---------- scenes & navigation ---------- */
+const scenes = $$('.scene');
+const ctrl = {};
+let cur = 0, last = performance.now();
+const prog = $('#prog');
+scenes.forEach((s, i) => {
+  const b = document.createElement('button'); b.setAttribute('aria-label', 'Go to step ' + (i + 1));
+  b.onclick = () => go(i); prog.append(b);
+});
+function checkDone() {
+  const qs = $$('.q', scenes[cur]);
+  const ok = qs.every(q => q.dataset.done);
+  $('#next').classList.toggle('ready', ok && cur < scenes.length - 1);
+  $('#navHint').textContent = cur === scenes.length - 1 ? 'Done. Use Back to review.' : ok ? 'Nice. Continue when ready.' : 'Answer, then continue';
+}
+function go(i) {
+  i = Math.max(0, Math.min(scenes.length - 1, i));
+  ctrl[scenes[cur].dataset.key]?.leave?.();
+  scenes[cur].classList.remove('on'); scenes[cur].hidden = true;
+  cur = i;
+  const s = scenes[cur];
+  s.hidden = false;
+  let j = 0; $$('.rv', s).forEach(el => el.style.setProperty('--i', el.closest('[hidden]') ? 0 : Math.min(j++, 8)));
+  void s.offsetWidth; s.classList.add('on');
+  ctrl[s.dataset.key]?.enter?.();
+  [...prog.children].forEach((b, j) => { b.className = j < cur ? 'done' : j === cur ? 'cur' : ''; });
+  $('#count').textContent = `${cur + 1} / ${scenes.length}`;
+  $('#prev').disabled = cur === 0;
+  $('#next').disabled = cur === scenes.length - 1;
+  checkDone();
+  window.scrollTo({ top: 0, behavior: RM ? 'auto' : 'smooth' });
+}
+$('#prev').onclick = () => go(cur - 1);
+$('#next').onclick = () => go(cur + 1);
+addEventListener('keydown', e => {
+  if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName)) return;
+  if (e.key === 'ArrowRight') go(cur + 1);
+  if (e.key === 'ArrowLeft') go(cur - 1);
+});
+
+/* scene 0 */
+const p0 = new Pellet($('#pel0'), { n: 380, mode: 'ambient', rate: 5 });
+ctrl.intro = { tick: dt => { p0.update(dt); p0.draw(); } };
+
+/* scene 1 */
+const p1 = new Pellet($('#pel1'), { n: 420, mode: 'prop', k: Math.LN2 / 45 });
+ctrl.inside = { enter: () => p1.reset(), tick: dt => { p1.update(dt); p1.draw(); $('#dec1').textContent = `Decayed: ${420 - p1.alive} of 420`; } };
+$('#re1').onclick = () => p1.reset();
+
+/* scene 2 */
+// Activity = λN. Same isotope, so 50 Ci means half the Ir-192 atoms.
+// Aged: same pellet, half the atoms decayed to stable Pt/Os. Fresh: half the metal, so the
+// linear size scales by 0.5^(1/3) ≈ 0.79; a 2D slice then holds 0.79² ≈ 63% of the atoms.
+const DOT = 0.32 * Math.sqrt(Math.PI / 260) * 0.34;
+const p2a = new Pellet($('#pel2a'), { n: 260, mode: 'ambient', rate: 12, scale: 0.32, dot: DOT });
+const p2b = new Pellet($('#pel2b'), { n: 260, mode: 'ambient', rate: 6, scale: 0.32, dot: DOT, spent: 0.5 });
+const CAP2 = {
+  aged: ['Pellet ≈ 3.0 mm', 'Same pellet, same size, same focal spot. Half its Ir-192 atoms have decayed into stable atoms that stay inside.'],
+  fresh: ['Pellet ≈ 2.4 mm', 'Half the Ir-192 atoms, so about half the iridium metal. Half the volume is about 80% of the width, so the focal spot is smaller.'],
+};
+function setMode2(m) {
+  $$('#mode2 button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+  Object.assign(p2b.o, m === 'aged' ? { n: 260, scale: 0.32, spent: 0.5 } : { n: 164, scale: 0.32 * Math.cbrt(0.5), spent: 0 });
+  p2b.reset();
+  $('#dim2b').textContent = CAP2[m][0]; $('#cap2').textContent = CAP2[m][1];
+}
+$$('#mode2 button').forEach(b => b.onclick = () => setMode2(b.dataset.m));
+ctrl.activity = { tick: dt => {
+  p2a.update(dt); p2b.update(dt); p2a.draw(); p2b.draw();
+  $('#r2a').textContent = `${p2a.events.length} flashes / s`; $('#r2b').textContent = `${p2b.events.length} flashes / s`;
+} };
+
+/* scene 3 */
+function words(x) {
+  const u = [[1e15, 'quadrillion'], [1e12, 'trillion'], [1e9, 'billion']];
+  for (const [v, n] of u) if (x >= v) return `${fmt(x / v, 1)} ${n}`;
+  return fmt(x, 0);
+}
+function sci(x) { const e = Math.floor(Math.log10(x)); return `${fmt(x / 10 ** e, 2)} × 10<sup>${e}</sup>`; }
+const ciR = $('#ciRange');
+const updCi = () => { const c = +ciR.value, bq = c * 3.7e10;
+  $('#ciVal').textContent = c + ' Ci'; $('#bqVal').innerHTML = sci(bq) + ' Bq';
+  $('#bqWords').textContent = `About ${words(bq)} atoms decaying every second.`; };
+ciR.oninput = updCi; updCi();
+
+/* scene 4: the decay experiment */
+const p4 = new Pellet($('#pel4'), { n: 512, mode: 'target', scale: 0.34 });
+const S4 = {
+  iso: 'ir', t: 0, playing: false, tw: null, k: 0, ok: false,
+  unlock() { this.ok = true; this.btns(); },
+  btns() {
+    const max = this.t >= 6 - 1e-6;
+    $('#step4').disabled = !this.ok || max || !!this.tw;
+    $('#play4').disabled = !this.ok || max;
+    $('#reset4').disabled = !this.ok;
+    $('#play4').textContent = this.playing ? 'Pause' : 'Play';
+  },
+  reset() { this.t = 0; this.k = 0; this.playing = false; this.tw = null; p4.o.iso = this.iso; p4.reset(); $('#log4').textContent = ''; this.btns(); },
+  time(t) { const iso = ISO[this.iso]; return this.iso === 'ir' ? `${Math.round(t * iso.hlDays)} days` : `${fmt(t * 5.27, 1)} yr`; },
+};
+$('#step4').onclick = () => { S4.playing = false; S4.tw = { a: S4.t, b: Math.floor(S4.t + 1e-6) + 1, e: 0, d: RM ? .01 : 1.3 }; S4.btns(); };
+$('#play4').onclick = () => { S4.playing = !S4.playing; S4.tw = null; S4.btns(); };
+$('#reset4').onclick = () => S4.reset();
+$$('#isoSeg button').forEach(b => b.onclick = () => {
+  $$('#isoSeg button').forEach(x => x.classList.toggle('on', x === b));
+  S4.iso = b.dataset.iso; S4.reset();
+  const iso = ISO[S4.iso];
+  $('#chipHL').textContent = 'Half-life ' + iso.hlLabel; $('#chipE').textContent = iso.energy;
+});
+const ordinal = ['', 'Exactly half.', 'A quarter left.', 'An eighth left.', 'A sixteenth left.', '1/32 left.', '1/64 left.'];
+ctrl.sim = {
+  leave: () => { S4.playing = false; S4.btns(); },
+  tick: dt => {
+    if (S4.tw) {
+      const tw = S4.tw; tw.e += dt; const p = Math.min(1, tw.e / tw.d);
+      S4.t = tw.a + (tw.b - tw.a) * ease(p);
+      if (p >= 1) { S4.t = tw.b; S4.tw = null; S4.btns(); }
+    } else if (S4.playing) {
+      S4.t = Math.min(6, S4.t + dt / 2.6);
+      if (S4.t >= 6) { S4.playing = false; S4.btns(); }
+    }
+    p4.target = Math.round(512 * Math.pow(2, -S4.t));
+    p4.update(dt); p4.draw();
+    const A = 100 * Math.pow(2, -S4.t);
+    $('#rd-t').textContent = S4.time(S4.t);
+    $('#rd-n').textContent = S4.t.toFixed(2);
+    $('#rd-a').textContent = p4.alive;
+    $('#rd-c').textContent = (A >= 10 ? A.toFixed(1) : A.toFixed(2)) + ' Ci';
+    const k = Math.floor(S4.t + 1e-6);
+    if (k > S4.k) {
+      S4.k = k;
+      $('#log4').textContent = `${k} half-li${k > 1 ? 'ves' : 'fe'} (${S4.time(k)}): ${512 >> k} atoms, ${fmt(100 / 2 ** k)} Ci. ${ordinal[k]}`;
+    }
+    // chart
+    const [w, h, x] = fit($('#ch4'));
+    const Ax = axes(x, w, h, { xmax: 6, ymax: 100, xticks: [0, 1, 2, 3, 4, 5, 6], yticks: [0, 25, 50, 75, 100], xfmt: v => v ? v + ' HL' : '0' });
+    const f = v => 100 * Math.pow(2, -v);
+    curve(x, Ax, f, 0, 6, T.line, 1.5, [4, 4]);
+    for (let i = 1; i <= Math.min(k, 4); i++) marker(x, Ax, i, f(i), T[S4.iso], fmt(f(i)) + ' Ci');
+    if (S4.t > 0) curve(x, Ax, f, 0, S4.t, T[S4.iso], 2.5);
+    x.fillStyle = T[S4.iso]; x.beginPath(); x.arc(Ax.X(S4.t), Ax.Y(f(S4.t)), 5, 0, 6.283); x.fill();
+  },
+};
+
+/* scene 6: animated curve */
+const c6 = { p: 0 };
+ctrl.curve = {
+  enter: () => c6.p = RM ? 1 : 0,
+  tick: dt => {
+    c6.p = Math.min(1, c6.p + dt / 3.6);
+    const [w, h, x] = fit($('#ch6'));
+    const Ax = axes(x, w, h, { xmax: 375, ymax: 100, xticks: [0, 75, 150, 225, 300, 375], yticks: [0, 25, 50, 75, 100], xfmt: v => v + ' d' });
+    const f = v => 100 * Math.pow(2, -v / 75), end = 375 * c6.p;
+    for (let i = 1; i <= 5; i++) if (end >= i * 75) marker(x, Ax, i * 75, f(i * 75), T.ir, fmt(f(i * 75)) + ' Ci');
+    curve(x, Ax, f, 0, Math.max(0.01, end), T.ir, 3);
+    x.fillStyle = T.ir; x.beginPath(); x.arc(Ax.X(end), Ax.Y(f(end)), 5, 0, 6.283); x.fill();
+    if (end >= 75) {
+      x.font = '600 11px "IBM Plex Mono", ui-monospace, monospace'; x.fillStyle = T.accent; x.textAlign = 'center'; x.textBaseline = 'bottom';
+      x.fillText('← 1 half-life →', (Ax.X(0) + Ax.X(75)) / 2, Ax.Y(0) - 6);
+    }
+  },
+};
+$('#re6').onclick = () => c6.p = 0;
+
+/* scene 7: formula reveal */
+$('#more7').onclick = () => {
+  const hid = $$('#steps7 > div').find(d => d.hidden);
+  if (hid) show(hid);
+  if (!$$('#steps7 > div').some(d => d.hidden)) { $('#more7').disabled = true; show($('#q-n')); }
+};
+
+/* scene 11: race */
+const race = { p: -1, run() { this.p = RM ? 1 : 0; $('#re11').disabled = false; } };
+$('#re11').onclick = () => race.run();
+ctrl.race = {
+  tick: dt => {
+    if (race.p >= 0) race.p = Math.min(1, race.p + dt / 3.2);
+    const [w, h, x] = fit($('#ch11'));
+    const Ax = axes(x, w, h, { xmax: 365, ymax: 100, xticks: [0, 90, 180, 270, 365], yticks: [0, 25, 50, 75, 100], xfmt: v => v + ' d' });
+    if (race.p < 0) {
+      x.font = '500 14px "IBM Plex Sans", system-ui, sans-serif'; x.fillStyle = T.muted; x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.fillText('Answer to run the race', w / 2, h / 2 - 10); return;
+    }
+    const end = 365 * race.p;
+    const fi = v => 100 * Math.pow(2, -v / 75), fc = v => 100 * Math.pow(2, -v / ISO.co.hlDays);
+    curve(x, Ax, fc, 0, Math.max(.01, end), T.co, 3);
+    curve(x, Ax, fi, 0, Math.max(.01, end), T.ir, 3);
+    x.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; x.textBaseline = 'bottom';
+    const lab = (f, c, txt) => { x.fillStyle = c; x.beginPath(); x.arc(Ax.X(end), Ax.Y(f(end)), 5, 0, 6.283); x.fill();
+      x.textAlign = end > 250 ? 'right' : 'left'; x.fillText(txt, Ax.X(end) + (end > 250 ? -8 : 8), Ax.Y(f(end)) - 6); };
+    lab(fc, T.co, `Co-60 ${fmt(fc(end), 1)} Ci`);
+    lab(fi, T.ir, `Ir-192 ${fmt(fi(end), 1)} Ci`);
+  },
+};
+
+/* scene 12: calculator */
+const calc = () => {
+  const iso = ISO[$('#cIso').value], A0 = Math.max(0, +$('#cA0').value || 0);
+  const tv = Math.max(0, +$('#cT').value || 0), days = $('#cU').value === 'y' ? tv * 365.25 : tv;
+  const hlShown = $('#cIso').value === 'ir' ? 75 : 5.27, tShown = $('#cIso').value === 'ir' ? days : days / 365.25;
+  const n = days / iso.hlDays, A = A0 / Math.pow(2, n);
+  $('#cRes').textContent = `${A >= 10 ? fmt(A, 1) : fmt(A, 3)} Ci`;
+  $('#cWork').textContent = `n = ${fmt(tShown, 2)} ÷ ${hlShown} = ${fmt(n, 3)} · 2${sup(fmt(n, 2))} = ${fmt(2 ** n, 3)} · New Activity = ${fmt(A0, 2)} ÷ ${fmt(2 ** n, 3)}`;
+  return { iso: $('#cIso').value, A0, days, n, A };
+};
+['cIso', 'cA0', 'cT', 'cU'].forEach(id => $('#' + id).addEventListener('input', calc));
+$('#cIso').addEventListener('change', () => { $('#cU').value = $('#cIso').value === 'ir' ? 'd' : 'y'; $('#cT').value = $('#cIso').value === 'ir' ? 75 : 5.27; calc(); });
+function nice(x) { const e = 10 ** Math.floor(Math.log10(x)), m = x / e; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * e; }
+ctrl.calc = {
+  enter: () => {
+    const g = state.guess;
+    $('#guessRecap').innerHTML = (g ? `Your opening guess: <b>${g}</b>. ` : '') + 'After 75 days, one half-life, an Ir-192 source reads <b>50 Ci</b>.' + (g === '50 Ci' ? ' You called it.' : '');
+    $('#scoreLine').textContent = score.total ? `First-try answers: ${score.first} of ${score.total}` : '';
+  },
+  tick: () => {
+    const r = calc(), iso = ISO[r.iso];
+    const [w, h, x] = fit($('#ch12'));
+    const xmax = Math.max(r.days * 1.25, iso.hlDays * 3), yr = r.iso === 'co';
+    const unit = yr ? 365.25 : 1, step = nice(xmax / unit / 4);
+    const xt = []; for (let v = 0; v * unit <= xmax + 1e-9; v += step) xt.push(v * unit);
+    const ym = r.A0 || 1;
+    const Ax = axes(x, w, h, { xmax, ymax: ym, xticks: xt, yticks: [0, ym / 2, ym].map(v => +v.toFixed(2)), xfmt: v => fmt(v / unit, 1) + (yr ? ' y' : ' d'), yfmt: v => fmt(v, 1) });
+    const f = v => r.A0 * Math.pow(2, -v / iso.hlDays);
+    curve(x, Ax, f, 0, xmax, T[r.iso], 2.5);
+    marker(x, Ax, r.days, r.A, T[r.iso], '', 'right');
+  },
+};
+
+/* ---------- loop ---------- */
+function loop(ts) {
+  const dt = Math.min(0.05, (ts - last) / 1000); last = ts;
+  ctrl[scenes[cur].dataset.key]?.tick?.(dt);
+  requestAnimationFrame(loop);
+}
+go(0);
+requestAnimationFrame(loop);
+})();
+</script>
+
+</body>
+</html>
