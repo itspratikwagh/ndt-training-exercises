@@ -39,6 +39,12 @@
   @keyframes glow { from { box-shadow: 0 0 0 2px rgba(255,216,77,0.5); } to { box-shadow: 0 0 0 5px #ffd84d; } }
   /* the controls sit in the gap between the plate and the A-scan, right under the probe */
   .cvwrap { position: relative; }
+  .tvwrap { margin-top: 10px; border-top: 1px solid var(--rule); padding-top: 8px; }
+  .tvwrap[hidden] { display: none; }
+  ul.found { list-style: none; margin: 4px 0 8px; padding: 0; font-size: 13px; }
+  ul.found li { padding: 3px 0; color: var(--ink-soft); }
+  ul.found li.ok { color: #0d904f; font-weight: 700; }
+  ul.found li span { font: 600 12px 'JetBrains Mono', monospace; margin-left: 6px; }
   .cvwrap .toolbar { position: absolute; left: 5.4%; right: 5%; top: 53%; margin: 0; }
   @media (max-width: 700px) {               /* small screens: controls go just above the plate */
     .cvwrap { display: flex; flex-direction: column; }
@@ -108,6 +114,7 @@
         <canvas id="cv" width="1500" height="1050" aria-label="Cross-section of the welded plate with an angle-beam probe, and the A-scan below"></canvas>
         <div class="toolbar"><span class="lab">Exit point to weld centerline</span><span class="big" id="dist">---</span><span class="lab" id="side"></span></div>
       </div>
+      <div class="tvwrap" id="tvwrap" hidden><canvas id="tv" width="1500" height="540" tabindex="0" aria-label="Top view of the plate along the weld, with the probe. Drag the probe along the weld and toward or away from it."></canvas></div>
       <div class="help" id="help">Drag the probe along the plate. Distances are measured from the beam exit point to the weld centerline.</div>
     </div>
     <aside class="side">
@@ -138,33 +145,33 @@
   };
   const PLATES = {
     'UT-14221': { name: 'UT-14221 · 0.625″ plate · single-V · flush', T: 0.625, bevel: 30, root: 0.12, crown: 0, flush: true, joint: 'v',
-      flaws: [{ n: 1, kind: 'vol', what: 'slag', label: 'Flaw 1 · slag inclusion', amp: 75, pts: blob(0.015, 0.2, 0.35, 0.04) },
-              { n: 2, kind: 'crack', what: 'centerline crack', label: 'Flaw 2 · centerline crack', x1: 0, y1: 0.1, x2: 0, y2: 0.3 }] },
-    'UT-14222': { name: 'UT-14222 · 0.337″ pipe wall · single-V', pipe: true, T: 0.337, bevel: 37.5, root: 0.0625, crown: 0.6, joint: 'v',
-      flaws: [{ n: 1, kind: 'lof', what: 'lack of fusion', label: 'Flaw 1 · lack of fusion', side: 1, y1: 0.1, y2: 0.25 },
-              { n: 2, kind: 'crack', what: 'toe crack', label: 'Flaw 2 · toe crack', x1: -0.3, y1: 0, x2: -0.3, y2: 0.1 }] },
+      flaws: [{ n: 1, z1: 1.2, z2: 1.8, kind: 'vol', what: 'slag', label: 'Flaw 1 · slag inclusion', amp: 75, pts: blob(0.015, 0.2, 0.35, 0.04) },
+              { n: 2, z1: 2.4, z2: 2.9, kind: 'crack', what: 'centerline crack', label: 'Flaw 2 · centerline crack', x1: 0, y1: 0.1, x2: 0, y2: 0.3 }] },
+    'UT-14222': { name: 'UT-14222 · 0.337″ pipe wall · single-V', pipe: true, L: 14.1, T: 0.337, bevel: 37.5, root: 0.0625, crown: 0.6, joint: 'v',
+      flaws: [{ n: 1, z1: 0.9, z2: 1.2, kind: 'lof', what: 'lack of fusion', label: 'Flaw 1 · lack of fusion', side: 1, y1: 0.1, y2: 0.25 },
+              { n: 2, z1: 9.3, z2: 9.9, kind: 'crack', what: 'toe crack', label: 'Flaw 2 · toe crack', x1: -0.3, y1: 0, x2: -0.3, y2: 0.1 }] },
     'UT-14223': { name: 'UT-14223 · 0.375″ tee joint (coming later)', soon: true },
     'UT-14224': { name: 'UT-14224 · 0.625″ plate · single-V · flush', T: 0.625, bevel: 30, root: 0.12, crown: 0, flush: true, joint: 'v',
-      flaws: [{ n: 1, kind: 'crack', what: 'lamination', label: 'Flaw 1 · lamination', x1: 0.75, y1: 0.5, x2: 1.05, y2: 0.5, rough: 0.22, note: NOTE.lam },
-              { n: 2, kind: 'crack', what: 'root crack', label: 'Flaw 2 · root crack', x1: 0.06, y1: 0.425, x2: 0.06, y2: 0.625 }] },
+      flaws: [{ n: 1, z1: 2.0, z2: 2.5, kind: 'crack', what: 'lamination', label: 'Flaw 1 · lamination', x1: 0.75, y1: 0.5, x2: 1.05, y2: 0.5, rough: 0.22, note: NOTE.lam },
+              { n: 2, z1: 3.1, z2: 3.4, kind: 'crack', what: 'root crack', label: 'Flaw 2 · root crack', x1: 0.06, y1: 0.425, x2: 0.06, y2: 0.625 }] },
     'UT-14225': { name: 'UT-14225 · 0.375″ plate · single-V', T: 0.375, bevel: 30, root: 0.12, crown: 0.555, joint: 'v',
-      flaws: [{ n: 1, kind: 'lof', what: 'lack of fusion', label: 'Flaw 1 · lack of fusion', side: 1, y1: 0.0, y2: 0.1 },
-              { n: 2, kind: 'vol', what: 'porosity', label: 'Flaw 2 · porosity', amp: 60, pts: [[0.0, 0.13], [0.03, 0.16], [-0.025, 0.17], [0.01, 0.2], [0.04, 0.12], [-0.03, 0.13]] }] },
+      flaws: [{ n: 1, z1: 0.7, z2: 1.4, kind: 'lof', what: 'lack of fusion', label: 'Flaw 1 · lack of fusion', side: 1, y1: 0.0, y2: 0.1 },
+              { n: 2, z1: 2.3, z2: 2.6, kind: 'vol', what: 'porosity', label: 'Flaw 2 · porosity', amp: 60, pts: [[0.0, 0.13], [0.03, 0.16], [-0.025, 0.17], [0.01, 0.2], [0.04, 0.12], [-0.03, 0.13]] }] },
     'UT-14226': { name: 'UT-14226 · 0.375″ plate · single-V', T: 0.375, bevel: 30, root: 0.12, crown: 0.555, joint: 'v',
-      flaws: [{ n: 1, kind: 'lof', what: 'lack of fusion', label: 'Flaw 1 · lack of fusion', side: 1, y1: 0.1, y2: 0.2 },
-              { n: 2, kind: 'crack', what: 'HAZ crack', label: 'Flaw 2 · HAZ crack (root)', x1: 0.15, y1: 0.275, x2: 0.15, y2: 0.375 }] },
+      flaws: [{ n: 1, z1: 1.6, z2: 1.9, kind: 'lof', what: 'lack of fusion', label: 'Flaw 1 · lack of fusion', side: 1, y1: 0.1, y2: 0.2 },
+              { n: 2, z1: 2.9, z2: 3.5, kind: 'crack', what: 'HAZ crack', label: 'Flaw 2 · HAZ crack (root)', x1: 0.15, y1: 0.275, x2: 0.15, y2: 0.375 }] },
     'UT-14227': { name: 'UT-14227 · 0.375″ plate · single-V', T: 0.375, bevel: 30, root: 0.12, crown: 0.555, joint: 'v',
-      flaws: [{ n: 1, kind: 'vol', what: 'slag', label: 'Flaw 1 · slag inclusion', amp: 75, pts: blob(-0.02, 0.2, 0.3, 0.035) },
-              { n: 2, kind: 'vol', what: 'porosity', label: 'Flaw 2 · porosity', amp: 60, pts: [[0, 0.11], [0.04, 0.12], [-0.035, 0.14], [0.02, 0.16], [-0.01, 0.19], [0.045, 0.2], [-0.04, 0.22], [0.01, 0.24]] }] },
+      flaws: [{ n: 1, z1: 1.2, z2: 1.5, kind: 'vol', what: 'slag', label: 'Flaw 1 · slag inclusion', amp: 75, pts: blob(-0.02, 0.2, 0.3, 0.035) },
+              { n: 2, z1: 2.7, z2: 3.2, kind: 'vol', what: 'porosity', label: 'Flaw 2 · porosity', amp: 60, pts: [[0, 0.11], [0.04, 0.12], [-0.035, 0.14], [0.02, 0.16], [-0.01, 0.19], [0.045, 0.2], [-0.04, 0.22], [0.01, 0.24]] }] },
     'UT-14228': { name: 'UT-14228 · 0.375″ plate · single-V · flush', T: 0.375, bevel: 30, root: 0.12, crown: 0, flush: true, joint: 'v',
-      flaws: [{ n: 1, kind: 'trans', what: 'transverse crack', label: 'Flaw 1 · transverse crack', x1: 0.1, x2: 0.5, y1: 0.225, note: NOTE.trans },
-              { n: 2, kind: 'crack', what: 'centerline crack', label: 'Flaw 2 · centerline crack', x1: 0, y1: 0, x2: 0, y2: 0.15 }] },
+      flaws: [{ n: 1, z1: 0.47, z2: 0.53, kind: 'trans', what: 'transverse crack', label: 'Flaw 1 · transverse crack', x1: 0.1, x2: 0.5, y1: 0.225, note: NOTE.trans },
+              { n: 2, z1: 1.8, z2: 2.3, kind: 'crack', what: 'centerline crack', label: 'Flaw 2 · centerline crack', x1: 0, y1: 0, x2: 0, y2: 0.15 }] },
     'UT-14229': { name: 'UT-14229 · 0.625″ plate · single-V', T: 0.625, bevel: 30, root: 0.12, crown: 0.84, joint: 'v',
-      flaws: [{ n: 1, kind: 'lof', what: 'lack of fusion', label: 'Flaw 1 · lack of fusion', side: 1, y1: 0.1, y2: 0.25 },
-              { n: 2, kind: 'crack', what: 'HAZ crack', label: 'Flaw 2 · HAZ crack (crown)', x1: 0.5, y1: 0, x2: 0.5, y2: 0.15 }] },
+      flaws: [{ n: 1, z1: 1.1, z2: 1.6, kind: 'lof', what: 'lack of fusion', label: 'Flaw 1 · lack of fusion', side: 1, y1: 0.1, y2: 0.25 },
+              { n: 2, z1: 2.6, z2: 3.4, kind: 'crack', what: 'HAZ crack', label: 'Flaw 2 · HAZ crack (crown)', x1: 0.5, y1: 0, x2: 0.5, y2: 0.15 }] },
     'UT-14230': { name: 'UT-14230 · 0.625″ plate · double-V', T: 0.625, bevel: 30, root: 0.06, crown: 0.5, joint: 'x',
-      flaws: [{ n: 1, kind: 'crack', what: 'incomplete penetration', label: 'Flaw 1 · incomplete penetration', x1: 0, y1: 0.24, x2: 0, y2: 0.39, rough: 0.35, note: NOTE.ip },
-              { n: 2, kind: 'vol', what: 'slag', label: 'Flaw 2 · slag inclusion', amp: 75, pts: blob(-0.03, 0.4, 0.55, 0.035) }] },
+      flaws: [{ n: 1, z1: 1.3, z2: 1.7, kind: 'crack', what: 'incomplete penetration', label: 'Flaw 1 · incomplete penetration', x1: 0, y1: 0.24, x2: 0, y2: 0.39, rough: 0.35, note: NOTE.ip },
+              { n: 2, z1: 2.8, z2: 3.3, kind: 'vol', what: 'slag', label: 'Flaw 2 · slag inclusion', amp: 75, pts: blob(-0.03, 0.4, 0.55, 0.035) }] },
     custom: { name: 'Another plate (enter it from its key)', custom: true }
   };
   const PROBES = { 45: '45° wedge', 60: '60° wedge' };
@@ -208,7 +215,8 @@
     // view: fit the scan zone plus the wedge behind the exit point
     const half = Math.max(zone[1], EMIN + 0.8) + (cfg.foot - cfg.bep) + 0.3;
     const S = Math.min(300, 900 / (2 * half), 275 / (0.92 + T));     // keep the centerline label clear of the readout
-    G = { T, tb, gap, face, TOE, TOEB, dbl, flush, EMIN, tn, hs, sp1, steps, legs, zone, RANGE, rootNote, S, XL: -half, XR: half, TOPY: Math.round(45 + 0.92 * S + Math.max(0, 0.6 - T) * 0) };
+    const CAPS = { top: flush ? null : { w: TOE, h: 0.06 }, bot: dbl ? { w: TOEB, h: 0.06 } : { w: face(T) + 0.04, h: 0.06 } };   // crown and root bead: half-ellipses
+    G = { T, tb, gap, face, TOE, TOEB, CAPS, dbl, flush, EMIN, tn, hs, sp1, steps, legs, zone, RANGE, rootNote, S, XL: -half, XR: half, TOPY: Math.round(45 + 0.92 * S + Math.max(0, 0.6 - T) * 0) };
     buildCells();
   }
 
@@ -221,23 +229,46 @@
 
   const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
   const card = document.getElementById('card'), stepsEl = document.getElementById('steps');
-  const st = { e: null, dir: 1, drag: null, beamAt: 0, flaw: 0, glow: null };
+  const st = { e: null, dir: 1, drag: null, beamAt: 0, flaw: 0, glow: null, z: 0.2, key: false, tdrag: null };
+  let marks = [], found = {}; const markAt = new Map();                      // top view: where echoes plotted while scanning, and which flaws gave one
+  const LEN = () => plate().L || 4, BWZ = 0.125;   // weld length; beam half-width along the weld (0.25″ crystal)
   const plate = () => PLATES[cfg.plate];
 
   // ---------- sound path ----------
+  // the sound path: straight legs between the surfaces; a leg that lands on the crown or the root bead
+  // goes into it, reflects off its curved surface, and the trace ends there (no clean bounce)
   function legs(e, dir, n) {
     const a = cfg.ang * RAD, out = []; let x = e, y = 0, dx = dir * Math.sin(a), dy = Math.cos(a), s = 0;
+    out.refl = null;
     for (let leg = 1; leg <= n; leg++) {
       let t = dy > 0 ? (G.T - y) / dy : -y / dy;
-      const tX = dx > 0 ? (G.XR - x) / dx : (G.XL - x) / dx; let end = false;
-      if (tX < t) { t = tX; end = true; }
-      out.push({ leg, x1: x, y1: y, x2: x + dx * t, y2: y + dy * t, s1: s, len: t, dx, dy });
-      if (end) break;
-      if (leg === 2 && !G.flush && Math.abs(x + dx * t) < G.TOE + 0.02) break;   // leg 2 coming up on the crown: no clean bounce
-      if (leg === 1 && G.dbl && Math.abs(x + dx * t) < G.TOEB + 0.02) break;     // double-V: leg 1 landing on the bottom cap
-      s += t; x += dx * t; y += dy * t; dy = -dy;
+      const tX = dx > 0 ? (G.XR - x) / dx : (G.XL - x) / dx;
+      if (tX < t) { out.push({ leg, x1: x, y1: y, x2: x + dx * t, y2: y + dy * t, s1: s, len: tX, dx, dy }); out[out.length - 1].x2 = x + dx * tX; out[out.length - 1].y2 = y + dy * tX; break; }
+      const xl = x + dx * t, cap = dy > 0 ? G.CAPS.bot : G.CAPS.top;
+      if (cap && Math.abs(xl) < cap.w) {
+        const ad = Math.abs(dy), A = dx * dx / (cap.w * cap.w) + ad * ad / (cap.h * cap.h), B = 2 * xl * dx / (cap.w * cap.w), Cc = xl * xl / (cap.w * cap.w) - 1;
+        const u = (-B + Math.sqrt(B * B - 4 * A * Cc)) / (2 * A), px = xl + dx * u, v = ad * u, py = dy > 0 ? G.T + v : -v;
+        let nx = px / (cap.w * cap.w), ny = (dy > 0 ? 1 : -1) * v / (cap.h * cap.h); const nl = Math.hypot(nx, ny); nx /= nl; ny /= nl;
+        const dn = dx * nx + dy * ny;
+        out.push({ leg, x1: x, y1: y, x2: px, y2: py, s1: s, len: t + u, dx, dy, cap: dy > 0 ? 'root' : 'crown' });
+        out.refl = { x: px, y: py, dx: dx - 2 * dn * nx, dy: dy - 2 * dn * ny, back: Math.acos(Math.max(-1, Math.min(1, -(dx * (dx - 2 * dn * nx) + dy * (dy - 2 * dn * ny))))) / RAD };
+        break;
+      }
+      out.push({ leg, x1: x, y1: y, x2: xl, y2: y + dy * t, s1: s, len: t, dx, dy });
+      s += t; x = xl; y += dy * t; dy = -dy;
     }
     return out;
+  }
+  // echo from the crown or the root bead: the part of the beam that hits the bulge where its surface faces back at the probe
+  function geoEcho(e, dir) {
+    const c = Math.cos(cfg.ang * RAD); let best = null;
+    for (let k = -20; k <= 20; k++) {
+      const d = k / 20 * BEAM_W, segs = legs(e + dir * d / c, dir, G.legs), r = segs.refl; if (!r) continue;
+      const g = segs[segs.length - 1], sp = g.s1 + g.len;
+      const amp = (g.cap === 'root' ? 85 : 60) * Math.exp(-Math.pow(r.back / (g.cap === 'root' ? 14 : 20), 2)) * Math.exp(-Math.pow(d / BEAM_W, 2)) * Math.exp(-sp / 6);
+      if (!best || amp > best.amp) best = { amp, s: sp, leg: g.leg, depth: g.cap === 'root' ? G.T : 0, what: g.cap === 'root' ? 'root geometry' : 'crown geometry', geo: true, px: r.x, py: r.y };
+    }
+    return best && best.amp > 5 ? best : null;
   }
   const distToSeg = (px, py, g) => { const t = Math.max(0, Math.min(g.len, (px - g.x1) * g.dx + (py - g.y1) * g.dy)); return { d: Math.hypot(px - (g.x1 + g.dx * t), py - (g.y1 + g.dy * t)), t }; };
 
@@ -263,11 +294,13 @@
   }
 
   // ---------- flaw echoes (library plates with a key) ----------
-  const curFlaw = () => st.flaw && plate().flaws ? plate().flaws.find(f => f.n === st.flaw) : null;
+  const flawList = () => plate().flaws || [];
+  const zOver = f => Math.max(0, Math.min(1, (Math.min(st.z + BWZ, f.z2) - Math.max(st.z - BWZ, f.z1)) / (2 * BWZ)));   // half the beam on the flaw: half the echo (the 6 dB drop)
+  const hunting = () => q.phase === 'end' && flawList().length > 0;
   function flawSeg(f) { return f.kind === 'lof' ? { x1: f.side * G.face(f.y1), y1: f.y1, x2: f.side * G.face(f.y2), y2: f.y2 } : f; }
-  function echo() {
-    const f = curFlaw();
+  function echo(f) {
     if (st.e == null || !f || f.kind === 'trans') return null;
+    const zf = zOver(f); if (zf <= 0) return null;
     let best = null;
     const keep = (amp, g, r, py) => { if (!best || amp > best.amp) best = { amp, s: g.s1 + r.t, leg: g.leg, depth: py, what: f.what }; };
     for (const g of legs(st.e, st.dir, G.legs)) {
@@ -282,7 +315,7 @@
       const sg = flawSeg(f), fx = sg.x2 - sg.x1, fy = sg.y2 - sg.y1, fl = Math.hypot(fx, fy), ux = fx / fl, uy = fy / fl;
       const dev = Math.acos(Math.min(1, Math.abs(g.dx * -uy + g.dy * ux))) / RAD;
       const surf = f.kind === 'crack' && Math.abs(fx) < 1e-9 ? (Math.min(sg.y1, sg.y2) < 1e-6 ? 0 : Math.max(sg.y1, sg.y2) > G.T - 1e-6 ? G.T : null) : null;
-      const corner = surf != null && Math.abs(g.y2 - surf) < 1e-6;   // this leg runs into the surface the crack breaks
+      const corner = surf != null && (Math.abs(g.y2 - surf) < 1e-6 || g.cap === (surf === 0 ? 'crown' : 'root'));   // this leg runs into the surface the crack breaks
       const refl = corner ? 0.95 : Math.max(Math.exp(-Math.pow(dev / 22, 2)), f.kind === 'lof' ? 0 : (f.rough != null ? f.rough : 0.25));
       for (let k = 0; k <= 12; k++) {
         const px = sg.x1 + fx * k / 12, py = sg.y1 + fy * k / 12, r = distToSeg(px, py, g);
@@ -290,8 +323,12 @@
         keep(100 * refl * Math.exp(-Math.pow(r.d / BEAM_W, 2)) * Math.exp(-(g.s1 + r.t) / 6), g, r, py);
       }
     }
+    if (best) { best.amp *= zf; best.n = f.n; }
     return best && best.amp > 5 ? best : null;
   }
+
+  const echoes = () => [...(hunting() ? flawList().map(echo) : []), st.e == null ? null : geoEcho(st.e, st.dir)].filter(Boolean).sort((a, b) => b.amp - a.amp);
+  const seen = {};
 
   // ---------- lesson flow ----------
   const fresh = () => ({ phase: 'setup', fb: '', answered: {}, si: 0, lo: 99, hi: 0 });
@@ -317,6 +354,7 @@
       G.flush ? 'The crown is ground <b>flush</b>, so the wedge can slide right up to the weld and onto it.' : `The wedge stops at the crown, so the exit point can't get closer than crown half-width + BEP = <b>${IN2(G.EMIN)}</b> to the weld centerline.`,
       G.dbl ? 'Double-V: the root is in the <b>middle</b>. <b>Leg 1</b> covers the lower V, <b>leg 2</b> the upper V.' : G.legs === 3 ? 'The root is reached with <b>leg 3</b>, so set the A-scan range to show 3 legs.' : '<b>Leg 1</b> reaches the root; <b>leg 2</b> the middle, the top and the toes.',
       `Scan zone: exit point <b>${IN2(G.zone[0])} to ${IN2(G.zone[1])}</b> from the weld centerline. Include the <b>HAZ</b>, the base metal right beside the weld.`,
+      '<b>Geometry echoes</b>: the root bead and the crown reflect sound too. They plot at the bottom or top surface, on the far side of the centerline. A flaw plots inside the weld.',
       '<b>Scan from both sides</b>: one side never covers it all.'
     ].map(t => `<li>${t}</li>`).join('');
   }
@@ -392,12 +430,17 @@
         show(both() >= 99.5 ? `<div class="ql">Full coverage</div><div class="qq"><span class="ok">Both sides together: ${both()}%.</span></div><button class="go" data-a="next" data-v="end">Finish →</button>`
           : `<div class="ql">Coverage: ${both()}%</div><div class="qq">Both sides together: <b>${both()}%</b>.</div><div class="ex">The gap is ${gapWhere()}. With this probe on this plate, the beam can't reach it cleanly. Note it in your report as not fully covered.</div><button class="go" data-a="next" data-v="end">Finish →</button>`); break;
       case 'end': {
-        const e = echo(), fl = plate().flaws || [];
-        show(`<div class="ql">Done · free scan</div><div class="qq">Scan ${IN2(G.zone[0])} to ${IN2(G.zone[1])} from the centerline, from both sides.</div>
+        const ech = echoes(), e = ech[0], fl = flawList(), g = ech.find(x => x.geo && x.amp > 15);
+        const where = x => x.toFixed(1) + '″';
+        show(`<div class="ql">${fl.length ? 'Find the flaws' : 'Done · free scan'}</div><div class="qq">${fl.length ? 'Drag the probe in the <b>top view</b>: along the weld, and toward and away from it to change the skip.' : `Scan ${IN2(G.zone[0])} to ${IN2(G.zone[1])} from the centerline, from both sides.`}</div>
           <div class="qs" style="margin-top:8px">Scan from</div>${opts('side', [['1', 'Left side'], ['-1', 'Right side']], st.dir)}
-          ${fl.length ? `<div class="qs" style="margin-top:8px">Show a flaw from the key</div>${opts('flaw', [['0', 'None']].concat(fl.map(f => [String(f.n), f.label])), st.flaw)}
-          <div class="fb">${st.flaw ? (e && e.amp > 15 ? `Echo: <b>${Math.round(e.amp)}%</b>, ${e.what}, leg ${e.leg}.` : curFlaw().kind === 'trans' ? 'No echo from this direction.' : 'Scan to find it.') : ''}</div>
-          ${curFlaw() && curFlaw().note ? `<div class="ex">${curFlaw().note}</div>` : ''}` : ''}`); break;
+          ${fl.length ? `<div class="fb">${e && e.amp > 15 ? `Echo: <b>${Math.round(e.amp)}%</b> · ${e.geo ? e.what : 'leg ' + e.leg} at X ${where(st.z)}` : 'No echo here.'}</div>
+          ${g ? `<div class="ex">${g === e ? '' : 'Also '}<b>${Math.round(g.amp)}%</b> from the ${g.what === 'root geometry' ? 'root bead' : 'crown'}: <b>geometry</b>, not a flaw. It's there all along the weld.</div>` : ''}
+          <div class="qs" style="margin-top:8px">Found ${fl.filter(f => found[f.n]).length} of ${fl.length}${st.key ? '' : ' · the key is hidden'}</div>
+          <ul class="found">${fl.map(f => `<li class="${found[f.n] ? 'ok' : ''}">${found[f.n] ? '✓' : '○'} ${st.key || found[f.n] ? f.label.replace(/^Flaw \d · /, `Flaw ${f.n} · `) : 'Flaw ' + f.n} ${found[f.n] ? `<span>X ${where(found[f.n].lo)}–${where(found[f.n].hi)}</span>` : ''}</li>`).join('')}</ul>
+          <div class="opts"><button data-a="key">${st.key ? 'Hide the key' : 'Show the key'}</button><button data-a="clear">Clear marks</button></div>
+          ${st.key ? fl.filter(f => f.note).map(f => `<div class="ex">Flaw ${f.n}: ${f.note}</div>`).join('') : ''}`
+          : (g ? `<div class="ex"><b>${Math.round(g.amp)}%</b> from the ${g.what === 'root geometry' ? 'root bead' : 'crown'}: that's <b>geometry</b>, not a flaw.</div>` : '')}`); break;
       }
     }
   }
@@ -419,12 +462,13 @@
       else q.fb = v === 'a' ? '<span class="no">That\'s half a skip:</span> leg 1 only. Leg 2 comes back up the same distance again.' : '<span class="no">Too far.</span> Use the formula: 2 × ' + IN(G.T) + ' × tan(' + cfg.ang + '°).';
     }
     if (a === 'side' && +v !== st.dir) { st.dir = +v; st.e = -st.e; st.beamAt = performance.now(); }
-    if (a === 'flaw') st.flaw = +v;
+    if (a === 'key') st.key = !st.key;
+    if (a === 'clear') { marks = []; found = {}; markAt.clear(); }
     if (a === 'next') {
       q.fb = '';
       if (v === 'step+') { q.si++; q.phase = 'step'; }
       else if (v === 'other') { st.dir = -1; st.e = Math.min(G.zone[1] + 0.3, G.XR - (cfg.foot - cfg.bep) - 0.05); st.beamAt = performance.now(); q.lo = 99; q.hi = 0; q.phase = 'sweep2'; }
-      else { q.phase = v; if (v === 'sweep1') { q.lo = 99; q.hi = 0; } if (v === 'zone') q.answered.zone = true; }
+      else { q.phase = v; if (v === 'sweep1') { q.lo = 99; q.hi = 0; } if (v === 'zone') q.answered.zone = true; if (v === 'end') { st.z = 0.2; marks = []; found = {}; markAt.clear(); st.key = false; } }
     }
     render();
   }
@@ -432,6 +476,16 @@
   const lockMsg = () => q.phase.endsWith('-ok') || q.phase === 'zone' ? 'Press Next on the card' : 'Answer on the card first';
   let toast = null;
   const say = t => { toast = { t, at: performance.now() }; };
+
+  function record() {                             // mark where the instrument plots each echo, as you scan
+    const a = cfg.ang * RAD;
+    for (const ec of echoes()) {
+      if (ec.amp <= 15) continue;
+      const x = st.e + st.dir * ec.s * Math.sin(a), k = Math.round(x / 0.02) + ':' + Math.round(st.z / 0.025) + (ec.geo ? 'g' : ''), m = markAt.get(k);   // one mark per small cell, the strongest echo
+      if (!m) { const nm = { x, z: st.z, amp: ec.amp, geo: !!ec.geo }; markAt.set(k, nm); marks.push(nm); } else if (ec.amp > m.amp) m.amp = ec.amp;
+      if (!ec.geo) { const f = found[ec.n] || (found[ec.n] = { lo: st.z, hi: st.z }); f.lo = Math.min(f.lo, st.z); f.hi = Math.max(f.hi, st.z); }
+    }
+  }
 
   // ---------- input ----------
   const pos = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height }; };
@@ -456,6 +510,9 @@
       if (q.phase === 'sweep1' && swept) { q.answered.sweep1 = true; q.phase = 'sweep1-ok'; }
       if (q.phase === 'sweep2' && swept) { q.answered.sweep2 = true; q.phase = 'sweep2-ok'; }
     }
+    if (hunting()) record();
+    const ge = geoEcho(st.e, st.dir);
+    if (ge && ge.amp > 30 && !seen[ge.what]) { seen[ge.what] = 1; say(ge.what === 'root geometry' ? 'Echo from the root bead: geometry, not a flaw' : 'Echo from the crown: geometry, not a flaw'); }
     render();
     if (!unlocked() || q.phase !== phase0) st.drag = null;
   }
@@ -533,18 +590,18 @@
     ctx.fillStyle = 'rgba(214,170,90,0.28)';
     const ys = [0, T / 2, T];                       // the fusion faces are straight between these depths (single- or double-V)
     for (const sd of [-1, 1]) { ctx.beginPath(); ys.forEach((y, i) => ctx[i ? 'lineTo' : 'moveTo'](X(sd * face(y)), Y(y))); ys.slice().reverse().forEach(y => ctx.lineTo(X(sd * (face(y) + HAZ)), Y(y))); ctx.closePath(); ctx.fill(); }
-    const cw = G.TOE, cb = G.TOEB;
+    const cw = G.TOE, top = G.CAPS.top, rb = G.CAPS.bot, cb = rb.w;
+    const arc = (cap, y0, sgn, from, to) => { for (let k = 0; k <= 24; k++) { const xx = from + (to - from) * k / 24; ctx.lineTo(X(xx), Y(y0 + sgn * cap.h * Math.sqrt(Math.max(0, 1 - Math.pow(xx / cap.w, 2))))); } };
     ctx.fillStyle = '#c9b9a3';
     ctx.beginPath(); ctx.moveTo(X(-cw), Y(0));
-    if (G.flush) ctx.lineTo(X(cw), Y(0)); else ctx.bezierCurveTo(X(-cw * 0.8), Y(-0.08), X(cw * 0.8), Y(-0.08), X(cw), Y(0));
+    if (top) arc(top, 0, -1, -cw, cw); else ctx.lineTo(X(cw), Y(0));
     ctx.lineTo(X(face(0)), Y(0)); ys.forEach(y => ctx.lineTo(X(face(y)), Y(y)));
-    if (G.dbl) { ctx.lineTo(X(cb), Y(T)); ctx.bezierCurveTo(X(cb * 0.8), Y(T + 0.08), X(-cb * 0.8), Y(T + 0.08), X(-cb), Y(T)); ctx.lineTo(X(-face(T)), Y(T)); }
-    else ctx.quadraticCurveTo(X(0), Y(T) + 0.11 * S, X(-face(T)), Y(T));
+    ctx.lineTo(X(cb), Y(T)); arc(rb, T, 1, cb, -cb); ctx.lineTo(X(-face(T)), Y(T));
     ys.slice().reverse().forEach(y => ctx.lineTo(X(-face(y)), Y(y))); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = '#7a6a52'; ctx.lineWidth = 1.4; ctx.setLineDash([5, 4]);
     for (const sd of [-1, 1]) { ctx.beginPath(); ys.forEach((y, i) => ctx[i ? 'lineTo' : 'moveTo'](X(sd * face(y)), Y(y))); ctx.stroke(); }
     ctx.setLineDash([]);
-    if (!st.flaw) for (let k = 0; k < cells.length; k++) {
+    if (q.phase !== 'end') for (let k = 0; k < cells.length; k++) {
       const a = cov[st.dir][k], b = cov[-st.dir][k]; if (!a && !b) continue;
       const c = cells[k]; ctx.fillStyle = a ? 'rgba(13,144,79,0.45)' : 'rgba(42,111,219,0.38)';
       ctx.fillRect(X(c.x - c.w / 2), Y(c.y - T / NY / 2), c.w * S + 0.6, T / NY * S + 0.6);
@@ -569,32 +626,49 @@
     const tick = G.XR > 3 ? 1 : 0.5;
     for (let d = tick; d < G.XR - 0.1; d += tick) for (const sd of [-1, 1]) { ctx.strokeStyle = C.soft; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X(sd * d), Y(T)); ctx.lineTo(X(sd * d), Y(T) + 5); ctx.stroke(); txt(d.toFixed(1), X(sd * d), Y(T) + 30, { size: 10, w: 600, c: C.faded, mono: true, a: 'center' }); }
     if (q.answered.zone) for (const sd of [-1, 1]) { const z = G.zone; ctx.fillStyle = 'rgba(42,111,219,0.22)'; ctx.fillRect(X(sd > 0 ? z[0] : -z[1]), Y(T) + 6, (z[1] - z[0]) * S, 9); }
-    const f = curFlaw();
+    if (hunting() && st.key) for (const f of flawList()) if (st.z + BWZ > f.z1 && st.z - BWZ < f.z2) {
     if (f && (f.kind === 'lof' || f.kind === 'crack')) {
-      const sg = flawSeg(f), n = f.kind === 'lof' || f.what === 'lamination' ? 1 : 8, nx = -(sg.y2 - sg.y1), ny = sg.x2 - sg.x1, nl = Math.hypot(nx, ny) || 1;
-      ctx.strokeStyle = C.flaw; ctx.lineWidth = n > 1 ? 3 : 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
-      for (let k = 0; k <= n; k++) { const w = n > 1 && k % n ? (k % 2 ? 1 : -1) * 0.018 : 0; const px = sg.x1 + (sg.x2 - sg.x1) * k / n + w * nx / nl, py = sg.y1 + (sg.y2 - sg.y1) * k / n + w * ny / nl; ctx[k ? 'lineTo' : 'moveTo'](X(px), Y(py)); }
-      ctx.stroke(); ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
-    }
-    if (f && f.kind === 'vol' && f.what === 'porosity') { ctx.strokeStyle = C.flaw; ctx.lineWidth = 1.4; for (const [px, py] of f.pts) { ctx.beginPath(); ctx.arc(X(px), Y(py), 2.6, 0, 7); ctx.stroke(); } }
-    if (f && f.kind === 'vol' && f.what !== 'porosity') { ctx.fillStyle = C.flaw; ctx.beginPath(); f.pts.slice(0, 6).forEach(([px, py], i) => ctx[i ? 'lineTo' : 'moveTo'](X(px), Y(py))); ctx.closePath(); ctx.fill(); }
-    if (f && f.kind === 'trans') {
-      const cx = (f.x1 + f.x2) / 2, r = (f.x2 - f.x1) / 2;
-      ctx.save(); ctx.beginPath(); ctx.ellipse(X(cx), Y(T), r * S, (T - f.y1) * S, 0, Math.PI, 2 * Math.PI); ctx.closePath();
-      ctx.fillStyle = 'rgba(192,20,28,0.18)'; ctx.fill(); ctx.strokeStyle = C.flaw; ctx.lineWidth = 2; ctx.stroke(); ctx.clip();
-      ctx.lineWidth = 1; for (let k = -6; k <= 6; k++) { ctx.beginPath(); ctx.moveTo(X(cx + k * r / 4), Y(T)); ctx.lineTo(X(cx + k * r / 4 + r), Y(f.y1)); ctx.stroke(); }
-      ctx.restore();
-      txt('runs across the weld', X(cx), Y(f.y1) - 8, { size: 11, w: 800, c: C.flaw, a: 'center' });
+        const sg = flawSeg(f), n = f.kind === 'lof' || f.what === 'lamination' ? 1 : 8, nx = -(sg.y2 - sg.y1), ny = sg.x2 - sg.x1, nl = Math.hypot(nx, ny) || 1;
+        ctx.strokeStyle = C.flaw; ctx.lineWidth = n > 1 ? 3 : 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
+        for (let k = 0; k <= n; k++) { const w = n > 1 && k % n ? (k % 2 ? 1 : -1) * 0.018 : 0; const px = sg.x1 + (sg.x2 - sg.x1) * k / n + w * nx / nl, py = sg.y1 + (sg.y2 - sg.y1) * k / n + w * ny / nl; ctx[k ? 'lineTo' : 'moveTo'](X(px), Y(py)); }
+        ctx.stroke(); ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
+      }
+      if (f && f.kind === 'vol' && f.what === 'porosity') { ctx.strokeStyle = C.flaw; ctx.lineWidth = 1.4; for (const [px, py] of f.pts) { ctx.beginPath(); ctx.arc(X(px), Y(py), 2.6, 0, 7); ctx.stroke(); } }
+      if (f && f.kind === 'vol' && f.what !== 'porosity') { ctx.fillStyle = C.flaw; ctx.beginPath(); f.pts.slice(0, 6).forEach(([px, py], i) => ctx[i ? 'lineTo' : 'moveTo'](X(px), Y(py))); ctx.closePath(); ctx.fill(); }
+      if (f && f.kind === 'trans') {
+        const cx = (f.x1 + f.x2) / 2, r = (f.x2 - f.x1) / 2;
+        ctx.save(); ctx.beginPath(); ctx.ellipse(X(cx), Y(T), r * S, (T - f.y1) * S, 0, Math.PI, 2 * Math.PI); ctx.closePath();
+        ctx.fillStyle = 'rgba(192,20,28,0.18)'; ctx.fill(); ctx.strokeStyle = C.flaw; ctx.lineWidth = 2; ctx.stroke(); ctx.clip();
+        ctx.lineWidth = 1; for (let k = -6; k <= 6; k++) { ctx.beginPath(); ctx.moveTo(X(cx + k * r / 4), Y(T)); ctx.lineTo(X(cx + k * r / 4 + r), Y(f.y1)); ctx.stroke(); }
+        ctx.restore();
+        txt('runs across the weld', X(cx), Y(f.y1) - 8, { size: 11, w: 800, c: C.flaw, a: 'center' });
+      }
     }
 
-    const e = echo();
+    const ech = echoes(), e = ech[0] || null;
     if (st.e != null) {
       const segs = legs(st.e, st.dir, G.legs);
       const total = segs.reduce((a, g) => a + g.len, 0), grow = st.drag ? total : Math.min(total, (now - st.beamAt) / 1000 * 0.4 * Math.max(1, T / 0.375));
-      ctx.save(); ctx.beginPath(); ctx.rect(X(G.XL), Y(0), (G.XR - G.XL) * S, T * S); ctx.clip();
+      ctx.save(); ctx.beginPath(); ctx.moveTo(X(G.XL), Y(0)); ctx.lineTo(X(-cw), Y(0)); if (top) arc(top, 0, -1, -cw, cw); ctx.lineTo(X(G.XR), Y(0)); ctx.lineTo(X(G.XR), Y(T)); ctx.lineTo(X(cb), Y(T)); arc(rb, T, 1, cb, -cb); ctx.lineTo(X(G.XL), Y(T)); ctx.closePath(); ctx.clip();   // the steel, crown and bead included
       let left = grow; const pts = [[X(segs[0].x1), Y(segs[0].y1)]];
       for (const g of segs) { const l = Math.min(g.len, Math.max(0, left)); if (l <= 0) break; const x2 = g.x1 + g.dx * l, y2 = g.y1 + g.dy * l; ctx.strokeStyle = g.leg === 3 ? 'rgba(255,190,70,0.26)' : 'rgba(255,190,70,0.36)'; ctx.lineWidth = BEAM_W * 2 * S; ctx.beginPath(); ctx.moveTo(X(g.x1), Y(g.y1)); ctx.lineTo(X(x2), Y(y2)); ctx.stroke(); pts.push([X(x2), Y(y2)]); left -= g.len; }
       dashed(pts, C.orange); ctx.restore();
+      if (segs.refl && grow >= total) {                // the beam glancing off the crown or root bead
+        const r = segs.refl, back = r.back < 30, L = back ? 0.5 : 0.35, off = back ? 0.05 : 0;   // sent back toward the probe: blue echo; glanced away: orange
+        const ox = -r.dy * off, oy = r.dx * off, rgb = back ? '42,111,219' : '217,115,26';
+        ctx.strokeStyle = `rgba(${rgb},0.9)`; ctx.lineWidth = back ? 2.5 : 2; ctx.setLineDash([3, 4]);
+        ctx.beginPath(); ctx.moveTo(X(r.x + ox), Y(r.y + oy)); ctx.lineTo(X(r.x + ox + r.dx * L), Y(r.y + oy + r.dy * L)); ctx.stroke(); ctx.setLineDash([]);
+        const ax = X(r.x + ox + r.dx * L), ay = Y(r.y + oy + r.dy * L), an = Math.atan2(r.dy, r.dx);
+        ctx.fillStyle = `rgba(${rgb},0.95)`; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax - 9 * Math.cos(an - 0.4), ay - 9 * Math.sin(an - 0.4)); ctx.lineTo(ax - 9 * Math.cos(an + 0.4), ay - 9 * Math.sin(an + 0.4)); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = C.orange; ctx.beginPath(); ctx.arc(X(r.x), Y(r.y), 3.5, 0, 7); ctx.fill();
+      }
+      const top1 = echoes()[0];
+      if (top1 && top1.amp > 15 && grow >= total) {     // where the instrument plots it: along the straight zigzag, at that sound path
+        const a = cfg.ang * RAD, sx = st.e + st.dir * top1.s * Math.sin(a), z = top1.s * Math.cos(a), m = z % (2 * T), dz = m <= T ? m : 2 * T - m;
+        const qx = X(sx), qy = Y(dz), col = top1.geo ? '#2a6fdb' : C.flaw;
+        ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(qx, qy, 7, 0, 7); ctx.moveTo(qx - 11, qy); ctx.lineTo(qx + 11, qy); ctx.moveTo(qx, qy - 11); ctx.lineTo(qx, qy + 11); ctx.stroke();
+        txt('plots here', qx + st.dir * 14, qy + (dz > T / 2 ? 22 : -10), { size: 10, w: 800, c: col, a: st.dir > 0 ? 'left' : 'right' });
+      }
       drawProbe(st.e, st.dir, true);
       if (grow >= total) segs.forEach(g => { if (g.len * S < 50) return; const mx = X((g.x1 + g.x2) / 2) - st.dir * 30, my = Y((g.y1 + g.y2) / 2); ctx.fillStyle = 'rgba(255,255,255,0.9)'; rr(mx - 22, my - 9, 44, 17, 5); ctx.fill(); txt('Leg ' + g.leg, mx, my + 3, { size: 10, w: 800, a: 'center' }); });
       if (grow >= total) { const u = (tm * 0.5 * Math.max(1, T / 0.375)) % (total + 0.4); if (u < total) { let s = u, p = null; for (const g of segs) { if (s <= g.len) { p = [X(g.x1 + g.dx * s), Y(g.y1 + g.dy * s)]; break; } s -= g.len; } if (p) { ctx.fillStyle = C.red; ctx.shadowColor = C.red; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(p[0], p[1], 5, 0, 7); ctx.fill(); ctx.shadowBlur = 0; } } }
@@ -620,7 +694,7 @@
       const s = px / AS.w * RANGE;
       let a = 1.2 + 1.8 * Math.abs(Math.sin(s * 300 / RANGE * 1.75 + Math.sin(s * 70) * 3)) * (0.6 + 0.4 * Math.sin(tm * 9 + s * 40));
       if (st.e != null) a += 70 * Math.exp(-Math.max(s + 0.01 * RANGE, 0) / (0.012 * RANGE));
-      if (e) { const d = (s - e.s) / RANGE * AS.w, w = d < 0 ? 3 : 5; if (Math.abs(d) < 24) a += e.amp * Math.exp(-Math.pow(d / w, 2)) * (0.5 + 0.5 * Math.abs(Math.sin(d * 0.9))); }
+      for (const ec of ech) { const d = (s - ec.s) / RANGE * AS.w, w = d < 0 ? 3 : 5; if (Math.abs(d) < 24) a += ec.amp * Math.exp(-Math.pow(d / w, 2)) * (0.5 + 0.5 * Math.abs(Math.sin(d * 0.9))); }
       const yv = bot - Math.min(a, 105) / 100 * (AS.h - 6);
       px ? ctx.lineTo(AS.x + px, yv) : ctx.moveTo(AS.x, yv);
     }
@@ -628,7 +702,7 @@
     const tstep = RANGE > 3 ? 0.5 : 0.25;
     for (let v = 0; (RANGE - v) / RANGE * AS.w > 50; v += tstep) txt(v.toFixed(2), AS.x + v / RANGE * AS.w, AS.y + AS.h + 18, { size: 11, w: 600, c: C.soft, mono: true, a: v === 0 ? 'left' : 'center' });
     txt(RANGE.toFixed(2) + '″', AS.x + AS.w, AS.y + AS.h + 18, { size: 11, w: 600, c: C.soft, mono: true, a: 'right' });
-    if (vis) txt(e.what + ' · leg ' + e.leg, Math.min(AS.x + e.s / RANGE * AS.w + 10, AS.x + AS.w - 170), AS.y + 26, { size: 13, w: 800, c: '#7dffb0' });
+    ech.filter(ec => ec.amp > 15).forEach((ec, i) => txt(ec.what + ' · leg ' + ec.leg, Math.min(AS.x + ec.s / RANGE * AS.w + 10, AS.x + AS.w - 190), AS.y + 26 + i * 18, { size: 13, w: 800, c: ec.geo ? '#8ec5ff' : '#7dffb0' }));
 
     if (toast && now - toast.at < 2600) {
       ctx.font = `700 14px ${SANS}`; const tw = ctx.measureText(toast.t).width + 28;
@@ -636,11 +710,80 @@
       rr(W / 2 - tw / 2, 40, tw, 32, 8); ctx.fillStyle = '#6b2412'; ctx.fill();
       txt(toast.t, W / 2, 61, { size: 14, w: 700, c: '#fff', a: 'center' }); ctx.globalAlpha = 1;
     }
+    drawTop(now);
     requestAnimationFrame(frame);
   }
+  // ---------- top view: the plate from above, the weld running up the page like on the key ----------
+  const tv = document.getElementById('tv'), tctx = tv.getContext('2d'), tvwrap = document.getElementById('tvwrap'), TH = 360, TY0 = 300, TY1 = 34;
+  const ZY = z => TY0 - z / LEN() * (TY0 - TY1);   // X along the weld (from the bottom edge, as on the key) to canvas y
+  const WEDGE_W = 0.5;                            // wedge width across the beam
+  function tprobeHit(p) { if (st.e == null) return false; const a = X(st.e - st.dir * (cfg.foot - cfg.bep)), b = X(st.e + st.dir * cfg.bep), hz = Math.max(16, WEDGE_W / 2 / LEN() * (TY0 - TY1)); return p.x > Math.min(a, b) - 8 && p.x < Math.max(a, b) + 8 && Math.abs(p.y - ZY(st.z)) < hz + 6; }
+  function drawTop(now) {
+    const show = hunting(); if (tvwrap.hidden === show) tvwrap.hidden = !show; if (!show) return;
+    const c = tctx, S = G.S, L = LEN(), zs = (TY0 - TY1) / L;
+    c.setTransform(K, 0, 0, K, 0, 0); c.clearRect(0, 0, W, TH);
+    const t = (s, x, y, o) => { o = o || {}; c.font = `${o.w || 600} ${o.size || 12}px ${o.mono ? MONO : SANS}`; c.fillStyle = o.c || C.ink; c.textAlign = o.a || 'left'; c.fillText(s, x, y); };
+    t(`TOP VIEW · ${plate().pipe ? 'PIPE, UNROLLED' : 'PLATE'} · WELD LENGTH ${L.toFixed(1)}″`, 40, 20, { size: 11, w: 700, c: C.faded, mono: true });
+    c.fillStyle = '#d3d9e0'; c.fillRect(X(G.XL), ZY(L), (G.XR - G.XL) * S, L * zs);
+    c.fillStyle = 'rgba(214,170,90,0.28)'; const hz = G.face(0) + HAZ; c.fillRect(X(-hz), ZY(L), 2 * hz * S, L * zs);
+    c.fillStyle = '#c9b9a3'; c.fillRect(X(-G.TOE), ZY(L), 2 * G.TOE * S, L * zs);
+    if (!G.flush) { c.strokeStyle = 'rgba(122,106,82,0.45)'; c.lineWidth = 1; for (let z = 0.06; z < L; z += 0.12) { c.beginPath(); c.moveTo(X(-G.TOE), ZY(z)); c.quadraticCurveTo(X(0), ZY(z + 0.1), X(G.TOE), ZY(z)); c.stroke(); } }   // weld ripples
+    c.strokeStyle = 'rgba(13,144,79,0.7)'; c.setLineDash([8, 4, 2, 4]); c.beginPath(); c.moveTo(X(0), ZY(L) - 6); c.lineTo(X(0), ZY(0) + 6); c.stroke(); c.setLineDash([]);
+    c.strokeStyle = '#5f6b78'; c.lineWidth = 2; c.strokeRect(X(G.XL), ZY(L), (G.XR - G.XL) * S, L * zs);
+    const tick = L > 6 ? 2 : 1;
+    for (let z = 0; z <= L + 1e-6; z += tick) { c.strokeStyle = C.soft; c.lineWidth = 1; c.beginPath(); c.moveTo(X(G.XL) - 6, ZY(z)); c.lineTo(X(G.XL), ZY(z)); c.stroke(); t(z.toFixed(0) + '″', X(G.XL) - 9, ZY(z) + 4, { size: 10, mono: true, c: C.faded, a: 'right' }); }
+    t('X', X(G.XL) - 44, ZY(L / 2) + 4, { size: 12, w: 800, c: C.soft, a: 'center' });
+    t('+Y', X(G.XL) + 6, ZY(0) + 16, { size: 10, w: 700, c: C.faded, mono: true }); t('−Y', X(G.XR) - 6, ZY(0) + 16, { size: 10, w: 700, c: C.faded, mono: true, a: 'right' });
+    if (st.key) for (const f of flawList()) {       // the key: where each flaw is
+      let xa, xb;
+      if (f.kind === 'lof') { xa = f.side * G.face(f.y1); xb = f.side * G.face(f.y2); }
+      else if (f.kind === 'vol') { xa = Math.min(...f.pts.map(p => p[0])); xb = Math.max(...f.pts.map(p => p[0])); }
+      else { xa = f.x1; xb = f.x2; }
+      const lo = Math.min(xa, xb), hi = Math.max(xa, xb, lo + 0.03), mid = (lo + hi) / 2, w = Math.max((hi - lo) * S, 4);
+      c.fillStyle = 'rgba(192,20,28,0.35)'; c.strokeStyle = C.flaw; c.lineWidth = 1.5;
+      c.fillRect(X(mid) - w / 2, ZY(f.z2), w, Math.max(3, (f.z2 - f.z1) * zs)); c.strokeRect(X(mid) - w / 2, ZY(f.z2), w, Math.max(3, (f.z2 - f.z1) * zs));
+      t(String(f.n), X(mid) + w / 2 + 6, ZY((f.z1 + f.z2) / 2) + 4, { size: 12, w: 800, c: C.flaw });
+    }
+    for (const m of marks) { if (m.geo) { c.fillStyle = `rgba(42,111,219,${(0.05 + m.amp / 500).toFixed(3)})`; c.fillRect(X(m.x) - 1.5, ZY(m.z) - 1.5, 3, 3); } else { c.fillStyle = `rgba(192,20,28,${(0.25 + m.amp / 130).toFixed(2)})`; c.fillRect(X(m.x) - 2.5, ZY(m.z) - 2.5, 5, 5); } }   // the indications you've plotted
+    c.fillStyle = 'rgba(192,20,28,0.8)'; c.fillRect(X(G.XL) + 60, TY0 + 30, 7, 7); t('echo from a flaw', X(G.XL) + 72, TY0 + 37, { size: 11, w: 700, c: C.soft });
+    c.fillStyle = 'rgba(42,111,219,0.6)'; c.fillRect(X(G.XL) + 200, TY0 + 30, 7, 7); t('geometry (crown, root bead)', X(G.XL) + 212, TY0 + 37, { size: 11, w: 700, c: C.soft });
+    t('Marks show where the echoes plot.', X(G.XR), TY0 + 37, { size: 11, w: 600, c: C.faded, a: 'right' });
+    if (st.e == null) return;
+    // the beam on the surface: skip marks along it
+    const segs = legs(st.e, st.dir, G.legs), xEnd = segs[segs.length - 1].x2, y = ZY(st.z), bw = BWZ * zs;
+    c.fillStyle = 'rgba(255,190,70,0.30)'; c.fillRect(Math.min(X(st.e), X(xEnd)), y - bw, Math.abs(X(xEnd) - X(st.e)), 2 * bw);
+    c.strokeStyle = C.orange; c.lineWidth = 2; c.setLineDash([6, 5]); c.beginPath(); c.moveTo(X(st.e), y); c.lineTo(X(xEnd), y); c.stroke(); c.setLineDash([]);
+    segs.forEach(g => { if (g.cap) return; const xs = X(g.x2); c.strokeStyle = C.orange; c.lineWidth = 2; c.beginPath(); c.moveTo(xs, y - bw - 4); c.lineTo(xs, y + bw + 4); c.stroke(); t(g.leg % 2 ? `${g.leg}/2 skip`.replace('1/2', '½').replace('3/2', '1½') : `${g.leg / 2} skip`, xs, y - bw - 8, { size: 10, w: 800, c: C.orange, a: 'center' }); });
+    // the wedge footprint
+    const a = X(st.e - st.dir * (cfg.foot - cfg.bep)), b = X(st.e + st.dir * cfg.bep), hw = WEDGE_W / 2 * zs;
+    c.fillStyle = 'rgba(208,58,68,0.85)'; c.strokeStyle = '#8a1f27'; c.lineWidth = 1.5; c.fillRect(Math.min(a, b), y - hw, Math.abs(b - a), 2 * hw); c.strokeRect(Math.min(a, b), y - hw, Math.abs(b - a), 2 * hw);
+    c.fillStyle = '#b8bec6'; c.beginPath(); c.arc(X(st.e - st.dir * (cfg.foot - cfg.bep) * 0.55), y, Math.min(hw * 0.8, 0.22 * S), 0, 7); c.fill(); c.strokeStyle = '#6b7380'; c.stroke();
+    c.fillStyle = '#fff'; c.beginPath(); c.moveTo(X(st.e) + st.dir * 9, y); c.lineTo(X(st.e) - st.dir * 2, y - 6); c.lineTo(X(st.e) - st.dir * 2, y + 6); c.closePath(); c.fill();
+    t(`X ${st.z.toFixed(2)}″`, Math.min(a, b) - 8, y + 4, { size: 11, w: 800, c: C.blue, mono: true, a: 'right' });
+    if (!st.tdrag && marks.length === 0) t('Drag the probe up and down the weld', X(0), ZY(L) - 8 + 0, { size: 13, w: 800, c: C.blue, a: 'center' });
+  }
+  const tpos = e => { const r = tv.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * TH / r.height }; };
+  const setZ = z => { st.z = Math.round(Math.max(0, Math.min(LEN(), z)) * 1000) / 1000; };
+  tv.addEventListener('pointerdown', e => {
+    const p = tpos(e); if (!hunting() || !tprobeHit(p)) return;
+    e.preventDefault(); tv.setPointerCapture(e.pointerId); st.tdrag = { dx: X(st.e) - p.x, dy: ZY(st.z) - p.y };
+  });
+  tv.addEventListener('pointermove', e => {
+    const p = tpos(e); tv.style.cursor = st.tdrag ? 'grabbing' : hunting() && tprobeHit(p) ? 'grab' : 'default';
+    if (!st.tdrag) return;
+    setZ((TY0 - (p.y + st.tdrag.dy)) / (TY0 - TY1) * LEN());
+    st.drag = st.drag || {}; setX((p.x + st.tdrag.dx - 500) / G.S); st.drag = null;
+  });
+  tv.addEventListener('pointerup', () => { st.tdrag = null; });
+  tv.addEventListener('keydown', e => {
+    if (!hunting() || st.e == null) return;
+    const k = { ArrowUp: [0, 0.02], ArrowDown: [0, -0.02], ArrowLeft: [-0.01, 0], ArrowRight: [0.01, 0] }[e.key]; if (!k) return;
+    e.preventDefault(); setZ(st.z + k[1]); setX(st.e + k[0]);
+  });
+
   derive(); st.e = -Math.min(G.EMIN + 0.6, G.XR - (cfg.foot - cfg.bep) - 0.1); render();
   (document.fonts ? Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 2000))]) : Promise.resolve()).then(() => requestAnimationFrame(frame));
-  window.__wgen = { cfg, get G() { return G; }, st, get q() { return q; }, legs, echo, get cov() { return cov; }, pctOf, both, setX, act, derive, PLATES };
+  window.__wgen = { geoEcho, echoes, setZ, get marks() { return marks; }, get found() { return found; }, cfg, get G() { return G; }, st, get q() { return q; }, legs, echo, get cov() { return cov; }, pctOf, both, setX, act, derive, PLATES };
 })();
 </script>
 </body>
