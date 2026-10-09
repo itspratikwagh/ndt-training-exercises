@@ -83,6 +83,7 @@
   .toolbar .big { font: 700 20px 'JetBrains Mono', monospace; color: var(--blue); }
   .form { display: grid; gap: 8px; margin-top: 10px; }
   .form [hidden] { display: none; }
+  #f-custom[hidden] { display: none; }
   #f-custom { display: grid; gap: 8px; padding: 8px; border: 1px dashed var(--rule); border-radius: 8px; }
   .fld { display: grid; gap: 3px; font-size: 13px; font-weight: 700; color: var(--ink); }
   .fld small { font-weight: 500; color: var(--ink-soft); font-size: 12px; }
@@ -128,44 +129,86 @@
   'use strict';
   const RAD = Math.PI / 180, HAZ = 0.10, BEAM_W = 0.08;     // HAZ width beside each fusion face; beam half-width (5 MHz, 0.25″ crystal, near field)
   // ---------- plate library (from the plate keys) ----------
+  // x is across the weld (+ = the -Y side of the key, right on the drawing), y is depth from the top surface
+  const blob = (cx, y1, y2, r) => [[cx, y1], [cx + r, y1 + (y2 - y1) * 0.3], [cx + r * 0.7, y1 + (y2 - y1) * 0.7], [cx, y2], [cx - r * 0.7, y1 + (y2 - y1) * 0.7], [cx - r, y1 + (y2 - y1) * 0.3], [cx, (y1 + y2) / 2]];
+  const NOTE = {
+    lam: 'A lamination lies flat in the base metal, so the angle beam hits it at a slant and little comes back. Find it with a straight-beam probe before the angle-beam scan.',
+    trans: 'A transverse crack runs <b>across</b> the weld. This scan aims the beam across the weld too, so the beam runs along the crack and gets almost nothing back. To find it, scan <b>along</b> the weld (probe beside or on the weld, beam aimed along it).',
+    ip: 'Incomplete penetration in a double-V stands upright in the middle of the plate. The beam meets it at a slant, so the echo is weaker than its size suggests. Scan from both sides.'
+  };
   const PLATES = {
-    'UT-14225': { name: 'FlawTech UT-14225 · 0.375″ carbon steel · single-V', T: 0.375, bevel: 30, root: 0.12, crown: 0.555, key: true,
-      flaws: [{ n: 1, kind: 'lof', label: 'Flaw 1 · lack of fusion', side: 1, y1: 0.0, y2: 0.1 },
-              { n: 2, kind: 'poro', label: 'Flaw 2 · porosity', pts: [[0.0, 0.13], [0.03, 0.16], [-0.025, 0.17], [0.01, 0.2], [0.04, 0.12], [-0.03, 0.13]] }] },
+    'UT-14221': { name: 'UT-14221 · 0.625″ plate · single-V · flush', T: 0.625, bevel: 30, root: 0.12, crown: 0, flush: true, joint: 'v',
+      flaws: [{ n: 1, kind: 'vol', what: 'slag', label: 'Flaw 1 · slag inclusion', amp: 75, pts: blob(0.015, 0.2, 0.35, 0.04) },
+              { n: 2, kind: 'crack', what: 'centerline crack', label: 'Flaw 2 · centerline crack', x1: 0, y1: 0.1, x2: 0, y2: 0.3 }] },
+    'UT-14222': { name: 'UT-14222 · 0.337″ pipe wall · single-V', pipe: true, T: 0.337, bevel: 37.5, root: 0.0625, crown: 0.6, joint: 'v',
+      flaws: [{ n: 1, kind: 'lof', what: 'lack of fusion', label: 'Flaw 1 · lack of fusion', side: 1, y1: 0.1, y2: 0.25 },
+              { n: 2, kind: 'crack', what: 'toe crack', label: 'Flaw 2 · toe crack', x1: -0.3, y1: 0, x2: -0.3, y2: 0.1 }] },
+    'UT-14223': { name: 'UT-14223 · 0.375″ tee joint (coming later)', soon: true },
+    'UT-14224': { name: 'UT-14224 · 0.625″ plate · single-V · flush', T: 0.625, bevel: 30, root: 0.12, crown: 0, flush: true, joint: 'v',
+      flaws: [{ n: 1, kind: 'crack', what: 'lamination', label: 'Flaw 1 · lamination', x1: 0.75, y1: 0.5, x2: 1.05, y2: 0.5, rough: 0.22, note: NOTE.lam },
+              { n: 2, kind: 'crack', what: 'root crack', label: 'Flaw 2 · root crack', x1: 0.06, y1: 0.425, x2: 0.06, y2: 0.625 }] },
+    'UT-14225': { name: 'UT-14225 · 0.375″ plate · single-V', T: 0.375, bevel: 30, root: 0.12, crown: 0.555, joint: 'v',
+      flaws: [{ n: 1, kind: 'lof', what: 'lack of fusion', label: 'Flaw 1 · lack of fusion', side: 1, y1: 0.0, y2: 0.1 },
+              { n: 2, kind: 'vol', what: 'porosity', label: 'Flaw 2 · porosity', amp: 60, pts: [[0.0, 0.13], [0.03, 0.16], [-0.025, 0.17], [0.01, 0.2], [0.04, 0.12], [-0.03, 0.13]] }] },
+    'UT-14226': { name: 'UT-14226 · 0.375″ plate · single-V', T: 0.375, bevel: 30, root: 0.12, crown: 0.555, joint: 'v',
+      flaws: [{ n: 1, kind: 'lof', what: 'lack of fusion', label: 'Flaw 1 · lack of fusion', side: 1, y1: 0.1, y2: 0.2 },
+              { n: 2, kind: 'crack', what: 'HAZ crack', label: 'Flaw 2 · HAZ crack (root)', x1: 0.15, y1: 0.275, x2: 0.15, y2: 0.375 }] },
+    'UT-14227': { name: 'UT-14227 · 0.375″ plate · single-V', T: 0.375, bevel: 30, root: 0.12, crown: 0.555, joint: 'v',
+      flaws: [{ n: 1, kind: 'vol', what: 'slag', label: 'Flaw 1 · slag inclusion', amp: 75, pts: blob(-0.02, 0.2, 0.3, 0.035) },
+              { n: 2, kind: 'vol', what: 'porosity', label: 'Flaw 2 · porosity', amp: 60, pts: [[0, 0.11], [0.04, 0.12], [-0.035, 0.14], [0.02, 0.16], [-0.01, 0.19], [0.045, 0.2], [-0.04, 0.22], [0.01, 0.24]] }] },
+    'UT-14228': { name: 'UT-14228 · 0.375″ plate · single-V · flush', T: 0.375, bevel: 30, root: 0.12, crown: 0, flush: true, joint: 'v',
+      flaws: [{ n: 1, kind: 'trans', what: 'transverse crack', label: 'Flaw 1 · transverse crack', x1: 0.1, x2: 0.5, y1: 0.225, note: NOTE.trans },
+              { n: 2, kind: 'crack', what: 'centerline crack', label: 'Flaw 2 · centerline crack', x1: 0, y1: 0, x2: 0, y2: 0.15 }] },
+    'UT-14229': { name: 'UT-14229 · 0.625″ plate · single-V', T: 0.625, bevel: 30, root: 0.12, crown: 0.84, joint: 'v',
+      flaws: [{ n: 1, kind: 'lof', what: 'lack of fusion', label: 'Flaw 1 · lack of fusion', side: 1, y1: 0.1, y2: 0.25 },
+              { n: 2, kind: 'crack', what: 'HAZ crack', label: 'Flaw 2 · HAZ crack (crown)', x1: 0.5, y1: 0, x2: 0.5, y2: 0.15 }] },
+    'UT-14230': { name: 'UT-14230 · 0.625″ plate · double-V', T: 0.625, bevel: 30, root: 0.06, crown: 0.5, joint: 'x',
+      flaws: [{ n: 1, kind: 'crack', what: 'incomplete penetration', label: 'Flaw 1 · incomplete penetration', x1: 0, y1: 0.24, x2: 0, y2: 0.39, rough: 0.35, note: NOTE.ip },
+              { n: 2, kind: 'vol', what: 'slag', label: 'Flaw 2 · slag inclusion', amp: 75, pts: blob(-0.03, 0.4, 0.55, 0.035) }] },
     custom: { name: 'Another plate (enter it from its key)', custom: true }
   };
   const PROBES = { 45: '45° wedge', 60: '60° wedge' };
   const V_WEDGE = 2.337, V_STEEL = 3.23;
 
   // ---------- current setup ----------
-  const cfg = { plate: 'UT-14225', T: 0.375, bevel: 30, root: 0.12, crown: 0.555, ang: 60, bep: 0.5, foot: 1.0 };
+  const cfg = { plate: 'UT-14225', T: 0.375, bevel: 30, root: 0.12, crown: 0.555, flush: false, joint: 'v', ang: 60, bep: 0.5, foot: 1.0 };
+  const usePlate = P => Object.assign(cfg, { T: P.T, bevel: P.bevel, root: P.root, crown: P.crown, flush: !!P.flush, joint: P.joint });
   let G;                                           // derived geometry and plan, rebuilt from cfg
   function derive() {
-    const T = cfg.T, tb = Math.tan(cfg.bevel * RAD), gap = cfg.root / 2, face = y => gap + (T - y) * tb;
-    const TOE = Math.max(cfg.crown / 2, face(0)), EMIN = TOE + cfg.bep, tn = Math.tan(cfg.ang * RAD), hs = T * tn;
+    const T = cfg.T, tb = Math.tan(cfg.bevel * RAD), gap = cfg.root / 2, dbl = cfg.joint === 'x', flush = cfg.flush;
+    const face = dbl ? y => gap + Math.abs(y - T / 2) * tb : y => gap + (T - y) * tb;
+    const TOE = flush ? face(0) : Math.max(cfg.crown / 2, face(0)), TOEB = dbl ? TOE : face(T);
+    const EMIN = flush ? 0.05 : TOE + cfg.bep, tn = Math.tan(cfg.ang * RAD), hs = T * tn;
     // where to put the probe: the steps, in the order you meet them sliding back from the weld
     const steps = [], closeNotes = [], closeZones = []; let legs = 2, rootNote = '';
-    const land = EMIN - hs;                        // where leg 1 meets the back wall at the closest position (from the centerline)
-    if (hs >= EMIN) steps.push({ id: 'root', spot: hs, zones: ['root'], title: 'Put leg 1 on the <b>root</b>.', card: 'Slide back until <b>leg 1</b> lands on the root.', ok: 'That\'s half a skip.' });
-    else if (land <= face(T) + BEAM_W) { closeNotes.push('<b>Leg 1</b> reaches the near half of the <b>root</b>; the other half is covered from the other side.'); closeZones.push('rootn'); }
-    else if (hs >= TOE + 0.02) { legs = 3; steps.push({ id: 'root', spot: 3 * hs, zones: ['root'], title: 'Reach the <b>root</b> with leg 3.', card: 'Leg 1 can\'t reach the root. Slide back until <b>leg 3</b> lands on the root.', ok: 'Leg 3 comes after leg 2 on the A-scan, so the range has to show 3 legs.' }); closeNotes.push('Leg 1 lands in the base metal, short of the weld.'); }
-    else { rootNote = 'With this probe the root can\'t be reached on this plate: leg 1 can\'t get close enough and leg 2 comes up on the crown.'; closeNotes.push('Leg 1 lands in the base metal, short of the weld.'); }
-    if (1.5 * hs >= EMIN + 0.02) steps.push({ id: 'mid', spot: 1.5 * hs, zones: ['mid'], title: 'Put leg 2 through the <b>middle</b>.', card: 'Slide back until <b>leg 2</b> passes through the middle of the weld.', ok: '' });
-    else { closeNotes.push('<b>Leg 2</b> comes up through the <b>middle</b> of the weld.'); closeZones.push('mid'); }
-    steps.push({ id: 'toe', spot: TOE + HAZ + 2 * hs, zones: ['toe'], title: 'Reach the near-side <b>toe and HAZ</b> with leg 2.', card: 'Slide back until <b>leg 2</b> reaches the near-side toe and the HAZ beside it.', ok: '' });
-    steps.unshift({ id: 'close', spot: EMIN, zones: closeZones, title: 'Get as <b>close</b> as the crown allows.', card: 'Slide the probe toward the weld until the wedge stops at the crown.',
+    if (dbl) {                                     // double-V: the root is in the middle of the plate
+      if (hs / 2 >= EMIN) steps.push({ id: 'root', spot: hs / 2, zones: ['rootx'], title: 'Put leg 1 on the <b>root</b>, in the middle.', card: 'In a double-V the root is in the <b>middle</b> of the plate. Slide back until <b>leg 1</b> reaches it.', ok: 'Half of a half skip: leg 1 is only halfway down.' });
+      else if (1.5 * hs >= EMIN + 0.02 && hs / 2 >= TOEB + 0.02) steps.push({ id: 'root', spot: 1.5 * hs, zones: ['rootx'], title: 'Reach the <b>root</b>, in the middle, with leg 2.', card: 'In a double-V the root is in the <b>middle</b>. Leg 1 can\'t get there past the crown, so slide back until <b>leg 2</b> crosses it.', ok: '' });
+      else rootNote = 'With this probe the root in the middle can\'t be reached cleanly on this plate.';
+      steps.push({ id: 'lower', spot: TOEB + HAZ + hs, zones: ['lower'], title: 'Reach the near-side <b>bottom toe and HAZ</b> with leg 1.', card: 'Slide back until <b>leg 1</b> lands beside the bottom cap, on the near side, past the HAZ.', ok: '' });
+    } else {
+      const land = EMIN - hs;                      // where leg 1 meets the back wall at the closest position (from the centerline)
+      if (hs >= EMIN) steps.push({ id: 'root', spot: hs, zones: ['root'], title: 'Put leg 1 on the <b>root</b>.', card: 'Slide back until <b>leg 1</b> lands on the root.', ok: 'That\'s half a skip.' });
+      else if (land <= face(T) + BEAM_W) { closeNotes.push('<b>Leg 1</b> reaches the near half of the <b>root</b>; the other half is covered from the other side.'); closeZones.push('rootn'); }
+      else if (hs >= TOE + 0.02) { legs = 3; steps.push({ id: 'root', spot: 3 * hs, zones: ['root'], title: 'Reach the <b>root</b> with leg 3.', card: 'Leg 1 can\'t reach the root. Slide back until <b>leg 3</b> lands on the root.', ok: 'Leg 3 comes after leg 2 on the A-scan, so the range has to show 3 legs.' }); closeNotes.push('Leg 1 lands in the base metal, short of the weld.'); }
+      else { rootNote = 'With this probe the root can\'t be reached on this plate: leg 1 can\'t get close enough and leg 2 comes up on the crown.'; closeNotes.push('Leg 1 lands in the base metal, short of the weld.'); }
+      if (1.5 * hs >= EMIN + 0.02) steps.push({ id: 'mid', spot: 1.5 * hs, zones: ['mid'], title: 'Put leg 2 through the <b>middle</b>.', card: 'Slide back until <b>leg 2</b> passes through the middle of the weld.', ok: '' });
+      else { closeNotes.push('<b>Leg 2</b> comes up through the <b>middle</b> of the weld.'); closeZones.push('mid'); }
+    }
+    steps.push({ id: 'toe', spot: TOE + HAZ + 2 * hs, zones: ['toe'], title: `Reach the near-side ${dbl ? '<b>top toe' : '<b>toe'} and HAZ</b> with leg 2.`, card: `Slide back until <b>leg 2</b> reaches the near-side ${dbl ? 'top ' : ''}toe and the HAZ beside it.`, ok: '' });
+    if (!flush) steps.unshift({ id: 'close', spot: EMIN, zones: closeZones, title: 'Get as <b>close</b> as the crown allows.', card: 'Slide the probe toward the weld until the wedge stops at the crown.',
       ok: `The wedge front hits the crown: the exit point can't get closer than <b>${EMIN.toFixed(3)}″</b>. ` + closeNotes.join(' ') });
     steps.sort((a, b) => a.spot - b.spot);
     for (let i = steps.length - 1; i > 0; i--) if (steps[i].spot - steps[i - 1].spot < 0.05) {   // two targets at (almost) the same spot: one step
       const a = steps[i - 1], b = steps[i];
       steps.splice(i - 1, 2, { id: a.id + '+' + b.id, spot: a.spot, close: a.id === 'close', zones: a.zones.concat(b.zones), title: a.title.replace(/\.$/, '') + ', and ' + b.title.charAt(0).toLowerCase() + b.title.slice(1), card: a.card + ' ' + b.card.replace('Slide back until', 'At the same spot,').replace('reaches', 'reaches'), ok: [a.ok, b.ok].filter(Boolean).join(' ') });
     }
-    const zone = [EMIN, Math.ceil((steps[steps.length - 1].spot + 0.02) * 20) / 20];
+    const zone = [flush ? Math.floor((steps[0].spot - 0.02) * 20) / 20 : EMIN, Math.ceil((steps[steps.length - 1].spot + 0.02) * 20) / 20];
     const sp1 = T / Math.cos(cfg.ang * RAD), RANGE = Math.ceil(legs * sp1 * 1.12 * 4) / 4;
     // view: fit the scan zone plus the wedge behind the exit point
     const half = Math.max(zone[1], EMIN + 0.8) + (cfg.foot - cfg.bep) + 0.3;
-    const S = Math.min(300, 900 / (2 * half), 330 / (0.95 + T));
-    G = { T, tb, gap, face, TOE, EMIN, tn, hs, sp1, steps, legs, zone, RANGE, rootNote, S, XL: -half, XR: half, TOPY: Math.round(45 + 0.92 * S + Math.max(0, 0.6 - T) * 0) };
+    const S = Math.min(300, 900 / (2 * half), 275 / (0.92 + T));     // keep the centerline label clear of the readout
+    G = { T, tb, gap, face, TOE, TOEB, dbl, flush, EMIN, tn, hs, sp1, steps, legs, zone, RANGE, rootNote, S, XL: -half, XR: half, TOPY: Math.round(45 + 0.92 * S + Math.max(0, 0.6 - T) * 0) };
     buildCells();
   }
 
@@ -190,7 +233,8 @@
       if (tX < t) { t = tX; end = true; }
       out.push({ leg, x1: x, y1: y, x2: x + dx * t, y2: y + dy * t, s1: s, len: t, dx, dy });
       if (end) break;
-      if (leg === 2 && Math.abs(x + dx * t) < G.TOE + 0.02) break;   // leg 2 coming up on the crown: no clean bounce
+      if (leg === 2 && !G.flush && Math.abs(x + dx * t) < G.TOE + 0.02) break;   // leg 2 coming up on the crown: no clean bounce
+      if (leg === 1 && G.dbl && Math.abs(x + dx * t) < G.TOEB + 0.02) break;     // double-V: leg 1 landing on the bottom cap
       s += t; x += dx * t; y += dy * t; dy = -dy;
     }
     return out;
@@ -219,26 +263,31 @@
   }
 
   // ---------- flaw echoes (library plates with a key) ----------
+  const curFlaw = () => st.flaw && plate().flaws ? plate().flaws.find(f => f.n === st.flaw) : null;
+  function flawSeg(f) { return f.kind === 'lof' ? { x1: f.side * G.face(f.y1), y1: f.y1, x2: f.side * G.face(f.y2), y2: f.y2 } : f; }
   function echo() {
-    const f = st.flaw && plate().flaws ? plate().flaws.find(f => f.n === st.flaw) : null;
-    if (st.e == null || !f) return null;
+    const f = curFlaw();
+    if (st.e == null || !f || f.kind === 'trans') return null;
     let best = null;
+    const keep = (amp, g, r, py) => { if (!best || amp > best.amp) best = { amp, s: g.s1 + r.t, leg: g.leg, depth: py, what: f.what }; };
     for (const g of legs(st.e, st.dir, G.legs)) {
-      if (f.kind === 'lof') {
-        const x1 = f.side * G.face(f.y1), x2 = f.side * G.face(f.y2), fx = x2 - x1, fy = f.y2 - f.y1, fl = Math.hypot(fx, fy), ux = fx / fl, uy = fy / fl;
-        for (let k = 0; k <= 10; k++) {
-          const px = x1 + ux * fl * k / 10, py = f.y1 + uy * fl * k / 10, r = distToSeg(px, py, g);
-          if (r.d > BEAM_W * 1.5) continue;
-          const dev = Math.acos(Math.abs(g.dx * -uy + g.dy * ux)) / RAD;
-          const amp = 100 * Math.exp(-Math.pow(dev / 22, 2)) * Math.exp(-Math.pow(r.d / BEAM_W, 2)) * Math.exp(-(g.s1 + r.t) / 6);
-          if (!best || amp > best.amp) best = { amp, s: g.s1 + r.t, leg: g.leg, depth: py, what: 'lack of fusion' };
-        }
-      } else {
+      if (f.kind === 'vol') {
         for (const [px, py] of f.pts) {
           const r = distToSeg(px, py, g); if (r.d > BEAM_W * 1.5) continue;
-          const amp = 60 * Math.exp(-Math.pow(r.d / BEAM_W, 2)) * Math.exp(-(g.s1 + r.t) / 6);
-          if (!best || amp > best.amp) best = { amp, s: g.s1 + r.t, leg: g.leg, depth: py, what: 'porosity' };
+          keep(f.amp * Math.exp(-Math.pow(r.d / BEAM_W, 2)) * Math.exp(-(g.s1 + r.t) / 6), g, r, py);
         }
+        continue;
+      }
+      // planar flaws: strong when the beam hits them square on, or in the corner they make with a surface
+      const sg = flawSeg(f), fx = sg.x2 - sg.x1, fy = sg.y2 - sg.y1, fl = Math.hypot(fx, fy), ux = fx / fl, uy = fy / fl;
+      const dev = Math.acos(Math.min(1, Math.abs(g.dx * -uy + g.dy * ux))) / RAD;
+      const surf = f.kind === 'crack' && Math.abs(fx) < 1e-9 ? (Math.min(sg.y1, sg.y2) < 1e-6 ? 0 : Math.max(sg.y1, sg.y2) > G.T - 1e-6 ? G.T : null) : null;
+      const corner = surf != null && Math.abs(g.y2 - surf) < 1e-6;   // this leg runs into the surface the crack breaks
+      const refl = corner ? 0.95 : Math.max(Math.exp(-Math.pow(dev / 22, 2)), f.kind === 'lof' ? 0 : (f.rough != null ? f.rough : 0.25));
+      for (let k = 0; k <= 12; k++) {
+        const px = sg.x1 + fx * k / 12, py = sg.y1 + fy * k / 12, r = distToSeg(px, py, g);
+        if (r.d > BEAM_W * 1.5) continue;
+        keep(100 * refl * Math.exp(-Math.pow(r.d / BEAM_W, 2)) * Math.exp(-(g.s1 + r.t) / 6), g, r, py);
       }
     }
     return best && best.amp > 5 ? best : null;
@@ -265,8 +314,8 @@
   function renderKeys() {
     document.getElementById('keys').innerHTML = [
       `Skip = 2 × thickness × tan(wedge angle). ${cfg.ang}° wedge on ${IN(G.T)}: half skip <b>${IN(G.hs)}</b>, one skip <b>${IN(2 * G.hs)}</b>.`,
-      `The wedge stops at the crown, so the exit point can't get closer than crown half-width + BEP = <b>${IN2(G.EMIN)}</b> to the weld centerline.`,
-      G.legs === 3 ? 'The root is reached with <b>leg 3</b>, so set the A-scan range to show 3 legs.' : '<b>Leg 1</b> reaches the root; <b>leg 2</b> the middle, the top and the toes.',
+      G.flush ? 'The crown is ground <b>flush</b>, so the wedge can slide right up to the weld and onto it.' : `The wedge stops at the crown, so the exit point can't get closer than crown half-width + BEP = <b>${IN2(G.EMIN)}</b> to the weld centerline.`,
+      G.dbl ? 'Double-V: the root is in the <b>middle</b>. <b>Leg 1</b> covers the lower V, <b>leg 2</b> the upper V.' : G.legs === 3 ? 'The root is reached with <b>leg 3</b>, so set the A-scan range to show 3 legs.' : '<b>Leg 1</b> reaches the root; <b>leg 2</b> the middle, the top and the toes.',
       `Scan zone: exit point <b>${IN2(G.zone[0])} to ${IN2(G.zone[1])}</b> from the weld centerline. Include the <b>HAZ</b>, the base metal right beside the weld.`,
       '<b>Scan from both sides</b>: one side never covers it all.'
     ].map(t => `<li>${t}</li>`).join('');
@@ -281,29 +330,34 @@
     const p = plate(), num = (id, label, val, step, hint) => `<label class="fld"><span>${label}</span><input type="number" id="${id}" value="${val}" step="${step}" inputmode="decimal">${hint ? `<small>${hint}</small>` : ''}</label>`;
     show(`<div class="ql">Set up</div><div class="qq">Your plate and your probe</div>
       <div class="form">
-        <label class="fld"><span>Plate</span><select id="f-plate">${Object.entries(PLATES).map(([k, v]) => `<option value="${k}"${k === cfg.plate ? ' selected' : ''}>${v.name}</option>`).join('')}</select></label>
+        <label class="fld"><span>Plate</span><select id="f-plate">${Object.entries(PLATES).map(([k, v]) => `<option value="${k}"${k === cfg.plate ? ' selected' : ''}${v.soon ? ' disabled' : ''}>${v.name}</option>`).join('')}</select></label>
         <div id="f-custom"${p.custom ? '' : ' hidden'}>
           ${num('f-T', 'Thickness (″)', cfg.T, 0.001)}
-          ${num('f-bevel', 'Bevel angle, each side (°)', cfg.bevel, 1, 'Single-V groove')}
+          <label class="fld"><span>Weld</span><select id="f-joint"><option value="v"${cfg.joint === 'v' ? ' selected' : ''}>Single-V groove</option><option value="x"${cfg.joint === 'x' ? ' selected' : ''}>Double-V groove</option></select></label>
+          ${num('f-bevel', 'Bevel angle, each side (°)', cfg.bevel, 1)}
           ${num('f-root', 'Root opening (″)', cfg.root, 0.01)}
+          <label class="fld"><span>Crown</span><select id="f-cap"><option value="aw"${cfg.flush ? '' : ' selected'}>As-welded</option><option value="flush"${cfg.flush ? ' selected' : ''}>Ground flush</option></select></label>
           ${num('f-crown', 'Crown width (″)', cfg.crown, 0.01, 'Width of the weld cap on the surface')}
         </div>
         <label class="fld"><span>Probe</span><select id="f-ang">${Object.entries(PROBES).map(([k, v]) => `<option value="${k}"${+k === cfg.ang ? ' selected' : ''}>5 MHz on a ${v}</option>`).join('')}</select></label>
         ${num('f-bep', 'Beam exit point (″)', cfg.bep, 0.01, 'From the <b>front</b> of the wedge to the exit point. Measure it on the IIW or DSC block.')}
         ${num('f-foot', 'Wedge length (″)', cfg.foot, 0.01, 'Front to back, along the bottom of the wedge')}
       </div><div class="fb">${q.fb}</div><button class="go" data-a="start">Start →</button>`);
-    card.querySelectorAll('input, #f-ang').forEach(el => el.addEventListener('input', () => {   // live preview of the plate and wedge
+    card.querySelectorAll('input, #f-ang, #f-joint, #f-cap').forEach(el => el.addEventListener('input', () => {   // live preview of the plate and wedge
       const keep = Object.assign({}, cfg); readForm();
-      if (cfg.T >= 0.125 && cfg.T <= 2 && cfg.bevel >= 10 && cfg.bevel <= 45 && cfg.root >= 0 && cfg.crown >= 0 && cfg.foot >= 0.4 && cfg.bep > 0.05 && cfg.bep < cfg.foot - 0.05) { derive(); st.e = -Math.min(G.EMIN + 0.6, G.XR - (cfg.foot - cfg.bep) - 0.1); st.beamAt = 0; }
+      if (cfg.T >= 0.125 && cfg.T <= 2 && cfg.bevel >= 10 && cfg.bevel <= 45 && cfg.root >= 0 && cfg.crown >= 0 && cfg.foot >= 0.4 && cfg.bep > 0.05 && cfg.bep < cfg.foot - 0.05) { derive(); st.e = -Math.min(G.EMIN + 0.6, G.XR - (cfg.foot - cfg.bep) - 0.1); st.beamAt = 0; renderSteps(); renderKeys(); }
       else Object.assign(cfg, keep);
     }));
-    card.querySelector('#f-plate').addEventListener('change', e => { cfg.plate = e.target.value; const P = plate(); if (!P.custom) Object.assign(cfg, { T: P.T, bevel: P.bevel, root: P.root, crown: P.crown }); readForm(); derive(); st.e = -Math.min(G.EMIN + 0.6, G.XR - (cfg.foot - cfg.bep) - 0.1); setupForm(); });
+    card.querySelector('#f-plate').addEventListener('change', e => { cfg.plate = e.target.value; const P = plate(); if (!P.custom) usePlate(P); readForm(); derive(); st.e = -Math.min(G.EMIN + 0.6, G.XR - (cfg.foot - cfg.bep) - 0.1); render(); });
   }
   function readForm() {
     const v = id => { const el = card.querySelector('#' + id); return el ? parseFloat(el.value) : NaN; };
     const ang = v('f-ang'); if (!isNaN(ang)) cfg.ang = ang;
     for (const [id, k] of [['f-bep', 'bep'], ['f-foot', 'foot']]) { const x = v(id); if (!isNaN(x)) cfg[k] = x; }
-    if (plate().custom) for (const [id, k] of [['f-T', 'T'], ['f-bevel', 'bevel'], ['f-root', 'root'], ['f-crown', 'crown']]) { const x = v(id); if (!isNaN(x)) cfg[k] = x; }
+    if (plate().custom) {
+      for (const [id, k] of [['f-T', 'T'], ['f-bevel', 'bevel'], ['f-root', 'root'], ['f-crown', 'crown']]) { const x = v(id); if (!isNaN(x)) cfg[k] = x; }
+      const j = card.querySelector('#f-joint'), c = card.querySelector('#f-cap'); if (j) cfg.joint = j.value; if (c) cfg.flush = c.value === 'flush';
+    }
   }
   function render() {
     renderSteps(); renderKeys();
@@ -342,7 +396,8 @@
         show(`<div class="ql">Done · free scan</div><div class="qq">Scan ${IN2(G.zone[0])} to ${IN2(G.zone[1])} from the centerline, from both sides.</div>
           <div class="qs" style="margin-top:8px">Scan from</div>${opts('side', [['1', 'Left side'], ['-1', 'Right side']], st.dir)}
           ${fl.length ? `<div class="qs" style="margin-top:8px">Show a flaw from the key</div>${opts('flaw', [['0', 'None']].concat(fl.map(f => [String(f.n), f.label])), st.flaw)}
-          <div class="fb">${st.flaw ? (e && e.amp > 15 ? `Echo: <b>${Math.round(e.amp)}%</b>, ${e.what}, leg ${e.leg}.` : 'Scan to find it.') : ''}</div>` : ''}`); break;
+          <div class="fb">${st.flaw ? (e && e.amp > 15 ? `Echo: <b>${Math.round(e.amp)}%</b>, ${e.what}, leg ${e.leg}.` : curFlaw().kind === 'trans' ? 'No echo from this direction.' : 'Scan to find it.') : ''}</div>
+          ${curFlaw() && curFlaw().note ? `<div class="ex">${curFlaw().note}</div>` : ''}` : ''}`); break;
       }
     }
   }
@@ -358,7 +413,7 @@
   function act(a, v) {
     if (a === 'start') return begin();
     if (a === 'thick') { if (Math.abs(+v - G.T) < 1e-9) { q.fb = ''; q.phase = 'weld'; } else q.fb = '<span class="no">Check the key:</span> the description line gives the thickness first.'; }
-    if (a === 'weld') { if (v === 'v') { q.fb = ''; q.answered.weld = true; q.phase = 'skip'; } else q.fb = '<span class="no">Look again:</span> one V, open at the top, with the root at the bottom.'; }
+    if (a === 'weld') { if (v === cfg.joint) { q.fb = ''; q.answered.weld = true; q.phase = 'skip'; } else q.fb = cfg.joint === 'x' ? '<span class="no">Look again:</span> two Vs, one from each side, with the root in the middle.' : '<span class="no">Look again:</span> one V, open at the top, with the root at the bottom.'; }
     if (a === 'skip') {
       if (v === 'b') { q.fb = ''; q.answered.skip = true; q.phase = 'skip-ok'; st.dir = 1; st.e = -Math.min(G.EMIN + 0.9, G.XR - (cfg.foot - cfg.bep) - 0.1); st.beamAt = performance.now(); }
       else q.fb = v === 'a' ? '<span class="no">That\'s half a skip:</span> leg 1 only. Leg 2 comes back up the same distance again.' : '<span class="no">Too far.</span> Use the formula: 2 × ' + IN(G.T) + ' × tan(' + cfg.ang + '°).';
@@ -390,7 +445,7 @@
       const a = Math.min(Math.abs(prev), d), b = Math.max(Math.abs(prev), d);
       if (s.spot >= a - SNAP && s.spot <= b + SNAP) d = s.spot;
     }
-    if (!s && prev != null && Math.abs(prev) > G.EMIN + 0.002 && d <= G.EMIN + 0.001) say('The wedge is touching the crown');
+    if (!s && !G.flush && prev != null && Math.abs(prev) > G.EMIN + 0.002 && d <= G.EMIN + 0.001) say('The wedge is touching the crown');
     st.e = -st.dir * d;
     if (s && Math.abs(d - s.spot) < 1e-9) { q.answered[s.id] = true; st.glow = s.zones; st.beamAt = performance.now(); q.phase = 'step-ok'; }
     if (['sweep1', 'sweep2', 'end'].includes(q.phase)) {
@@ -467,22 +522,27 @@
     for (let k = n; k >= 0; k--) { const y = y1 + (y2 - y1) * k / n; ctx.lineTo(X(half ? 0 : G.face(y) + extra), Y(y)); }
     ctx.closePath();
   }
-  const ZONES = () => ({ root: [0.7 * G.T, G.T, 0], rootn: [0.7 * G.T, G.T, 0, 1], mid: [0.3 * G.T, 0.7 * G.T, 0], toe: [0, 0.3 * G.T, HAZ, 1] });
+  const ZONES = () => ({ root: [0.7 * G.T, G.T, 0], rootn: [0.7 * G.T, G.T, 0, 1], mid: [0.3 * G.T, 0.7 * G.T, 0], toe: [0, 0.3 * G.T, HAZ, 1], rootx: [0.38 * G.T, 0.62 * G.T, 0], lower: [0.62 * G.T, G.T, HAZ, 1] });
 
   function frame(now) {
     const tm = now / 1000, T = G.T, face = G.face, S = G.S;
     ctx.setTransform(K, 0, 0, K, 0, 0); ctx.clearRect(0, 0, W, H);
-    txt((plate().custom ? 'YOUR PLATE' : 'PLATE ' + cfg.plate) + ' · WELD CROSS-SECTION', 40, 26, { size: 11, w: 700, c: C.faded, mono: true });
+    txt((plate().custom ? 'YOUR PLATE' : (plate().pipe ? 'PIPE ' : 'PLATE ') + cfg.plate) + ' · WELD CROSS-SECTION', 40, 26, { size: 11, w: 700, c: C.faded, mono: true });
     const gr = ctx.createLinearGradient(0, Y(0), 0, Y(T)); gr.addColorStop(0, '#d3d9e0'); gr.addColorStop(1, '#a3adb9');
     ctx.fillStyle = gr; ctx.fillRect(X(G.XL), Y(0), (G.XR - G.XL) * S, T * S);
     ctx.fillStyle = 'rgba(214,170,90,0.28)';
-    for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(X(sd * face(0)), Y(0)); ctx.lineTo(X(sd * (face(0) + HAZ)), Y(0)); ctx.lineTo(X(sd * (face(T) + HAZ)), Y(T)); ctx.lineTo(X(sd * face(T)), Y(T)); ctx.closePath(); ctx.fill(); }
-    const cw = G.TOE;
+    const ys = [0, T / 2, T];                       // the fusion faces are straight between these depths (single- or double-V)
+    for (const sd of [-1, 1]) { ctx.beginPath(); ys.forEach((y, i) => ctx[i ? 'lineTo' : 'moveTo'](X(sd * face(y)), Y(y))); ys.slice().reverse().forEach(y => ctx.lineTo(X(sd * (face(y) + HAZ)), Y(y))); ctx.closePath(); ctx.fill(); }
+    const cw = G.TOE, cb = G.TOEB;
     ctx.fillStyle = '#c9b9a3';
-    ctx.beginPath(); ctx.moveTo(X(-cw), Y(0)); ctx.bezierCurveTo(X(-cw * 0.8), Y(-0.08), X(cw * 0.8), Y(-0.08), X(cw), Y(0)); ctx.lineTo(X(face(0)), Y(0));
-    ctx.lineTo(X(face(T)), Y(T)); ctx.quadraticCurveTo(X(0), Y(T) + 0.11 * S, X(-face(T)), Y(T)); ctx.lineTo(X(-face(0)), Y(0)); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(X(-cw), Y(0));
+    if (G.flush) ctx.lineTo(X(cw), Y(0)); else ctx.bezierCurveTo(X(-cw * 0.8), Y(-0.08), X(cw * 0.8), Y(-0.08), X(cw), Y(0));
+    ctx.lineTo(X(face(0)), Y(0)); ys.forEach(y => ctx.lineTo(X(face(y)), Y(y)));
+    if (G.dbl) { ctx.lineTo(X(cb), Y(T)); ctx.bezierCurveTo(X(cb * 0.8), Y(T + 0.08), X(-cb * 0.8), Y(T + 0.08), X(-cb), Y(T)); ctx.lineTo(X(-face(T)), Y(T)); }
+    else ctx.quadraticCurveTo(X(0), Y(T) + 0.11 * S, X(-face(T)), Y(T));
+    ys.slice().reverse().forEach(y => ctx.lineTo(X(-face(y)), Y(y))); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = '#7a6a52'; ctx.lineWidth = 1.4; ctx.setLineDash([5, 4]);
-    for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(X(sd * face(0)), Y(0)); ctx.lineTo(X(sd * face(T)), Y(T)); ctx.stroke(); }
+    for (const sd of [-1, 1]) { ctx.beginPath(); ys.forEach((y, i) => ctx[i ? 'lineTo' : 'moveTo'](X(sd * face(y)), Y(y))); ctx.stroke(); }
     ctx.setLineDash([]);
     if (!st.flaw) for (let k = 0; k < cells.length; k++) {
       const a = cov[st.dir][k], b = cov[-st.dir][k]; if (!a && !b) continue;
@@ -501,7 +561,7 @@
     if (q.phase === 'step-ok' && st.glow) st.glow.forEach(k => drawZone(k, 'ok'));
     ctx.strokeStyle = '#5f6b78'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(X(G.XL), Y(0)); ctx.lineTo(X(-cw), Y(0)); ctx.moveTo(X(cw), Y(0)); ctx.lineTo(X(G.XR), Y(0));
-    ctx.moveTo(X(G.XL), Y(T)); ctx.lineTo(X(-face(T)), Y(T)); ctx.moveTo(X(face(T)), Y(T)); ctx.lineTo(X(G.XR), Y(T)); ctx.stroke();
+    ctx.moveTo(X(G.XL), Y(T)); ctx.lineTo(X(-cb), Y(T)); ctx.moveTo(X(cb), Y(T)); ctx.lineTo(X(G.XR), Y(T)); ctx.stroke();
     for (const xe of [G.XL, G.XR]) { ctx.beginPath(); ctx.moveTo(X(xe), Y(0)); ctx.lineTo(X(xe) + 6, Y(T * 0.4)); ctx.lineTo(X(xe) - 6, Y(T * 0.6)); ctx.lineTo(X(xe), Y(T)); ctx.stroke(); }
     ctx.strokeStyle = 'rgba(13,144,79,0.7)'; ctx.lineWidth = 1.2; ctx.setLineDash([8, 4, 2, 4]); ctx.beginPath(); ctx.moveTo(X(0), Y(0) - 0.15 * S); ctx.lineTo(X(0), Y(T) + 40); ctx.stroke(); ctx.setLineDash([]);
     txt('weld centerline', X(0), Y(T) + 52, { size: 11, w: 700, c: C.good, a: 'center' });
@@ -509,9 +569,23 @@
     const tick = G.XR > 3 ? 1 : 0.5;
     for (let d = tick; d < G.XR - 0.1; d += tick) for (const sd of [-1, 1]) { ctx.strokeStyle = C.soft; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X(sd * d), Y(T)); ctx.lineTo(X(sd * d), Y(T) + 5); ctx.stroke(); txt(d.toFixed(1), X(sd * d), Y(T) + 30, { size: 10, w: 600, c: C.faded, mono: true, a: 'center' }); }
     if (q.answered.zone) for (const sd of [-1, 1]) { const z = G.zone; ctx.fillStyle = 'rgba(42,111,219,0.22)'; ctx.fillRect(X(sd > 0 ? z[0] : -z[1]), Y(T) + 6, (z[1] - z[0]) * S, 9); }
-    const f = st.flaw && plate().flaws ? plate().flaws.find(f => f.n === st.flaw) : null;
-    if (f && f.kind === 'lof') { ctx.strokeStyle = C.flaw; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(X(f.side * face(f.y1)), Y(f.y1)); ctx.lineTo(X(f.side * face(f.y2)), Y(f.y2)); ctx.stroke(); ctx.lineCap = 'butt'; }
-    if (f && f.kind === 'poro') { ctx.strokeStyle = C.flaw; ctx.lineWidth = 1.4; for (const [px, py] of f.pts) { ctx.beginPath(); ctx.arc(X(px), Y(py), 2.6, 0, 7); ctx.stroke(); } }
+    const f = curFlaw();
+    if (f && (f.kind === 'lof' || f.kind === 'crack')) {
+      const sg = flawSeg(f), n = f.kind === 'lof' || f.what === 'lamination' ? 1 : 8, nx = -(sg.y2 - sg.y1), ny = sg.x2 - sg.x1, nl = Math.hypot(nx, ny) || 1;
+      ctx.strokeStyle = C.flaw; ctx.lineWidth = n > 1 ? 3 : 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
+      for (let k = 0; k <= n; k++) { const w = n > 1 && k % n ? (k % 2 ? 1 : -1) * 0.018 : 0; const px = sg.x1 + (sg.x2 - sg.x1) * k / n + w * nx / nl, py = sg.y1 + (sg.y2 - sg.y1) * k / n + w * ny / nl; ctx[k ? 'lineTo' : 'moveTo'](X(px), Y(py)); }
+      ctx.stroke(); ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
+    }
+    if (f && f.kind === 'vol' && f.what === 'porosity') { ctx.strokeStyle = C.flaw; ctx.lineWidth = 1.4; for (const [px, py] of f.pts) { ctx.beginPath(); ctx.arc(X(px), Y(py), 2.6, 0, 7); ctx.stroke(); } }
+    if (f && f.kind === 'vol' && f.what !== 'porosity') { ctx.fillStyle = C.flaw; ctx.beginPath(); f.pts.slice(0, 6).forEach(([px, py], i) => ctx[i ? 'lineTo' : 'moveTo'](X(px), Y(py))); ctx.closePath(); ctx.fill(); }
+    if (f && f.kind === 'trans') {
+      const cx = (f.x1 + f.x2) / 2, r = (f.x2 - f.x1) / 2;
+      ctx.save(); ctx.beginPath(); ctx.ellipse(X(cx), Y(T), r * S, (T - f.y1) * S, 0, Math.PI, 2 * Math.PI); ctx.closePath();
+      ctx.fillStyle = 'rgba(192,20,28,0.18)'; ctx.fill(); ctx.strokeStyle = C.flaw; ctx.lineWidth = 2; ctx.stroke(); ctx.clip();
+      ctx.lineWidth = 1; for (let k = -6; k <= 6; k++) { ctx.beginPath(); ctx.moveTo(X(cx + k * r / 4), Y(T)); ctx.lineTo(X(cx + k * r / 4 + r), Y(f.y1)); ctx.stroke(); }
+      ctx.restore();
+      txt('runs across the weld', X(cx), Y(f.y1) - 8, { size: 11, w: 800, c: C.flaw, a: 'center' });
+    }
 
     const e = echo();
     if (st.e != null) {
