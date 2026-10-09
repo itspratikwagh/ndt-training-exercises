@@ -208,7 +208,8 @@
     // view: fit the scan zone plus the wedge behind the exit point
     const half = Math.max(zone[1], EMIN + 0.8) + (cfg.foot - cfg.bep) + 0.3;
     const S = Math.min(300, 900 / (2 * half), 275 / (0.92 + T));     // keep the centerline label clear of the readout
-    G = { T, tb, gap, face, TOE, TOEB, dbl, flush, EMIN, tn, hs, sp1, steps, legs, zone, RANGE, rootNote, S, XL: -half, XR: half, TOPY: Math.round(45 + 0.92 * S + Math.max(0, 0.6 - T) * 0) };
+    const CAPS = { top: flush ? null : { w: TOE, h: 0.06 }, bot: dbl ? { w: TOEB, h: 0.06 } : { w: face(T) + 0.04, h: 0.06 } };   // crown and root bead: half-ellipses
+    G = { T, tb, gap, face, TOE, TOEB, CAPS, dbl, flush, EMIN, tn, hs, sp1, steps, legs, zone, RANGE, rootNote, S, XL: -half, XR: half, TOPY: Math.round(45 + 0.92 * S + Math.max(0, 0.6 - T) * 0) };
     buildCells();
   }
 
@@ -225,19 +226,40 @@
   const plate = () => PLATES[cfg.plate];
 
   // ---------- sound path ----------
+  // the sound path: straight legs between the surfaces; a leg that lands on the crown or the root bead
+  // goes into it, reflects off its curved surface, and the trace ends there (no clean bounce)
   function legs(e, dir, n) {
     const a = cfg.ang * RAD, out = []; let x = e, y = 0, dx = dir * Math.sin(a), dy = Math.cos(a), s = 0;
+    out.refl = null;
     for (let leg = 1; leg <= n; leg++) {
       let t = dy > 0 ? (G.T - y) / dy : -y / dy;
-      const tX = dx > 0 ? (G.XR - x) / dx : (G.XL - x) / dx; let end = false;
-      if (tX < t) { t = tX; end = true; }
-      out.push({ leg, x1: x, y1: y, x2: x + dx * t, y2: y + dy * t, s1: s, len: t, dx, dy });
-      if (end) break;
-      if (leg === 2 && !G.flush && Math.abs(x + dx * t) < G.TOE + 0.02) break;   // leg 2 coming up on the crown: no clean bounce
-      if (leg === 1 && G.dbl && Math.abs(x + dx * t) < G.TOEB + 0.02) break;     // double-V: leg 1 landing on the bottom cap
-      s += t; x += dx * t; y += dy * t; dy = -dy;
+      const tX = dx > 0 ? (G.XR - x) / dx : (G.XL - x) / dx;
+      if (tX < t) { out.push({ leg, x1: x, y1: y, x2: x + dx * t, y2: y + dy * t, s1: s, len: tX, dx, dy }); out[out.length - 1].x2 = x + dx * tX; out[out.length - 1].y2 = y + dy * tX; break; }
+      const xl = x + dx * t, cap = dy > 0 ? G.CAPS.bot : G.CAPS.top;
+      if (cap && Math.abs(xl) < cap.w) {
+        const ad = Math.abs(dy), A = dx * dx / (cap.w * cap.w) + ad * ad / (cap.h * cap.h), B = 2 * xl * dx / (cap.w * cap.w), Cc = xl * xl / (cap.w * cap.w) - 1;
+        const u = (-B + Math.sqrt(B * B - 4 * A * Cc)) / (2 * A), px = xl + dx * u, v = ad * u, py = dy > 0 ? G.T + v : -v;
+        let nx = px / (cap.w * cap.w), ny = (dy > 0 ? 1 : -1) * v / (cap.h * cap.h); const nl = Math.hypot(nx, ny); nx /= nl; ny /= nl;
+        const dn = dx * nx + dy * ny;
+        out.push({ leg, x1: x, y1: y, x2: px, y2: py, s1: s, len: t + u, dx, dy, cap: dy > 0 ? 'root' : 'crown' });
+        out.refl = { x: px, y: py, dx: dx - 2 * dn * nx, dy: dy - 2 * dn * ny, back: Math.acos(Math.max(-1, Math.min(1, -(dx * (dx - 2 * dn * nx) + dy * (dy - 2 * dn * ny))))) / RAD };
+        break;
+      }
+      out.push({ leg, x1: x, y1: y, x2: xl, y2: y + dy * t, s1: s, len: t, dx, dy });
+      s += t; x = xl; y += dy * t; dy = -dy;
     }
     return out;
+  }
+  // echo from the crown or the root bead: the part of the beam that hits the bulge where its surface faces back at the probe
+  function geoEcho(e, dir) {
+    const c = Math.cos(cfg.ang * RAD); let best = null;
+    for (let k = -20; k <= 20; k++) {
+      const d = k / 20 * BEAM_W, segs = legs(e + dir * d / c, dir, G.legs), r = segs.refl; if (!r) continue;
+      const g = segs[segs.length - 1], sp = g.s1 + g.len;
+      const amp = (g.cap === 'root' ? 85 : 60) * Math.exp(-Math.pow(r.back / (g.cap === 'root' ? 14 : 20), 2)) * Math.exp(-Math.pow(d / BEAM_W, 2)) * Math.exp(-sp / 6);
+      if (!best || amp > best.amp) best = { amp, s: sp, leg: g.leg, depth: g.cap === 'root' ? G.T : 0, what: g.cap === 'root' ? 'root geometry' : 'crown geometry', geo: true, px: r.x, py: r.y };
+    }
+    return best && best.amp > 5 ? best : null;
   }
   const distToSeg = (px, py, g) => { const t = Math.max(0, Math.min(g.len, (px - g.x1) * g.dx + (py - g.y1) * g.dy)); return { d: Math.hypot(px - (g.x1 + g.dx * t), py - (g.y1 + g.dy * t)), t }; };
 
@@ -282,7 +304,7 @@
       const sg = flawSeg(f), fx = sg.x2 - sg.x1, fy = sg.y2 - sg.y1, fl = Math.hypot(fx, fy), ux = fx / fl, uy = fy / fl;
       const dev = Math.acos(Math.min(1, Math.abs(g.dx * -uy + g.dy * ux))) / RAD;
       const surf = f.kind === 'crack' && Math.abs(fx) < 1e-9 ? (Math.min(sg.y1, sg.y2) < 1e-6 ? 0 : Math.max(sg.y1, sg.y2) > G.T - 1e-6 ? G.T : null) : null;
-      const corner = surf != null && Math.abs(g.y2 - surf) < 1e-6;   // this leg runs into the surface the crack breaks
+      const corner = surf != null && (Math.abs(g.y2 - surf) < 1e-6 || g.cap === (surf === 0 ? 'crown' : 'root'));   // this leg runs into the surface the crack breaks
       const refl = corner ? 0.95 : Math.max(Math.exp(-Math.pow(dev / 22, 2)), f.kind === 'lof' ? 0 : (f.rough != null ? f.rough : 0.25));
       for (let k = 0; k <= 12; k++) {
         const px = sg.x1 + fx * k / 12, py = sg.y1 + fy * k / 12, r = distToSeg(px, py, g);
@@ -292,6 +314,9 @@
     }
     return best && best.amp > 5 ? best : null;
   }
+
+  const echoes = () => [echo(), st.e == null ? null : geoEcho(st.e, st.dir)].filter(Boolean).sort((a, b) => b.amp - a.amp);
+  const seen = {};
 
   // ---------- lesson flow ----------
   const fresh = () => ({ phase: 'setup', fb: '', answered: {}, si: 0, lo: 99, hi: 0 });
@@ -317,6 +342,7 @@
       G.flush ? 'The crown is ground <b>flush</b>, so the wedge can slide right up to the weld and onto it.' : `The wedge stops at the crown, so the exit point can't get closer than crown half-width + BEP = <b>${IN2(G.EMIN)}</b> to the weld centerline.`,
       G.dbl ? 'Double-V: the root is in the <b>middle</b>. <b>Leg 1</b> covers the lower V, <b>leg 2</b> the upper V.' : G.legs === 3 ? 'The root is reached with <b>leg 3</b>, so set the A-scan range to show 3 legs.' : '<b>Leg 1</b> reaches the root; <b>leg 2</b> the middle, the top and the toes.',
       `Scan zone: exit point <b>${IN2(G.zone[0])} to ${IN2(G.zone[1])}</b> from the weld centerline. Include the <b>HAZ</b>, the base metal right beside the weld.`,
+      '<b>Geometry echoes</b>: the root bead and the crown reflect sound too. They plot at the bottom or top surface, on the far side of the centerline. A flaw plots inside the weld.',
       '<b>Scan from both sides</b>: one side never covers it all.'
     ].map(t => `<li>${t}</li>`).join('');
   }
@@ -397,7 +423,8 @@
           <div class="qs" style="margin-top:8px">Scan from</div>${opts('side', [['1', 'Left side'], ['-1', 'Right side']], st.dir)}
           ${fl.length ? `<div class="qs" style="margin-top:8px">Show a flaw from the key</div>${opts('flaw', [['0', 'None']].concat(fl.map(f => [String(f.n), f.label])), st.flaw)}
           <div class="fb">${st.flaw ? (e && e.amp > 15 ? `Echo: <b>${Math.round(e.amp)}%</b>, ${e.what}, leg ${e.leg}.` : curFlaw().kind === 'trans' ? 'No echo from this direction.' : 'Scan to find it.') : ''}</div>
-          ${curFlaw() && curFlaw().note ? `<div class="ex">${curFlaw().note}</div>` : ''}` : ''}`); break;
+          ${curFlaw() && curFlaw().note ? `<div class="ex">${curFlaw().note}</div>` : ''}` : ''}
+          ${(() => { const g = st.e == null ? null : geoEcho(st.e, st.dir); return g && g.amp > 15 ? `<div class="ex"><b>${Math.round(g.amp)}%</b> from the ${g.what === 'root geometry' ? 'root bead' : 'crown'}: that's <b>geometry</b>, not a flaw. It plots ${g.what === 'root geometry' ? 'at the bottom, past the centerline' : 'at the top surface, on the cap'}.</div>` : ''; })()}`); break;
       }
     }
   }
@@ -456,6 +483,8 @@
       if (q.phase === 'sweep1' && swept) { q.answered.sweep1 = true; q.phase = 'sweep1-ok'; }
       if (q.phase === 'sweep2' && swept) { q.answered.sweep2 = true; q.phase = 'sweep2-ok'; }
     }
+    const ge = geoEcho(st.e, st.dir);
+    if (ge && ge.amp > 30 && !seen[ge.what]) { seen[ge.what] = 1; say(ge.what === 'root geometry' ? 'Echo from the root bead: geometry, not a flaw' : 'Echo from the crown: geometry, not a flaw'); }
     render();
     if (!unlocked() || q.phase !== phase0) st.drag = null;
   }
@@ -533,13 +562,13 @@
     ctx.fillStyle = 'rgba(214,170,90,0.28)';
     const ys = [0, T / 2, T];                       // the fusion faces are straight between these depths (single- or double-V)
     for (const sd of [-1, 1]) { ctx.beginPath(); ys.forEach((y, i) => ctx[i ? 'lineTo' : 'moveTo'](X(sd * face(y)), Y(y))); ys.slice().reverse().forEach(y => ctx.lineTo(X(sd * (face(y) + HAZ)), Y(y))); ctx.closePath(); ctx.fill(); }
-    const cw = G.TOE, cb = G.TOEB;
+    const cw = G.TOE, top = G.CAPS.top, rb = G.CAPS.bot, cb = rb.w;
+    const arc = (cap, y0, sgn, from, to) => { for (let k = 0; k <= 24; k++) { const xx = from + (to - from) * k / 24; ctx.lineTo(X(xx), Y(y0 + sgn * cap.h * Math.sqrt(Math.max(0, 1 - Math.pow(xx / cap.w, 2))))); } };
     ctx.fillStyle = '#c9b9a3';
     ctx.beginPath(); ctx.moveTo(X(-cw), Y(0));
-    if (G.flush) ctx.lineTo(X(cw), Y(0)); else ctx.bezierCurveTo(X(-cw * 0.8), Y(-0.08), X(cw * 0.8), Y(-0.08), X(cw), Y(0));
+    if (top) arc(top, 0, -1, -cw, cw); else ctx.lineTo(X(cw), Y(0));
     ctx.lineTo(X(face(0)), Y(0)); ys.forEach(y => ctx.lineTo(X(face(y)), Y(y)));
-    if (G.dbl) { ctx.lineTo(X(cb), Y(T)); ctx.bezierCurveTo(X(cb * 0.8), Y(T + 0.08), X(-cb * 0.8), Y(T + 0.08), X(-cb), Y(T)); ctx.lineTo(X(-face(T)), Y(T)); }
-    else ctx.quadraticCurveTo(X(0), Y(T) + 0.11 * S, X(-face(T)), Y(T));
+    ctx.lineTo(X(cb), Y(T)); arc(rb, T, 1, cb, -cb); ctx.lineTo(X(-face(T)), Y(T));
     ys.slice().reverse().forEach(y => ctx.lineTo(X(-face(y)), Y(y))); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = '#7a6a52'; ctx.lineWidth = 1.4; ctx.setLineDash([5, 4]);
     for (const sd of [-1, 1]) { ctx.beginPath(); ys.forEach((y, i) => ctx[i ? 'lineTo' : 'moveTo'](X(sd * face(y)), Y(y))); ctx.stroke(); }
@@ -587,14 +616,30 @@
       txt('runs across the weld', X(cx), Y(f.y1) - 8, { size: 11, w: 800, c: C.flaw, a: 'center' });
     }
 
-    const e = echo();
+    const ech = echoes(), e = ech[0] || null;
     if (st.e != null) {
       const segs = legs(st.e, st.dir, G.legs);
       const total = segs.reduce((a, g) => a + g.len, 0), grow = st.drag ? total : Math.min(total, (now - st.beamAt) / 1000 * 0.4 * Math.max(1, T / 0.375));
-      ctx.save(); ctx.beginPath(); ctx.rect(X(G.XL), Y(0), (G.XR - G.XL) * S, T * S); ctx.clip();
+      ctx.save(); ctx.beginPath(); ctx.moveTo(X(G.XL), Y(0)); ctx.lineTo(X(-cw), Y(0)); if (top) arc(top, 0, -1, -cw, cw); ctx.lineTo(X(G.XR), Y(0)); ctx.lineTo(X(G.XR), Y(T)); ctx.lineTo(X(cb), Y(T)); arc(rb, T, 1, cb, -cb); ctx.lineTo(X(G.XL), Y(T)); ctx.closePath(); ctx.clip();   // the steel, crown and bead included
       let left = grow; const pts = [[X(segs[0].x1), Y(segs[0].y1)]];
       for (const g of segs) { const l = Math.min(g.len, Math.max(0, left)); if (l <= 0) break; const x2 = g.x1 + g.dx * l, y2 = g.y1 + g.dy * l; ctx.strokeStyle = g.leg === 3 ? 'rgba(255,190,70,0.26)' : 'rgba(255,190,70,0.36)'; ctx.lineWidth = BEAM_W * 2 * S; ctx.beginPath(); ctx.moveTo(X(g.x1), Y(g.y1)); ctx.lineTo(X(x2), Y(y2)); ctx.stroke(); pts.push([X(x2), Y(y2)]); left -= g.len; }
       dashed(pts, C.orange); ctx.restore();
+      if (segs.refl && grow >= total) {                // the beam glancing off the crown or root bead
+        const r = segs.refl, back = r.back < 30, L = back ? 0.5 : 0.35, off = back ? 0.05 : 0;   // sent back toward the probe: blue echo; glanced away: orange
+        const ox = -r.dy * off, oy = r.dx * off, rgb = back ? '42,111,219' : '217,115,26';
+        ctx.strokeStyle = `rgba(${rgb},0.9)`; ctx.lineWidth = back ? 2.5 : 2; ctx.setLineDash([3, 4]);
+        ctx.beginPath(); ctx.moveTo(X(r.x + ox), Y(r.y + oy)); ctx.lineTo(X(r.x + ox + r.dx * L), Y(r.y + oy + r.dy * L)); ctx.stroke(); ctx.setLineDash([]);
+        const ax = X(r.x + ox + r.dx * L), ay = Y(r.y + oy + r.dy * L), an = Math.atan2(r.dy, r.dx);
+        ctx.fillStyle = `rgba(${rgb},0.95)`; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax - 9 * Math.cos(an - 0.4), ay - 9 * Math.sin(an - 0.4)); ctx.lineTo(ax - 9 * Math.cos(an + 0.4), ay - 9 * Math.sin(an + 0.4)); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = C.orange; ctx.beginPath(); ctx.arc(X(r.x), Y(r.y), 3.5, 0, 7); ctx.fill();
+      }
+      const top1 = echoes()[0];
+      if (top1 && top1.amp > 15 && grow >= total) {     // where the instrument plots it: along the straight zigzag, at that sound path
+        const a = cfg.ang * RAD, sx = st.e + st.dir * top1.s * Math.sin(a), z = top1.s * Math.cos(a), m = z % (2 * T), dz = m <= T ? m : 2 * T - m;
+        const qx = X(sx), qy = Y(dz), col = top1.geo ? '#2a6fdb' : C.flaw;
+        ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(qx, qy, 7, 0, 7); ctx.moveTo(qx - 11, qy); ctx.lineTo(qx + 11, qy); ctx.moveTo(qx, qy - 11); ctx.lineTo(qx, qy + 11); ctx.stroke();
+        txt('plots here', qx + st.dir * 14, qy + (dz > T / 2 ? 22 : -10), { size: 10, w: 800, c: col, a: st.dir > 0 ? 'left' : 'right' });
+      }
       drawProbe(st.e, st.dir, true);
       if (grow >= total) segs.forEach(g => { if (g.len * S < 50) return; const mx = X((g.x1 + g.x2) / 2) - st.dir * 30, my = Y((g.y1 + g.y2) / 2); ctx.fillStyle = 'rgba(255,255,255,0.9)'; rr(mx - 22, my - 9, 44, 17, 5); ctx.fill(); txt('Leg ' + g.leg, mx, my + 3, { size: 10, w: 800, a: 'center' }); });
       if (grow >= total) { const u = (tm * 0.5 * Math.max(1, T / 0.375)) % (total + 0.4); if (u < total) { let s = u, p = null; for (const g of segs) { if (s <= g.len) { p = [X(g.x1 + g.dx * s), Y(g.y1 + g.dy * s)]; break; } s -= g.len; } if (p) { ctx.fillStyle = C.red; ctx.shadowColor = C.red; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(p[0], p[1], 5, 0, 7); ctx.fill(); ctx.shadowBlur = 0; } } }
@@ -620,7 +665,7 @@
       const s = px / AS.w * RANGE;
       let a = 1.2 + 1.8 * Math.abs(Math.sin(s * 300 / RANGE * 1.75 + Math.sin(s * 70) * 3)) * (0.6 + 0.4 * Math.sin(tm * 9 + s * 40));
       if (st.e != null) a += 70 * Math.exp(-Math.max(s + 0.01 * RANGE, 0) / (0.012 * RANGE));
-      if (e) { const d = (s - e.s) / RANGE * AS.w, w = d < 0 ? 3 : 5; if (Math.abs(d) < 24) a += e.amp * Math.exp(-Math.pow(d / w, 2)) * (0.5 + 0.5 * Math.abs(Math.sin(d * 0.9))); }
+      for (const ec of ech) { const d = (s - ec.s) / RANGE * AS.w, w = d < 0 ? 3 : 5; if (Math.abs(d) < 24) a += ec.amp * Math.exp(-Math.pow(d / w, 2)) * (0.5 + 0.5 * Math.abs(Math.sin(d * 0.9))); }
       const yv = bot - Math.min(a, 105) / 100 * (AS.h - 6);
       px ? ctx.lineTo(AS.x + px, yv) : ctx.moveTo(AS.x, yv);
     }
@@ -628,7 +673,7 @@
     const tstep = RANGE > 3 ? 0.5 : 0.25;
     for (let v = 0; (RANGE - v) / RANGE * AS.w > 50; v += tstep) txt(v.toFixed(2), AS.x + v / RANGE * AS.w, AS.y + AS.h + 18, { size: 11, w: 600, c: C.soft, mono: true, a: v === 0 ? 'left' : 'center' });
     txt(RANGE.toFixed(2) + '″', AS.x + AS.w, AS.y + AS.h + 18, { size: 11, w: 600, c: C.soft, mono: true, a: 'right' });
-    if (vis) txt(e.what + ' · leg ' + e.leg, Math.min(AS.x + e.s / RANGE * AS.w + 10, AS.x + AS.w - 170), AS.y + 26, { size: 13, w: 800, c: '#7dffb0' });
+    ech.filter(ec => ec.amp > 15).forEach((ec, i) => txt(ec.what + ' · leg ' + ec.leg, Math.min(AS.x + ec.s / RANGE * AS.w + 10, AS.x + AS.w - 190), AS.y + 26 + i * 18, { size: 13, w: 800, c: ec.geo ? '#8ec5ff' : '#7dffb0' }));
 
     if (toast && now - toast.at < 2600) {
       ctx.font = `700 14px ${SANS}`; const tw = ctx.measureText(toast.t).width + 28;
@@ -640,7 +685,7 @@
   }
   derive(); st.e = -Math.min(G.EMIN + 0.6, G.XR - (cfg.foot - cfg.bep) - 0.1); render();
   (document.fonts ? Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 2000))]) : Promise.resolve()).then(() => requestAnimationFrame(frame));
-  window.__wgen = { cfg, get G() { return G; }, st, get q() { return q; }, legs, echo, get cov() { return cov; }, pctOf, both, setX, act, derive, PLATES };
+  window.__wgen = { geoEcho, echoes, cfg, get G() { return G; }, st, get q() { return q; }, legs, echo, get cov() { return cov; }, pctOf, both, setX, act, derive, PLATES };
 })();
 </script>
 </body>
