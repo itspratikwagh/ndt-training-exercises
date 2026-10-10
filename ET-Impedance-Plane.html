@@ -270,52 +270,100 @@
 <div class="toast hidden" id="toast" role="status"></div>
 
 <script id="physics">
-/* ===== Physics: Forster normalized impedance of a coil around a solid nonferromagnetic cylinder =====
-   Z_norm = (1 - eta) j + eta j mu_eff,  mu_eff = (2/(ka)) J1(ka)/J0(ka),  ka = sqrt(-j f/fg)          */
-var Cx = {
-  c: function (re, im) { return { re: re, im: im || 0 }; },
-  add: function (a, b) { return { re: a.re + b.re, im: a.im + b.im }; },
-  sub: function (a, b) { return { re: a.re - b.re, im: a.im - b.im }; },
-  mul: function (a, b) { return { re: a.re * b.re - a.im * b.im, im: a.re * b.im + a.im * b.re }; },
-  scale: function (a, s) { return { re: a.re * s, im: a.im * s }; },
-  div: function (a, b) { var d = b.re * b.re + b.im * b.im; return { re: (a.re * b.re + a.im * b.im) / d, im: (a.im * b.re - a.re * b.im) / d }; },
-  abs: function (a) { return Math.hypot(a.re, a.im); },
-  sqrt: function (a) { var r = Cx.abs(a); var re = Math.sqrt((r + a.re) / 2); var im = Math.sqrt(Math.max(0, (r - a.re) / 2)); return { re: re, im: a.im < 0 ? -im : im }; }
-};
-/* J_n(z) for n = 0, 1 by power series: sum_k (-1)^k (z/2)^(2k+n) / (k! (k+n)!) */
-function besselJ(n, z) {
-  var h = Cx.scale(z, 0.5), h2 = Cx.mul(h, h);
-  var term = n === 0 ? Cx.c(1, 0) : h;
-  var sum = term;
-  for (var k = 1; k < 400; k++) {
-    term = Cx.scale(Cx.mul(term, h2), -1 / (k * (k + n)));
-    sum = Cx.add(sum, term);
-    if (k > 4 && Cx.abs(term) < 1e-17 * Cx.abs(sum)) break;
+/* ===== Physics: Dodd and Deeds (1968) analytical model =====
+   An air-core circular coil above a nonmagnetic conducting plate of thickness d, with air behind it.
+   Coil (mm): inner radius r1, outer radius r2, height h. A wear face keeps it COIL.wear above the part at contact;
+   lift-off adds to that gap. Impedance is normalized to the coil-in-air reactance, so air sits at (0, 1):
+     Zn = j (1 + I / I0)
+     I  = integral_0^inf G(a) A(a) Rf(a) da,       I0 = integral_0^inf G(a) 2 (a h + e^(-a h) - 1) da
+     G  = P(a)^2 / a^6,   P(a) = integral from a r1 to a r2 of x J1(x) dx,   A = (e^(-a l1) - e^(-a l2))^2
+     Rf = (a^2 - a1^2)(1 - e^(-2 a1 d)) / ((a + a1)^2 - (a - a1)^2 e^(-2 a1 d)),   a1 = sqrt(a^2 + j w mu0 sigma)
+   with l1 = wear face + lift-off and l2 = l1 + h. Simpson's rule on a = u^2 (160 steps) and Gauss-Legendre for P
+   keep the error under 1e-7. tools/eddy/check_dodd_deeds.cjs checks this against an independent image-coil
+   filament sum, the thick-plate and thin-sheet limits, passivity, and the claims each lesson makes. */
+var COIL = { r1: 1.0, r2: 2.0, h: 1.0, wear: 0.1 };
+var MU0 = 4e-7 * Math.PI, SIGMA_IACS = 5.8e7; /* 100 %IACS = 58.0 MS/m */
+function besselJ1(x) { /* rational and asymptotic approximations, absolute error about 1e-8 */
+  var ax = Math.abs(x), y, a1, a2, r;
+  if (ax < 8) {
+    y = x * x;
+    a1 = x * (72362614232.0 + y * (-7895059235.0 + y * (242396853.1 + y * (-2972611.439 + y * (15704.48260 + y * (-30.16036606))))));
+    a2 = 144725228442.0 + y * (2300535178.0 + y * (18583304.74 + y * (99447.43394 + y * (376.9991397 + y))));
+    return a1 / a2;
   }
-  return sum;
+  var z = 8 / ax, xx = ax - 2.356194491; y = z * z;
+  a1 = 1 + y * (0.183105e-2 + y * (-0.3516396496e-4 + y * (0.2457520174e-5 + y * (-0.240337019e-6))));
+  a2 = 0.04687499995 + y * (-0.2002690873e-3 + y * (0.8449199096e-5 + y * (-0.88228987e-6 + y * 0.105787412e-6)));
+  r = Math.sqrt(0.636619772 / ax) * (Math.cos(xx) * a1 - z * Math.sin(xx) * a2);
+  return x < 0 ? -r : r;
 }
-var FMAX = 3000; /* series stays accurate (|ka| < 55) well past where the curve has flattened out */
-function muEff(f) {
-  if (f <= 1e-9) return Cx.c(1, 0);
-  f = Math.min(f, FMAX);
-  var ka = Cx.sqrt(Cx.c(0, -f));
-  return Cx.mul(Cx.div(Cx.c(2, 0), ka), Cx.div(besselJ(1, ka), besselJ(0, ka)));
+var DD = (function () {
+  var GX = [-0.9739065285, -0.8650633667, -0.6794095683, -0.4333953941, -0.1488743390, 0.1488743390, 0.4333953941, 0.6794095683, 0.8650633667, 0.9739065285];
+  var GW = [0.0666713443, 0.1494513492, 0.2190863625, 0.2692667193, 0.2955242247, 0.2955242247, 0.2692667193, 0.2190863625, 0.1494513492, 0.0666713443];
+  function intXJ1(a, b) { /* integral of x J1(x) from a to b, Gauss-Legendre on unit-length panels */
+    var n = Math.max(1, Math.ceil(b - a)), w = (b - a) / n, s = 0;
+    for (var k = 0; k < n; k++) { var m = a + (k + 0.5) * w; for (var i = 0; i < 10; i++) { var x = m + 0.5 * w * GX[i]; s += GW[i] * x * besselJ1(x); } }
+    return s * 0.5 * w;
+  }
+  var N = 160, umax = Math.sqrt(40 / COIL.r1), du = umax / N, a = [], w = [], I0 = 0;
+  for (var i = 1; i <= N; i++) { /* i = 0 has zero weight because da = 2u du */
+    var u = i * du, al = u * u, P = intXJ1(al * COIL.r1, al * COIL.r2);
+    var wt = (i === N ? 1 : (i % 2 ? 4 : 2)) * du / 3 * 2 * u * P * P / Math.pow(al, 6);
+    a.push(al); w.push(wt);
+    I0 += wt * 2 * (al * COIL.h + Math.exp(-al * COIL.h) - 1);
+  }
+  return { a: a, w: w, I0: I0 };
+})();
+var zCache = {}, zCount = 0;
+/* sigma in S/m, fHz in Hz, dmm = plate thickness in mm (Infinity or 1e5 and above = thick), lift = lift-off in mm above the
+   wear face (Infinity = coil in air). Returns {R, X}, normalized. Results are cached: do not modify the returned object. */
+function Zplate(sigma, fHz, dmm, lift) {
+  if (!(lift < 1e4) || !(sigma > 0) || !(fHz > 0) || !(dmm > 0)) return { R: 0, X: 1 };
+  var key = sigma + '|' + fHz + '|' + dmm + '|' + lift, hit = zCache[key];
+  if (hit) return hit;
+  var k2 = 2 * Math.PI * fHz * MU0 * sigma * 1e-6, l1 = COIL.wear + lift, l2 = l1 + COIL.h, thick = !(dmm < 1e5), sr = 0, si = 0;
+  for (var i = 0; i < DD.a.length; i++) {
+    var al = DD.a[i], A = Math.exp(-al * l1) - Math.exp(-al * l2), g = DD.w[i] * A * A;
+    var r = Math.hypot(al * al, k2), qr = Math.sqrt((r + al * al) / 2), qi = Math.sqrt(Math.max(0, (r - al * al) / 2));
+    var Rr, Ri, nr, ni, dr, di, dd;
+    if (thick) { /* (a - a1) / (a + a1) */
+      nr = al - qr; ni = -qi; dr = al + qr; di = qi; dd = dr * dr + di * di;
+      Rr = (nr * dr + ni * di) / dd; Ri = (ni * dr - nr * di) / dd;
+    } else {
+      var e = Math.exp(-2 * qr * dmm), ph = -2 * qi * dmm, er = e * Math.cos(ph), ei = e * Math.sin(ph);
+      var Nr = -ei * k2, Ni = -(1 - er) * k2; /* (1 - E)(-j k2) */
+      var pr = al + qr, pi = qi, mr = al - qr, mi = -qi;
+      var p2r = pr * pr - pi * pi, p2i = 2 * pr * pi, m2r = mr * mr - mi * mi, m2i = 2 * mr * mi;
+      dr = p2r - (m2r * er - m2i * ei); di = p2i - (m2r * ei + m2i * er); dd = dr * dr + di * di;
+      Rr = (Nr * dr + Ni * di) / dd; Ri = (Ni * dr - Nr * di) / dd;
+    }
+    sr += g * Rr; si += g * Ri;
+  }
+  var z = { R: -si / DD.I0, X: 1 + sr / DD.I0 };
+  if (++zCount > 60000) { zCache = {}; zCount = 0; }
+  zCache[key] = z;
+  return z;
 }
-/* normalized impedance: R horizontal, X vertical; air point is (0, 1) */
-function Zn(f, eta) {
-  var mu = muEff(f);
-  return { R: -eta * mu.im, X: (1 - eta) + eta * mu.re };
-}
-/* Map %IACS and test frequency to f/fg: f/fg = 0.3 x %IACS x (frequency / 100 kHz) */
-function fOf(iacs, kHz) { return 0.3 * iacs * (kHz / 100); }
-/* Standard depth of penetration in mm (nonmagnetic): 503 / sqrt(f sigma), sigma = %IACS x 0.58 MS/m */
-function depthMM(iacs, kHz) { return 503 / Math.sqrt(kHz * 1e3 * iacs * 0.58e6) * 1000; }
-/* Unit directions at a point on the locus: toward the air point (lift-off) and along the locus toward lower conductivity.
-   In this model both directions are independent of the fill factor, so the angle depends on f/fg only. */
+/* Standard depth of penetration in mm for a nonmagnetic metal: delta = 1 / sqrt(pi f mu0 sigma) = 503 / sqrt(f sigma) */
+function depthMM(iacs, kHz) { return 503 / Math.sqrt(kHz * 1e3 * iacs / 100 * SIGMA_IACS) * 1000; }
+/* ----- Lesson 1 view of the model: thick plates only -----
+   f   = test frequency in Hz x %IACS. On a thick plate that product alone sets where the dot sits on the conductivity curve.
+   eta = probe coupling: 0.9 in contact, 0 back in air. The lift-off gap is -0.8 mm x ln(eta / 0.9), so equal steps
+         of eta move the dot roughly equal distances toward the air point. */
+var FMIN = 1e3, FMAX = 1e10; /* frequency x %IACS: FMIN sits beside the air point, FMAX beside the perfect-conductor end */
+function liftOfEta(eta) { var c = eta / 0.9; return c >= 0.99999 ? 0 : (c <= 1e-4 ? Infinity : -0.8 * Math.log(c)); }
+function Zn(f, eta) { return Zplate(f / 100 * SIGMA_IACS / 1e5, 1e5, Infinity, liftOfEta(eta)); }
+function fOf(iacs, kHz) { return iacs * kHz * 1000; }
+var XPC = Zn(1e15, 0.9).X; /* where the curve ends: a perfect conductor */
+var P_PEAK = (function () { /* frequency x %IACS where the curve bulges furthest to the right */
+  var a = Math.log(1e4), b = Math.log(1e8), g = (Math.sqrt(5) - 1) / 2;
+  for (var i = 0; i < 60; i++) { var c = b - g * (b - a), d = a + g * (b - a); if (Zn(Math.exp(c), 0.9).R > Zn(Math.exp(d), 0.9).R) b = d; else a = c; }
+  return Math.exp((a + b) / 2);
+})();
+/* Unit directions at a point on the curve: more lift-off, and lower conductivity. The angle between them is the separation angle. */
 function sepDirs(f) {
-  var eta = 0.9, P = Zn(f, eta);
-  var l = { R: -P.R, X: 1 - P.X }, ln = Math.hypot(l.R, l.X);
-  var A = Zn(f * 0.999, eta), B = Zn(f * 1.001, eta);
+  var P = Zn(f, 0.9), L = Zn(f, 0.9 * 0.99), A = Zn(f * 0.999, 0.9), B = Zn(f * 1.001, 0.9);
+  var l = { R: L.R - P.R, X: L.X - P.X }, ln = Math.hypot(l.R, l.X);
   var c = { R: A.R - B.R, X: A.X - B.X }, cn = Math.hypot(c.R, c.X);
   l = { R: l.R / ln, X: l.X / ln }; c = { R: c.R / cn, X: c.X / cn };
   var d = Math.max(-1, Math.min(1, l.R * c.R + l.X * c.X));
@@ -332,23 +380,24 @@ function sepAngle(f) { return sepDirs(f).deg; }
 var ETA = 0.9;
 var MATS = {
   ti:  { name: 'Titanium (Ti-6Al-4V)', short: 'Ti', iacs: 1.0,  color: '#8e9096' },
-  ss:  { name: 'Stainless steel 304',  short: 'SS', iacs: 2.5,  color: '#a6acb2' },
+  ss:  { name: 'Stainless steel 304',  short: 'SS', iacs: 2.4,  color: '#a6acb2' },
   al2: { name: 'Aluminum 2024',        short: 'Al 2024', iacs: 30, color: '#b3bcc5' },
   al:  { name: 'Aluminum 6061',        short: 'Al', iacs: 43,   color: '#c3ccd4' },
   cu:  { name: 'Copper',               short: 'Cu', iacs: 100,  color: '#c87533' }
 };
-var FM = { ti: fOf(1, 100), ss: fOf(2.5, 100), al: fOf(43, 100), cu: fOf(100, 100) };
+var FM = { ti: fOf(1, 100), ss: fOf(2.4, 100), al: fOf(43, 100), cu: fOf(100, 100) };
 var CAM = {
   full:  { r0: -0.04, r1: 0.62, x0: -0.04, x1: 1.10 },
-  locus: { r0: -0.02, r1: 0.50, x0: 0.06, x1: 1.07 },
-  top:   { r0: -0.01, r1: 0.23, x0: 0.86, x1: 1.03 }
+  locus: { r0: -0.01, r1: 0.20, x0: 0.56, x1: 1.03 },
+  top:   { r0: -0.005, r1: 0.13, x0: 0.89, x1: 1.012 }
 };
 var STEP_TITLES = ['The two axes', 'Air, then metal', 'Conductivity locus', 'Lift-off', 'Separation angle', 'Instruments and frequency'];
+var SANDBOX_AFTER = 3; /* index of the step that unlocks the sandbox */
 
-/* lift-off of 0.6 on aluminum gives |Z| that a conductivity drop also reaches: find that f/fg */
+/* lift-off to coupling 0.6 on aluminum gives a |Z| that a conductivity drop also reaches: find that frequency x %IACS */
 var LO_ETA = 0.6;
 var F_SAME = (function () {
-  var P = Zn(FM.al, LO_ETA), r = Math.hypot(P.R, P.X), lo = 0.05, hi = FM.al;
+  var P = Zn(FM.al, LO_ETA), r = Math.hypot(P.R, P.X), lo = FMIN, hi = FM.al;
   for (var i = 0; i < 80; i++) { var m = Math.sqrt(lo * hi), z = Zn(m, ETA); if (Math.hypot(z.R, z.X) > r) lo = m; else hi = m; }
   return Math.sqrt(lo * hi);
 })();
@@ -394,7 +443,7 @@ function matGhosts(which, eta) {
   });
   return g;
 }
-function locusPath(extra) { var p = { type: 'locus', eta: ETA, f0: 0.02, f1: FMAX, cls: 'p-locus', show: 1 }; for (var k in extra) p[k] = extra[k]; return p; }
+function locusPath(extra) { var p = { type: 'locus', eta: ETA, f0: FMIN, f1: FMAX, cls: 'p-locus', show: 1 }; for (var k in extra) p[k] = extra[k]; return p; }
 
 var S = baseState();
 var dirty = true;
@@ -418,14 +467,19 @@ function dotPos(st) {
   return Zn(dotF(st), d.eta);
 }
 function dotF(st) { var d = st.dot; return d.iacs != null ? fOf(d.iacs, st.freq.kHz) : d.f; }
+/* points on a fixed grid plus the exact ends, so cached model values are reused while a path grows */
+function gridPts(a, b, step) {
+  var lo = Math.min(a, b), hi = Math.max(a, b), mid = [];
+  for (var k = Math.ceil(lo / step); k * step < hi; k++) if (k * step > lo) mid.push(k * step);
+  if (b < a) mid.reverse();
+  return [a].concat(mid, [b]);
+}
 function pathPoints(p) {
-  var pts = [], i, n;
+  var pts = [];
   if (p.type === 'locus') {
-    var a = Math.log(p.f0), b = Math.log(p.fEnd != null ? p.fEnd : p.f1);
-    n = Math.max(2, Math.round(Math.abs(b - a) * 22));
-    for (i = 0; i <= n; i++) pts.push(Zn(Math.exp(a + (b - a) * i / n), p.eta));
+    gridPts(Math.log(p.f0), Math.log(p.fEnd != null ? p.fEnd : p.f1), 1 / 24).forEach(function (u) { pts.push(Zn(Math.exp(u), p.eta)); });
   } else if (p.type === 'lift') {
-    pts.push(Zn(p.f, p.e0)); pts.push(Zn(p.f, p.eEnd != null ? p.eEnd : p.e1));
+    gridPts(p.e0, p.eEnd != null ? p.eEnd : p.e1, 0.9 / 60).forEach(function (e) { pts.push(Zn(p.f, e)); });
   } else if (p.type === 'seg') {
     var pr = p.prog == null ? 1 : p.prog;
     pts.push({ R: p.R0, X: p.X0 }); pts.push({ R: lerp(p.R0, p.R1, pr), X: lerp(p.X0, p.X1, pr) });
@@ -449,7 +503,7 @@ function angleMarkup(P, dirs, m, opacity) {
     '<text class="t-ang" x="' + lx + '" y="' + (ly + 4) + '" text-anchor="middle">' + Math.round(dirs.deg) + '&deg;</text></g>';
 }
 function niceStep(s) {
-  var c = [0.01, 0.02, 0.05, 0.1, 0.2, 0.25, 0.5];
+  var c = [0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.25, 0.5];
   for (var i = 0; i < c.length; i++) if (c[i] * s >= 44) return c[i];
   return 0.5;
 }
@@ -462,7 +516,7 @@ function render() {
   out.push('<defs><clipPath id="clipA"><rect x="' + L + '" y="' + T0 + '" width="' + m.pw + '" height="' + m.ph + '"/></clipPath>' +
     '<marker id="ahead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill:var(--dot)"/></marker></defs>');
   /* grid */
-  var step = niceStep(m.s), dec = step < 0.1 ? 2 : (step === 0.25 ? 2 : 1);
+  var step = niceStep(m.s), dec = step < 0.01 ? 3 : (step < 0.1 || step === 0.25 ? 2 : 1);
   if (st.grid > 0) {
     var g = '<g opacity="' + st.grid + '">';
     var rs = Math.max(0, Math.ceil(m.Rmin / step) * step), xs = Math.max(0, Math.ceil(m.Xmin / step) * step);
@@ -599,7 +653,7 @@ function renderInset(ins) {
    (tools/voiceover/build_lesson_audio.cjs). A clip's file name is a hash of its caption text,
    and VO maps that hash to the clip length in seconds, so timing matches the voice even when muted. */
 var VO_DIR = 'video/audio/ET-Impedance-Plane/';
-/*VO-MANIFEST*/var VO = {"49915709":8.78,"57108249":5.23,"eba0258e":1.73,"437fbccc":10.58,"b3f525f3":9.46,"2ab1c59f":11.71,"e4e265b8":10.32,"fc77c24e":1.08,"fb1bc293":2.93,"aec744a5":7.25,"cb15fc96":6.79,"c07e7f4c":3.5,"93cd899a":3.31,"8278c1cf":6.41,"47072d7e":5.74,"82bfebb9":1.85,"2b7edce4":5.35,"d2cfbcfc":7.03,"e651ef40":7.85,"063ed47f":5.3,"7cadec3b":4.9,"f5385e2f":17.14,"c7a0f396":17.5,"bfea9c7a":7.34,"c868b732":7.34,"ebec7cde":11.86,"9a49afee":6.29,"f9ddc827":3.77,"0e495cdd":6.89,"3321922a":7.25,"172d7367":2.11,"73093ee7":5.88,"303c9153":3.41,"3ad4c27c":4.73,"32b25650":9.86,"d2b52340":4.58,"e19b39c0":9.79,"57792cde":8.52,"8e2282d3":2.88,"c20cf4f2":2.98,"52932dad":6.72,"37f1ede4":7.56,"5d36b1ea":6.53,"8ad0a6ae":1.87,"116be572":2.54,"e8187fc7":10.46,"3698de93":4.9,"03e5586a":10.7,"0f8a1dd4":7.51,"a307c629":7.87,"e3c6d2d3":4.22,"a1ebe040":6.29,"6a09de41":7.08,"5880165c":9.02,"63ba8af9":10.27,"206855f2":1.58,"58cbe3cb":9.36,"c8214092":4.15,"2f3d3b87":7.18,"e0d68fe1":13.15,"bfe23ddc":4.49,"8354ffac":5.69,"828eaf5a":7.82,"071f2825":4.85,"af85e588":4.68,"68c81d43":11.54,"99d88787":8.95,"3c0efec9":2.09,"25a23f69":7.73,"4ae021c4":4.82,"de96f35e":5.38,"5b3079ff":9.26,"622ca25b":7.2,"bdeb4343":4.49,"1638b9e0":7.85,"a270296c":10.75,"030b7c47":7.8,"bd9594b5":9.46,"2f962b50":9.22,"5265ac4a":2.42,"68d85de0":7.92,"54186a11":1.49,"334e4226":5.04,"3c8d1392":9.22,"08b3616c":9.43,"0ed6a41d":11.16,"29f8d60c":4.13,"bff80731":6.31,"b511a109":11.57,"5a6b3c2d":6.98,"e73dfee6":4.46,"25da0197":4.92,"010e4416":8.04,"538ffeb7":5.64,"03135426":7.37,"116c8009":13.7,"6c4f7139":5.09};/*END-VO-MANIFEST*/
+/*VO-MANIFEST*/var VO = {"49915709":8.78,"57108249":5.23,"eba0258e":1.73,"437fbccc":10.58,"b3f525f3":9.46,"2ab1c59f":11.71,"e4e265b8":10.32,"fc77c24e":1.08,"fb1bc293":2.93,"aec744a5":7.25,"cb15fc96":6.79,"c07e7f4c":3.5,"93cd899a":3.31,"8278c1cf":6.41,"47072d7e":5.74,"82bfebb9":1.85,"2b7edce4":5.35,"d2cfbcfc":7.03,"e651ef40":7.85,"063ed47f":5.3,"7cadec3b":4.9,"f5385e2f":17.14,"c7a0f396":17.5,"bfea9c7a":7.34,"c868b732":7.34,"ebec7cde":11.86,"9a49afee":6.29,"f9ddc827":3.77,"0e495cdd":6.89,"67a390de":6.72,"172d7367":2.11,"73093ee7":5.88,"303c9153":3.41,"3ad4c27c":4.73,"32b25650":9.86,"d2b52340":4.58,"e19b39c0":9.79,"57792cde":8.52,"8e2282d3":2.88,"c20cf4f2":2.98,"52932dad":6.72,"37f1ede4":7.56,"5d36b1ea":6.53,"8ad0a6ae":1.87,"116be572":2.54,"e8187fc7":10.46,"3698de93":4.9,"03e5586a":10.7,"0f8a1dd4":7.51,"a307c629":7.87,"e3c6d2d3":4.22,"a1ebe040":6.29,"6a09de41":7.08,"5880165c":9.02,"0fd9d813":9.98,"206855f2":1.58,"58cbe3cb":9.36,"c8214092":4.15,"2f3d3b87":7.18,"e0d68fe1":13.15,"bfe23ddc":4.49,"0bff5686":6.55,"828eaf5a":7.82,"071f2825":4.85,"af85e588":4.68,"d5e03801":9.24,"99d88787":8.95,"3c0efec9":2.09,"25a23f69":7.73,"4ae021c4":4.82,"de96f35e":5.38,"5b3079ff":9.26,"1584e377":7.63,"bdeb4343":4.49,"1638b9e0":7.85,"a270296c":10.75,"9302b4d6":7.99,"6029cd15":9.91,"2f962b50":9.22,"5265ac4a":2.42,"68d85de0":7.92,"54186a11":1.49,"334e4226":5.04,"3c8d1392":9.22,"08b3616c":9.43,"0ed6a41d":11.16,"db3f3f3f":4.25,"bff80731":6.31,"b511a109":11.57,"5a6b3c2d":6.98,"e73dfee6":4.46,"25da0197":4.92,"010e4416":8.04,"538ffeb7":5.64,"03135426":7.37,"116c8009":13.7,"6c4f7139":5.09};/*END-VO-MANIFEST*/
 var muted = false, speed = 1, speechStarted = false, curClip = null, prefetched = {};
 var voiceEl = typeof Audio !== 'undefined' ? new Audio() : null;
 if (voiceEl) voiceEl.preload = 'auto';
@@ -749,7 +803,7 @@ function setPaused(v) {
 /* ===================== lesson controller ===================== */
 var progress = store.get();
 progress.done = progress.done || [];
-if (/[?&]unlock=all/.test(location.search)) { progress.done = [0, 1, 2, 3, 4, 5]; }
+if (/[?&]unlock=all/.test(location.search)) { progress.done = STEP_TITLES.map(function (_, i) { return i; }); }
 var Lesson = { step: -1, items: [], idx: 0, sceneIdx: 0, sceneSnap: null, mode: 'idle', started: false };
 
 function runStep(n) {
@@ -788,12 +842,12 @@ function stepDone() {
   var fresh = progress.done.indexOf(n) < 0;
   if (fresh) progress.done.push(n);
   store.set(progress);
-  if (n === 3 && fresh) toast('Sandbox mode unlocked. Try it from the tabs at the top.');
+  if (n === SANDBOX_AFTER && fresh) toast('Sandbox mode unlocked. Try it from the tabs at the top.');
   renderChapters(); renderTabs();
-  if (n < 5) { Lesson.mode = 'between'; setTimeout(function () { if (Lesson.mode === 'between' && Lesson.step === n) runStep(n + 1); }, 900); }
+  if (n < STEP_TITLES.length - 1) { Lesson.mode = 'between'; setTimeout(function () { if (Lesson.mode === 'between' && Lesson.step === n) runStep(n + 1); }, 900); }
   else { Lesson.mode = 'finished'; $('progBar').style.width = '100%'; renderInfo(); updateControls(); toast('Lesson complete. Recap and Quiz are unlocked.'); }
 }
-function maxReachable() { var m = 0; for (var i = 0; i < 6; i++) if (progress.done.indexOf(i) >= 0) m = i + 1; return Math.min(5, m); }
+function maxReachable() { var m = 0; for (var i = 0; i < STEP_TITLES.length; i++) if (progress.done.indexOf(i) >= 0) m = i + 1; return Math.min(STEP_TITLES.length - 1, m); }
 
 /* ===================== checkpoint (ask) UI ===================== */
 var reasonText = '';
@@ -852,7 +906,7 @@ function checkAnswer() {
   }
   $('fbArea').innerHTML = '<div class="fb ' + (o.ok ? 'good' : 'bad') + '"><span class="tag">' + (o.ok ? 'Correct' : 'Not quite') + '</span>' + esc(o.fb) +
     notes.map(function (n) { return '<div class="note">' + esc(n) + '</div>'; }).join('') + '</div><div class="row" id="fbBtns"><span class="muted" id="fbWait">Watch the diagram&hellip;</span></div>';
-  var items = [say(o.fb, [])].concat(o.demo || []);
+  var items = [say(o.fb, o.fbAnims || [])].concat(o.demo || []);
   var snap = clone(S);
   if (paused) paused = false;
   if (!wide() && Lesson.started) $('video').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -883,7 +937,7 @@ function afterFeedback(st, o) {
 
 /* ===================== lesson script ===================== */
 function titleItem(n) {
-  return say('Step ' + (n + 1) + '. ' + STEP_TITLES[n] + '.', [SET('title', { show: 1, n: 'Step ' + (n + 1) + ' of 6', text: STEP_TITLES[n] }), T('title.show', 0, 0.75, 1)], { dur: 2.2 });
+  return say('Step ' + (n + 1) + '. ' + STEP_TITLES[n] + '.', [SET('title', { show: 1, n: 'Step ' + (n + 1) + ' of ' + STEP_TITLES.length, text: STEP_TITLES[n] }), T('title.show', 0, 0.75, 1)], { dur: 2.2 });
 }
 var demoAxes = [
   say('Store more energy in the magnetic field, and the dot climbs.', [T('dot', { R: 0.25, X: 0.6 }, 0, 0.2), T('hiX', 1, 0.1, 0.3), T('dot.X', 0.88, 0.3, 0.9), T('hiX', 0, 0.9, 1)]),
@@ -895,13 +949,13 @@ var demoLenz = [
 ];
 function bothPathsDemo(keepDot) {
   return [say('Copper never changes during lift-off. Watch the two routes side by side.', [
-    SET('paths.ret', locusPath({ f0: FM.cu, f1: 0.02, fEnd: FM.cu, label: 'conductivity route', color: 'var(--locus)', dx: 8, dy: -4 })),
+    SET('paths.ret', locusPath({ f0: FM.cu, f1: FMIN, fEnd: FM.cu, label: 'conductivity route', color: 'var(--locus)', dx: 8, dy: -4 })),
     SET('paths.lo', { type: 'lift', f: FM.cu, e0: ETA, e1: 0, eEnd: ETA, cls: 'p-lift', show: 1, label: 'lift-off route', color: 'var(--lift)', dx: 10, dy: 16 }),
     SET('ghosts.via', { f: FM.cu, eta: ETA, show: 1, fill: 'var(--locus)', stroke: 'var(--locus)' }),
-    T('paths.ret.fEnd', 0.02, 0.05, 0.95, 'io', true), T('ghosts.via.f', 0.02, 0.05, 0.95, 'io', true),
+    T('paths.ret.fEnd', FMIN, 0.05, 0.95, 'io', true), T('ghosts.via.f', FMIN, 0.05, 0.95, 'io', true),
     T('paths.lo.eEnd', 0, 0.05, 0.95), T('dot.eta', 0, 0.05, 0.95), T('inset.lift', 1, 0.05, 0.95), T('inset.eddy', 0.1, 0.05, 0.95), T('inset.heat', 0, 0.05, 0.95), T('inset.oppose', 0, 0.05, 0.95)
   ], { dur: 6 }),
-  say('The conductivity route swings out through the heat bulge. The lift-off route heads straight for the air point.', [T('ghosts.via.show', 0, 0.7, 1)])];
+  say('The conductivity route swings out through the heat bulge. The lift-off route heads almost directly for the air point.', [T('ghosts.via.show', 0, 0.7, 1)])];
 }
 
 var STEPS = [
@@ -946,7 +1000,7 @@ var STEPS = [
         { t: 'It does not move.', fb: 'Watch the block. Currents start flowing in the aluminum as soon as the coil arrives, so something must change.', demo: [say('Eddy currents appear in the aluminum the moment the coil arrives.', [T('inset.eddy', 1, 0, 0.5), T('inset.heat', 0.6, 0.3, 1)])] }
       ] }),
     say('Down and right. Hold on to that: down means the coil’s field was pushed back, and right means heat was made in the part.', [SET('ghosts.al', { f: FM.al, eta: ETA, label: 'aluminum', show: 1, dx: 12, dy: 4 })]),
-    say('Notice that the dot took a straight route as the coil came down onto the metal. Remember that route. It comes back in Step 4.', [T('paths.place.show', 1, 0, 0.2), T('paths.place.show', 0.4, 0.8, 1)])
+    say('Notice the route the dot took as the coil came down onto the metal. Remember it, because it comes back in Step 4.', [T('paths.place.show', 1, 0, 0.2), T('paths.place.show', 0.4, 0.8, 1)])
   ] },
 /* ---------- Step 3 ---------- */
 { setup: function () {
@@ -962,7 +1016,7 @@ var STEPS = [
       opts: [
         { t: 'Higher.', fb: 'Better conductivity means stronger eddy currents, and stronger eddy currents push back harder on the coil’s field. Which way did pushing back move the dot in Step 2?', demo: [say('A stronger opposing field leaves even less energy stored in the coil’s field.', [T('inset.oppose', 1, 0, 0.4), T('inset.field', 0.5, 0.3, 0.9)])] },
         { t: 'Lower.', ok: true, fb: 'Right. Better conductivity means stronger eddy currents and a stronger opposing field, so even less energy is stored. Copper sits somewhere on this lower line.',
-          demo: [say('', [SET('paths.cuLine', { type: 'seg', R0: 0, X0: Zn(FM.cu, ETA).X, R1: 0.5, X1: Zn(FM.cu, ETA).X, prog: 0, cls: 'p-guide', show: 1, label: 'copper is on this line', lat: 'start', dx: 6, dy: -8 }), T('paths.cuLine.prog', 1, 0, 0.8)], { dur: 2 })] },
+          demo: [say('', [SET('paths.cuLine', { type: 'seg', R0: 0, X0: Zn(FM.cu, ETA).X, R1: 0.19, X1: Zn(FM.cu, ETA).X, prog: 0, cls: 'p-guide', show: 1, label: 'copper is on this line', anchor: 'end', dx: -4, dy: -8 }), T('paths.cuLine.prog', 1, 0, 0.8)], { dur: 2 })] },
         { t: 'About the same height.', fb: 'Copper is a much better conductor, so its eddy currents are stronger and push back harder on the coil’s field. Which way does pushing back move the dot?', demo: [say('A stronger opposing field leaves even less energy stored in the coil’s field.', [T('inset.oppose', 1, 0, 0.4), T('inset.field', 0.5, 0.3, 0.9)])] }
       ] }),
     say('So copper is lower. Now for the harder question.', []),
@@ -974,11 +1028,11 @@ var STEPS = [
           demo: [say('', [SET('paths.toCu', locusPath({ f0: FM.al, f1: FM.cu, fEnd: FM.al, cls: 'p-locus p-thin' })), T('dot.f', FM.cu, 0.1, 0.9, 'io', true), T('paths.toCu.fEnd', FM.cu, 0.1, 0.9, 'io', true), SET('ghosts.cu', { f: FM.cu, eta: ETA, label: 'copper', show: 1, dx: 12, dy: 4 }, 0.9)], { dur: 2.8 })] },
         { t: 'Exactly the same distance to the right.', fb: 'Close, but the heat does not stay constant. Think about the two extremes: a metal that barely conducts, and one that conducts perfectly.', sub: null }
       ] }),
-    say('Now sweep conductivity from very low to very high and trace the dot.', [T('paths.cuLine.show', 0, 0, 0.3), T('paths.toCu.show', 0, 0, 0.3), T('paths.perf.show', 0, 0, 0.3), T('ghosts.perfect.show', 0, 0, 0.3), T('ghosts.sweep.show', 0, 0, 0.3), SET('paths.loc', locusPath({ fEnd: 0.02 })), T('dot.f', 0.02, 0.2, 1, 'io', true), T('inset.show', 0, 0, 0.5)], { dur: 3.5 }),
-    say('At low conductivity barely any current flows, so there is little heat. The dot stays close to the air point.', [T('dot.f', 1.5, 0.1, 1, 'io', true), T('paths.loc.fEnd', 1.5, 0.1, 1, 'io', true)]),
-    say('In the middle, current flows freely and the metal still resists it, so the heat peaks and the curve bulges furthest to the right.', [T('dot.f', 8, 0, 0.8, 'io', true), T('paths.loc.fEnd', 8, 0, 0.8, 'io', true), SET('ghosts.peak', { f: 6, eta: ETA, label: 'most heat', show: 1, dx: 12, dy: 4, fill: 'var(--heat)', stroke: 'var(--heat)' }, 0.6)]),
-    say('At very high conductivity the currents are huge but meet almost no resistance, so the heat falls again and the curve turns down and back to the left.', [T('dot.f', FMAX, 0, 0.85, 'io', true), T('paths.loc.fEnd', FMAX, 0, 0.85, 'io', true), SET('paths.perf2', { type: 'seg', R0: Zn(FMAX, ETA).R, X0: Zn(FMAX, ETA).X, R1: 0, X1: 1 - ETA, prog: 0, cls: 'p-locus p-dash p-thin', show: 1 }, 0.85), T('paths.perf2.prog', 1, 0.85, 1)]),
-    say('This curve is the conductivity locus. Titanium and stainless steel sit near the top. Aluminum sits just past the bulge. Copper sits lower and further left.', [
+    say('Now sweep conductivity from very low to very high and trace the dot.', [T('paths.cuLine.show', 0, 0, 0.3), T('paths.toCu.show', 0, 0, 0.3), T('paths.perf.show', 0, 0, 0.3), T('ghosts.perfect.show', 0, 0, 0.3), T('ghosts.sweep.show', 0, 0, 0.3), SET('paths.loc', locusPath({ fEnd: FMIN })), T('dot.f', FMIN, 0.2, 1, 'io', true), T('inset.show', 0, 0, 0.5)], { dur: 3.5 }),
+    say('At low conductivity barely any current flows, so there is little heat. The dot stays close to the air point.', [T('dot.f', 8e4, 0.1, 1, 'io', true), T('paths.loc.fEnd', 8e4, 0.1, 1, 'io', true)]),
+    say('In the middle, current flows freely and the metal still resists it, so the heat peaks and the curve bulges furthest to the right.', [T('dot.f', 1.6e6, 0, 0.8, 'io', true), T('paths.loc.fEnd', 1.6e6, 0, 0.8, 'io', true), SET('ghosts.peak', { f: P_PEAK, eta: ETA, label: 'most heat', show: 1, dx: 12, dy: 4, fill: 'var(--heat)', stroke: 'var(--heat)' }, 0.6)]),
+    say('At very high conductivity the currents are huge but meet almost no resistance, so the heat falls again and the curve turns down and back to the left.', [T('dot.f', FMAX, 0, 0.85, 'io', true), T('paths.loc.fEnd', FMAX, 0, 0.85, 'io', true), SET('paths.perf2', { type: 'seg', R0: Zn(FMAX, ETA).R, X0: Zn(FMAX, ETA).X, R1: 0, X1: XPC, prog: 0, cls: 'p-locus p-dash p-thin', show: 1 }, 0.85), T('paths.perf2.prog', 1, 0.85, 1)]),
+    say('This curve is the conductivity locus. Titanium and stainless steel sit near the top. Aluminum sits past the bulge. Copper sits lower and further left.', [
       T('ghosts.peak.show', 0, 0, 0.1), T('dot.f', FM.cu, 0.6, 1, 'io', true),
       SET('ghosts.ti', matGhosts(['ti']).ti, 0.1), SET('ghosts.ss', matGhosts(['ss']).ss, 0.2), SET('ghosts.al', matGhosts(['al']).al, 0.45), SET('ghosts.cu', matGhosts(['cu']).cu, 0.65)])
   ] },
@@ -1001,7 +1055,7 @@ var STEPS = [
         { t: 'It takes a different, more direct path to the air point.', ok: true, fb: 'Yes. The metal is still copper, so there is no detour through a heat bulge. The copper’s effect simply fades as the coil moves away.', demo: bothPathsDemo() },
         { t: 'It does not move.', fb: 'Pull the coil far enough away and it is back in air. Where must the dot end up then?', demo: [say('Far enough away, the coil is back in air, so the dot must end at the air point.', [T('inset.lift', 1, 0, 0.9), T('dot.eta', 0, 0, 0.9), T('inset.eddy', 0, 0, 0.9), T('inset.oppose', 0, 0, 0.9)])] }
       ] }),
-    say('In this model the lift-off route is a straight line aimed at the air point. Real probes give a gently curved line, but the lesson is the same: two different causes, two different directions.', [T('dot.eta', ETA, 0, 0.5), T('inset.lift', 0, 0, 0.5), T('inset.eddy', 1, 0, 0.5), T('inset.oppose', 0.8, 0, 0.5)]),
+    say('The lift-off route bends only gently on its way to the air point, and it never swings out through the heat bulge. Two different causes, two different directions.', [T('dot.eta', ETA, 0, 0.5), T('inset.lift', 0, 0, 0.5), T('inset.eddy', 1, 0, 0.5), T('inset.oppose', 0.8, 0, 0.5)]),
     say('That difference in direction is what lets an inspector tell the two apart. Sandbox mode is now unlocked, so you can try this yourself whenever you like.', [])
   ] },
 /* ---------- Step 5 ---------- */
@@ -1021,17 +1075,17 @@ var STEPS = [
     ask({ label: 'Checkpoint 5', q: 'To tell lift-off from a conductivity change, do you want the angle between them small or large?',
       opts: [
         { t: 'Small.', fb: 'Picture two arrows lying almost on top of each other. If the dot moves along one of them, can you tell which one it was? Watch titanium, then copper.', demo: [
-          say('At titanium the two directions nearly overlap. Was that wobble lift-off or a conductivity change? Hard to say.', [T('cam', CAM.top, 0, 0.3), SET('angles.ti', { f: FM.ti, show: 1 }), SET('ghosts.w', { f: FM.ti, eta: ETA, show: 1, fill: 'var(--dot)', stroke: 'var(--dot)', big: 1 }),
+          say('At titanium the two directions are close together. Was that wobble lift-off or a conductivity change? It is hard to be sure.', [T('cam', CAM.top, 0, 0.3), SET('angles.ti', { f: FM.ti, show: 1 }), SET('ghosts.w', { f: FM.ti, eta: ETA, show: 1, fill: 'var(--dot)', stroke: 'var(--dot)', big: 1 }),
             T('ghosts.w.eta', 0.45, 0.35, 0.6), T('ghosts.w.eta', ETA, 0.6, 0.85)]),
           say('At copper the directions are far apart, so a lift-off wobble is obvious.', [SET('ghosts.w.f', FM.cu), T('cam', CAM.locus, 0, 0.3), T('ghosts.w.eta', 0.6, 0.35, 0.6), T('ghosts.w.eta', ETA, 0.6, 0.85)])] },
         { t: 'Large.', ok: true, fb: 'Right. When the two directions point well apart, a lift-off wobble and a conductivity change look clearly different on the screen.' },
         { t: 'It does not matter.', fb: 'It matters a lot. Picture two arrows lying almost on top of each other. If the dot moves along one of them, can you tell which one it was? Watch titanium, then copper.', demo: [
-          say('At titanium the two directions nearly overlap. Was that wobble lift-off or a conductivity change? Hard to say.', [T('cam', CAM.top, 0, 0.3), SET('angles.ti', { f: FM.ti, show: 1 }), SET('ghosts.w', { f: FM.ti, eta: ETA, show: 1, fill: 'var(--dot)', stroke: 'var(--dot)', big: 1 }),
+          say('At titanium the two directions are close together. Was that wobble lift-off or a conductivity change? It is hard to be sure.', [T('cam', CAM.top, 0, 0.3), SET('angles.ti', { f: FM.ti, show: 1 }), SET('ghosts.w', { f: FM.ti, eta: ETA, show: 1, fill: 'var(--dot)', stroke: 'var(--dot)', big: 1 }),
             T('ghosts.w.eta', 0.45, 0.35, 0.6), T('ghosts.w.eta', ETA, 0.6, 0.85)]),
           say('At copper the directions are far apart, so a lift-off wobble is obvious.', [SET('ghosts.w.f', FM.cu), T('cam', CAM.locus, 0, 0.3), T('ghosts.w.eta', 0.6, 0.35, 0.6), T('ghosts.w.eta', ETA, 0.6, 0.85)])] }
       ] }),
-    say('Now read the angles. At the high conductivity end, for copper and aluminum, the angle opens up to roughly fifty degrees.', [SET('angles.al', { f: FM.al, show: 0 }), T('angles.al.show', 1, 0.2, 0.5)]),
-    say('Zoom in at the low conductivity end. For titanium and stainless steel, the two directions almost overlap. The angle is only a few degrees.', [T('cam', CAM.top, 0, 0.35), SET('angles.ti', { f: FM.ti, show: 0 }), SET('angles.ss', { f: FM.ss, show: 0 }), T('angles.ss.show', 1, 0.35, 0.55), T('angles.ti.show', 1, 0.55, 0.75)]),
+    say('Now read the angles. At the high conductivity end, for copper and aluminum, the angle opens up to about forty five degrees.', [SET('angles.al', { f: FM.al, show: 0 }), T('angles.al.show', 1, 0.2, 0.5)]),
+    say('Zoom in at the low conductivity end. For titanium and stainless steel, the two directions are much closer, only about twenty five to thirty degrees apart.', [T('cam', CAM.top, 0, 0.35), SET('angles.ti', { f: FM.ti, show: 0 }), SET('angles.ss', { f: FM.ss, show: 0 }), T('angles.ss.show', 1, 0.35, 0.55), T('angles.ti.show', 1, 0.55, 0.75)]),
     say('So at one test frequency, the low conductivity metals are the hard ones. There, lift-off can easily be mistaken for a change in conductivity.', [T('cam', CAM.locus, 0.3, 0.9)])
   ] },
 /* ---------- Step 6 ---------- */
@@ -1052,15 +1106,15 @@ var STEPS = [
     say('Now remember that the dot’s place on the curve depends on frequency times conductivity. Raise either one and the dot slides down the curve. Lower it and the dot climbs back up.', [
       T('arcZ.show', 0, 0, 0.1), T('paths.lo.show', 0, 0, 0.1), T('paths.cd.show', 0, 0, 0.1), T('ghosts.e1.show', 0, 0, 0.1), T('meter.show', 0, 0, 0.1),
       SET('dot.iacs', 43), SET('freq', { show: 1, kHz: 100 }), T('freq.kHz', 300, 0.15, 0.5, 'io', true), T('freq.kHz', 35, 0.55, 0.85, 'io', true), T('freq.kHz', 100, 0.9, 1, 'io', true)], { dur: 9 }),
-    say('Back to titanium, where the angle is tiny at one hundred kilohertz.', [SET('dot.iacs', 1), T('cam', CAM.top, 0, 0.5), SET('angles.d', { dot: true, show: 0 }), T('angles.d.show', 1, 0.4, 0.7), SET('depth', { show: 1, iacs: 1 }, 0.4)]),
+    say('Back to titanium, where the angle is smallest at one hundred kilohertz.', [SET('dot.iacs', 1), T('cam', CAM.top, 0, 0.5), SET('angles.d', { dot: true, show: 0 }), T('angles.d.show', 1, 0.4, 0.7), SET('depth', { show: 1, iacs: 1 }, 0.4)]),
     ask({ label: 'Checkpoint 6', q: 'You are inspecting titanium, where the angle is small. What setting do you change, and what do you give up?',
       rules: [{ re: /depth|penetrat|deep|surface/i, note: 'You were already thinking about depth. That trade is the heart of this question.' }],
       opts: [
         { t: 'Raise the frequency. You give up depth of penetration.', ok: true, fb: 'Yes. A higher frequency moves titanium down the curve, where the angle opens up. But a higher frequency also crowds the eddy currents toward the surface, so you see less deep into the part.',
-          demo: [say('', [T('freq.kHz', 1000, 0, 0.9, 'io', true), T('cam', { r0: -0.02, r1: 0.4, x0: 0.6, x1: 1.04 }, 0, 0.9)], { dur: 4 })] },
+          demo: [say('', [T('freq.kHz', 1000, 0, 0.9, 'io', true), T('cam', { r0: -0.01, r1: 0.17, x0: 0.78, x1: 1.012 }, 0, 0.9)], { dur: 4 })] },
         { t: 'Lower the frequency. You give up sensitivity.', fb: 'Lower frequency moves the dot up the curve, toward the air point. Is the angle bigger or smaller up there? Watch.', demo: [say('Lower frequency: the dot climbs and the angle closes even further.', [T('freq.kHz', 30, 0, 0.8, 'io', true)])] },
-        { t: 'Raise the frequency. You give up nothing.', fb: 'The angle part is right. But frequency also controls how deep the eddy currents reach. Watch the depth gauge as the frequency rises.', demo: [say('The angle opens, but the standard depth shrinks from about two millimeters to under one.', [T('freq.kHz', 1000, 0, 0.8, 'io', true), T('cam', { r0: -0.02, r1: 0.4, x0: 0.6, x1: 1.04 }, 0, 0.8)])] },
-        { t: 'Turn up the gain. You give up nothing.', fb: 'Gain makes everything on the screen bigger, including the lift-off signal. Scaling both arrows up does not change the angle between them.', demo: [say('Zooming in works like adding gain. The picture grows, and the angle stays exactly the same.', [T('cam', { r0: 0.0, r1: 0.08, x0: 0.96, x1: 1.01 }, 0, 0.6)])] }
+        { t: 'Raise the frequency. You give up nothing.', fb: 'The angle part is right. But frequency also controls how deep the eddy currents reach. Watch the depth gauge as the frequency rises.', demo: [say('The angle opens, but the standard depth shrinks from about two millimeters to under one.', [T('freq.kHz', 1000, 0, 0.8, 'io', true), T('cam', { r0: -0.01, r1: 0.17, x0: 0.78, x1: 1.012 }, 0, 0.8)])] },
+        { t: 'Turn up the gain. You give up nothing.', fb: 'Gain makes everything on the screen bigger, including the lift-off signal. Scaling both arrows up does not change the angle between them.', demo: [say('Zooming in works like adding gain. The picture grows, and the angle stays exactly the same.', [T('cam', { r0: 0.035, r1: 0.075, x0: 0.947, x1: 0.987 }, 0, 0.6)])] }
       ] }),
     say('That trade is fine when you only care about the surface, such as surface breaking cracks, or sorting metals by conductivity.', []),
     say('It is not fine when the flaw is below the surface, like corrosion on the far side of a skin, or a subsurface crack. Those need a low frequency, so you accept a smaller angle and control lift-off carefully instead.', [T('freq.kHz', 100, 0, 0.6, 'io', true), T('cam', CAM.top, 0, 0.6)]),
@@ -1074,7 +1128,7 @@ var STEPS = [
       { t: 'On the reactance axis, below the air point.', ok: true, keep: true, fb: 'Yes. Zero heat puts it back on the left edge, and its field is pushed out of the metal, so it sits well below the air point. Watch where the curve heads as conductivity climbs.',
         demo: [say('', [SET('paths.perf', locusPath({ f0: FM.al, f1: FMAX, fEnd: FM.al, cls: 'p-locus p-thin p-dash' })), SET('ghosts.sweep', { f: FM.al, eta: ETA, show: 1, fill: 'var(--locus)', stroke: 'var(--locus)' }),
           T('paths.perf.fEnd', FMAX, 0, 0.85, 'io', true), T('ghosts.sweep.f', FMAX, 0, 0.85, 'io', true),
-          SET('ghosts.perfect', { R: 0, X: 1 - ETA, show: 1, label: 'perfect conductor', dx: 10, dy: 4, fill: 'var(--locus)', stroke: 'var(--locus)' }, 0.85)], { dur: 4 })] },
+          SET('ghosts.perfect', { R: 0, X: XPC, show: 1, label: 'perfect conductor', dx: 10, dy: 4, fill: 'var(--locus)', stroke: 'var(--locus)' }, 0.85)], { dur: 4 })] },
       { t: 'Far to the right, where the heat is highest.', fb: 'Far right means lots of heat, and we just agreed that a perfect conductor makes none.' },
       { t: 'Exactly at the air point.', fb: 'Right on the left to right part, since there is no heat. But the eddy currents still push the coil’s field out of the metal, so less energy is stored than in air. The dot sits lower.' }
     ] };
@@ -1122,7 +1176,7 @@ function renderInfo() {
     h = '<div class="eyebrow">Step ' + (n + 1) + ' of 6</div><h2>' + esc(STEP_TITLES[n]) + '</h2>';
     var done = progress.done.indexOf(n) >= 0;
     h += done ? '<p class="muted"><b>Key idea:</b> ' + esc(KEY_IDEAS[n]) + '</p>' : '<p class="muted">A checkpoint question is coming up in this step. It will appear here.</p>';
-    h += '<p class="muted" style="font-size:12.5px">The diagram uses the classic normalized model of a coil around a solid nonmagnetic rod. Lift-off is modeled as weaker coupling between coil and part.</p>';
+    h += '<p class="muted" style="font-size:12.5px">The diagram is computed from the Dodd and Deeds model of a probe coil on a thick, nonmagnetic plate.</p>';
   }
   $('infoCard').innerHTML = h;
 }
@@ -1142,7 +1196,7 @@ function renderChapters() {
   var cur = nav.querySelector('.current'); if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 function renderTabs() {
-  var sbOpen = progress.done.indexOf(3) >= 0, allDone = progress.done.indexOf(5) >= 0;
+  var sbOpen = progress.done.indexOf(SANDBOX_AFTER) >= 0, allDone = progress.done.indexOf(STEP_TITLES.length - 1) >= 0;
   $('tabSandbox').disabled = !sbOpen; $('tabSandbox').innerHTML = 'Sandbox' + (sbOpen ? '' : ' &#128274;');
   $('tabRecap').disabled = !allDone; $('tabQuiz').disabled = !allDone;
   ['Lesson', 'Sandbox', 'Recap', 'Quiz'].forEach(function (n) { $('tab' + n).setAttribute('aria-selected', view === n.toLowerCase() ? 'true' : 'false'); });
@@ -1189,8 +1243,8 @@ function sbState() {
   s.angles.a = { dot: true, show: 1 };
   var mk = nearestMat(SB.iacs);
   var col = mk ? MATS[mk].color : '#b7bec6';
-  s.inset = { show: 1, lift: SB.lift / 100, mat: { name: '', color: col, label: (mk ? MATS[mk].short + ', ' : '') + fmt(SB.iacs, SB.iacs < 10 ? 1 : 0) + ' %IACS' }, field: 1, eddy: clamp(1 - SB.lift / 100, 0, 1), heat: clamp(P0.R / 0.34, 0, 1) * (1 - SB.lift / 100), oppose: clamp(1 - P0.X, 0, 1) };
-  if (SB.zoom) { var w = 0.11; s.cam = { r0: P0.R - w, r1: P0.R + w, x0: P0.X - w * 0.9, x1: P0.X + w * 0.9 }; }
+  s.inset = { show: 1, lift: SB.lift / 100, mat: { name: '', color: col, label: (mk ? MATS[mk].short + ', ' : '') + fmt(SB.iacs, SB.iacs < 10 ? 1 : 0) + ' %IACS' }, field: 1, eddy: clamp(1 - SB.lift / 100, 0, 1), heat: clamp(P0.R / 0.108, 0, 1) * (1 - SB.lift / 100), oppose: clamp((1 - P0.X) / 0.41, 0, 1) };
+  if (SB.zoom) { var w = 0.035; s.cam = { r0: P0.R - w, r1: P0.R + w, x0: P0.X - w * 0.9, x1: P0.X + w * 0.9 }; }
   else s.cam = clone(CAM.locus);
   return s;
 }
@@ -1219,13 +1273,12 @@ function syncSandbox(fromSlider) {
   if (!fromSlider) { $('sbI').value = logPos(SB.iacs, 0.8, 100); $('sbL').value = SB.lift; $('sbF').value = logPos(SB.kHz, 10, 2000); }
   var mk = nearestMat(SB.iacs);
   $('sbIv').textContent = fmt(SB.iacs, SB.iacs < 10 ? 1 : 0) + ' %IACS' + (mk ? ' (' + MATS[mk].name + ')' : '');
-  $('sbLv').textContent = SB.lift === 0 ? 'contact' : SB.lift === 100 ? 'coil in air' : SB.lift + '%';
+  $('sbLv').textContent = SB.lift === 0 ? 'contact' : SB.lift === 100 ? 'coil in air' : fmt(liftOfEta(ETA * (1 - SB.lift / 100)), 2) + ' mm gap';
   $('sbFv').textContent = SB.kHz >= 1000 ? fmt(SB.kHz / 1000, 2) + ' MHz' : fmt(SB.kHz, 0) + ' kHz';
   S = sbState(); dirty = true;
   var f = fOf(SB.iacs, SB.kHz), Z = dotPos(S);
   $('sbOut').innerHTML =
     '<span>Angle between lift-off and locus</span><b class="big">' + fmt(sepAngle(f), 1) + '&deg;</b>' +
-    '<span>f/fg (frequency x conductivity)</span><b>' + (f < 10 ? fmt(f, 2) : fmt(f, 1)) + '</b>' +
     '<span>Normalized R</span><b>' + fmt(Z.R, 3) + '</b><span>Normalized X</span><b>' + fmt(Z.X, 3) + '</b>' +
     '<span>Standard depth</span><b>' + fmt(depthMM(SB.iacs, SB.kHz), 2) + ' mm</b>';
 }
@@ -1280,8 +1333,7 @@ function miniMap(cam) {
   return { s: s, px: function (R) { return W / 2 + (R - cr) * s; }, py: function (X) { return H / 2 - (X - cx) * s; } };
 }
 function miniLocus(m, f1, eta, cls) {
-  var pts = [], a = Math.log(0.02), b = Math.log(f1 || FMAX);
-  for (var i = 0; i <= 120; i++) pts.push(Zn(Math.exp(a + (b - a) * i / 120), eta || ETA));
+  var pts = gridPts(Math.log(FMIN), Math.log(f1 || FMAX), 1 / 24).map(function (u) { return Zn(Math.exp(u), eta || ETA); });
   return '<path d="' + polyline(pts, m) + '" class="' + (cls || 'p-locus p-thin') + '"/>';
 }
 function miniDot(m, P, col) { return '<circle cx="' + m.px(P.R) + '" cy="' + m.py(P.X) + '" r="4.5" style="fill:' + (col || 'var(--dot)') + ';stroke:var(--panel);stroke-width:1.5"/>'; }
@@ -1293,7 +1345,7 @@ function miniAngle(m, f) {
     '<text x="' + (x + 8) + '" y="' + (y + 14) + '" style="font:700 10px var(--mono);fill:var(--ink)">' + Math.round(d.deg) + '&deg;</text>';
 }
 function renderRecap(t) {
-  var full = { r0: -0.05, r1: 0.75, x0: -0.04, x1: 1.08 }, loc = { r0: -0.03, r1: 0.5, x0: 0.05, x1: 1.06 };
+  var full = { r0: -0.05, r1: 0.75, x0: -0.04, x1: 1.08 }, loc = { r0: -0.01, r1: 0.2, x0: 0.56, x1: 1.03 };
   var h, m, ph, P;
   m = miniMap(full); ph = (t % 4) / 4;
   var e = $('mini0'); if (!e) return;
@@ -1304,10 +1356,10 @@ function renderRecap(t) {
   ph = (t % 3) / 3; P = Zn(FM.al, ETA * ease(clamp(ph * 1.4, 0, 1)));
   $('mini1').innerHTML = miniAxes(m) + '<circle cx="' + m.px(0) + '" cy="' + m.py(1) + '" r="4" style="fill:var(--panel);stroke:var(--ink);stroke-width:1.5"/>' + miniDot(m, P);
   m = miniMap(loc); ph = (t % 5) / 5;
-  var fe = Math.exp(lerp(Math.log(0.03), Math.log(FMAX), ease(clamp(ph * 1.25, 0, 1))));
+  var fe = Math.exp(lerp(Math.log(FMIN * 1.5), Math.log(FMAX), ease(clamp(ph * 1.25, 0, 1))));
   $('mini2').innerHTML = miniAxes(m) + miniLocus(m, fe) + miniDot(m, Zn(fe, ETA));
   ph = (t % 3.5) / 3.5;
-  $('mini3').innerHTML = miniAxes(m) + miniLocus(m, null, ETA, 'p-locus p-thin p-faint') + '<line x1="' + m.px(Zn(FM.cu, ETA).R) + '" y1="' + m.py(Zn(FM.cu, ETA).X) + '" x2="' + m.px(0) + '" y2="' + m.py(1) + '" class="p-lift p-thin" stroke-dasharray="3 3"/>' + miniDot(m, Zn(FM.cu, ETA * (1 - ease(clamp(ph * 1.3, 0, 1)))));
+  $('mini3').innerHTML = miniAxes(m) + miniLocus(m, null, ETA, 'p-locus p-thin p-faint') + '<path d="' + polyline(gridPts(ETA, 0, 0.9 / 30).map(function (e) { return Zn(FM.cu, e); }), m) + '" class="p-lift p-thin" stroke-dasharray="3 3"/>' + miniDot(m, Zn(FM.cu, ETA * (1 - ease(clamp(ph * 1.3, 0, 1)))));
   $('mini4').innerHTML = miniAxes(m) + miniLocus(m, null, ETA, 'p-locus p-thin p-faint') + miniAngle(m, FM.cu) + miniAngle(m, FM.ti);
   ph = (t % 5) / 5; var kHz = Math.exp(lerp(Math.log(100), Math.log(1000), ph < 0.5 ? ease(ph * 2) : 1 - ease((ph - 0.5) * 2)));
   var fT = fOf(1, kHz), dm = depthMM(1, kHz);
@@ -1333,7 +1385,7 @@ var QUIZ = [
   { s: 3, q: 'The paint on a test panel is thicker in one area. On the impedance plane, this mostly looks like:', o: ['A conductivity increase.', 'A higher test frequency.', 'More lift-off.', 'No change, since paint does not conduct.'], a: 2,
     x: 'A nonconductive coating holds the coil further from the metal. That is lift-off, which is also why eddy currents can measure paint and coating thickness.' },
   { s: 4, q: 'At one test frequency, which material shows the smallest angle between the lift-off direction and the conductivity locus?', o: ['Copper.', '6061 aluminum.', '2024 aluminum.', 'Titanium.'], a: 3,
-    x: 'Low conductivity metals sit near the top of the curve, where lift-off and conductivity changes point in almost the same direction. Titanium is the hardest of these four to separate from lift-off.' },
+    x: 'Low conductivity metals sit near the top of the curve, where lift-off and conductivity changes point in similar directions. Titanium is the hardest of these four to separate from lift-off.' },
   { s: 5, q: 'Why does an instrument that reads only impedance magnitude struggle with lift-off?', o: ['It cannot detect conductivity changes at all.', 'It sees only the arrow’s length, so a lift-off change and a conductivity change can give the same reading.', 'Lift-off does not change the impedance magnitude.', 'It shows phase but not magnitude.'], a: 1,
     x: 'Two different moves can end on the same circle around the origin and so give the same magnitude. Only the direction of the move tells them apart, and a magnitude-only instrument cannot see direction.' },
   { s: 5, q: 'You need to find corrosion on the far side of a thick aluminum skin. What is the best approach?', o: ['Use a high frequency to widen the separation angle.', 'Use a low frequency for deeper penetration, and control lift-off carefully.', 'Keep the frequency and turn up the gain.', 'Any frequency works, because depth does not depend on frequency.'], a: 1,
@@ -1391,7 +1443,7 @@ function showResults() {
 $('startBtn').onclick = function () {
   startIfNeeded();
   unlockAudio();
-  var mr = maxReachable(); runStep(progress.done.length && mr < 6 && progress.done.indexOf(mr) < 0 ? mr : 0);
+  var mr = maxReachable(); runStep(progress.done.length && mr < STEP_TITLES.length && progress.done.indexOf(mr) < 0 ? mr : 0);
 };
 $('playBtn').onclick = function () { if (P.items) setPaused(!paused); else if (paused) setPaused(false); };
 $('replayBtn').onclick = replaySegment;

@@ -29,3 +29,11 @@ python3 tools/voiceover/kokoro_say.py --json lines.json   # [{"text": ..., "out"
   unless the user asks for it.
 - Write the narration so it reads well aloud: spell out units ("kilohertz", "percent I A C S"),
   and avoid symbols the model would read literally.
+
+## Eddy current lessons: one physics model
+
+`ET-Impedance-Plane.html` and `ET-Frequency-and-Thickness.html` compute every curve from the Dodd and Deeds model of a
+probe coil above a nonmagnetic plate. Each page carries an exact copy of `tools/eddy/dodd_deeds_core.js` in its
+`<script id="physics">` block, so each page stays self-contained and can be embedded on its own. After changing the
+core, a lesson's numbers or its narration claims, update both copies and run `node tools/eddy/check_dodd_deeds.cjs`.
+

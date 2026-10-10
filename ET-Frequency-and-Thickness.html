@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ET: Frequency and Thickness</title>
+<style>
+  :root {
+    --bg: #f7f5f0;
+    --panel: #ffffff;
+    --panel2: #f1eee7;
+    --ink: #1b1d22;
+    --ink-soft: #4b4f58;
+    --ink-faded: #8a8e96;
+    --rule: #dcd7cc;
+    --grid: #e7e3da;
+    --accent: #b54515;
+    --accent-soft: #fbeee4;
+    --hl: #d9480f;
+    --locus: #c2551b;
+    --lift: #0b7f8f;
+    --dot: #2847c4;
+    --thk1: #3b5bdb;
+    --thk2: #2b8a3e;
+    --field: #2f6fd6;
+    --eddy: #e07b12;
+    --heat: #d62f2f;
+    --good: #23784a;
+    --good-soft: #e5f4ea;
+    --bad: #b8322a;
+    --bad-soft: #fbe9e7;
+    --coil: #5a5f6b;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 10px 28px -14px rgba(40,30,20,0.22);
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161b; --panel: #1c1f26; --panel2: #232731; --ink: #eceef2; --ink-soft: #b7bcc7;
+      --ink-faded: #7d8391; --rule: #333846; --grid: #262a34; --accent: #f08a4b; --accent-soft: #3a2a20;
+      --hl: #ff8c4a; --locus: #f0904f; --lift: #43c4d3; --dot: #8ea6ff; --thk1: #91a7ff; --thk2: #69db7c; --field: #6fa0ff; --eddy: #ffae4d;
+      --heat: #ff6b60; --good: #5fd08f; --good-soft: #1d3327; --bad: #ff7b70; --bad-soft: #3a2222; --coil: #9aa1af;
+      --shadow: 0 1px 0 rgba(0,0,0,0.3), 0 10px 28px -14px rgba(0,0,0,0.6);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161b; --panel: #1c1f26; --panel2: #232731; --ink: #eceef2; --ink-soft: #b7bcc7;
+    --ink-faded: #7d8391; --rule: #333846; --grid: #262a34; --accent: #f08a4b; --accent-soft: #3a2a20;
+    --hl: #ff8c4a; --locus: #f0904f; --lift: #43c4d3; --dot: #8ea6ff; --thk1: #91a7ff; --thk2: #69db7c; --field: #6fa0ff; --eddy: #ffae4d;
+    --heat: #ff6b60; --good: #5fd08f; --good-soft: #1d3327; --bad: #ff7b70; --bad-soft: #3a2222; --coil: #9aa1af;
+    --shadow: 0 1px 0 rgba(0,0,0,0.3), 0 10px 28px -14px rgba(0,0,0,0.6);
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { font: 16px/1.5 var(--sans); -webkit-text-size-adjust: 100%; }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 12px 16px 48px; }
+
+  header.top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; justify-content: space-between; margin-bottom: 10px; }
+  .titles { min-width: 0; }
+  .eyebrow { font: 600 11px/1.2 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
+  h1 { font-size: clamp(20px, 3.4vw, 28px); line-height: 1.15; margin: 4px 0 0; letter-spacing: -.01em; }
+  a.back { font: 500 12px var(--mono); color: var(--ink-faded); text-decoration: none; }
+  a.back:hover { color: var(--accent); }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .tab, .iconbtn {
+    border: 1px solid var(--rule); background: var(--panel); border-radius: 999px; padding: 6px 12px;
+    font-size: 14px; cursor: pointer; white-space: nowrap;
+  }
+  .tab[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .tab:disabled { opacity: .45; cursor: not-allowed; }
+  .tab:focus-visible, .iconbtn:focus-visible, .chap:focus-visible, .opt:focus-visible, .btn:focus-visible, .ctl:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .chapters { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 8px; scrollbar-width: thin; }
+  .chap {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 6px; border: 1px solid var(--rule);
+    background: var(--panel); border-radius: 10px; padding: 6px 10px; font-size: 13px; cursor: pointer;
+  }
+  .chap .n { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font: 600 11px var(--mono); border: 1px solid var(--ink-faded); color: var(--ink-soft); }
+  .chap.done .n { background: var(--good); border-color: var(--good); color: var(--bg); }
+  .chap.current { border-color: var(--accent); background: var(--accent-soft); }
+  .chap.current .n { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+  .chap:disabled { opacity: .45; cursor: not-allowed; }
+
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 16px; align-items: start; }
+  @media (max-width: 920px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+  .stage { background: var(--panel); border: 1px solid var(--rule); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+  .video { position: relative; width: 100%; display: flex; flex-direction: column; background: var(--panel); }
+  .plotbox { position: relative; width: 100%; height: clamp(280px, 46vh, 500px); }
+  .xsbox { position: relative; width: 100%; height: clamp(150px, 23vh, 210px); border-top: 1px solid var(--rule); }
+  @media (max-width: 600px) { .plotbox { height: auto; aspect-ratio: 1 / 0.98; } .xsbox { height: 172px; } }
+  #plane, #xs { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: manipulation; }
+  .hud { position: absolute; right: 8px; top: 8px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; pointer-events: none; max-width: 60%; }
+  .chip { background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--rule); border-radius: 8px; padding: 4px 8px; font-size: 12px; line-height: 1.3; }
+  .chip b { font-family: var(--mono); font-size: 15px; }
+  .modelnote { font-size: 11.5px; color: var(--ink-soft); padding: 5px 14px; border-top: 1px solid var(--rule); background: var(--panel2); }
+  @media (max-width: 600px) {
+    .hud { position: static; flex-direction: row; flex-wrap: wrap; max-width: none; align-items: center; padding: 0 8px 6px; }
+    .chip b { font-size: 13px; }
+  }
+  .depthbar { width: 120px; height: 8px; border-radius: 4px; background: var(--grid); overflow: hidden; margin-top: 3px; }
+  .depthbar i { display: block; height: 100%; background: var(--field); width: 50%; }
+  .hidden { display: none !important; }
+  .titlecard {
+    position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); text-align: center;
+    background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--rule); border-radius: 12px;
+    padding: 12px 20px; box-shadow: var(--shadow); pointer-events: none; max-width: 86%;
+  }
+  .titlecard .eyebrow { margin-bottom: 4px; }
+  .titlecard div:last-child { font-size: clamp(18px, 3vw, 26px); font-weight: 650; }
+  .startover {
+    position: absolute; inset: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--panel) 80%, transparent);
+    backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); text-align: center; padding: 16px;
+  }
+  .startover .box { max-width: 420px; }
+  .startover p { color: var(--ink-soft); margin: 8px 0 14px; font-size: 14px; }
+  .bigplay { font-size: 18px; font-weight: 650; padding: 12px 22px; border-radius: 999px; border: 0; background: var(--accent); color: #fff; cursor: pointer; }
+
+  .caption { padding: 10px 14px 8px; min-height: 4.6em; font-size: 17px; line-height: 1.45; border-top: 1px solid var(--rule); }
+  .caption .w { color: var(--ink-faded); transition: color .12s; }
+  .caption .w.on { color: var(--ink); }
+  .controls { display: flex; align-items: center; gap: 8px; padding: 6px 10px 10px; flex-wrap: wrap; }
+  .ctl { border: 1px solid var(--rule); background: var(--panel2); border-radius: 8px; height: 36px; min-width: 40px; padding: 0 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; }
+  .ctl:disabled { opacity: .45; cursor: not-allowed; }
+  .ctl svg { width: 18px; height: 18px; }
+  .prog { flex: 1 1 100px; height: 6px; background: var(--grid); border-radius: 3px; overflow: hidden; min-width: 60px; }
+  .prog i { display: block; height: 100%; width: 0; background: var(--accent); }
+  select.ctl { appearance: auto; }
+
+  .side { display: flex; flex-direction: column; gap: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--rule); border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .card h2 { font-size: 17px; margin: 2px 0 8px; line-height: 1.35; }
+  .card p { margin: 6px 0; }
+  .card.ask { border-color: var(--accent); }
+  .muted { color: var(--ink-soft); font-size: 14px; }
+  .opts { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+  .opt {
+    display: flex; gap: 10px; align-items: flex-start; text-align: left; width: 100%; border: 1.5px solid var(--rule);
+    background: var(--panel); border-radius: 10px; padding: 10px 12px; cursor: pointer; font-size: 15px; line-height: 1.35;
+  }
+  .opt .k { flex: 0 0 auto; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--ink-faded); font: 600 12px var(--mono); }
+  .opt[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .opt[aria-checked="true"] .k { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .opt.tried { opacity: .5; text-decoration: line-through; }
+  .opt.right { border-color: var(--good); background: var(--good-soft); }
+  .opt.wrong { border-color: var(--bad); background: var(--bad-soft); }
+  .opt.right .k { background: var(--good); border-color: var(--good); color: #fff; }
+  .opt.wrong .k { background: var(--bad); border-color: var(--bad); color: #fff; }
+  .opt:disabled { cursor: default; }
+  textarea { width: 100%; min-height: 54px; border: 1px solid var(--rule); border-radius: 8px; background: var(--panel2); padding: 8px; font-size: 14px; resize: vertical; }
+  .btn { border: 0; border-radius: 10px; padding: 9px 16px; font-weight: 600; cursor: pointer; background: var(--accent); color: #fff; font-size: 15px; }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--rule); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+  .fb { border-radius: 10px; padding: 10px 12px; margin-top: 10px; font-size: 15px; }
+  .fb.good { background: var(--good-soft); border-left: 4px solid var(--good); }
+  .fb.bad { background: var(--bad-soft); border-left: 4px solid var(--bad); }
+  .fb .tag { font: 700 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  .fb.good .tag { color: var(--good); } .fb.bad .tag { color: var(--bad); }
+  .fb .note { margin-top: 6px; font-size: 13px; color: var(--ink-soft); }
+
+  .slider { margin: 12px 0; }
+  .slider label { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; }
+  .slider label span { font-family: var(--mono); font-weight: 500; color: var(--accent); }
+  .slider input[type=range] { width: 100%; accent-color: var(--accent); height: 28px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; }
+  .presets button { border: 1px solid var(--rule); background: var(--panel2); border-radius: 999px; padding: 4px 10px; font-size: 13px; cursor: pointer; }
+  .readout { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 14px; margin-top: 8px; }
+  .readout b { font-family: var(--mono); font-weight: 600; text-align: right; }
+  .readout .big { color: var(--accent); font-size: 17px; }
+
+  .view { margin-top: 4px; }
+  .recap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .recap-card { background: var(--panel); border: 1px solid var(--rule); border-radius: 14px; padding: 12px; box-shadow: var(--shadow); display: flex; gap: 12px; align-items: center; }
+  .recap-card svg { flex: 0 0 120px; width: 120px; height: 110px; background: var(--panel2); border-radius: 10px; }
+  .recap-card h3 { margin: 0 0 4px; font-size: 15px; }
+  .recap-card p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+  .quiz { max-width: 720px; margin: 0 auto; }
+  .qmeta { font: 600 12px var(--mono); color: var(--ink-faded); letter-spacing: .08em; text-transform: uppercase; }
+  .qprog { height: 6px; border-radius: 3px; background: var(--grid); overflow: hidden; margin: 8px 0 12px; }
+  .qprog i { display: block; height: 100%; background: var(--accent); }
+  .key { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .key .item { border: 1px solid var(--rule); border-radius: 12px; padding: 10px 12px; background: var(--panel); }
+  .key .item.ok { border-left: 4px solid var(--good); }
+  .key .item.no { border-left: 4px solid var(--bad); }
+  .key .ans { font-size: 14px; margin: 4px 0; }
+  .score { font-size: 34px; font-weight: 700; }
+  .toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; box-shadow: var(--shadow); z-index: 10; max-width: calc(100% - 32px); }
+
+  svg text { font-family: var(--sans); }
+  .t-tick { font-size: 11px; fill: var(--ink-faded); font-family: var(--mono); }
+  .t-axis { font-size: 13px; fill: var(--ink-soft); font-weight: 600; }
+  .t-lbl { font-size: 12.5px; fill: var(--ink); font-weight: 600; paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
+  .t-ang { font-size: 13px; font-weight: 700; fill: var(--ink); font-family: var(--mono); paint-order: stroke; stroke: var(--panel); stroke-width: 4px; }
+  .gl { stroke: var(--grid); stroke-width: 1; }
+  .ax { stroke: var(--ink-soft); stroke-width: 1.6; }
+  .p-locus { stroke: var(--locus); fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .p-lift { stroke: var(--lift); fill: none; stroke-width: 3; stroke-linecap: round; }
+  .p-thick { stroke: var(--thk1); fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .p-thick2 { stroke: var(--thk2); fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .p-guide { stroke: var(--ink-faded); fill: none; stroke-width: 1.5; stroke-dasharray: 5 5; }
+  .p-faint { opacity: .35; }
+  .p-dash { stroke-dasharray: 6 6; }
+  .p-thin { stroke-width: 2; }
+  .t-sm { font-size: 11px; }
+  .t-xs { font-size: 11px; fill: var(--ink-soft); font-weight: 600; }
+  .t-xs.b { fill: var(--ink); font-weight: 700; }
+  .presets button.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="titles">
+      <a class="back" href="index.html">&larr; All exercises</a>
+      <div class="eyebrow" style="margin-top:6px">Eddy Current Testing</div>
+      <h1>Frequency and Thickness on the Impedance Plane</h1>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Mode">
+      <button class="tab" role="tab" id="tabLesson" aria-selected="true">Lesson</button>
+      <button class="tab" role="tab" id="tabSandbox" aria-selected="false" disabled title="Unlocks after Step 3">Sandbox &#128274;</button>
+      <button class="tab" role="tab" id="tabRecap" aria-selected="false" disabled title="Unlocks after Step 5">Recap</button>
+      <button class="tab" role="tab" id="tabQuiz" aria-selected="false" disabled title="Unlocks after Step 5">Quiz</button>
+      <button class="iconbtn" id="themeBtn" aria-label="Color theme">Theme: auto</button>
+    </nav>
+  </header>
+
+  <nav class="chapters" id="chapters" aria-label="Lesson steps"></nav>
+
+  <section id="viewPlayer" class="layout">
+    <div class="stage">
+      <div class="video" id="video">
+        <div class="plotbox" id="plotbox"><svg id="plane" role="img" aria-label="Impedance plane diagram"></svg></div>
+        <div class="hud" id="hud">
+          <div class="chip" id="freqChip">Frequency <b id="freqVal">100 kHz</b></div>
+          <div class="chip" id="depthChip">Standard depth &delta; <b id="depthVal"></b></div>
+          <div class="chip" id="thickChip">Thickness <b id="thickVal"></b></div>
+          <div class="chip hidden" id="liftChip">Lift-off <b id="liftVal"></b></div>
+        </div>
+        <div class="xsbox"><svg id="xs" role="img" aria-label="Cross-section of the plate under the coil, showing eddy current density fading with depth"></svg></div>
+        <div class="titlecard hidden" id="titleCard"><div class="eyebrow" id="titleEyebrow">Step 1</div><div id="titleText"></div></div>
+        <div class="startover" id="startOver">
+          <div class="box">
+            <div class="eyebrow">Interactive lesson &middot; about 10 minutes</div>
+            <h2 style="margin:6px 0 0;font-size:22px">How frequency and thickness move the dot</h2>
+            <p>Turn your sound on for narration. Captions are always on, so the lesson works fully with the sound off too. The lesson pauses at five checkpoints to ask you a question.</p>
+            <button class="bigplay" id="startBtn">&#9654; Start lesson</button>
+          </div>
+        </div>
+      </div>
+      <div class="modelnote">Simplified model for understanding trends, not for reading real instrument values</div>
+      <div class="caption" id="caption" aria-live="polite"></div>
+      <div class="controls" id="controls">
+        <button class="ctl" id="playBtn" aria-label="Pause"></button>
+        <button class="ctl" id="replayBtn" aria-label="Replay segment" title="Replay segment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg><span>Replay</span></button>
+        <div class="prog" aria-hidden="true"><i id="progBar"></i></div>
+        <select class="ctl" id="speedSel" aria-label="Playback speed">
+          <option value="0.75">0.75x</option><option value="1" selected>1x</option><option value="1.25">1.25x</option><option value="1.5">1.5x</option>
+        </select>
+        <button class="ctl" id="muteBtn" aria-label="Mute narration"></button>
+      </div>
+    </div>
+    <aside class="side" id="side">
+      <div class="card" id="infoCard"></div>
+      <div class="card ask hidden" id="askCard" aria-live="polite"></div>
+      <div class="card hidden" id="sbCard"></div>
+    </aside>
+  </section>
+
+  <section id="viewRecap" class="view hidden"></section>
+  <section id="viewQuiz" class="view hidden"></section>
+</div>
+<div class="toast hidden" id="toast" role="status"></div>
+
+<script id="physics">
+/* ===== Physics: Dodd and Deeds (1968) analytical model =====
+   An air-core circular coil above a nonmagnetic conducting plate of thickness d, with air behind it.
+   Coil (mm): inner radius r1, outer radius r2, height h. A wear face keeps it COIL.wear above the part at contact;
+   lift-off adds to that gap. Impedance is normalized to the coil-in-air reactance, so air sits at (0, 1):
+     Zn = j (1 + I / I0)
+     I  = integral_0^inf G(a) A(a) Rf(a) da,       I0 = integral_0^inf G(a) 2 (a h + e^(-a h) - 1) da
+     G  = P(a)^2 / a^6,   P(a) = integral from a r1 to a r2 of x J1(x) dx,   A = (e^(-a l1) - e^(-a l2))^2
+     Rf = (a^2 - a1^2)(1 - e^(-2 a1 d)) / ((a + a1)^2 - (a - a1)^2 e^(-2 a1 d)),   a1 = sqrt(a^2 + j w mu0 sigma)
+   with l1 = wear face + lift-off and l2 = l1 + h. Simpson's rule on a = u^2 (160 steps) and Gauss-Legendre for P
+   keep the error under 1e-7. tools/eddy/check_dodd_deeds.cjs checks this against an independent image-coil
+   filament sum, the thick-plate and thin-sheet limits, passivity, and the claims each lesson makes. */
+var COIL = { r1: 1.0, r2: 2.0, h: 1.0, wear: 0.1 };
+var MU0 = 4e-7 * Math.PI, SIGMA_IACS = 5.8e7; /* 100 %IACS = 58.0 MS/m */
+function besselJ1(x) { /* rational and asymptotic approximations, absolute error about 1e-8 */
+  var ax = Math.abs(x), y, a1, a2, r;
+  if (ax < 8) {
+    y = x * x;
+    a1 = x * (72362614232.0 + y * (-7895059235.0 + y * (242396853.1 + y * (-2972611.439 + y * (15704.48260 + y * (-30.16036606))))));
+    a2 = 144725228442.0 + y * (2300535178.0 + y * (18583304.74 + y * (99447.43394 + y * (376.9991397 + y))));
+    return a1 / a2;
+  }
+  var z = 8 / ax, xx = ax - 2.356194491; y = z * z;
+  a1 = 1 + y * (0.183105e-2 + y * (-0.3516396496e-4 + y * (0.2457520174e-5 + y * (-0.240337019e-6))));
+  a2 = 0.04687499995 + y * (-0.2002690873e-3 + y * (0.8449199096e-5 + y * (-0.88228987e-6 + y * 0.105787412e-6)));
+  r = Math.sqrt(0.636619772 / ax) * (Math.cos(xx) * a1 - z * Math.sin(xx) * a2);
+  return x < 0 ? -r : r;
+}
+var DD = (function () {
+  var GX = [-0.9739065285, -0.8650633667, -0.6794095683, -0.4333953941, -0.1488743390, 0.1488743390, 0.4333953941, 0.6794095683, 0.8650633667, 0.9739065285];
+  var GW = [0.0666713443, 0.1494513492, 0.2190863625, 0.2692667193, 0.2955242247, 0.2955242247, 0.2692667193, 0.2190863625, 0.1494513492, 0.0666713443];
+  function intXJ1(a, b) { /* integral of x J1(x) from a to b, Gauss-Legendre on unit-length panels */
+    var n = Math.max(1, Math.ceil(b - a)), w = (b - a) / n, s = 0;
+    for (var k = 0; k < n; k++) { var m = a + (k + 0.5) * w; for (var i = 0; i < 10; i++) { var x = m + 0.5 * w * GX[i]; s += GW[i] * x * besselJ1(x); } }
+    return s * 0.5 * w;
+  }
+  var N = 160, umax = Math.sqrt(40 / COIL.r1), du = umax / N, a = [], w = [], I0 = 0;
+  for (var i = 1; i <= N; i++) { /* i = 0 has zero weight because da = 2u du */
+    var u = i * du, al = u * u, P = intXJ1(al * COIL.r1, al * COIL.r2);
+    var wt = (i === N ? 1 : (i % 2 ? 4 : 2)) * du / 3 * 2 * u * P * P / Math.pow(al, 6);
+    a.push(al); w.push(wt);
+    I0 += wt * 2 * (al * COIL.h + Math.exp(-al * COIL.h) - 1);
+  }
+  return { a: a, w: w, I0: I0 };
+})();
+var zCache = {}, zCount = 0;
+/* sigma in S/m, fHz in Hz, dmm = plate thickness in mm (Infinity or 1e5 and above = thick), lift = lift-off in mm above the
+   wear face (Infinity = coil in air). Returns {R, X}, normalized. Results are cached: do not modify the returned object. */
+function Zplate(sigma, fHz, dmm, lift) {
+  if (!(lift < 1e4) || !(sigma > 0) || !(fHz > 0) || !(dmm > 0)) return { R: 0, X: 1 };
+  var key = sigma + '|' + fHz + '|' + dmm + '|' + lift, hit = zCache[key];
+  if (hit) return hit;
+  var k2 = 2 * Math.PI * fHz * MU0 * sigma * 1e-6, l1 = COIL.wear + lift, l2 = l1 + COIL.h, thick = !(dmm < 1e5), sr = 0, si = 0;
+  for (var i = 0; i < DD.a.length; i++) {
+    var al = DD.a[i], A = Math.exp(-al * l1) - Math.exp(-al * l2), g = DD.w[i] * A * A;
+    var r = Math.hypot(al * al, k2), qr = Math.sqrt((r + al * al) / 2), qi = Math.sqrt(Math.max(0, (r - al * al) / 2));
+    var Rr, Ri, nr, ni, dr, di, dd;
+    if (thick) { /* (a - a1) / (a + a1) */
+      nr = al - qr; ni = -qi; dr = al + qr; di = qi; dd = dr * dr + di * di;
+      Rr = (nr * dr + ni * di) / dd; Ri = (ni * dr - nr * di) / dd;
+    } else {
+      var e = Math.exp(-2 * qr * dmm), ph = -2 * qi * dmm, er = e * Math.cos(ph), ei = e * Math.sin(ph);
+      var Nr = -ei * k2, Ni = -(1 - er) * k2; /* (1 - E)(-j k2) */
+      var pr = al + qr, pi = qi, mr = al - qr, mi = -qi;
+      var p2r = pr * pr - pi * pi, p2i = 2 * pr * pi, m2r = mr * mr - mi * mi, m2i = 2 * mr * mi;
+      dr = p2r - (m2r * er - m2i * ei); di = p2i - (m2r * ei + m2i * er); dd = dr * dr + di * di;
+      Rr = (Nr * dr + Ni * di) / dd; Ri = (Ni * dr - Nr * di) / dd;
+    }
+    sr += g * Rr; si += g * Ri;
+  }
+  var z = { R: -si / DD.I0, X: 1 + sr / DD.I0 };
+  if (++zCount > 60000) { zCache = {}; zCount = 0; }
+  zCache[key] = z;
+  return z;
+}
+/* Standard depth of penetration in mm for a nonmagnetic metal: delta = 1 / sqrt(pi f mu0 sigma) = 503 / sqrt(f sigma) */
+function depthMM(iacs, kHz) { return 503 / Math.sqrt(kHz * 1e3 * iacs / 100 * SIGMA_IACS) * 1000; }
+/* ----- Lesson view of the model: materials by %IACS, thickness and lift-off in mils (1 mil = 0.0254 mm) ----- */
+var MIL = 0.0254, THICK = 1e6; /* a thickness of THICK mils or more means a thick plate with no back wall */
+var PMIN = 1e3, PMAX = 1e10;    /* frequency (Hz) x %IACS range of the drawn conductivity curve: air end to perfect-conductor end */
+/* thick plate: the place on the conductivity curve depends only on frequency x %IACS (p) */
+function Zp(p, liftMils) { return Zplate(p / 100 * SIGMA_IACS / 1e5, 1e5, Infinity, (liftMils || 0) * MIL); }
+function Zm(iacs, kHz, mils, liftMils) {
+  if (mils >= THICK) return Zp(iacs * kHz * 1000, liftMils);
+  return Zplate(iacs / 100 * SIGMA_IACS, kHz * 1e3, mils * MIL, (liftMils || 0) * MIL);
+}
+function deltaMils(iacs, kHz) { return depthMM(iacs, kHz) / MIL; }
+/* Unit directions at a thick-plate point: more lift-off, and lower conductivity. The angle between them is the separation angle. */
+function sepDirs(iacs, kHz) {
+  var p = iacs * kHz * 1000, P = Zp(p, 0), L = Zp(p, 0.4), A = Zp(p * 0.999, 0), B = Zp(p * 1.001, 0);
+  var l = { R: L.R - P.R, X: L.X - P.X }, ln = Math.hypot(l.R, l.X);
+  var c = { R: A.R - B.R, X: A.X - B.X }, cn = Math.hypot(c.R, c.X);
+  l = { R: l.R / ln, X: l.X / ln }; c = { R: c.R / cn, X: c.X / cn };
+  var d = Math.max(-1, Math.min(1, l.R * c.R + l.X * c.X));
+  var ang = Math.acos(d) * 180 / Math.PI;
+  if (ang > 90) { ang = 180 - ang; c = { R: -c.R, X: -c.X }; }
+  return { lift: l, loc: c, deg: ang };
+}
+</script>
+
+<script>
+"use strict";
+/* ===================== constants ===================== */
+/* Typical conductivities in %IACS (100 %IACS = 58.0 MS/m). Real parts vary with alloy, temper and temperature,
+   so the lesson and the sandbox call these typical values.
+   Copper C11000, annealed: 100 to 101 (Austral Wright and Fisk Alloy C11000 data sheets).
+   Pure aluminum 1100-O: 59 (MakeItFrom 1100-O; an AMS 4001 listing gives about 58).
+   Aluminum 2024-T3: 30 (MakeItFrom 2024-T3; Online Metals 2024-T3 sheet).
+   Brass C26000, 70/30 cartridge brass: 28 (Copper Development Association design guide; MakeItFrom).
+   Phosphor bronze C51000: about 15 (US patent 5,882,442; Ulbrich lists 13 to 20).
+   Lead: about 8 (measured lead strip, 7.98 to 8.23; Chinese Journal of Mechanical Engineering, 2017).
+   304 stainless steel: 2.4 (MakeItFrom AISI 304; Goodfellow lists 70 to 72 microhm cm).
+   Ti-6Al-4V: 1.0 (171 microhm cm in the Upmet and voestalpine data sheets).
+   Graphite, EDM-3 grade: 0.11 (615 microhm inch in the POCO, Entegris, EDM grade chart). */
+var MATS = {
+  cu:  { name: 'Copper (C11000)',          short: 'Cu',        iacs: 100,  color: '#c87533', ink: '#1b1d22' },
+  al:  { name: 'Pure aluminum (1100)',     short: 'Al 1100',   iacs: 59,   color: '#c7d0d8', ink: '#1b1d22' },
+  a24: { name: 'Aluminum 2024-T3',         short: 'Al 2024',   iacs: 30,   color: '#b3bcc5', ink: '#1b1d22' },
+  br:  { name: 'Brass (C26000, 70/30)',    short: 'Brass',     iacs: 28,   color: '#cfae55', ink: '#1b1d22' },
+  bz:  { name: 'Phosphor bronze (C51000)', short: 'Bronze',    iacs: 15,   color: '#b98a52', ink: '#1b1d22' },
+  pb:  { name: 'Lead',                     short: 'Lead',      iacs: 8,    color: '#8a9099', ink: '#1b1d22' },
+  ss:  { name: '304 stainless steel',      short: '304 SS',    iacs: 2.4,  color: '#a6acb2', ink: '#1b1d22' },
+  ti:  { name: 'Ti-6Al-4V',                short: 'Ti-6Al-4V', iacs: 1.0,  color: '#8e9096', ink: '#1b1d22' },
+  gr:  { name: 'Graphite (EDM grade)',     short: 'Graphite',  iacs: 0.11, color: '#4b4f56', ink: '#eceef2' }
+};
+var MAT_ORDER = ['cu', 'al', 'a24', 'br', 'bz', 'pb', 'ss', 'ti', 'gr'];
+var CAM = { locus: { r0: -0.01, r1: 0.2, x0: 0.56, x1: 1.03 } };
+var STEP_TITLES = ['Separation angle', 'Frequency', 'Thin material', 'Depth and sensitivity', 'Frequency and thickness'];
+var SANDBOX_AFTER = 2; /* index of the step that unlocks the sandbox */
+/* a camera box around a set of points, padded, for zooming in on a detail */
+function boxAround(pts, pad, minSize) {
+  var r0 = 1e9, r1 = -1e9, x0 = 1e9, x1 = -1e9;
+  pts.forEach(function (p) { r0 = Math.min(r0, p.R); r1 = Math.max(r1, p.R); x0 = Math.min(x0, p.X); x1 = Math.max(x1, p.X); });
+  var w = Math.max(r1 - r0, x1 - x0, minSize || 0.01) * (pad || 0.25), cr = (r0 + r1) / 2, cx = (x0 + x1) / 2;
+  var hw = Math.max(r1 - r0, minSize || 0.01) / 2 + w, hh = Math.max(x1 - x0, minSize || 0.01) / 2 + w;
+  return { r0: cr - hw, r1: cr + hw, x0: cx - hh, x1: cx + hh };
+}
+
+/* ===================== small helpers ===================== */
+function $(id) { return document.getElementById(id); }
+function clone(o) { return o === undefined ? undefined : JSON.parse(JSON.stringify(o)); }
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function ease(t, k) { if (k === 'lin') return t; return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+function getP(o, k) { return k.split('.').reduce(function (a, s) { return a == null ? undefined : a[s]; }, o); }
+function setP(o, k, v) { var ks = k.split('.'), a = o; for (var i = 0; i < ks.length - 1; i++) { if (a[ks[i]] == null) a[ks[i]] = {}; a = a[ks[i]]; } a[ks[ks.length - 1]] = v; }
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function fmt(v, d) { return (Math.round(v * Math.pow(10, d)) / Math.pow(10, d)).toFixed(d); }
+var store = {
+  get: function () { try { return JSON.parse(localStorage.getItem('et-ft-progress') || '{}'); } catch (e) { return {}; } },
+  set: function (v) { try { localStorage.setItem('et-ft-progress', JSON.stringify(v)); } catch (e) {} }
+};
+
+/* ===================== timeline item constructors ===================== */
+/* T: tween a value, SET: assign at a moment, FN: custom per-frame function */
+function T(k, to, a, b, e, log) { return { k: k, to: to, a: a == null ? 0 : a, b: b == null ? 1 : b, e: e || 'io', log: !!log }; }
+function SET(k, v, at) { return { k: k, set: v, at: at || 0 }; }
+function say(text, anims, opt) { var o = { type: 'say', text: text, anims: anims || [] }; if (opt) for (var x in opt) o[x] = opt[x]; return o; }
+function ask(node) { return { type: 'ask', node: node }; }
+
+/* ===================== visual state ===================== */
+/* Everything on screen comes from one state object, S. The cross-section always shows the plate under the dot
+   (same material, frequency, thickness and lift-off), so the two views cannot drift apart.
+   Units: thickness and lift-off in mils, frequency in kHz. A null kHz means "use the frequency knob", S.freq.kHz. */
+function baseState() {
+  return {
+    cam: clone(CAM.locus), axes: 1, grid: 1, hiR: 0, hiX: 0, noteR: 1, noteX: 1, air: 1,
+    freq: { kHz: 100 },
+    dot: { show: 1, mat: 'cu', kHz: null, d: THICK, lift: 0, label: '' },
+    ghosts: {}, paths: {}, tdots: {}, angles: {},
+    xs: { show: 1, depthMax: 30, hl: 0 },
+    chips: 1, title: { show: 0, n: '', text: '' }
+  };
+}
+function matGhost(k, extra) { var g = { mat: k, label: MATS[k].short, show: 1 }; for (var x in extra) g[x] = extra[x]; return g; }
+function matGhosts(keys, extra) { var o = {}; keys.forEach(function (k) { o[k] = matGhost(k, extra); }); return o; }
+function condPath(extra) { var p = { type: 'cond', lift: 0, p0: PMIN, p1: PMAX, cls: 'p-locus', show: 1 }; for (var k in extra) p[k] = extra[k]; return p; }
+function thickPath(mat, kHz, extra) { var p = { type: 'thick', mat: mat, kHz: kHz, lift: 0, d0: 0.3, d1: 90, cls: 'p-thick', show: 1 }; for (var k in extra) p[k] = extra[k]; return p; }
+function liftPath(mat, kHz, extra) { var p = { type: 'lift', mat: mat, kHz: kHz, l0: 0, l1: 20, lEnd: 0, cls: 'p-lift', show: 1 }; for (var k in extra) p[k] = extra[k]; return p; }
+function evenList(a, b, step) { var o = []; for (var v = a; v <= b + 1e-9; v += step) o.push(Math.round(v * 1000) / 1000); return o; }
+
+var S = baseState();
+var dirty = true;
+
+/* ===================== rendering ===================== */
+var svg = $('plane'), xsSvg = $('xs');
+function mapper(W, H, cam) {
+  var pad = { l: 46, r: 12, t: 12, b: 38 };
+  var pw = Math.max(40, W - pad.l - pad.r), ph = Math.max(40, H - pad.t - pad.b);
+  var s = Math.min(pw / (cam.r1 - cam.r0), ph / (cam.x1 - cam.x0));
+  var cr = (cam.r0 + cam.r1) / 2, cx = (cam.x0 + cam.x1) / 2, ox = pad.l + pw / 2, oy = pad.t + ph / 2;
+  return {
+    s: s, pad: pad, pw: pw, ph: ph, W: W, H: H,
+    px: function (R) { return ox + (R - cr) * s; }, py: function (X) { return oy - (X - cx) * s; },
+    Rmin: cr - pw / 2 / s, Rmax: cr + pw / 2 / s, Xmin: cx - ph / 2 / s, Xmax: cx + ph / 2 / s
+  };
+}
+function kOf(st, o) { return o.kHz != null ? o.kHz : st.freq.kHz; }
+function zOf(st, o) { return Zm(MATS[o.mat].iacs, kOf(st, o), o.d == null ? THICK : o.d, o.lift || 0); }
+function dotPos(st) { return zOf(st, st.dot); }
+/* points on a fixed grid plus the exact ends, so cached model values are reused while a path grows */
+function gridPts(a, b, step) {
+  var lo = Math.min(a, b), hi = Math.max(a, b), mid = [];
+  for (var k = Math.ceil(lo / step); k * step < hi; k++) if (k * step > lo) mid.push(k * step);
+  if (b < a) mid.reverse();
+  return [a].concat(mid, [b]);
+}
+function pathPoints(st, p) {
+  var pts = [], k, ia;
+  if (p.type === 'cond') {
+    gridPts(Math.log(p.p0), Math.log(p.pEnd != null ? p.pEnd : p.p1), 1 / 24).forEach(function (u) { pts.push(Zp(Math.exp(u), p.lift)); });
+  } else if (p.type === 'thick') {
+    k = kOf(st, p); ia = MATS[p.mat].iacs;
+    gridPts(Math.log(p.d0), Math.log(p.dEnd != null ? p.dEnd : p.d1), 1 / 30).forEach(function (u) { pts.push(Zm(ia, k, Math.exp(u), p.lift)); });
+  } else if (p.type === 'lift') {
+    k = kOf(st, p); ia = MATS[p.mat].iacs;
+    gridPts(p.l0, p.lEnd != null ? p.lEnd : p.l1, 0.5).forEach(function (l) { pts.push(Zm(ia, k, THICK, l)); });
+  } else if (p.type === 'seg') {
+    var pr = p.prog == null ? 1 : p.prog;
+    pts.push({ R: p.R0, X: p.X0 }); pts.push({ R: lerp(p.R0, p.R1, pr), X: lerp(p.X0, p.X1, pr) });
+  }
+  return pts;
+}
+function polyline(pts, m) { return pts.map(function (q, i) { return (i ? 'L' : 'M') + m.px(q.R).toFixed(1) + ' ' + m.py(q.X).toFixed(1); }).join(''); }
+function angleMarkup(P, dirs, m, opacity) {
+  var x = m.px(P.R), y = m.py(P.X), L = 44, r = 24;
+  /* near the air point both directions aim at the axis; flip them (same angle) so the marker sits in open space */
+  var sg = P.X > 0.75 ? -1 : 1;
+  var u1 = { x: sg * dirs.lift.R, y: -sg * dirs.lift.X }, u2 = { x: sg * dirs.loc.R, y: -sg * dirs.loc.X };
+  var a1 = { x: x + u1.x * r, y: y + u1.y * r }, a2 = { x: x + u2.x * r, y: y + u2.y * r };
+  var sweep = (u1.x * u2.y - u1.y * u2.x) > 0 ? 1 : 0;
+  var bx = u1.x + u2.x, by = u1.y + u2.y, bl = Math.hypot(bx, by) || 1;
+  var lx = x + bx / bl * (L + 14), ly = y + by / bl * (L + 14);
+  return '<g opacity="' + opacity + '">' +
+    '<line x1="' + x + '" y1="' + y + '" x2="' + (x + u1.x * L) + '" y2="' + (y + u1.y * L) + '" style="stroke:var(--lift);stroke-width:2.5" stroke-dasharray="4 3"/>' +
+    '<line x1="' + x + '" y1="' + y + '" x2="' + (x + u2.x * L) + '" y2="' + (y + u2.y * L) + '" style="stroke:var(--locus);stroke-width:2.5" stroke-dasharray="4 3"/>' +
+    '<path d="M' + a1.x + ' ' + a1.y + 'A' + r + ' ' + r + ' 0 0 ' + sweep + ' ' + a2.x + ' ' + a2.y + '" style="fill:none;stroke:var(--ink);stroke-width:1.5"/>' +
+    '<text class="t-ang" x="' + lx + '" y="' + (ly + 4) + '" text-anchor="middle">' + Math.round(dirs.deg) + '&deg;</text></g>';
+}
+function niceStep(s) {
+  var c = [0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.25, 0.5];
+  for (var i = 0; i < c.length; i++) if (c[i] * s >= 44) return c[i];
+  return 0.5;
+}
+/* keeps labels from piling up: each label tries its own spot, then steps down or up until it is clear of earlier ones */
+function makePlacer() {
+  var boxes = [];
+  function hit(x, y, w, h) { for (var j = 0; j < boxes.length; j++) { var b = boxes[j]; if (x < b.x + b.w && x + w > b.x && y < b.y + b.h && y + h > b.y) return true; } return false; }
+  return {
+    block: function (x, y, w, h) { boxes.push({ x: x, y: y, w: w, h: h }); },
+    place: function (x, y, text, anchor) {
+      var w = text.length * 6.9 + 4, h = 14, x0 = anchor === 'end' ? x - w : (anchor === 'middle' ? x - w / 2 : x);
+      var tries = [0, 13, -13, 26, -26, 39, -39, 52, -52, 65, -65], dy = 0;
+      for (var i = 0; i < tries.length; i++) if (!hit(x0, y + tries[i] - 11, w, h)) { dy = tries[i]; break; }
+      boxes.push({ x: x0, y: y + dy - 11, w: w, h: h });
+      return y + dy;
+    }
+  };
+}
+function fmtK(k) {
+  if (k >= 999.5) { var v = Math.round(k / 10) / 100; return (v >= 10 ? fmt(v, 0) : String(v)) + ' MHz'; }
+  return (k >= 99.95 ? fmt(k, 0) : String(Math.round(k * 10) / 10)) + ' kHz';
+}
+function fmtMils(v) { return v >= 100 ? fmt(v, 0) : (v >= 10 ? fmt(v, 1) : fmt(v, 2)); }
+function render() { renderPlane(S); renderXS(S); renderHud(S); }
+function renderPlane(st) {
+  var W = svg.clientWidth, H = svg.clientHeight;
+  if (!W || !H) return;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  var m = mapper(W, H, st.cam), out = [], pl = makePlacer(), labels = [];
+  var L = m.pad.l, T0 = m.pad.t, Rr = m.pad.l + m.pw, B = m.pad.t + m.ph;
+  out.push('<defs><clipPath id="clipA"><rect x="' + L + '" y="' + T0 + '" width="' + m.pw + '" height="' + m.ph + '"/></clipPath></defs>');
+  /* grid */
+  var step = niceStep(m.s), dec = step < 0.01 ? 3 : (step < 0.1 || step === 0.25 ? 2 : 1);
+  if (st.grid > 0) {
+    var g = '<g opacity="' + st.grid + '">';
+    var rs = Math.max(0, Math.ceil(m.Rmin / step) * step), xs0 = Math.max(0, Math.ceil(m.Xmin / step) * step);
+    var yTop = Math.max(T0, m.py(m.Xmax)), yBot = Math.min(B, m.py(0)), xL = Math.max(L, m.px(0));
+    for (var r = rs; r <= m.Rmax + 1e-9; r += step) { var X = m.px(r); g += '<line class="gl" x1="' + X + '" y1="' + yTop + '" x2="' + X + '" y2="' + yBot + '"/>'; g += '<text class="t-tick" x="' + X + '" y="' + (B + 14) + '" text-anchor="middle">' + fmt(r, dec) + '</text>'; }
+    for (var xx = xs0; xx <= m.Xmax + 1e-9; xx += step) { var Y = m.py(xx); g += '<line class="gl" x1="' + xL + '" y1="' + Y + '" x2="' + Rr + '" y2="' + Y + '"/>'; g += '<text class="t-tick" x="' + (L - 6) + '" y="' + (Y + 4) + '" text-anchor="end">' + fmt(xx, dec) + '</text>'; }
+    out.push(g + '</g>');
+  }
+  /* axes */
+  if (st.axes > 0) {
+    var ox = m.px(0), oy = m.py(0), a = st.axes;
+    out.push('<g clip-path="url(#clipA)"><line class="ax" x1="' + ox + '" y1="' + oy + '" x2="' + m.px(m.Rmax) + '" y2="' + oy + '"/>' +
+      '<line class="ax" x1="' + ox + '" y1="' + oy + '" x2="' + ox + '" y2="' + m.py(m.Xmax) + '"/></g>');
+    var narrow = m.ph < 420;
+    out.push('<text class="t-axis" opacity="' + a + '" x="' + (L + m.pw / 2) + '" y="' + (m.H - 6) + '" text-anchor="middle">' + esc('Resistance R' + (st.noteR ? ' (heat lost)' : '') + ' →') + '</text>');
+    out.push('<text class="t-axis" opacity="' + a + '" transform="translate(13 ' + (T0 + m.ph / 2) + ') rotate(-90)" text-anchor="middle">' + esc((narrow ? 'Reactance X' : 'Inductive reactance X') + (st.noteX ? ' (energy stored)' : '') + ' →') + '</text>');
+  }
+  var body = '<g clip-path="url(#clipA)">';
+  /* the dot first reserves its spot so labels steer around it */
+  var D = st.dot.show > 0 ? dotPos(st) : null;
+  if (D) pl.block(m.px(D.R) - 10, m.py(D.X) - 10, 20, 20);
+  /* air point */
+  if (st.air > 0) {
+    body += '<g opacity="' + st.air + '"><circle cx="' + m.px(0) + '" cy="' + m.py(1) + '" r="6" style="fill:var(--panel);stroke:var(--ink);stroke-width:2"/></g>';
+    pl.block(m.px(0) - 7, m.py(1) - 7, 14, 14);
+    labels.push({ x: m.px(0) + 9, y: m.py(1) - 9, text: 'air point', px: m.px(0), py: m.py(1), op: st.air });
+  }
+  /* paths */
+  Object.keys(st.paths).forEach(function (id) {
+    var p = st.paths[id]; if (!p || !(p.show > 0)) return;
+    var pts = pathPoints(st, p);
+    body += '<path d="' + polyline(pts, m) + '" class="' + (p.cls || 'p-locus') + '" opacity="' + p.show + '"/>';
+    if (p.label) {
+      var q = pts[p.lat === 'start' ? 0 : pts.length - 1];
+      labels.push({ x: m.px(q.R) + (p.dx == null ? 8 : p.dx), y: m.py(q.X) + (p.dy || 0), text: p.label, anchor: p.anchor, color: p.color, op: p.show });
+    }
+  });
+  /* thickness dots */
+  Object.keys(st.tdots).forEach(function (id) {
+    var t = st.tdots[id]; if (!t || !(t.show > 0)) return;
+    var k = kOf(st, t), ia = MATS[t.mat].iacs;
+    t.list.forEach(function (mils, i) {
+      if (t.upTo != null && mils > t.upTo + 1e-6) return;
+      var P = Zm(ia, k, mils, t.lift || 0), x = m.px(P.R), y = m.py(P.X);
+      body += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (t.r || 3) + '" style="fill:' + (t.color || 'var(--thk1)') + ';stroke:var(--panel);stroke-width:1" opacity="' + t.show + '"/>';
+      var name = t.names ? t.names[i] : (t.labels && t.labels.indexOf(mils) >= 0 ? mils + ' mil' : '');
+      if (name) labels.push({ x: x + (t.ldx == null ? 7 : t.ldx), y: y + (t.ldy == null ? 4 : t.ldy), text: name, anchor: t.anchor, px: x, py: y, color: t.color, op: t.show, small: 1 });
+    });
+  });
+  /* ghosts: material markers and helpers */
+  Object.keys(st.ghosts).forEach(function (id) {
+    var gh = st.ghosts[id]; if (!gh || !(gh.show > 0)) return;
+    var P = gh.R != null ? { R: gh.R, X: gh.X } : zOf(st, gh), x = m.px(P.R), y = m.py(P.X);
+    body += '<circle cx="' + x + '" cy="' + y + '" r="' + (gh.big ? 6.5 : 4.5) + '" style="fill:' + (gh.fill || 'var(--panel)') + ';stroke:' + (gh.stroke || 'var(--ink)') + ';stroke-width:2" opacity="' + gh.show + '"/>';
+    if (gh.label) labels.push({ x: x + (gh.dx == null ? 9 : gh.dx), y: y + (gh.dy == null ? 4 : gh.dy), text: gh.label, anchor: gh.anchor, px: x, py: y, op: gh.show });
+  });
+  /* angle markers */
+  Object.keys(st.angles).forEach(function (id) {
+    var an = st.angles[id]; if (!an || !(an.show > 0)) return;
+    var k = kOf(st, an), ia = MATS[an.mat].iacs;
+    body += angleMarkup(Zm(ia, k, THICK, 0), sepDirs(ia, k), m, an.show);
+  });
+  /* the dot */
+  if (D) {
+    var dx = m.px(D.R), dy = m.py(D.X);
+    body += '<g opacity="' + st.dot.show + '"><circle cx="' + dx + '" cy="' + dy + '" r="13" style="fill:var(--dot)" opacity="0.18"/><circle cx="' + dx + '" cy="' + dy + '" r="7" style="fill:var(--dot);stroke:var(--panel);stroke-width:2"/></g>';
+    if (st.dot.label) labels.unshift({ x: dx + 12, y: dy + 4, text: st.dot.label, px: dx, py: dy, op: st.dot.show, color: 'var(--dot)' });
+  }
+  /* labels, placed so they do not overlap; a thin leader line joins any label pushed away from its point */
+  labels.forEach(function (lb) {
+    var y = pl.place(lb.x, lb.y, lb.text, lb.anchor);
+    if (lb.px != null && Math.abs(y - lb.y) > 6) body += '<line x1="' + lb.px + '" y1="' + lb.py + '" x2="' + (lb.anchor === 'end' ? lb.x + 2 : lb.x - 2) + '" y2="' + (y - 4) + '" style="stroke:var(--ink-faded);stroke-width:1" opacity="' + lb.op + '"/>';
+    body += '<text class="t-lbl' + (lb.small ? ' t-sm' : '') + '" x="' + lb.x + '" y="' + y + '" text-anchor="' + (lb.anchor || 'start') + '" opacity="' + lb.op + '"' + (lb.color ? ' style="fill:' + lb.color + '"' : '') + '>' + esc(lb.text) + '</text>';
+  });
+  body += '</g>';
+  out.push(body);
+  svg.innerHTML = out.join('');
+}
+function niceMils(span, px) { var c = [1, 2, 5, 10, 20, 25, 50, 100, 200, 500]; for (var i = 0; i < c.length; i++) if (c[i] / span * px >= 24) return c[i]; return 1000; }
+/* the cross-section: coil, plate, eddy current density fading with depth, standard-depth marks and the back wall */
+function renderXS(st) {
+  var W = xsSvg.clientWidth, H = xsSvg.clientHeight;
+  if (!W || !H) return;
+  xsSvg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  if (!(st.xs.show > 0)) { xsSvg.innerHTML = ''; return; }
+  var d = st.dot, mat = MATS[d.mat], k = kOf(st, d), dl = deltaMils(mat.iacs, k), Dm = st.xs.depthMax;
+  var L = 46, Rx = W - 10, top = 44, bot = H - 8, Hp = bot - top, sc = Hp / Dm, t = performance.now() / 1000;
+  var thick = !(d.d < Dm), dEnd = thick ? Dm : d.d, yB = top + dEnd * sc, pw = Rx - L;
+  var profW = Math.min(84, pw * 0.2), profX = Rx - profW - 8, cx = L + (profX - 14 - L) * 0.55, cw = Math.min(96, pw * 0.28);
+  var h = '<defs><linearGradient id="jg" x1="0" y1="0" x2="0" y2="1">';
+  for (var i = 0; i <= 12; i++) h += '<stop offset="' + (i / 12).toFixed(3) + '" style="stop-color:var(--eddy);stop-opacity:' + (0.85 * Math.exp(-dEnd * i / 12 / dl)).toFixed(3) + '"/>';
+  h += '</linearGradient></defs>';
+  /* plate: material tint, then the current shading on top */
+  h += '<rect x="' + L + '" y="' + top + '" width="' + pw + '" height="' + (yB - top) + '" style="fill:' + mat.color + '" opacity="0.38"/>';
+  h += '<rect x="' + L + '" y="' + top + '" width="' + (profX - 12 - L) + '" height="' + (yB - top) + '" fill="url(#jg)"/>';
+  if (thick) h += '<text class="t-xs" x="' + (Rx - 4) + '" y="' + (bot - 3) + '" text-anchor="end">plate continues</text>';
+  else if (bot - yB > 36) h += '<text class="t-xs" x="' + (profX - 16) + '" y="' + (bot - 4) + '" text-anchor="end">air behind the plate</text>';
+  /* eddy current symbols under the coil (out of the page on one side, into it on the other), fading with depth */
+  [0.3, 0.9, 1.6, 2.4].forEach(function (f, j) {
+    var zz = f * dl; if (zz > dEnd || zz > Dm) return;
+    var y = top + zz * sc, a = Math.exp(-f) * (0.8 + 0.2 * Math.sin(t * 4 + j));
+    h += '<g opacity="' + a.toFixed(3) + '" style="stroke:var(--eddy);stroke-width:1.8;fill:none">' +
+      '<circle cx="' + (cx - cw * 0.38) + '" cy="' + y + '" r="5.5"/><circle cx="' + (cx - cw * 0.38) + '" cy="' + y + '" r="1.6" style="fill:var(--eddy)"/>' +
+      '<circle cx="' + (cx + cw * 0.38) + '" cy="' + y + '" r="5.5"/><path d="M' + (cx + cw * 0.38 - 3.5) + ' ' + (y - 3.5) + 'l7 7M' + (cx + cw * 0.38 + 3.5) + ' ' + (y - 3.5) + 'l-7 7"/></g>';
+  });
+  /* standard-depth marks: 1, 2 and 3 standard depths, with the current density left at each */
+  var crowd = dl * sc < 15, lastN = 0;
+  for (var n = 1; n <= 3; n++) {
+    var zz = n * dl; if (zz > Dm) break;
+    var y = top + zz * sc, inMetal = zz <= dEnd + 1e-9, op = inMetal ? 0.95 : 0.35, strong = st.xs.hl > 0 ? 1 + st.xs.hl : 1;
+    lastN = n;
+    h += '<line x1="' + L + '" y1="' + y + '" x2="' + (profX + profW) + '" y2="' + y + '" style="stroke:var(--ink-soft);stroke-width:' + (1.2 * strong) + '" stroke-dasharray="5 4" opacity="' + op + '"/>';
+    if (!crowd) h += '<text class="t-xs" x="' + (L + 6) + '" y="' + (y - 3) + '" opacity="' + op + '">' + n + ' δ' + (inMetal ? ' · ' + [37, 14, 5][n - 1] + '%' : '') + '</text>';
+  }
+  /* marks too close to label one by one get a single label below them */
+  if (crowd && lastN) h += '<text class="t-xs" x="' + (L + 6) + '" y="' + (top + lastN * dl * sc + 12) + '">' + ['', '1 δ', '1 and 2 δ', '1, 2 and 3 δ'][lastN] + '</text>';
+  /* back wall */
+  if (!thick) {
+    h += '<line x1="' + L + '" y1="' + yB + '" x2="' + Rx + '" y2="' + yB + '" style="stroke:var(--ink);stroke-width:2.5"/>';
+    var above = yB - top > 16;
+    h += '<text class="t-xs b" x="' + (profX - 16) + '" y="' + (above ? yB - 5 : yB + 13) + '" text-anchor="end">back wall: ' + fmtMils(d.d) + ' mils</text>';
+  }
+  /* current density versus depth, cut off at the back wall */
+  var pp = [];
+  for (var q = 0; q <= 40; q++) { var z2 = dEnd * q / 40; pp.push((profX + profW * Math.exp(-z2 / dl)).toFixed(1) + ',' + (top + z2 * sc).toFixed(1)); }
+  h += '<line x1="' + profX + '" y1="' + top + '" x2="' + profX + '" y2="' + bot + '" style="stroke:var(--ink-faded);stroke-width:1"/>';
+  h += '<polyline points="' + pp.join(' ') + '" style="fill:none;stroke:var(--eddy);stroke-width:2.2"/>';
+  if (!thick) h += '<line x1="' + (profX + profW * Math.exp(-dEnd / dl)).toFixed(1) + '" y1="' + yB + '" x2="' + profX + '" y2="' + yB + '" style="stroke:var(--eddy);stroke-width:2.2"/>';
+  h += '<text class="t-xs" x="' + (profX + profW) + '" y="' + (top - 5) + '" text-anchor="end">current density</text>';
+  /* surface */
+  h += '<line x1="' + L + '" y1="' + top + '" x2="' + Rx + '" y2="' + top + '" style="stroke:var(--ink);stroke-width:1.5"/>';
+  /* depth scale in mils */
+  var stp = niceMils(Dm, Hp);
+  h += '<text class="t-tick" x="' + (L - 6) + '" y="' + (top - 6) + '" text-anchor="end">mils</text>';
+  for (var v = 0; v <= Dm + 1e-9; v += stp) { var yv = top + v * sc; h += '<line x1="' + (L - 4) + '" y1="' + yv + '" x2="' + L + '" y2="' + yv + '" style="stroke:var(--ink-faded)"/><text class="t-tick" x="' + (L - 6) + '" y="' + (yv + 4) + '" text-anchor="end">' + v + '</text>'; }
+  /* coil, held above the plate by the wear face plus any lift-off */
+  var gap = (COIL.wear / MIL + (d.lift || 0)) * sc, gp = clamp(gap, 2, top - 16), cb = top - gp;
+  h += '<line x1="' + cx + '" y1="0" x2="' + cx + '" y2="' + (cb - 12) + '" style="stroke:var(--coil);stroke-width:3"/>';
+  h += '<rect x="' + (cx - cw / 2) + '" y="' + (cb - 12) + '" width="' + cw + '" height="12" rx="3" style="fill:var(--panel);stroke:var(--coil);stroke-width:2"/>';
+  for (var w = 0; w < 7; w++) { var xw = cx - cw / 2 + 6 + w * (cw - 12) / 6.5; h += '<line x1="' + xw + '" y1="' + (cb - 10) + '" x2="' + (xw + 4) + '" y2="' + (cb - 2) + '" style="stroke:var(--coil);stroke-width:1.4"/>'; }
+  h += '<text class="t-xs b" x="8" y="14">' + esc(mat.short + ' at ' + fmtK(k)) + '</text>';
+  xsSvg.innerHTML = h;
+}
+function renderHud(st) {
+  var d = st.dot, k = kOf(st, d), dl = deltaMils(MATS[d.mat].iacs, k);
+  $('hud').classList.toggle('hidden', !(st.chips > 0.5 && d.show > 0.5));
+  $('freqVal').textContent = fmtK(k);
+  $('depthVal').textContent = fmtMils(dl) + ' mils (' + fmt(dl * MIL, dl * MIL < 1 ? 2 : 1) + ' mm)';
+  $('thickVal').textContent = d.d >= THICK ? 'thick plate' : fmtMils(d.d) + ' mils = ' + fmt(d.d / dl, 2) + ' δ';
+  $('liftChip').classList.toggle('hidden', !(d.lift > 0.05));
+  $('liftVal').textContent = fmtMils(d.lift || 0) + ' mils';
+  var tc = $('titleCard');
+  tc.classList.toggle('hidden', !(st.title.show > 0.02));
+  tc.style.opacity = st.title.show;
+  $('titleEyebrow').textContent = st.title.n; $('titleText').textContent = st.title.text;
+}
+
+/* ===================== voice-over: pre-recorded Kokoro clips =====================
+   Every spoken line is a clip recorded offline with Kokoro v1.0, voice af_heart, speed 1.0
+   (tools/voiceover/build_lesson_audio.cjs). A clip's file name is a hash of its caption text,
+   and VO maps that hash to the clip length in seconds, so timing matches the voice even when muted. */
+var VO_DIR = 'video/audio/ET-Frequency-and-Thickness/';
+/*VO-MANIFEST*/var VO = {"39474350":4.87,"55993790":6.1,"acd6c01d":2.06,"3873ab18":8.16,"59e29d4a":10.25,"203819d2":9.84,"c8b9d04d":9.84,"7ee962a5":7.94,"b80a1f4f":12.67,"39cd7b30":9.58,"44b27a99":4.34,"ef4bf211":2.98,"39f29c40":3.31,"4f6f902e":12.53,"ecfc2617":1.63,"13e7850d":9.07,"4c70a1fb":9.05,"1893d956":4.85,"ed3fbea7":8.42,"e526b948":6.38,"7de6cd72":6.5,"d732be5f":7.82,"e7080e78":6.41,"f6ee8531":4.22,"5d0bf690":3.22,"40f12636":4.85,"5faf0633":5.42,"1124bb4a":1.73,"d587c4b4":8.81,"6c452818":9.17,"2cc82bc9":5.23,"f9f8b827":10.01,"0ba132aa":14.47,"a4c63fa2":7.06,"fd52a912":6.24,"ad363015":6.31,"f202b48c":5.23,"f3a13a00":6.46,"ee01f1ef":5.14,"4cee1419":10.3,"9da6653d":14.06,"19b5f0a1":7.34,"d31578ce":2.23,"9cbb31e6":6.19,"f349ef92":6.58,"50c5f449":12.53,"e533cdfb":8.3,"e43dd21a":7.78,"f5e4fd28":3.29,"3f21f5dc":9.5,"2a49ca12":12.79,"bc880d43":8.69,"66a14236":10.54,"362fa0cf":2.28,"989f0b95":14.42,"f69b3837":8.23,"23e5bc25":14.57,"165ad86d":12.14,"73662f8c":5.45,"332d7543":4.49,"ede8c1fd":6.34,"35e8ed7b":11.9,"6c4f7139":5.09};/*END-VO-MANIFEST*/
+var muted = false, speed = 1, speechStarted = false, curClip = null, prefetched = {};
+var voiceEl = typeof Audio !== 'undefined' ? new Audio() : null;
+if (voiceEl) voiceEl.preload = 'auto';
+function clipId(text) {
+  var h = 0x811c9dc5;
+  for (var i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return ('0000000' + h.toString(16)).slice(-8);
+}
+/* what the voice actually says: units and symbols spelled out */
+function speechText(t) {
+  return t.replace(/’/g, "'").replace(/%IACS/g, ' percent I A C S').replace(/\bkHz\b/g, 'kilohertz').replace(/\bMHz\b/g, 'megahertz')
+    .replace(/\b304\b/g, 'three oh four').replace(/\b1100\b/g, 'eleven hundred').replace(/\b2024\b/g, 'twenty twenty four').replace(/Ti-6Al-4V/g, 'titanium six four')
+    .replace(/\bStep (\d)\b/g, function (_, d) { return 'Step ' + ['zero', 'one', 'two', 'three', 'four', 'five', 'six'][+d]; });
+}
+function clipDur(text) { return text ? VO[clipId(text)] || 0 : 0; }
+function stopSpeech() { curClip = null; if (voiceEl) try { voiceEl.pause(); } catch (e) {} }
+function speak(text, onEnd) {
+  stopSpeech();
+  if (muted || !voiceEl || !text) return false;
+  var id = clipId(text);
+  if (!VO[id]) return false;
+  var token = {}; curClip = token; speechStarted = false;
+  var fin = function () { if (curClip === token) { curClip = null; onEnd(); } };
+  voiceEl.onplaying = function () { if (curClip === token) speechStarted = true; };
+  voiceEl.onended = fin; voiceEl.onerror = fin;
+  voiceEl.defaultPlaybackRate = speed;
+  voiceEl.src = VO_DIR + id + '.mp3';
+  voiceEl.playbackRate = speed;
+  var pr = voiceEl.play(); if (pr && pr.catch) pr.catch(fin);
+  return true;
+}
+function voiceProgress() {
+  return (curClip && speechStarted && voiceEl.duration > 0) ? voiceEl.currentTime / voiceEl.duration : -1;
+}
+function prefetch(text) {
+  if (!text || muted || typeof Audio === 'undefined') return;
+  var id = clipId(text);
+  if (!VO[id] || prefetched[id]) return;
+  var a = new Audio(); a.preload = 'auto'; a.src = VO_DIR + id + '.mp3'; prefetched[id] = a;
+}
+/* iOS only lets audio play after a tap: play a silent clip on the Start tap to unlock the element */
+function unlockAudio() {
+  if (!voiceEl) return;
+  var b = new Uint8Array(44 + 800), v = new DataView(b.buffer), str = function (o, t) { for (var i = 0; i < t.length; i++) b[o + i] = t.charCodeAt(i); };
+  str(0, 'RIFF'); v.setUint32(4, 36 + 800, true); str(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); str(36, 'data'); v.setUint32(40, 800, true);
+  for (var i = 44; i < b.length; i++) b[i] = 128;
+  var bin = ''; for (var j = 0; j < b.length; j++) bin += String.fromCharCode(b[j]);
+  try { voiceEl.src = 'data:audio/wav;base64,' + btoa(bin); var p = voiceEl.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+}
+
+/* ===================== player: plays a list of 'say' items ===================== */
+var paused = false;
+var P = { items: null, i: 0, t: 0, dur: 1, onDone: null, speechDone: true, enterSnap: null, froms: null, applied: null, words: [], lastW: -2 };
+function durOf(it) {
+  var w = it.text ? it.text.split(/\s+/).length : 0, c = clipDur(it.text);
+  return Math.max(it.dur || 0, c ? c + 0.35 : w / 2.5 + 0.6);
+}
+function setCaption(text) {
+  var cap = $('caption');
+  if (!text) { P.words = []; return; }
+  P.words = []; var html = '', pos = 0;
+  text.split(/(\s+)/).forEach(function (tok) {
+    if (/^\s+$/.test(tok) || !tok) { html += tok; } else { P.words.push(pos); html += '<span class="w">' + esc(tok) + '</span>'; }
+    pos += tok.length;
+  });
+  cap.innerHTML = html; P.lastW = -2;
+}
+function updateCaption(p) {
+  if (!P.words.length) return;
+  var idx;
+  var vp = voiceProgress();
+  idx = Math.floor((vp >= 0 ? vp : p) * P.words.length * 1.02);
+  if (idx === P.lastW) return; P.lastW = idx;
+  var sp = $('caption').querySelectorAll('.w');
+  for (var j = 0; j < sp.length; j++) sp[j].classList.toggle('on', j <= idx);
+}
+function enterItem(fresh) {
+  var it = P.items[P.i];
+  if (fresh) P.enterSnap = clone(S); else S = clone(P.enterSnap);
+  P.applied = {};
+  P.froms = {};
+  it.anims.forEach(function (a, j) { if ('set' in a && a.at <= 0) { setP(S, a.k, clone(a.set)); P.applied[j] = 1; } });
+  /* chained tweens on one key: each starts where the previous one ends, and only runs once its window opens */
+  var lastTo = {};
+  P.first = {};
+  it.anims.forEach(function (a, j) {
+    if ('set' in a || a.fn) return;
+    if (a.k in lastTo) P.froms[j] = clone(lastTo[a.k]); else { P.froms[j] = clone(getP(S, a.k)); P.first[j] = 1; }
+    if (P.froms[j] !== undefined) lastTo[a.k] = typeof a.to === 'object' ? Object.assign({}, P.froms[j], a.to) : a.to;
+  });
+  P.t = 0; P.real = 0; P.dur = durOf(it);
+  setCaption(it.text);
+  P.speechDone = true;
+  if (!paused) startItemSpeech();
+  if (it.onEnter) it.onEnter();
+  var nx = P.items[P.i + 1] || (P.items.length === 1 && Lesson.items[Lesson.idx + 1]);
+  if (nx) prefetch(nx.type === 'ask' ? nx.node.q : nx.text);
+  dirty = true;
+}
+function startItemSpeech() {
+  var it = P.items[P.i];
+  P.speechDone = !speak(it.text, function () { P.speechDone = true; });
+}
+function frameItem(p) {
+  var it = P.items[P.i];
+  it.anims.forEach(function (a, j) {
+    if ('set' in a) { if (!P.applied[j] && p >= a.at) { setP(S, a.k, clone(a.set)); P.applied[j] = 1; } return; }
+    if (a.fn) { a.fn(S, p); return; }
+    var q = ease(clamp((p - a.a) / Math.max(1e-6, a.b - a.a), 0, 1), a.e), from = P.froms[j];
+    if (from == null || (!P.first[j] && p < a.a)) return;
+    if (typeof a.to === 'object') {
+      var o = getP(S, a.k) || {};
+      for (var kk in a.to) o[kk] = a.log ? Math.exp(lerp(Math.log(from[kk]), Math.log(a.to[kk]), q)) : lerp(from[kk], a.to[kk], q);
+      setP(S, a.k, o);
+    } else setP(S, a.k, a.log ? Math.exp(lerp(Math.log(from), Math.log(a.to), q)) : lerp(from, a.to, q));
+  });
+}
+function playerStart(items, onDone) {
+  P.items = items; P.i = 0; P.onDone = onDone; enterItem(true); updateControls();
+}
+function playerStop() { P.items = null; stopSpeech(); updateControls(); }
+function playerTick(dt) {
+  if (!P.items || paused) return;
+  P.t += dt * speed; P.real += dt;
+  /* some browsers silently drop an utterance; if it never starts, fall back to caption timing */
+  if (!P.speechDone && !speechStarted && P.real > 6) P.speechDone = true;
+  var p = Math.min(1, P.t / P.dur);
+  frameItem(p); updateCaption(p); dirty = true;
+  if (p >= 1 && (P.speechDone || muted || P.t > P.dur * 2.2 + 4)) {
+    frameItem(1); updateCaption(1);
+    P.i++;
+    if (P.i < P.items.length) enterItem(true);
+    else { var cb = P.onDone; P.items = null; updateControls(); if (cb) cb(); }
+  }
+  if (Lesson.mode === 'play' && P.items) {
+    var n = Lesson.items.length, frac = (Lesson.idx + p) / n;
+    $('progBar').style.width = (frac * 100).toFixed(1) + '%';
+  }
+}
+function setPaused(v) {
+  paused = v;
+  if (v) stopSpeech();
+  else if (P.items) enterItem(false);
+  updateControls();
+}
+
+/* ===================== lesson controller ===================== */
+var progress = store.get();
+progress.done = progress.done || [];
+if (/[?&]unlock=all/.test(location.search)) { progress.done = STEP_TITLES.map(function (_, i) { return i; }); }
+var Lesson = { step: -1, items: [], idx: 0, sceneIdx: 0, sceneSnap: null, mode: 'idle', started: false };
+
+function runStep(n) {
+  playerStop(); hideAsk();
+  Lesson.step = n; S = STEPS[n].setup(); Lesson.items = STEPS[n].items; Lesson.idx = 0;
+  Lesson.mode = 'play';
+  renderChapters(); renderInfo();
+  $('progBar').style.width = '0%';
+  if (paused) setPaused(false);
+  advance();
+}
+function advance() {
+  var items = Lesson.items;
+  if (Lesson.idx >= items.length) { stepDone(); return; }
+  if (Lesson.idx === 0 || items[Lesson.idx - 1].type === 'ask') { Lesson.sceneIdx = Lesson.idx; Lesson.sceneSnap = clone(S); }
+  var it = items[Lesson.idx];
+  if (it.type === 'ask') {
+    Lesson.mode = 'ask';
+    $('progBar').style.width = ((Lesson.idx / items.length) * 100).toFixed(1) + '%';
+    showAsk(it.node, function () { hideAsk(); Lesson.mode = 'play'; Lesson.idx++; advance(); }, { top: true });
+  } else {
+    Lesson.mode = 'play';
+    playerStart([it], function () { Lesson.idx++; advance(); });
+  }
+  updateControls();
+}
+function replaySegment() {
+  if (Lesson.mode === 'idle' || !Lesson.sceneSnap) return;
+  playerStop(); hideAsk();
+  S = clone(Lesson.sceneSnap); Lesson.idx = Lesson.sceneIdx;
+  if (paused) setPaused(false);
+  advance();
+}
+function stepDone() {
+  var n = Lesson.step;
+  var fresh = progress.done.indexOf(n) < 0;
+  if (fresh) progress.done.push(n);
+  store.set(progress);
+  if (n === SANDBOX_AFTER && fresh) toast('Sandbox mode unlocked. Try it from the tabs at the top.');
+  renderChapters(); renderTabs();
+  if (n < STEP_TITLES.length - 1) { Lesson.mode = 'between'; setTimeout(function () { if (Lesson.mode === 'between' && Lesson.step === n) runStep(n + 1); }, 900); }
+  else { Lesson.mode = 'finished'; $('progBar').style.width = '100%'; renderInfo(); updateControls(); toast('Lesson complete. Recap and Quiz are unlocked.'); }
+}
+function maxReachable() { var m = 0; for (var i = 0; i < STEP_TITLES.length; i++) if (progress.done.indexOf(i) >= 0) m = i + 1; return Math.min(STEP_TITLES.length - 1, m); }
+
+/* ===================== checkpoint (ask) UI ===================== */
+var reasonText = '';
+var askState = null;
+function wide() { return window.matchMedia('(min-width: 921px)').matches; }
+function hideAsk() { $('askCard').classList.add('hidden'); $('askCard').innerHTML = ''; askState = null; $('infoCard').classList.remove('hidden'); }
+function showAsk(node, cont, opt) {
+  opt = opt || {};
+  playerStop();
+  if (opt.top && !opt.tried) reasonText = '';
+  askState = { node: node, cont: cont, tried: opt.tried || [], sel: -1, snap: clone(S), opt: opt };
+  var c = $('askCard');
+  c.classList.remove('hidden');
+  $('infoCard').classList.add('hidden');
+  var html = '<div class="eyebrow">' + esc(node.label || 'Checkpoint') + '</div><h2>' + esc(node.q) + '</h2>';
+  if (opt.note) html += '<p class="muted">' + esc(opt.note) + '</p>';
+  html += '<div class="opts" role="radiogroup" aria-label="Answer choices">';
+  node.opts.forEach(function (o, i) {
+    var tried = askState.tried.indexOf(i) >= 0;
+    html += '<button class="opt' + (tried ? ' tried' : '') + '" role="radio" aria-checked="false" data-i="' + i + '"' + (tried ? ' disabled' : '') + '><span class="k">' + 'ABCD'[i] + '</span><span>' + esc(o.t) + '</span></button>';
+  });
+  html += '</div>';
+  if (node.reason !== false) html += '<label class="muted" for="reasonBox">Your reasoning (optional)</label><textarea id="reasonBox" placeholder="Why do you think so?"></textarea>';
+  html += '<div class="row"><button class="btn" id="checkBtn" disabled>Check answer</button></div><div id="fbArea"></div>';
+  c.innerHTML = html;
+  var rb = $('reasonBox'); if (rb) { rb.value = reasonText; rb.addEventListener('input', function () { reasonText = rb.value; }); }
+  c.querySelectorAll('.opt').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (askState.locked) return;
+      askState.sel = +b.dataset.i;
+      c.querySelectorAll('.opt').forEach(function (x) { x.setAttribute('aria-checked', x === b ? 'true' : 'false'); });
+      $('checkBtn').disabled = false;
+    });
+  });
+  $('checkBtn').addEventListener('click', checkAnswer);
+  setCaption(node.q);
+  var sp = $('caption').querySelectorAll('.w'); for (var j = 0; j < sp.length; j++) sp[j].classList.add('on');
+  speak(node.q, function () {});
+  node.opts.forEach(function (o) { prefetch(o.fb); });
+  updateControls();
+  if (!window.matchMedia('(min-width: 921px)').matches && Lesson.started) setTimeout(function () { c.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 80);
+}
+function checkAnswer() {
+  var st = askState; if (!st || st.sel < 0) return;
+  var node = st.node, o = node.opts[st.sel];
+  st.locked = true;
+  var c = $('askCard');
+  c.querySelectorAll('.opt').forEach(function (b) { b.disabled = true; if (+b.dataset.i === st.sel && o.ok) b.classList.add('right'); });
+  $('checkBtn').classList.add('hidden');
+  var rb = $('reasonBox'); if (rb) rb.disabled = true;
+  var notes = [];
+  var rt = (reasonText || '').trim();
+  if (rt && node.reason !== false) {
+    notes.push('You wrote: “' + rt.slice(0, 220) + (rt.length > 220 ? '…' : '') + '”');
+    (node.rules || []).forEach(function (r) { if (r.re.test(rt) && (!r.opts || r.opts.indexOf(st.sel) >= 0)) notes.push(r.note); });
+  }
+  $('fbArea').innerHTML = '<div class="fb ' + (o.ok ? 'good' : 'bad') + '"><span class="tag">' + (o.ok ? 'Correct' : 'Not quite') + '</span>' + esc(o.fb) +
+    notes.map(function (n) { return '<div class="note">' + esc(n) + '</div>'; }).join('') + '</div><div class="row" id="fbBtns"><span class="muted" id="fbWait">Watch the diagram&hellip;</span></div>';
+  var items = [say(o.fb, o.fbAnims || [])].concat(o.demo || []);
+  var snap = clone(S);
+  if (paused) paused = false;
+  if (!wide() && Lesson.started) $('video').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  playerStart(items, function () {
+    if (!o.ok && !o.keep) { S = snap; dirty = true; }
+    afterFeedback(st, o);
+  });
+}
+function afterFeedback(st, o) {
+  var node = st.node, btns = $('fbBtns'); if (!btns || askState !== st) return;
+  var b = document.createElement('button'); b.className = 'btn';
+  if (o.ok) {
+    if (node.next) { b.textContent = 'Next question →'; b.onclick = function () { showAsk(node.next, st.cont, {}); }; }
+    else { b.textContent = st.opt.top ? 'Continue lesson ▶' : 'Back to the question →'; b.onclick = function () { st.cont(); }; }
+  } else if (o.sub) {
+    b.textContent = 'Think it through →';
+    b.onclick = function () {
+      var tried = st.tried.concat([st.sel]);
+      showAsk(o.sub, function () { showAsk(node, st.cont, { tried: tried, top: st.opt.top, note: 'Now try the original question again.' }); }, {});
+    };
+  } else {
+    b.textContent = 'Try again';
+    b.onclick = function () { showAsk(node, st.cont, { tried: st.tried.concat([st.sel]), top: st.opt.top }); };
+  }
+  btns.innerHTML = ''; btns.appendChild(b); b.focus({ preventScroll: true });
+  if (!wide()) setTimeout(function () { btns.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60);
+}
+
+/* ===================== lesson script ===================== */
+function titleItem(n) {
+  return say('Step ' + (n + 1) + '. ' + STEP_TITLES[n] + '.', [SET('title', { show: 1, n: 'Step ' + (n + 1) + ' of ' + STEP_TITLES.length, text: STEP_TITLES[n] }), T('title.show', 0, 0.75, 1)], { dur: 2.2 });
+}
+/* zoom boxes for close-ups, computed from the model so they frame the real points */
+function zAt(iacs, kHz, list) { return list.map(function (dm) { return Zm(iacs, kHz, dm, 0); }); }
+var CAM_TI = boxAround([Zm(1, 100, THICK, 0), Zm(1, 100, THICK, 12)], 0.9, 0.04);
+var CAM_CU = boxAround([Zm(100, 100, THICK, 0), Zm(100, 100, THICK, 12)], 0.6, 0.06);
+var CAM_BR200 = boxAround(zAt(28, 200, evenList(20, 40, 1)), 1.5, 0.012);
+var CAM_SS200 = boxAround(zAt(2.4, 200, evenList(20, 40, 1)), 0.15, 0.02);
+var CAM_S5 = boxAround(zAt(28, 200, [8, 10, 12, 14, 20, 30, 60]).concat(zAt(28, 400, [8, 10, 12, 14, 20, 60])), 0.2, 0.04);
+
+var angleTour = [
+  say('At titanium the two directions are only about twenty five degrees apart.', [T('cam', CAM_TI, 0, 0.45)]),
+  say('At copper they open up to about forty four degrees.', [T('cam', CAM_CU, 0, 0.45)]),
+  say('', [T('cam', CAM.locus, 0, 0.9)], { dur: 1.2 })
+];
+var freqDemo = [
+  say('At one megahertz the two aluminums nearly touch at the bottom of the curve.', [T('freq.kHz', 1000, 0, 0.45, 'io', true)]),
+  say('At ten kilohertz they sit well apart in the open middle.', [T('freq.kHz', 10, 0, 0.6, 'io', true)])
+];
+function swapToSheet(text) {
+  return [say(text, [T('dot.show', 0, 0, 0.12), SET('dot.d', 2, 0.12), SET('ghosts.thick.show', 1, 0.12), T('dot.show', 1, 0.16, 0.3)], text ? null : { dur: 2 })];
+}
+var CMP = [ /* brass and 304 stainless, both 30 mils thick at 200 kHz, with a dot for every mil from 20 to 40 */
+  SET('freq.kHz', 200), SET('paths.t50.show', 0), SET('tdots.t50.show', 0), SET('ghosts.thick.show', 0),
+  SET('paths.cb', thickPath('br', 200, { d0: 0.3, d1: 90, cls: 'p-thick p-thin' })),
+  SET('paths.cs', thickPath('ss', 200, { d0: 0.3, d1: 200, cls: 'p-thick2 p-thin' })),
+  SET('tdots.cb', { mat: 'br', kHz: 200, list: evenList(20, 40, 1), show: 1, color: 'var(--thk1)', r: 2.5, names: null }),
+  SET('tdots.cs', { mat: 'ss', kHz: 200, list: evenList(20, 40, 1), show: 1, color: 'var(--thk2)', r: 2.5 }),
+  SET('ghosts.ebr', { mat: 'br', kHz: 200, label: 'thick brass', show: 1, stroke: 'var(--thk1)' }),
+  SET('ghosts.ess', { mat: 'ss', kHz: 200, label: 'thick 304', show: 1, stroke: 'var(--thk2)' }),
+  SET('dot', { show: 1, mat: 'br', kHz: 200, d: 30, lift: 0, label: '' }), SET('xs.depthMax', 120)
+];
+var cmpDemo = [
+  say('Brass first. Thirty mils to thirty one, and the dot does not visibly move. Every mil from twenty to forty sits on top of the others.', [T('cam', CAM_BR200, 0, 0.3), T('dot.d', 31, 0.45, 0.8, 'lin')]),
+  say('Now 304 stainless, also thirty mils thick. One more mil moves the dot clearly, and its dots are still spread apart.', [SET('dot', { show: 1, mat: 'ss', kHz: 200, d: 30, lift: 0, label: '' }), T('cam', CAM_SS200, 0, 0.3), T('dot.d', 31, 0.45, 0.8, 'lin')]),
+  say('', [T('cam', CAM.locus, 0, 0.9)], { dur: 1.2 })
+];
+var f400Demo = [
+  say('At four hundred kilohertz, ten, twelve and fourteen mils crowd up against the thick brass point.', [SET('dot.kHz', 400), T('dot.d', 14, 0.3, 0.6, 'lin'), T('dot.d', 10, 0.65, 0.95, 'lin')]),
+  say('At two hundred kilohertz the same three thicknesses are spread out along the curve.', [SET('dot.kHz', 200), T('dot.d', 14, 0.3, 0.6, 'lin'), T('dot.d', 10, 0.65, 0.95, 'lin')]),
+  say('', [SET('dot.d', 12, 0.1)], { dur: 0.8 })
+];
+
+var STEPS = [
+/* ---------- Step 1: separation angle (100 kHz) ---------- */
+{ setup: function () {
+    var s = baseState(); s.freq.kHz = 100;
+    s.paths.cond = condPath({ pEnd: PMIN });
+    s.dot = { show: 1, mat: 'cu', kHz: null, d: THICK, lift: 0, label: '' };
+    s.xs.depthMax = 30;
+    return s; },
+  items: [
+    titleItem(0),
+    say('This lesson adds two new controls: test frequency and the thickness of the part. Our probe is now a small coil sitting on a flat plate.', [T('dot.lift', 6, 0.4, 0.6), T('dot.lift', 0, 0.7, 0.9)]),
+    say('Here is the conductivity curve at one hundred kilohertz, with nine metals on it. Copper sits low, near the end of the curve. Graphite sits right next to the air point.',
+      [T('paths.cond.pEnd', PMAX, 0, 0.45, 'io', true)].concat(MAT_ORDER.map(function (k, i) { return SET('ghosts.' + k, matGhost(k), 0.12 + i * 0.05); }))),
+    say('From any metal, lift-off pulls the dot back toward the air point along the teal line. A change in conductivity slides the dot along the orange curve instead.', [
+      SET('paths.lcu', liftPath('cu', null)), SET('paths.lal', liftPath('al', null)), SET('paths.lss', liftPath('ss', null)), SET('paths.lti', liftPath('ti', null)),
+      T('paths.lcu.lEnd', 20, 0, 0.4), T('paths.lal.lEnd', 20, 0.1, 0.5), T('paths.lss.lEnd', 20, 0.2, 0.6), T('paths.lti.lEnd', 20, 0.3, 0.7),
+      T('dot.lift', 12, 0.45, 0.65), T('dot.lift', 0, 0.75, 0.95)]),
+    say('The angle between those two directions is the separation angle. The wider it is, the easier it is to tell a lift-off wobble from a real change in the metal.', [
+      SET('angles.cu', { mat: 'cu', show: 0 }), T('angles.cu.show', 1, 0.1, 0.4), SET('angles.ti', { mat: 'ti', show: 0 }), T('angles.ti.show', 1, 0.45, 0.75)]),
+    ask({ label: 'Checkpoint 1', q: 'Where is it easiest to separate lift-off from a conductivity change: on copper and aluminum, or on titanium and stainless steel?',
+      rules: [{ re: /angle|apart|wide|direction/i, note: 'Thinking about how far apart the two directions point is exactly the right way in.' }],
+      opts: [
+        { t: 'Copper and aluminum.', ok: true, fb: 'Right. At one hundred kilohertz the two directions are about forty four degrees apart on copper and forty three on pure aluminum, but only about thirty on 304 stainless and twenty five on titanium.',
+          demo: [say('', [SET('angles.al', { mat: 'al', show: 0 }), T('angles.al.show', 1, 0, 0.4), SET('angles.ss', { mat: 'ss', show: 0 }), T('angles.ss.show', 1, 0.35, 0.75)], { dur: 2 })] },
+        { t: 'Titanium and stainless steel.', fb: 'Near the air point, lift-off and a conductivity change both point back toward the air point, so the two directions sit much closer together. Watch the angles.', demo: angleTour },
+        { t: 'It is the same everywhere.', fb: 'The angle changes along the curve. Watch it at each end.', demo: angleTour }
+      ] }),
+    say('Even at the copper end, the angle is well short of a right angle. Many instruments rotate the display so lift-off lies flat, but rotating the picture never changes the angle between the two directions.', [T('cam', CAM_CU, 0, 0.3), T('cam', CAM.locus, 0.8, 1)])
+  ] },
+/* ---------- Step 2: frequency and where a metal sits ---------- */
+{ setup: function () {
+    var s = baseState(); s.freq.kHz = 10;
+    s.paths.cond = condPath({});
+    s.ghosts = matGhosts(['cu', 'al', 'ss', 'ti', 'gr']);
+    s.dot = { show: 1, mat: 'a24', kHz: null, d: THICK, lift: 0, label: 'Al 2024' };
+    s.xs.depthMax = 160;
+    return s; },
+  items: [
+    titleItem(1),
+    say('Where a metal sits on this curve depends on frequency times conductivity. So frequency is a knob that slides every metal along the same curve.', [T('freq.kHz', 30, 0.3, 0.6, 'io', true), T('freq.kHz', 10, 0.7, 0.95, 'io', true)]),
+    say('At ten kilohertz, copper and the aluminums are spread through the middle of the curve. Stainless, titanium and graphite are bunched up beside the air point.', []),
+    say('Raise the frequency to one hundred kilohertz, and every metal slides down the curve.', [T('freq.kHz', 100, 0.25, 0.85, 'io', true)]),
+    say('At one megahertz, the high conductivity metals are crammed together at the bottom, while stainless and titanium have moved into the open middle.', [T('freq.kHz', 1000, 0, 0.5, 'io', true)]),
+    say('Metals bunch up at both ends of the curve and spread out in the middle. Frequency decides which ones sit where.', []),
+    ask({ label: 'Checkpoint 2', q: 'You need to sort 2024 aluminum from pure aluminum. Do you choose a low frequency or a high one?',
+      rules: [{ re: /spread|apart|middle/i, note: 'Looking for where the two dots spread apart is the right instinct.' }],
+      opts: [
+        { t: 'Low, around ten kilohertz.', ok: true, fb: 'Yes. At ten kilohertz both aluminums sit in the open middle of the curve, almost three times further apart than at one megahertz.', demo: [say('', [T('freq.kHz', 10, 0, 0.8, 'io', true)], { dur: 2.4 })] },
+        { t: 'High, around one megahertz.', fb: 'At one megahertz both aluminums have slid down to the bottom, where everything is crammed together. Watch.', demo: freqDemo },
+        { t: 'It does not matter, the conductivity difference is the same.', fb: 'The conductivity difference is the same, but how far apart that puts the dots is not.', demo: freqDemo }
+      ] }),
+    say('The rule: choose the frequency that puts the metals you care about in the spread-out middle of the curve.', [T('freq.kHz', 10, 0, 0.5, 'io', true)])
+  ] },
+/* ---------- Step 3: thin material (brass, 50 kHz) ---------- */
+{ setup: function () {
+    var s = baseState(); s.freq.kHz = 50;
+    s.paths.cond = condPath({ cls: 'p-locus p-faint p-dash' });
+    s.ghosts.thick = { mat: 'br', label: 'thick brass', show: 0, stroke: 'var(--thk1)', big: 1 };
+    s.dot = { show: 1, mat: 'br', kHz: null, d: THICK, lift: 0, label: 'brass' };
+    s.xs.depthMax = 75;
+    return s; },
+  items: [
+    titleItem(2),
+    say('So far every plate has been thick. Here is brass at fifty kilohertz. Its standard depth is about twenty two mils, a little over half a millimeter.', []),
+    say('The cross section shows the eddy currents in the plate. They are strongest at the surface and fade with depth. The marks show one, two and three standard depths.', [T('xs.hl', 1, 0, 0.2), T('xs.hl', 0, 0.85, 1)]),
+    say('Now swap the thick brass for a sheet only two mils thick, far thinner than the standard depth.', []),
+    ask({ label: 'Checkpoint 3', q: 'A brass sheet much thinner than the standard depth. Are the eddy currents stronger or weaker than in thick brass, and is the dot closer to the air point or to the thick brass point?',
+      rules: [{ re: /back wall|less metal|cut|thin/i, note: 'Thinking about the back wall cutting the current off is the key idea.' }],
+      opts: [
+        { t: 'Weaker, and closer to the air point.', ok: true, fb: 'Right. The back wall cuts the current off, so there is much less of it. Less current makes less heat, so the dot sits further left. It also pushes back less on the coil’s field, so the dot sits higher. Together that puts it close to the air point.', demo: swapToSheet('') },
+        { t: 'Stronger, and closer to the brass point.', fb: 'It is the same brass, but far less of it for the current to flow in. Look at how much shaded current the thin sheet keeps.', demo: swapToSheet('Here is the two mil sheet. Most of the shaded current is gone, and the dot jumps up toward the air point.') },
+        { t: 'Weaker, but in the same spot as thick brass.', fb: 'Weaker currents make less heat and push back less on the coil’s field. Which way do both of those move the dot?', demo: swapToSheet('Less heat moves the dot left, and less push back moves it up. Together they carry it close to the air point.') },
+        { t: 'Stronger, because a thin sheet concentrates the current.', fb: 'The back wall doesn’t squeeze the current into a smaller space. It just ends the current path.', demo: swapToSheet('Here is the two mil sheet. The current simply stops at the back wall, and the dot jumps up toward the air point.') }
+      ] }),
+    say('Now let’s add brass a little at a time. At two mils the dot sits just below the air point.', [
+      SET('dot.d', 2), SET('dot.label', ''), SET('ghosts.thick.show', 1),
+      SET('tdots.t50', { mat: 'br', list: evenList(2, 80, 2), upTo: 2, labels: [2, 10, 44, 66], show: 1, color: 'var(--thk1)' }),
+      SET('paths.t50', thickPath('br', null, { d0: 0.3, dEnd: 2 }))]),
+    say('By about ten mils it has swung out to the right, past the conductivity curve. A sheet this thick behaves a little like a lower conductivity metal, which sits nearer the heat bulge.', [
+      T('dot.d', 10, 0.05, 0.6, 'lin'), T('tdots.t50.upTo', 10, 0.05, 0.6, 'lin'), T('paths.t50.dEnd', 10, 0.05, 0.6, 'lin')]),
+    say('Keep adding brass, and the dot hooks back around and settles on the thick brass point. By forty four mils, two standard depths, it is within one percent. Past sixty six mils, three standard depths, nothing visible changes.', [
+      T('dot.d', 44, 0, 0.55, 'lin'), T('tdots.t50.upTo', 44, 0, 0.55, 'lin'), T('paths.t50.dEnd', 44, 0, 0.55, 'lin'),
+      T('dot.d', 70, 0.6, 0.95, 'lin'), T('tdots.t50.upTo', 70, 0.6, 0.95, 'lin'), T('paths.t50.dEnd', 70, 0.6, 0.95, 'lin')]),
+    say('In the cross section, almost no current reaches a back wall three standard depths down, so moving it further changes nothing.', [
+      T('dot.d', 74, 0, 0.8, 'lin'), T('tdots.t50.upTo', 74, 0, 0.8, 'lin'), T('paths.t50.dEnd', 74, 0, 0.8, 'lin'), T('xs.hl', 1, 0.2, 0.4), T('xs.hl', 0, 0.85, 1)])
+  ] },
+/* ---------- Step 4: why sensitivity drops with thickness ---------- */
+{ setup: function () {
+    var s = baseState(); s.freq.kHz = 50;
+    s.paths.cond = condPath({ cls: 'p-locus p-faint p-dash' });
+    s.paths.t50 = thickPath('br', null, { d0: 0.3, d1: 74 });
+    s.tdots.t50 = { mat: 'br', list: evenList(2, 74, 2), show: 1, color: 'var(--thk1)', labels: [2, 10, 44, 66] };
+    s.ghosts.thick = { mat: 'br', label: 'thick brass', show: 1, stroke: 'var(--thk1)', big: 1 };
+    s.dot = { show: 1, mat: 'br', kHz: null, d: 74, lift: 0, label: '' };
+    s.xs.depthMax = 75;
+    return s; },
+  items: [
+    titleItem(3),
+    say('Look back at the dots we just traced. The first mils made big jumps. The last ones barely moved the dot.', [T('dot.d', 4, 0.05, 0.35, 'lin'), T('dot.d', 74, 0.45, 0.98, 'lin')]),
+    ask({ label: 'Checkpoint 4', q: 'Why does adding one mil to a thin sheet move the dot a lot, while adding one mil to a thick plate barely moves it?',
+      rules: [{ re: /fraction|percent|proportion|bigger part/i, opts: [0], note: 'Thinking in fractions of the sheet is a natural first idea. The test below checks whether it holds up.' },
+              { re: /depth|reach|fade|deep/i, note: 'Asking how deep the current reaches is the key to this one.' }],
+      opts: [
+        { t: 'Because one mil is a bigger fraction of a thin sheet.', fbAnims: CMP,
+          fb: 'That sounds reasonable, so let’s test it. Here are brass and 304 stainless, both thirty mils thick, at two hundred kilohertz. One mil is the same fraction of each. Watch what one more mil does.',
+          demo: cmpDemo,
+          sub: { label: 'Think it through', q: 'Which has the deeper standard depth, brass or stainless steel?', reason: false,
+            opts: [
+              { t: 'Stainless steel.', ok: true, fb: 'Right. Stainless conducts about a tenth as well as brass, so its currents reach about three times deeper: about thirty eight mils, against eleven for brass.' },
+              { t: 'Brass.', fb: 'Lower conductivity means the field gets in further. Which of the two conducts less?' }
+            ] } },
+        { t: 'Added metal only matters if eddy currents reach it, and they fade with depth.', ok: true,
+          fb: 'Exactly. Current density falls off exponentially with depth. Metal added near the surface sits in strong current. Metal added three standard depths down sees almost none, so it changes almost nothing.',
+          demo: [say('', [T('dot.d', 22, 0, 0.4, 'lin'), T('dot.d', 66, 0.5, 1, 'lin')], { dur: 4 })] },
+        { t: 'The instrument loses gain on thick parts.', fb: 'Nothing about the instrument changed. The same coil responds strongly to the first mils and weakly to later ones. The answer is in the plate.' }
+      ] }),
+    say('That is the practical limit. Past about three standard depths, a plate looks just like an infinitely thick one. Eddy currents can’t measure thickness or find flaws down there.', [T('dot.d', 74, 0, 0.6, 'lin'), T('xs.hl', 1, 0.3, 0.5), T('xs.hl', 0, 0.85, 1)])
+  ] },
+/* ---------- Step 5: frequency and thickness (200 vs 400 kHz) ---------- */
+{ setup: function () {
+    var s = baseState(); s.freq.kHz = 200;
+    s.paths.cond = condPath({ cls: 'p-locus p-faint p-dash' });
+    s.paths.f200 = thickPath('br', 200, { d0: 0.3, d1: 60 });
+    s.paths.f400 = thickPath('br', 400, { d0: 0.3, d1: 60, cls: 'p-thick2' });
+    s.tdots.f200 = { mat: 'br', kHz: 200, list: [10, 12, 14], labels: [10, 12, 14], show: 1, color: 'var(--thk1)', r: 4, ldx: 0, ldy: 17, anchor: 'middle' };
+    s.tdots.f400 = { mat: 'br', kHz: 400, list: [10, 12, 14], labels: [10, 12, 14], show: 1, color: 'var(--thk2)', r: 4 };
+    s.ghosts.e200 = { mat: 'br', kHz: 200, label: '200 kHz, thick', show: 1, stroke: 'var(--thk1)' };
+    s.ghosts.e400 = { mat: 'br', kHz: 400, label: '400 kHz, thick', show: 1, stroke: 'var(--thk2)' };
+    s.dot = { show: 1, mat: 'br', kHz: 200, d: 12, lift: 0, label: '' };
+    s.xs.depthMax = 36;
+    return s; },
+  items: [
+    titleItem(4),
+    say('A lower frequency means a deeper standard depth, so it takes more thickness for the dot to settle. Here are two thickness curves for brass, one at two hundred kilohertz and one at four hundred. The dots mark ten, twelve and fourteen mils.', [T('cam', CAM_S5, 0.6, 0.95)]),
+    ask({ label: 'Checkpoint 5', q: 'You need to measure brass sheet expected to be ten to fourteen mils thick. Which frequency do you choose, two hundred kilohertz or four hundred?',
+      rules: [{ re: /depth|deep|penetrat|standard/i, note: 'Comparing the thickness with the standard depth at each frequency is exactly the right move.' }],
+      opts: [
+        { t: '200 kHz.', ok: true, fb: 'Yes. At two hundred kilohertz the standard depth is about eleven mils, so ten to fourteen mils sits around one standard depth, where each mil still moves the dot. The three dots are spread over twice as much of the curve as at four hundred.',
+          demo: [say('', [T('dot.d', 14, 0.15, 0.5, 'lin'), T('dot.d', 10, 0.55, 0.9, 'lin')], { dur: 3.2 })] },
+        { t: '400 kHz.', fb: 'At four hundred kilohertz the standard depth is under eight mils, so ten to fourteen mils is already more than one and a quarter standard depths. The dots crowd up against the thick brass point. Watch.', demo: f400Demo },
+        { t: 'Either, the range is the same.', fb: 'The range is the same in mils, but not in standard depths. Watch where the three dots land on each curve.', demo: f400Demo }
+      ] }),
+    say('The rule: choose the frequency that puts the thickness you care about near one standard depth. Too high, and the part looks infinitely thick. Far too low, and the whole curve shrinks toward the air point.', [SET('dot.d', 12, 0.2)]),
+    say('You have finished the lesson. Open the recap for a one screen summary, then try the quiz.', [])
+  ] }
+];
+
+/* every line the lesson can speak; used by tools/voiceover/build_lesson_audio.cjs */
+function allSpokenLines() {
+  var seen = {}, out = [];
+  function add(t) { if (!t) return; var id = clipId(t); if (seen[id]) return; seen[id] = 1; out.push({ id: id, caption: t, speak: speechText(t) }); }
+  function items(list) { (list || []).forEach(function (it) { if (it.type === 'ask') node(it.node); else add(it.text); }); }
+  function node(n) {
+    if (!n || seen['node:' + n.q]) return; seen['node:' + n.q] = 1;
+    add(n.q);
+    n.opts.forEach(function (o) { add(o.fb); items(o.demo); node(o.sub); });
+    node(n.next);
+  }
+  STEPS.forEach(function (st) { items(st.items); });
+  return out;
+}
+
+/* ===================== info card ===================== */
+var KEY_IDEAS = [
+  'The separation angle is widest at the high conductivity end, about 45 degrees here, and narrower near the air point.',
+  'Frequency slides every metal along the same curve. Put the metals you care about in the spread-out middle.',
+  'A very thin sheet sits near the air point. As it thickens, the dot swings out, hooks back and settles on the thick-plate point.',
+  'Eddy currents fade with depth, so metal added deep down changes little. Past about three standard depths, nothing changes.',
+  'For thickness, choose the frequency that puts the thickness you care about near one standard depth.'
+];
+function renderInfo() {
+  var n = Lesson.step, h = '';
+  if (Lesson.mode === 'finished') {
+    h = '<div class="eyebrow">Lesson complete</div><h2>Nice work.</h2><p class="muted">Review the five ideas on the recap screen, then take the 10 question quiz.</p><div class="row"><button class="btn" onclick="setView(\'recap\')">Open recap</button><button class="btn ghost" onclick="setView(\'quiz\')">Take the quiz</button></div>';
+  } else if (n < 0) {
+    h = '<div class="eyebrow">How this works</div><h2>Watch, predict, then check.</h2><p class="muted">The lesson plays like a short video and stops at checkpoints. Pick an answer, and if you like, type your reasoning. Wrong answers get a hint and a short animation before you try again.</p><p class="muted">The cross section under the plane always shows the plate under the dot. Use the step bar to go back to any step you have finished.</p>';
+  } else {
+    h = '<div class="eyebrow">Step ' + (n + 1) + ' of ' + STEP_TITLES.length + '</div><h2>' + esc(STEP_TITLES[n]) + '</h2>';
+    var done = progress.done.indexOf(n) >= 0;
+    h += done ? '<p class="muted"><b>Key idea:</b> ' + esc(KEY_IDEAS[n]) + '</p>' : '<p class="muted">A checkpoint question is coming up in this step. It will appear here.</p>';
+    h += '<p class="muted" style="font-size:12.5px">The diagram is computed from the Dodd and Deeds model of a probe coil above a nonmagnetic plate of any thickness. Conductivities are typical values.</p>';
+  }
+  $('infoCard').innerHTML = h;
+}
+
+/* ===================== chapters, tabs, controls ===================== */
+function renderChapters() {
+  var nav = $('chapters'), mr = maxReachable(), h = '';
+  STEP_TITLES.forEach(function (t, i) {
+    var done = progress.done.indexOf(i) >= 0, cur = i === Lesson.step && view === 'lesson';
+    var allowed = done || i === Lesson.step || i <= mr;
+    h += '<button class="chap' + (done ? ' done' : '') + (cur ? ' current' : '') + '" data-i="' + i + '"' + (allowed ? '' : ' disabled') + ' aria-current="' + (cur ? 'step' : 'false') + '"><span class="n">' + (done ? '✓' : i + 1) + '</span>' + esc(t) + '</button>';
+  });
+  nav.innerHTML = h;
+  nav.querySelectorAll('.chap').forEach(function (b) {
+    b.addEventListener('click', function () { var i = +b.dataset.i; setView('lesson'); startIfNeeded(); runStep(i); });
+  });
+  var cur = nav.querySelector('.current'); if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+function renderTabs() {
+  var sbOpen = progress.done.indexOf(SANDBOX_AFTER) >= 0, allDone = progress.done.indexOf(STEP_TITLES.length - 1) >= 0;
+  $('tabSandbox').disabled = !sbOpen; $('tabSandbox').innerHTML = 'Sandbox' + (sbOpen ? '' : ' &#128274;');
+  $('tabRecap').disabled = !allDone; $('tabQuiz').disabled = !allDone;
+  ['Lesson', 'Sandbox', 'Recap', 'Quiz'].forEach(function (n) { $('tab' + n).setAttribute('aria-selected', view === n.toLowerCase() ? 'true' : 'false'); });
+}
+var ICON = {
+  play: '<svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z" fill="currentColor"/></svg>',
+  pause: '<svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg>',
+  sound: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/></svg>',
+  mute: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 9l6 6M22 9l-6 6"/></svg>'
+};
+function updateControls() {
+  var pb = $('playBtn');
+  var canPlay = !!P.items;
+  pb.innerHTML = (paused || !canPlay) ? ICON.play : ICON.pause;
+  pb.setAttribute('aria-label', paused ? 'Play' : 'Pause');
+  pb.disabled = !canPlay && !paused;
+  $('replayBtn').disabled = !(Lesson.mode === 'play' || Lesson.mode === 'ask');
+  var mb = $('muteBtn'); mb.innerHTML = muted ? ICON.mute : ICON.sound; mb.setAttribute('aria-label', muted ? 'Unmute narration' : 'Mute narration');
+  mb.title = muted ? 'Narration off' : 'Narration on';
+}
+var toastT = null;
+function toast(msg) { var t = $('toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toastT); toastT = setTimeout(function () { t.classList.add('hidden'); }, 3600); }
+
+/* ===================== sandbox ===================== */
+var SB = { mat: 'br', kHz: 50, d: 12, thick: false, lift: 0, zoom: false };
+var lessonSnapshot = null;
+function logSlider(v, lo, hi) { return Math.exp(Math.log(lo) + (Math.log(hi) - Math.log(lo)) * v / 1000); }
+function logPos(x, lo, hi) { return Math.round((Math.log(x) - Math.log(lo)) / (Math.log(hi) - Math.log(lo)) * 1000); }
+function sbState() {
+  var s = baseState(), ia = MATS[SB.mat].iacs, dl = deltaMils(ia, SB.kHz), d = SB.thick ? THICK : SB.d;
+  s.freq.kHz = SB.kHz;
+  s.paths.cond = condPath({ lift: SB.lift });
+  s.paths.thk = thickPath(SB.mat, SB.kHz, { lift: SB.lift, d0: 0.25, d1: Math.max(6 * dl, SB.thick ? 0 : SB.d * 1.05) });
+  s.tdots.marks = { mat: SB.mat, kHz: SB.kHz, lift: SB.lift, list: [dl, 2 * dl, 3 * dl], names: ['1 δ', '2 δ', '3 δ'], show: 1, color: 'var(--thk1)', r: 3.5 };
+  if (!SB.zoom) MAT_ORDER.forEach(function (k) { if (k !== SB.mat) s.ghosts[k] = matGhost(k, { lift: SB.lift, show: 0.7 }); });
+  s.dot = { show: 1, mat: SB.mat, kHz: SB.kHz, d: d, lift: SB.lift, label: MATS[SB.mat].short };
+  s.xs.depthMax = SB.thick ? 3.4 * dl : Math.max(1.2 * SB.d, Math.min(3.4 * dl, 8 * SB.d));
+  var P0 = zOf(s, s.dot);
+  s.cam = SB.zoom ? { r0: P0.R - 0.03, r1: P0.R + 0.03, x0: P0.X - 0.03, x1: P0.X + 0.03 } : { r0: -0.01, r1: 0.21, x0: 0.55, x1: 1.03 };
+  return s;
+}
+function buildSandbox() {
+  var c = $('sbCard');
+  c.innerHTML = '<div class="eyebrow">Sandbox</div><h2>Change the plate and watch both views</h2>' +
+    '<div class="slider"><label>Material <span id="sbMv"></span></label><div class="presets" id="sbMats"></div><p class="muted" id="sbMnote" style="font-size:12.5px;margin:6px 0 0"></p></div>' +
+    '<div class="slider"><label for="sbF">Test frequency <span id="sbFv"></span></label><input type="range" id="sbF" min="0" max="1000"></div>' +
+    '<div class="slider"><label for="sbD">Thickness <span id="sbDv"></span></label><input type="range" id="sbD" min="0" max="1000">' +
+    '<label class="muted" style="display:flex;gap:8px;align-items:center;font-weight:400;justify-content:flex-start"><input type="checkbox" id="sbT"> Thick plate (no back wall)</label></div>' +
+    '<div class="slider"><label for="sbL">Lift-off <span id="sbLv"></span></label><input type="range" id="sbL" min="0" max="80"></div>' +
+    '<label class="muted" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="sbZ"> Zoom in around the dot</label>' +
+    '<div class="readout" id="sbOut"></div>' +
+    '<p class="muted" style="font-size:12.5px;margin-top:10px"><span style="color:var(--locus);font-weight:700">Orange</span>: conductivity curve for thick plates. ' +
+    '<span style="color:var(--thk1);font-weight:700">Blue</span>: thickness curve for this material, with dots at one, two and three standard depths. Open circles: the other materials as thick plates at this frequency.</p>' +
+    '<p class="muted" style="font-size:12.5px">Try this: pick brass at 50 kHz, slide the thickness from 1 to 100 mils, then lower the frequency and do it again.</p>';
+  var box = $('sbMats');
+  MAT_ORDER.forEach(function (k) {
+    var b = document.createElement('button'); b.textContent = MATS[k].short; b.dataset.k = k;
+    b.title = MATS[k].name + ', about ' + MATS[k].iacs + ' %IACS';
+    b.onclick = function () { SB.mat = k; syncSandbox(); }; box.appendChild(b);
+  });
+  $('sbF').oninput = function () { SB.kHz = logSlider(+this.value, 1, 5000); syncSandbox(true); };
+  $('sbD').oninput = function () { SB.d = logSlider(+this.value, 0.5, 250); syncSandbox(true); };
+  $('sbT').onchange = function () { SB.thick = this.checked; syncSandbox(true); };
+  $('sbL').oninput = function () { SB.lift = +this.value / 2; syncSandbox(true); };
+  $('sbZ').onchange = function () { SB.zoom = this.checked; syncSandbox(true); };
+}
+function syncSandbox(fromInput) {
+  if (!fromInput) { $('sbF').value = logPos(SB.kHz, 1, 5000); $('sbD').value = logPos(SB.d, 0.5, 250); $('sbL').value = Math.round(SB.lift * 2); $('sbT').checked = SB.thick; $('sbZ').checked = SB.zoom; }
+  var m = MATS[SB.mat], dl = deltaMils(m.iacs, SB.kHz);
+  $('sbMats').querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b.dataset.k === SB.mat); b.setAttribute('aria-pressed', b.dataset.k === SB.mat ? 'true' : 'false'); });
+  $('sbMv').textContent = m.short;
+  $('sbMnote').textContent = m.name + ': about ' + m.iacs + ' %IACS. This is a typical value; real parts vary with alloy, temper and temperature.';
+  $('sbFv').textContent = fmtK(SB.kHz);
+  $('sbDv').textContent = SB.thick ? 'thick plate' : fmtMils(SB.d) + ' mils (' + fmt(SB.d * MIL, 2) + ' mm)';
+  $('sbD').disabled = SB.thick;
+  $('sbLv').textContent = SB.lift === 0 ? 'contact' : fmtMils(SB.lift) + ' mils';
+  S = sbState(); dirty = true;
+  var Z = dotPos(S);
+  $('sbOut').innerHTML =
+    '<span>Standard depth</span><b class="big">' + fmtMils(dl) + ' mils</b>' +
+    '<span>Standard depth in mm</span><b>' + fmt(dl * MIL, 3) + ' mm</b>' +
+    '<span>Thickness in standard depths</span><b>' + (SB.thick ? 'thick' : fmt(SB.d / dl, 2)) + '</b>' +
+    '<span>Normalized R</span><b>' + fmt(Z.R, 4) + '</b><span>Normalized X</span><b>' + fmt(Z.X, 4) + '</b>';
+}
+
+/* ===================== views ===================== */
+var view = 'lesson';
+function setView(v) {
+  if (v === view) return;
+  if (view === 'lesson') { lessonSnapshot = S; if (!paused && P.items) setPaused(true); stopSpeech(); }
+  if (view === 'sandbox') { /* nothing to save */ }
+  view = v;
+  $('viewPlayer').classList.toggle('hidden', !(v === 'lesson' || v === 'sandbox'));
+  $('viewRecap').classList.toggle('hidden', v !== 'recap');
+  $('viewQuiz').classList.toggle('hidden', v !== 'quiz');
+  var lessonish = v === 'lesson';
+  $('caption').classList.toggle('hidden', !lessonish); $('controls').classList.toggle('hidden', !lessonish);
+  $('infoCard').classList.toggle('hidden', !lessonish || !!askState);
+  $('askCard').classList.toggle('hidden', !lessonish || !askState);
+  $('sbCard').classList.toggle('hidden', v !== 'sandbox');
+  $('startOver').classList.toggle('hidden', !(lessonish && !Lesson.started));
+  if (v === 'sandbox') { if (!$('sbCard').innerHTML) buildSandbox(); syncSandbox(); }
+  if (v === 'lesson' && lessonSnapshot) { S = lessonSnapshot; }
+  if (v === 'recap') buildRecap();
+  if (v === 'quiz') buildQuiz();
+  renderTabs(); renderChapters(); dirty = true;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function startIfNeeded() {
+  if (Lesson.started) return;
+  Lesson.started = true; $('startOver').classList.add('hidden');
+}
+
+/* ===================== recap ===================== */
+var RECAP = [
+  { t: '1. Separation angle', d: 'Lift-off and a conductivity change are about 45 degrees apart at the copper end and closer near air. Rotating the display never changes that angle.' },
+  { t: '2. Frequency', d: 'Frequency slides every metal along the same curve. Choose the frequency that puts your metals in the spread-out middle.' },
+  { t: '3. Thin material', d: 'A very thin sheet sits near the air point. As it thickens, the dot swings out past the curve, hooks back and settles on the thick-plate point.' },
+  { t: '4. Depth and sensitivity', d: 'Current fades exponentially with depth, so metal added deep down changes little. Past about three standard depths, nothing changes.' },
+  { t: '5. Frequency and thickness', d: 'Put the thickness you care about near one standard depth. Too high a frequency makes the part look infinitely thick.' }
+];
+function buildRecap() {
+  var v = $('viewRecap');
+  v.innerHTML = '<div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0;font-size:20px">Recap: five ideas</h2><button class="btn" onclick="setView(\'quiz\')">Take the quiz &rarr;</button></div><div class="recap-grid">' +
+    RECAP.map(function (r, i) { return '<div class="recap-card"><svg id="mini' + i + '" viewBox="0 0 120 110" aria-hidden="true"></svg><div><h3>' + esc(r.t) + '</h3><p>' + esc(r.d) + '</p></div></div>'; }).join('') +
+    '</div><p class="muted" style="margin-top:12px">Simplified model for understanding trends, not for reading real instrument values.</p>';
+}
+function miniMap(cam) {
+  var W = 120, H = 110, pad = 8, s = Math.min((W - 2 * pad) / (cam.r1 - cam.r0), (H - 2 * pad) / (cam.x1 - cam.x0));
+  var cr = (cam.r0 + cam.r1) / 2, cx = (cam.x0 + cam.x1) / 2;
+  return { s: s, px: function (R) { return W / 2 + (R - cr) * s; }, py: function (X) { return H / 2 - (X - cx) * s; } };
+}
+function miniCond(m, cls) { return '<path d="' + polyline(gridPts(Math.log(PMIN), Math.log(PMAX), 1 / 24).map(function (u) { return Zp(Math.exp(u), 0); }), m) + '" class="' + (cls || 'p-locus p-thin') + '"/>'; }
+function miniThick(m, ia, kHz, d1, cls) { return '<path d="' + polyline(gridPts(Math.log(0.3), Math.log(d1), 1 / 30).map(function (u) { return Zm(ia, kHz, Math.exp(u), 0); }), m) + '" class="' + (cls || 'p-thick p-thin') + '"/>'; }
+function miniDot(m, P, col, r) { return '<circle cx="' + m.px(P.R) + '" cy="' + m.py(P.X) + '" r="' + (r || 4.5) + '" style="fill:' + (col || 'var(--dot)') + ';stroke:var(--panel);stroke-width:1.5"/>'; }
+function miniAngle(m, ia, kHz) {
+  var P = Zm(ia, kHz, THICK, 0), d = sepDirs(ia, kHz), x = m.px(P.R), y = m.py(P.X), L = 18, sg = P.X > 0.75 ? -1 : 1;
+  return '<line x1="' + x + '" y1="' + y + '" x2="' + (x + sg * d.lift.R * L) + '" y2="' + (y - sg * d.lift.X * L) + '" style="stroke:var(--lift);stroke-width:2"/>' +
+    '<line x1="' + x + '" y1="' + y + '" x2="' + (x + sg * d.loc.R * L) + '" y2="' + (y - sg * d.loc.X * L) + '" style="stroke:var(--locus);stroke-width:2"/>' +
+    '<text x="' + (x + 8) + '" y="' + (y + (sg < 0 ? 14 : -6)) + '" style="font:700 10px var(--mono);fill:var(--ink)">' + Math.round(d.deg) + '&deg;</text>';
+}
+function tri(t, period) { var ph = (t % period) / period; return ph < 0.5 ? ease(ph * 2) : 1 - ease((ph - 0.5) * 2); }
+function renderRecap(t) {
+  var e = $('mini0'); if (!e) return;
+  var m = miniMap(CAM.locus);
+  e.innerHTML = miniCond(m) + miniAngle(m, 100, 100) + miniAngle(m, 1, 100);
+  var kHz = Math.exp(lerp(Math.log(10), Math.log(1000), tri(t, 7)));
+  $('mini1').innerHTML = miniCond(m, 'p-locus p-thin p-faint') + ['cu', 'al', 'ss', 'ti'].map(function (k, i) { return miniDot(m, Zm(MATS[k].iacs, kHz, THICK, 0), ['#c87533', 'var(--ink-soft)', 'var(--lift)', 'var(--dot)'][i], 3.5); }).join('') +
+    '<text x="62" y="104" style="font-size:9px;fill:var(--ink-soft)">' + fmtK(kHz) + '</text>';
+  var dd = lerp(0.5, 70, ease(clamp(((t % 6) / 6) * 1.25, 0, 1)));
+  $('mini2').innerHTML = miniCond(m, 'p-locus p-thin p-faint') + miniThick(m, 28, 50, dd) + miniDot(m, Zm(28, 50, dd, 0)) +
+    '<text x="62" y="104" style="font-size:9px;fill:var(--ink-soft)">' + Math.round(dd) + (Math.round(dd) === 1 ? ' mil' : ' mils') + '</text>';
+  /* a small cross-section: current fading with depth, marks at 1, 2 and 3 standard depths, a moving back wall */
+  var top = 16, dpx = 24, wall = top + lerp(0.5, 3.6, tri(t, 6)) * dpx, g = '<defs><linearGradient id="mg3" x1="0" y1="0" x2="0" y2="1">';
+  for (var i = 0; i <= 8; i++) g += '<stop offset="' + i / 8 + '" style="stop-color:var(--eddy);stop-opacity:' + (0.85 * Math.exp(-((wall - top) / dpx) * i / 8)).toFixed(3) + '"/>';
+  g += '</linearGradient></defs><rect x="8" y="' + top + '" width="104" height="' + (wall - top) + '" fill="url(#mg3)"/>';
+  for (var n = 1; n <= 3; n++) { var y = top + n * dpx; g += '<line x1="8" y1="' + y + '" x2="112" y2="' + y + '" style="stroke:var(--ink-soft);stroke-width:1" stroke-dasharray="3 3"/><text x="10" y="' + (y - 2) + '" style="font-size:8px;fill:var(--ink-soft)">' + n + ' δ ' + [37, 14, 5][n - 1] + '%</text>'; }
+  g += '<line x1="8" y1="' + top + '" x2="112" y2="' + top + '" style="stroke:var(--ink);stroke-width:1.5"/><line x1="8" y1="' + wall + '" x2="112" y2="' + wall + '" style="stroke:var(--ink);stroke-width:2"/>' +
+    '<rect x="46" y="4" width="28" height="8" rx="2" style="fill:var(--panel);stroke:var(--coil);stroke-width:1.5"/>';
+  $('mini3').innerHTML = g;
+  var m5 = miniMap(CAM_S5);
+  $('mini4').innerHTML = miniThick(m5, 28, 200, 60) + miniThick(m5, 28, 400, 60, 'p-thick2 p-thin') +
+    [10, 12, 14].map(function (dm) { return miniDot(m5, Zm(28, 200, dm, 0), 'var(--thk1)', 3) + miniDot(m5, Zm(28, 400, dm, 0), 'var(--thk2)', 3); }).join('') +
+    '<text x="6" y="104" style="font-size:9px;fill:var(--thk1)">200 kHz</text><text x="114" y="104" text-anchor="end" style="font-size:9px;fill:var(--thk2)">400 kHz</text>';
+}
+
+/* ===================== quiz ===================== */
+var QUIZ = [
+  { s: 0, q: 'At one test frequency, where on the conductivity curve is the angle between lift-off and a conductivity change widest?', o: ['Near the air point, where low conductivity metals sit.', 'At the high conductivity end, where copper and aluminum sit.', 'Exactly at the furthest right point of the curve.', 'It is the same everywhere on the curve.'], a: 1,
+    x: 'In this model the angle at 100 kHz is about 44 degrees at copper and 43 at pure aluminum, against about 30 at 304 stainless and 25 at titanium. Near the air point both moves point back toward air, so they sit closer together.' },
+  { s: 0, q: 'Many instruments rotate the display so the lift-off signal lies flat. What does that rotation do to the separation angle?', o: ['It doubles the angle.', 'It turns the angle into 90 degrees.', 'Nothing. It turns the whole picture, so the angle stays the same.', 'It shrinks the angle to zero.'], a: 2,
+    x: 'Rotation turns every signal by the same amount, so the angle between any two directions does not change. It only makes lift-off easy to recognize, because lift-off always lies in the same direction.' },
+  { s: 1, q: 'As the test frequency rises, what happens to a given metal’s dot on a thick plate?', o: ['It climbs toward the air point.', 'It slides down the conductivity curve, as if the metal conducted better.', 'It jumps to a different curve.', 'It stays where it is.'], a: 1,
+    x: 'On a thick plate the dot’s place depends on frequency times conductivity. Raising the frequency has the same effect as raising the conductivity, so the dot slides down the same curve.' },
+  { s: 1, q: 'You need to sort two titanium alloys with slightly different conductivities. Which frequency is the better starting point?', o: ['About 10 kHz, the low end of the range.', 'About 1 MHz, which moves titanium into the spread-out middle of the curve.', 'Any frequency, because the spacing never changes.', 'The lowest frequency the instrument offers.'], a: 1,
+    x: 'Titanium conducts poorly, so at low frequency it bunches up beside the air point. At about 1 MHz it sits in the open middle of the curve, where small conductivity differences spread out.' },
+  { s: 2, q: 'A brass sheet far thinner than the standard depth gives a dot that sits:', o: ['Close to the air point.', 'Right on top of the thick brass point.', 'Below the thick brass point, nearer the perfect-conductor end.', 'At the furthest right point of the conductivity curve.'], a: 0,
+    x: 'The back wall cuts the eddy currents off, so there is much less current. Less heat moves the dot left and less push back on the coil’s field moves it up, so it sits close to the air point.' },
+  { s: 2, q: 'As a sheet gets thicker, its dot traces a thickness curve. What shape does that curve take?', o: ['A straight line from air to the thick-plate point.', 'It follows the conductivity curve exactly.', 'It swings outside the conductivity curve, hooks back and settles on the thick-plate point.', 'It keeps moving for as long as the thickness grows.'], a: 2,
+    x: 'A medium-thin sheet behaves a little like a lower conductivity metal, so the curve swings out past the conductivity curve. It then hooks back and settles on the thick-plate point by about two to three standard depths.' },
+  { s: 3, q: 'Beyond about how many standard depths does extra thickness stop changing the reading?', o: ['One.', 'Three.', 'Ten.', 'It never stops changing.'], a: 1,
+    x: 'Current density falls to about 37 percent at one standard depth, 14 percent at two and 5 percent at three. In this model the dot is within a tenth of a percent of its final place by three standard depths.' },
+  { s: 3, q: 'Brass and 304 stainless plates are both 30 mils thick, tested at 200 kHz. Adding one more mil moves which dot more?', o: ['Brass.', '304 stainless.', 'Both the same, because one mil is the same fraction of each.', 'Neither moves at all.'], a: 1,
+    x: 'Stainless conducts about a tenth as well as brass, so its standard depth is about 38 mils against 11 for brass. At 30 mils the stainless currents still reach the back wall, so added metal matters, while almost no brass current gets that deep. In this model the stainless dot moves about 11 times as far.' },
+  { s: 4, q: 'You need to measure brass sheet expected to be 10 to 14 mils thick. Which frequency is better: 200 kHz or 400 kHz?', o: ['200 kHz.', '400 kHz.', 'Either, because the thickness range is the same.', 'A much higher frequency, such as 2 MHz.'], a: 0,
+    x: 'At 200 kHz the standard depth is about 11 mils, so 10 to 14 mils sits near one standard depth, where each mil still moves the dot. At 400 kHz the same sheets are more than one and a quarter standard depths deep and crowd up against the thick brass point.' },
+  { s: 4, q: 'Doubling the test frequency changes the standard depth by about what factor?', o: ['It doubles.', 'It halves.', 'It shrinks to about 0.71 of its old value.', 'It does not change.'], a: 2,
+    x: 'Standard depth goes as one over the square root of frequency, so doubling the frequency divides it by the square root of 2, about 1.41. Brass at 200 kHz is about 11 mils deep; at 400 kHz it is about 7.8 mils.' }
+];
+var QZ = { i: 0, ans: [], checked: [], done: false };
+function buildQuiz() {
+  var v = $('viewQuiz');
+  if (QZ.done) { showResults(); return; }
+  var q = QUIZ[QZ.i], sel = QZ.ans[QZ.i], chk = !!QZ.checked[QZ.i], ok = sel === q.a, last = QZ.i === QUIZ.length - 1;
+  var score = 0, done = 0;
+  QUIZ.forEach(function (x, i) { if (QZ.checked[i]) { done++; if (QZ.ans[i] === x.a) score++; } });
+  var h = '<div class="quiz card"><div class="qmeta">Question ' + (QZ.i + 1) + ' of ' + QUIZ.length + (done ? ' &middot; score so far ' + score + ' / ' + done : '') + '</div><div class="qprog"><i style="width:' + (done / QUIZ.length * 100) + '%"></i></div>' +
+    '<h2>' + esc(q.q) + '</h2><div class="opts" role="radiogroup">' +
+    q.o.map(function (t, i) {
+      var cls = chk && i === q.a ? ' right' : (chk && i === sel ? ' wrong' : '');
+      return '<button class="opt' + cls + '" role="radio" aria-checked="' + (sel === i) + '" data-i="' + i + '"' + (chk ? ' disabled' : '') + '><span class="k">' + 'ABCD'[i] + '</span><span>' + esc(t) + '</span></button>';
+    }).join('') + '</div>';
+  if (chk) {
+    h += '<div class="fb ' + (ok ? 'good' : 'bad') + '"><span class="tag">' + (ok ? 'Correct' : 'Wrong') + '</span>' +
+      (ok ? '' : 'The correct answer is <b>' + 'ABCD'[q.a] + ': ' + esc(q.o[q.a]) + '</b> ') + esc(q.x) +
+      '<div class="note">Covered in Step ' + (q.s + 1) + ': ' + esc(STEP_TITLES[q.s]) + '.</div></div>';
+  }
+  h += '<div class="row"><button class="btn ghost" id="qBack"' + (QZ.i ? '' : ' disabled') + '>Back</button>' +
+    (chk ? '<button class="btn" id="qNext">' + (last ? 'See results' : 'Next question') + '</button>'
+         : '<button class="btn" id="qCheck"' + (sel == null ? ' disabled' : '') + '>Check answer</button>') + '</div></div>';
+  v.innerHTML = h;
+  v.querySelectorAll('.opt').forEach(function (b) { b.onclick = function () { if (QZ.checked[QZ.i]) return; QZ.ans[QZ.i] = +b.dataset.i; buildQuiz(); }; });
+  $('qBack').onclick = function () { QZ.i--; buildQuiz(); };
+  if (chk) $('qNext').onclick = function () { if (!last) { QZ.i++; buildQuiz(); } else { QZ.done = true; showResults(); } };
+  else $('qCheck').onclick = function () { QZ.checked[QZ.i] = true; buildQuiz(); var f = v.querySelector('.fb'); if (f) f.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); };
+}
+function showResults() {
+  var score = 0, miss = {};
+  QUIZ.forEach(function (q, i) { if (QZ.ans[i] === q.a) score++; else miss[q.s] = 1; });
+  var steps = Object.keys(miss).map(Number).sort();
+  var h = '<div class="quiz"><div class="card"><div class="eyebrow">Quiz results</div><div class="score">' + score + ' / ' + QUIZ.length + '</div>' +
+    (steps.length ? '<p>Steps to revisit:</p><div class="row">' + steps.map(function (s) { return '<button class="btn ghost" data-s="' + s + '">Step ' + (s + 1) + ': ' + esc(STEP_TITLES[s]) + '</button>'; }).join('') + '</div>'
+      : '<p>Perfect score. Every step is solid.</p>') +
+    '<div class="row"><button class="btn" id="qRetry">Retake quiz</button></div></div><h2 style="font-size:18px;margin:18px 0 6px">Answer key</h2><div class="key">';
+  QUIZ.forEach(function (q, i) {
+    var ok = QZ.ans[i] === q.a;
+    h += '<div class="item ' + (ok ? 'ok' : 'no') + '"><b>' + (i + 1) + '. ' + esc(q.q) + '</b>' +
+      '<div class="ans">Your answer: ' + esc(q.o[QZ.ans[i]] || 'none') + (ok ? ' ✓' : ' ✗') + '</div>' +
+      (ok ? '' : '<div class="ans">Correct answer: <b>' + esc(q.o[q.a]) + '</b></div>') +
+      '<div class="muted">' + esc(q.x) + ' <span style="white-space:nowrap">(Step ' + (q.s + 1) + ')</span></div></div>';
+  });
+  h += '</div></div>';
+  $('viewQuiz').innerHTML = h;
+  $('viewQuiz').querySelectorAll('[data-s]').forEach(function (b) { b.onclick = function () { setView('lesson'); startIfNeeded(); runStep(+b.dataset.s); }; });
+  $('qRetry').onclick = function () { QZ.i = 0; QZ.ans = []; QZ.checked = []; QZ.done = false; buildQuiz(); };
+}
+
+/* ===================== wiring ===================== */
+$('startBtn').onclick = function () {
+  startIfNeeded();
+  unlockAudio();
+  var mr = maxReachable(); runStep(progress.done.length && mr < STEP_TITLES.length && progress.done.indexOf(mr) < 0 ? mr : 0);
+};
+$('playBtn').onclick = function () { if (P.items) setPaused(!paused); else if (paused) setPaused(false); };
+$('replayBtn').onclick = replaySegment;
+$('speedSel').onchange = function () { speed = +this.value; if (voiceEl) { voiceEl.defaultPlaybackRate = speed; voiceEl.playbackRate = speed; } };
+$('muteBtn').onclick = function () { muted = !muted; if (muted) { stopSpeech(); P.speechDone = true; } updateControls(); };
+['Lesson', 'Sandbox', 'Recap', 'Quiz'].forEach(function (n) { $('tab' + n).onclick = function () { setView(n.toLowerCase()); }; });
+var themes = ['auto', 'light', 'dark'], themeI = 0;
+try { themeI = Math.max(0, themes.indexOf(localStorage.getItem('et-ft-theme') || 'auto')); } catch (e) {}
+function applyTheme() {
+  var t = themes[themeI];
+  if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
+  $('themeBtn').textContent = 'Theme: ' + t; dirty = true;
+}
+$('themeBtn').onclick = function () { themeI = (themeI + 1) % 3; try { localStorage.setItem('et-ft-theme', themes[themeI]); } catch (e) {} applyTheme(); };
+document.addEventListener('keydown', function (e) {
+  if (view !== 'lesson' || /input|textarea|select/i.test(e.target.tagName)) return;
+  if (e.code === 'Space' && e.target.tagName !== 'BUTTON') { e.preventDefault(); $('playBtn').click(); }
+});
+if (window.ResizeObserver) new ResizeObserver(function () { dirty = true; }).observe($('video'));
+window.addEventListener('resize', function () { dirty = true; });
+document.addEventListener('visibilitychange', function () { if (document.hidden && P.items && !paused) setPaused(true); });
+
+var lastT = performance.now(), lastDraw = 0;
+function loop(now) {
+  var dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
+  if (view === 'lesson') playerTick(dt);
+  if (view === 'lesson' || view === 'sandbox') {
+    if (dirty || now - lastDraw > 66) { render(); dirty = false; lastDraw = now; } /* the cross-section currents pulse gently */
+  }
+  if (view === 'recap') renderRecap(now / 1000);
+  requestAnimationFrame(loop);
+}
+applyTheme(); renderChapters(); renderTabs(); renderInfo(); updateControls();
+/* show the conductivity curve behind the start screen */
+S = STEPS[0].setup(); S.paths.cond.pEnd = PMAX;
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
