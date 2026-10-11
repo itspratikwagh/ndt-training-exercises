@@ -205,6 +205,14 @@ canvas{display:block;width:100%}
 .wlog .todo{color:var(--muted);font-style:italic;font-family:var(--f-body);font-size:14px}
 #setTabs{flex-wrap:wrap;border-radius:16px;max-width:100%}
 #setTabs button{min-width:2.4em}
+.fx{display:flex;align-items:baseline;justify-content:center;gap:.28em;flex-wrap:nowrap;white-space:nowrap;font-family:var(--f-display);font-weight:700;font-size:clamp(22px,6.2vw,48px);letter-spacing:-.01em;padding:26px 16px;border-radius:14px;background:var(--surface);border:1px solid var(--line);position:relative}
+.fx.sm{font-size:clamp(20px,3.2vw,30px);padding:18px 12px}
+.tk{display:inline-block;will-change:transform}
+.tk.ug{color:var(--accent-ink)}
+.tk.sod{color:var(--co)}
+.tk.op{color:var(--muted);font-weight:500}
+.tk.min{color:var(--co);font-weight:500}
+.both{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px}
 .pstack{display:flex;flex-direction:column;gap:18px}
 </style>
 </head>
@@ -218,7 +226,7 @@ canvas{display:block;width:100%}
       Ug Math Lab
     </div>
     <nav class="prog" id="prog" aria-label="Lesson progress"></nav>
-    <div class="count" id="count">1 / 7</div>
+    <div class="count" id="count">1 / 6</div>
   </div>
 </header>
 
@@ -253,51 +261,38 @@ canvas{display:block;width:100%}
   </div>
   <div class="panel rv">
     <div id="dia1"></div>
-    <div class="sl"><label for="sF">F</label><input type="range" id="sF" min="1" max="6" step="0.5" value="3"><output id="oF">3 mm</output></div>
-    <div class="sl"><label for="sSOD">SOD</label><input type="range" id="sSOD" min="100" max="600" step="10" value="300"><output id="oSOD">300 mm</output></div>
-    <div class="sl"><label for="sOFD">OFD</label><input type="range" id="sOFD" min="10" max="100" step="5" value="50"><output id="oOFD">50 mm</output></div>
-    <div class="ugbig"><span class="cap">Ug</span><span class="v" id="ug1">0.5 mm</span></div>
+    <div class="sl"><label for="sF">F</label><input type="range" id="sF" min="0.05" max="0.25" step="0.01" value="0.12"><output id="oF">0.12″</output></div>
+    <div class="sl"><label for="sSOD">SOD</label><input type="range" id="sSOD" min="4" max="24" step="0.5" value="12"><output id="oSOD">12″</output></div>
+    <div class="sl"><label for="sOFD">OFD</label><input type="range" id="sOFD" min="0.5" max="4" step="0.25" value="2"><output id="oOFD">2″</output></div>
+    <div class="ugbig"><span class="cap">Ug</span><span class="v" id="ug1">0.02″</span></div>
     <div class="cap">To scale, except source size and Ug, which are drawn 40× larger.</div>
   </div>
 </section>
 
-<!-- 2 · Similar triangles -->
-<section class="scene" data-key="tri" hidden>
+<!-- 2 · The formula -->
+<section class="scene" data-key="formula" hidden>
   <div class="text">
-    <div class="eyebrow rv">Where the formula comes from</div>
-    <h2 class="rv">Two triangles, same shape</h2>
-    <div class="tri rv" id="tri">
-      <div>Top triangle: width <i>F</i>, height <i>SOD</i>.</div>
-      <div hidden>Bottom triangle: width <i>Ug</i>, height <i>OFD</i>.</div>
-      <div hidden>They meet at the object's edge, so their angles match.</div>
-    </div>
-    <div class="row rv"><button class="btn" id="triMore">Next</button></div>
-    <div class="q" id="q-ratio"></div>
-    <div class="formula" data-after="q-ratio" hidden>Ug = F × OFD ÷ SOD<small>F = source (focal spot) size · OFD = object-to-film distance · SOD = source-to-object distance</small></div>
-  </div>
-  <div class="panel rv">
-    <div id="dia2"></div>
-    <div class="legend">
-      <span><i class="dot" style="background:var(--co)"></i>Top triangle</span>
-      <span><i class="dot" style="background:var(--ir)"></i>Bottom triangle</span>
-    </div>
-  </div>
-</section>
-
-<!-- 3 · Rearrange -->
-<section class="scene" data-key="flip" hidden>
-  <div class="text">
-    <div class="eyebrow rv">Turn it around</div>
-    <h2 class="rv">The code sets Ug. You set the distance.</h2>
-    <p class="muted rv">F and OFD are usually fixed: F comes with the source, and OFD comes from the part.</p>
+    <div class="eyebrow rv">The formula</div>
+    <h2 class="rv">One formula, two jobs</h2>
+    <p class="muted rv">F comes with the source. OFD comes from the part. SOD is the distance you control.</p>
     <div class="q" id="q-what"></div>
-    <div class="q" id="q-sodf"></div>
     <div class="q" id="q-sfd"></div>
   </div>
-  <div class="text">
-    <div class="formula rv">Ug = F × OFD ÷ SOD</div>
-    <div class="formula" data-after="q-sodf" hidden>Min SOD = F × OFD ÷ Ug</div>
-    <div class="formula" data-after="q-sfd" hidden>Min SFD = SOD + OFD</div>
+  <div class="panel rv">
+    <div class="seg" id="fSeg" role="group" aria-label="Formula">
+      <button data-f="ug" class="on">Ug</button><button data-f="sod">Min SOD</button><button data-f="both">Side by side</button>
+    </div>
+    <div id="fOne"><div class="fx" id="fx" aria-live="polite">
+      <span class="tk min" id="tkMin" hidden>Min</span><span class="tk ug" id="tkUg">Ug</span><span class="tk op">=</span><span class="tk">F</span><span class="tk op">×</span><span class="tk">OFD</span><span class="tk op">÷</span><span class="tk sod" id="tkSod">SOD</span>
+    </div></div>
+    <div class="both" id="fBoth" hidden>
+      <div class="fx sm"><span class="tk ug">Ug</span><span class="tk op">=</span><span class="tk">F</span><span class="tk op">×</span><span class="tk">OFD</span><span class="tk op">÷</span><span class="tk sod">SOD</span></div>
+      <div class="fx sm"><span class="tk min">Min</span><span class="tk sod">SOD</span><span class="tk op">=</span><span class="tk">F</span><span class="tk op">×</span><span class="tk">OFD</span><span class="tk op">÷</span><span class="tk ug">Ug</span></div>
+    </div>
+    <p class="small" id="fCap" style="margin:0">Know the distance? Find Ug.</p>
+    <div class="row"><button class="btn accent" id="fFlip">Rearrange for SOD</button></div>
+    <div class="formula" data-after="q-sfd" hidden style="font-size:clamp(22px,3.4vw,30px)">Min SFD = Min SOD + OFD</div>
+    <div class="cap">F = focal spot size · OFD = object-to-film · SOD = source-to-object · SFD = source-to-film</div>
   </div>
 </section>
 
@@ -343,11 +338,10 @@ canvas{display:block;width:100%}
     <div class="panel rv">
       <div class="seg" id="cMode" role="group" aria-label="Solve for"><button data-m="ug" class="on">Find Ug</button><button data-m="sod">Find min SOD</button></div>
       <div class="calc">
-        <div class="field"><label for="cF">F</label><input id="cF" type="number" inputmode="decimal" value="0.1" step="any"></div>
-        <div class="field"><label for="cOFD">OFD</label><input id="cOFD" type="number" inputmode="decimal" value="1.5" step="any"></div>
-        <div class="field"><label for="cX" id="cXl">SOD</label><input id="cX" type="number" inputmode="decimal" value="10" step="any"></div>
+        <div class="field"><label for="cF">F (″)</label><input id="cF" type="number" inputmode="decimal" value="0.1" step="any"></div>
+        <div class="field"><label for="cOFD">OFD (″)</label><input id="cOFD" type="number" inputmode="decimal" value="1.5" step="any"></div>
+        <div class="field"><label for="cX" id="cXl">SOD (″)</label><input id="cX" type="number" inputmode="decimal" value="10" step="any"></div>
       </div>
-      <div class="field" style="max-width:12em"><label for="cU">Units</label><select id="cU"><option value="in">inches (″)</option><option value="mm">mm</option></select></div>
       <div class="result" id="cRes"></div>
       <div class="cap" id="cWork"></div>
     </div>
@@ -430,14 +424,10 @@ const QZ = {
     right: 'Right. From far away, the source looks more like a point.', wrong: 'Drag SOD to the right. What happens to the band?' },
   'q-OFD': { after: 'q-SOD', ask: '<span class="tag">Predict</span>Move the film <b>away from the part</b> (OFD up). Ug gets…', opts: ['Bigger', 'Smaller', 'No change'], ans: 0,
     right: 'Right. The rays keep spreading after the edge, so keep film tight to the part.', wrong: 'Drag OFD and watch the band.' },
-  'q-ratio': { hidden: true, ask: 'Same shape means same ratio. Ug ÷ OFD equals…', opts: ['F ÷ SOD', 'SOD ÷ F', 'F × SOD'], ans: 0,
-    right: 'Yes. Multiply both sides by OFD and you get the formula.', wrong: 'Compare width to height in each triangle: Ug to OFD, and F to …?' },
   'q-what': { ask: 'The code gives you Ug max. F and OFD are fixed. What do you solve for?', opts: ['F', 'SOD', 'OFD'], ans: 1,
-    right: 'Yes. SOD is the one distance you control on the job.', wrong: 'You can\'t change the source or the part. What can you move?' },
-  'q-sodf': { after: 'q-what', ask: 'Rearrange Ug = F × OFD ÷ SOD. SOD equals…', opts: ['F × OFD ÷ Ug', 'Ug × OFD ÷ F', 'F × Ug ÷ OFD'], ans: 0,
-    right: 'Yes. SOD and Ug swap places. This gives the <b>minimum</b> SOD: any closer and Ug is too big.', wrong: 'Multiply both sides by SOD, then divide both sides by Ug.' },
-  'q-sfd': { after: 'q-sodf', ask: 'SFD is source-to-film. Looking at the diagram, SFD equals…', opts: ['SOD + OFD', 'SOD − OFD', 'SOD × OFD'], ans: 0,
-    right: 'Yes. The source-to-film distance is the two pieces added end to end.', wrong: 'Follow the distance from the source down to the film.' },
+    right: 'Yes. SOD is the one distance you control. Press <b>Rearrange for SOD</b> and watch Ug and SOD swap places.', wrong: 'You can\'t change the source or the part. What can you move?' },
+  'q-sfd': { after: 'q-what', ask: 'SFD runs from the source all the way to the film. SFD equals…', opts: ['SOD + OFD', 'SOD − OFD', 'SOD × OFD'], ans: 0,
+    right: 'Yes. Source-to-object plus object-to-film.', wrong: 'Picture the two distances end to end, source down to film.' },
   'q-t25': { ask: 'You\'re shooting a 2.5″ weld. What is Ug max?', opts: ['0.020″', '0.030″', '0.040″', '0.070″'], ans: 1,
     right: '2.5″ falls in "2″ through 3″", so 0.030″.', wrong: 'Find the row that includes 2.5″.', onDone: () => hl(1) },
   'q-t2': { after: 'q-t25', ask: 'Exactly 2.000″?', opts: ['0.020″', '0.030″'], ans: 1,
@@ -449,13 +439,13 @@ const hl = i => $$('#codeTbl tbody tr').forEach((r, j) => r.classList.toggle('hl
 const LIMITS = [[2, 0.020, 'Under 2″'], [3, 0.030, '2″ through 3″'], [4, 0.040, 'Over 3″ through 4″'], [Infinity, 0.070, 'Over 4″']];
 const limitFor = t => LIMITS.find(([max], i) => i === 0 ? t < max : t <= max);
 const P = [
-  { kind: 'ug', u: 'mm', F: 2, OFD: 10, SOD: 100, note: 'Whole numbers to start.' },
-  { kind: 'ug', u: 'mm', F: 3, OFD: 20, SOD: 200 },
-  { kind: 'ug', u: 'mm', F: 4, OFD: 25, SOD: 400 },
-  { kind: 'ug', u: 'mm', F: 5, OFD: 40, SFD: 440, trap: true, note: 'Read carefully: this one gives SFD, not SOD.' },
-  { kind: 'ug', u: 'in', F: 0.1, OFD: 2, SOD: 20, note: 'Same math, now in inches.' },
-  { kind: 'sod', u: 'mm', F: 2, OFD: 20, Ug: 0.2, note: 'Now solve for the distance.' },
-  { kind: 'sod', u: 'mm', F: 3, OFD: 30, Ug: 0.3, sfd: true },
+  { kind: 'ug', u: 'in', F: 0.1, OFD: 1, SOD: 10, note: 'Simple numbers to start.' },
+  { kind: 'ug', u: 'in', F: 0.2, OFD: 2, SOD: 20 },
+  { kind: 'ug', u: 'in', F: 0.1, OFD: 3, SOD: 15 },
+  { kind: 'ug', u: 'in', F: 0.2, OFD: 1, SFD: 11, trap: true, note: 'Read carefully: this one gives SFD, not SOD.' },
+  { kind: 'ug', u: 'in', F: 0.15, OFD: 2, SOD: 12 },
+  { kind: 'sod', u: 'in', F: 0.1, OFD: 1, Ug: 0.02, note: 'Now solve for the distance.' },
+  { kind: 'sod', u: 'in', F: 0.2, OFD: 1.5, Ug: 0.02, sfd: true },
   { kind: 'sod', u: 'in', F: 0.12, OFD: 1.5, Ug: 0.02, sfd: true },
   { kind: 'sod', u: 'in', F: 0.1, OFD: 2.5, thick: 2.5, sfd: true, tape: true, note: 'Look up Ug max in the code table first.' },
   { kind: 'ug', u: 'in', F: 0.14, OFD: 1.5, SFD: 12, thick: 1.5, note: 'Does this setup pass?' },
@@ -486,10 +476,11 @@ function build(p, i) {
         `SOD = ${fmt(p.SFD)} − ${fmt(p.OFD)} = <b>${fmt(SOD)}${u}</b>`, { SOD: `SOD = ${fmt(SOD)}${u}` });
     }
     const top = p.F * p.OFD, ug = top / SOD;
+    const ugS = p.u === 'in' ? ug.toFixed(3) + '″' : fmt(ug) + u;
     add({ type: 'num', ask: `Top of the fraction: F × OFD = ${fmt(p.F)} × ${fmt(p.OFD)}`, ans: top, unit: '', hint: `Multiply ${fmt(p.F)} by ${fmt(p.OFD)}.`, show: `${fmt(p.F)} × ${fmt(p.OFD)} = ${fmt(top)}.` },
       `F × OFD = ${fmt(p.F)} × ${fmt(p.OFD)} = <b>${fmt(top)}</b>`);
-    add({ type: 'num', ask: `Ug = ${fmt(top)} ÷ ${fmt(SOD)}`, ans: ug, unit: UW(p.u), hint: `Divide ${fmt(top)} by ${fmt(SOD)}.`, show: `Ug = ${fmt(top)} ÷ ${fmt(SOD)} = ${fmt(ug)}${u}.` },
-      `Ug = ${fmt(top)} ÷ ${fmt(SOD)} = <b>${fmt(ug)}${u}</b>`, { Ug: `Ug = ${fmt(ug)}${u}` });
+    add({ type: 'num', ask: `Ug = ${fmt(top)} ÷ ${fmt(SOD)}`, ans: ug, unit: UW(p.u), hint: `Divide ${fmt(top)} by ${fmt(SOD)}.`, show: `Ug = ${fmt(top)} ÷ ${fmt(SOD)} = ${ugS}.` },
+      `Ug = ${fmt(top)} ÷ ${fmt(SOD)} = <b>${ugS}</b>`, { Ug: `Ug = ${ugS}` });
     if (p.thick) {
       const [, lim, row] = limitFor(p.thick), ok = ug <= lim + 1e-9;
       add({ type: 'mc', ask: `The part is ${fmt(p.thick)}″ thick, so Ug max is ${LF(lim)} (${row}). Does the setup pass?`, opts: ['Accept', 'Reject'], ans: ok ? 0 : 1,
@@ -652,47 +643,66 @@ const draw0 = m => $('#dia0').innerHTML = dia({ yS: 40, yO: 190, fHalf: 34, poin
 $$('#srcSeg button').forEach(b => b.onclick = () => { $$('#srcSeg button').forEach(x => x.classList.toggle('on', x === b)); draw0(b.dataset.s); });
 draw0('point');
 
-/* scene 1: sliders, to scale (700 mm = 252 px), F and Ug drawn 40× */
-const S = 252 / 700, EX = 40;
+/* scene 1: sliders, to scale (28″ = 252 px), F and Ug drawn 40× */
+const S = 252 / 28, EX = 40;
 function draw1() {
   const F = +$('#sF').value, sod = +$('#sSOD').value, ofd = +$('#sOFD').value, ug = F * ofd / sod;
-  $('#oF').textContent = F + ' mm'; $('#oSOD').textContent = sod + ' mm'; $('#oOFD').textContent = ofd + ' mm';
-  $('#ug1').textContent = fmt(ug) + ' mm';
+  $('#oF').textContent = fmt(F) + '″'; $('#oSOD').textContent = fmt(sod) + '″'; $('#oOFD').textContent = fmt(ofd) + '″';
+  $('#ug1').textContent = ug.toFixed(3) + '″';
   const yO = 292 - ofd * S;
-  $('#dia1').innerHTML = dia({ yS: yO - sod * S, yO, fHalf: F * EX * S / 2, labels: { F: `F = ${F} mm`, SOD: `SOD`, OFD: `OFD`, Ug: `Ug = ${fmt(ug)} mm` } });
+  $('#dia1').innerHTML = dia({ yS: yO - sod * S, yO, fHalf: F * EX * S / 2, labels: { F: `F = ${fmt(F)}″`, SOD: `SOD`, OFD: `OFD`, Ug: `Ug = ${ug.toFixed(3)}″` } });
 }
 ['sF', 'sSOD', 'sOFD'].forEach(id => $('#' + id).addEventListener('input', draw1));
 draw1();
 
-/* scene 2: triangles */
-const draw2 = () => $('#dia2').innerHTML = schematic({}, true);
-draw2();
-$('#triMore').onclick = () => {
-  const hid = $$('#tri > div').find(d => d.hidden);
-  if (hid) show(hid);
-  if (!$$('#tri > div').some(d => d.hidden)) { $('#triMore').disabled = true; show($('#q-ratio')); }
-};
+/* scene 2: formula rearrange. FLIP: measure, swap Ug and SOD, then animate each token from its old spot. */
+const CAPS = { ug: 'Know the distance? Find Ug.', sod: 'Know Ug max? Find the closest the source can be.', both: 'Same formula. Ug and SOD just swap places.' };
+let fState = 'ug';
+function setFormula(m) {
+  $$('#fSeg button').forEach(b => b.classList.toggle('on', b.dataset.f === m));
+  $('#fCap').textContent = CAPS[m];
+  $('#fOne').hidden = m === 'both'; $('#fBoth').hidden = m !== 'both';
+  $('#fFlip').hidden = m === 'both';
+  if (m === 'both') { fState = m; return; }
+  const fx = $('#fx'), toks = $$('.tk', fx).filter(t => !t.hidden), before = new Map(toks.map(t => [t, t.getBoundingClientRect()]));
+  const ug = $('#tkUg'), sod = $('#tkSod'), min = $('#tkMin'), wantSod = m === 'sod';
+  if (wantSod !== (min.nextElementSibling === sod)) {
+    // swap the two tokens in the DOM
+    const ph = document.createElement('span'); fx.replaceChild(ph, ug); fx.replaceChild(ug, sod); fx.replaceChild(sod, ph);
+  }
+  min.hidden = !wantSod;
+  $('#fFlip').textContent = wantSod ? 'Rearrange for Ug' : 'Rearrange for SOD';
+  if (!RM && fState !== 'both') {
+    $$('.tk', fx).filter(t => !t.hidden).forEach(t => {
+      const a = before.get(t), b = t.getBoundingClientRect();
+      if (!a) { t.animate([{ opacity: 0, transform: 'translateY(-12px)' }, { opacity: 1, transform: 'none' }], { duration: 500, delay: 450, fill: 'backwards' }); return; }
+      const dx = a.left - b.left, dy = a.top - b.top;
+      if (!dx && !dy) return;
+      const lift = t === ug ? -1.1 : t === sod ? 1.1 : 0, h = b.height * lift;
+      t.animate([{ transform: `translate(${dx}px,${dy}px)` }, { transform: `translate(${dx / 2}px,${dy / 2 + h}px)`, offset: .5 }, { transform: 'none' }],
+        { duration: t === ug || t === sod ? 900 : 600, easing: 'cubic-bezier(.45,.05,.25,1)' });
+    });
+  }
+  fState = m;
+}
+$$('#fSeg button').forEach(b => b.onclick = () => setFormula(b.dataset.f));
+$('#fFlip').onclick = () => setFormula(fState === 'sod' ? 'ug' : 'sod');
 
 /* scene 6: calculator + score */
 let mode = 'ug';
 $$('#cMode button').forEach(b => b.onclick = () => {
   mode = b.dataset.m; $$('#cMode button').forEach(x => x.classList.toggle('on', x === b));
-  $('#cXl').textContent = mode === 'ug' ? 'SOD' : 'Ug max';
-  $('#cX').value = mode === 'ug' ? ($('#cU').value === 'in' ? 10 : 300) : ($('#cU').value === 'in' ? 0.02 : 0.2);
+  $('#cXl').textContent = mode === 'ug' ? 'SOD (″)' : 'Ug max (″)';
+  $('#cX').value = mode === 'ug' ? 10 : 0.02;
   calc();
 });
-$('#cU').addEventListener('change', () => {
-  const inch = $('#cU').value === 'in';
-  $('#cF').value = inch ? 0.1 : 3; $('#cOFD').value = inch ? 1.5 : 40;
-  $('#cX').value = mode === 'ug' ? (inch ? 10 : 300) : (inch ? 0.02 : 0.2); calc();
-});
 function calc() {
-  const F = +$('#cF').value, ofd = +$('#cOFD').value, x = +$('#cX').value, u = $('#cU').value === 'in' ? '″' : ' mm';
+  const F = +$('#cF').value, ofd = +$('#cOFD').value, x = +$('#cX').value, u = '″';
   if (!(F > 0 && ofd >= 0 && x > 0)) { $('#cRes').textContent = '—'; $('#cWork').textContent = 'Enter positive numbers.'; return; }
   if (mode === 'ug') {
     const ug = F * ofd / x;
-    $('#cRes').textContent = `Ug = ${fmt(ug)}${u}`;
-    $('#cWork').textContent = `${fmt(F)} × ${fmt(ofd)} ÷ ${fmt(x)} = ${fmt(ug)}${u} · SFD = ${fmt(x + ofd)}${u}`;
+    $('#cRes').textContent = `Ug = ${ug.toFixed(3)}″`;
+    $('#cWork').textContent = `${fmt(F)} × ${fmt(ofd)} ÷ ${fmt(x)} = ${ug.toFixed(3)}″ · SFD = ${fmt(x + ofd)}${u}`;
   } else {
     const sod = F * ofd / x;
     $('#cRes').textContent = `Min SOD = ${fmt(sod)}${u}`;
