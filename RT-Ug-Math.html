@@ -265,7 +265,7 @@ canvas{display:block;width:100%}
     <div class="sl"><label for="sSOD">SOD</label><input type="range" id="sSOD" min="4" max="24" step="0.5" value="12"><output id="oSOD">12″</output></div>
     <div class="sl"><label for="sOFD">OFD</label><input type="range" id="sOFD" min="0.5" max="4" step="0.25" value="2"><output id="oOFD">2″</output></div>
     <div class="ugbig"><span class="cap">Ug</span><span class="v" id="ug1">0.02″</span></div>
-    <div class="cap">To scale, except source size and Ug, which are drawn 40× larger.</div>
+    <div class="cap">Film against the part, so OFD = thickness. To scale, except source size and Ug (drawn 40× larger).</div>
   </div>
 </section>
 
@@ -377,7 +377,7 @@ const fmt = v => { const a = Math.abs(v); return String(+v.toFixed(a < 1 ? 4 : a
 /* ---------- setup diagram (SVG) ---------- */
 // geometry in px: source at yS, object edge at (xe, yO), film at yF.
 // Rays from both ends of the source past the edge bound the penumbra: width = F·OFD/SOD.
-function dia({ yS, yO, fHalf, labels = {}, tri = false, point = false }) {
+function dia({ yS, yO, fHalf, tPx = 14, labels = {}, tri = false, point = false }) {
   const yF = 292, xe = 200, f = point ? 0 : fHalf, k = (yF - yO) / (yO - yS);
   const L = xe - f * k, R = xe + f * k;
   const t = (x, y, s, a = 'middle', c = 'var(--ink)') => `<text x="${x}" y="${y}" text-anchor="${a}" style="fill:${c}">${s}</text>`;
@@ -399,11 +399,17 @@ function dia({ yS, yO, fHalf, labels = {}, tri = false, point = false }) {
     g += `<polygon points="${xe - f},${yS} ${xe + f},${yS} ${xe},${yO}" style="fill:var(--co);opacity:.35;stroke:var(--co)"/>`;
     g += `<polygon points="${xe},${yO} ${L},${yF} ${R},${yF}" style="fill:var(--ir);opacity:.4;stroke:var(--ir)"/>`;
   }
-  // object (opaque edge) and source
-  g += `<rect x="40" y="${yO - 12}" width="${xe - 40}" height="12" style="fill:var(--muted)"/>`;
+  // part: top surface at yO, thickness tPx; anything between its bottom and the film is air gap
+  const yB = yO + tPx, gap = yF - yB;
+  g += `<rect x="86" y="${yO}" width="${xe - 86}" height="${tPx}" style="fill:var(--muted);opacity:.9"/>`;
+  if (labels.T && tPx >= 15) g += t((86 + xe) / 2, yO + tPx / 2 + 4, labels.T, 'middle', 'var(--surface)');
+  if (gap > 3) {
+    g += `<line x1="78" y1="${yB}" x2="78" y2="${yF}" style="stroke:var(--co)"/><line x1="73" y1="${yB}" x2="83" y2="${yB}" style="stroke:var(--co)"/><line x1="73" y1="${yF}" x2="83" y2="${yF}" style="stroke:var(--co)"/>`;
+    g += t(68, (yB + yF) / 2 + 4, labels.G || 'gap', 'end', 'var(--co)');
+  }
   g += point ? `<circle cx="${xe}" cy="${yS}" r="4" style="fill:var(--accent)"/>` : `<rect x="${xe - f}" y="${yS - 5}" width="${2 * f}" height="10" rx="2" style="fill:var(--accent)"/>`;
   g += t(xe, yS - 12, labels.F || (point ? 'point source' : 'F'));
-  g += t(70, yO - 18, 'object', 'start', 'var(--muted)') + t(26, yF + 26, 'film', 'start', 'var(--muted)');
+  g += t(90, yO - 8, 'part', 'start', 'var(--muted)') + t(26, yF + 26, 'film', 'start', 'var(--muted)');
   // dimensions
   g += dim(276, yS, yO, labels.SOD || 'SOD') + dim(276, yO, yF, labels.OFD || 'OFD');
   if (labels.SFD) g += dim(388, yS, yF, '') + t(392, yS - 10, labels.SFD, 'end', 'var(--muted)');
@@ -411,7 +417,12 @@ function dia({ yS, yO, fHalf, labels = {}, tri = false, point = false }) {
   else g += t(xe, yF + 30, 'sharp edge');
   return `<svg class="dia" viewBox="0 0 400 330" role="img" aria-label="Source, object and film geometry"><defs><linearGradient id="pen"><stop offset="0" style="stop-color:var(--ink)"/><stop offset="1" style="stop-color:var(--daughter)"/></linearGradient></defs>${g}</svg>`;
 }
-const schematic = (labels, tri) => dia({ yS: 40, yO: 200, fHalf: 30, labels, tri });
+// Practice drawings: SOD is shortened, but thickness and gap are drawn to scale with each other,
+// so a thicker part or a bigger gap looks bigger from problem to problem.
+const schematic = (labels, T = 1, gap = 0) => {
+  const ofd = T + gap, ofdPx = 34 + 26 * ofd, tPx = ofdPx * T / ofd;
+  return dia({ yS: 40, yO: 292 - ofdPx, fHalf: 30, tPx, labels });
+};
 
 /* ---------- quizzes ---------- */
 const score = { total: 0, first: 0 };
@@ -439,19 +450,20 @@ const hl = i => $$('#codeTbl tbody tr').forEach((r, j) => r.classList.toggle('hl
 const LIMITS = [[2, 0.020, 'Under 2″'], [3, 0.030, '2″ through 3″'], [4, 0.040, 'Over 3″ through 4″'], [Infinity, 0.070, 'Over 4″']];
 const limitFor = t => LIMITS.find(([max], i) => i === 0 ? t < max : t <= max);
 const P = [
-  { kind: 'ug', u: 'in', F: 0.1, OFD: 1, SOD: 10, note: 'Simple numbers to start.' },
-  { kind: 'ug', u: 'in', F: 0.2, OFD: 2, SOD: 20 },
-  { kind: 'ug', u: 'in', F: 0.1, OFD: 3, SOD: 15 },
-  { kind: 'ug', u: 'in', F: 0.2, OFD: 1, SFD: 11, trap: true, note: 'Read carefully: this one gives SFD, not SOD.' },
-  { kind: 'ug', u: 'in', F: 0.15, OFD: 2, SOD: 12 },
-  { kind: 'sod', u: 'in', F: 0.1, OFD: 1, Ug: 0.02, note: 'Now solve for the distance.' },
-  { kind: 'sod', u: 'in', F: 0.2, OFD: 1.5, Ug: 0.02, sfd: true },
-  { kind: 'sod', u: 'in', F: 0.12, OFD: 1.5, Ug: 0.02, sfd: true },
-  { kind: 'sod', u: 'in', F: 0.1, OFD: 2.5, thick: 2.5, sfd: true, tape: true, note: 'Look up Ug max in the code table first.' },
-  { kind: 'ug', u: 'in', F: 0.14, OFD: 1.5, SFD: 12, thick: 1.5, note: 'Does this setup pass?' },
-  { kind: 'sod', u: 'in', F: 0.117, OFD: 0.75, thick: 0.75, sfd: true, note: 'A 50 Ci Ir-192 source (0.117″ focal size) on a 0.75″ plate.' },
-  { kind: 'sod', u: 'in', F: 0.184, OFD: 3.25, thick: 3.25, sfd: true, note: 'A 150 Ci Ir-192 source (0.184″ focal size) on a 3.25″ weld.' },
+  { kind: 'ug', F: 0.1, T: 1, SOD: 10, note: 'Simple numbers to start. The film is against the back of the part.' },
+  { kind: 'ug', F: 0.2, T: 2, SOD: 20 },
+  { kind: 'ug', F: 0.1, T: 3, SOD: 15 },
+  { kind: 'ug', F: 0.2, T: 1, SFD: 11, trap: true, note: 'Read carefully: this one gives SFD, not SOD.' },
+  { kind: 'ug', F: 0.15, T: 1.5, gap: 0.5, SOD: 12, note: 'The film is not touching the part this time.' },
+  { kind: 'sod', F: 0.1, T: 1, Ug: 0.02, note: 'Now solve for the distance.' },
+  { kind: 'sod', F: 0.2, T: 1, gap: 0.5, Ug: 0.02, sfd: true },
+  { kind: 'sod', F: 0.12, T: 1.5, Ug: 0.02, sfd: true },
+  { kind: 'sod', F: 0.1, T: 2.5, code: true, sfd: true, tape: true, note: 'Look up Ug max in the code table first.' },
+  { kind: 'ug', F: 0.14, T: 1, gap: 0.5, SFD: 12, code: true, tableTrap: true, note: 'Does this setup pass?' },
+  { kind: 'sod', F: 0.117, T: 0.75, code: true, sfd: true, note: 'A 50 Ci Ir-192 source (0.117″ focal size) on a 0.75″ plate.' },
+  { kind: 'sod', F: 0.184, T: 3, gap: 0.25, code: true, sfd: true, note: 'A 150 Ci Ir-192 source (0.184″ focal size) on a 3″ weld. The film sits 0.25″ below.' },
 ];
+P.forEach(p => { p.u = 'in'; p.gap = p.gap || 0; p.OFD = p.T + p.gap; });
 const LF = v => v.toFixed(3) + '″';
 const U = u => u === 'in' ? '″' : ' mm';
 const UW = u => u === 'in' ? 'inch' : 'mm';
@@ -460,7 +472,11 @@ const tol = v => Math.max(Math.abs(v) * 0.012, 1e-6);
 function build(p, i) {
   const k = i + 1, id = 'p' + k, u = U(p.u), steps = [], lines = [];
   const add = (st, line, lab) => steps.push(Object.assign(st, { line, lab }));
-  const labels = { F: `F = ${fmt(p.F)}${u}`, OFD: `OFD = ${fmt(p.OFD)}${u}` };
+  const labels = { F: `F = ${fmt(p.F)}${u}`, T: `T = ${fmt(p.T)}″`, OFD: p.gap ? 'OFD = ?' : `OFD = ${fmt(p.OFD)}${u}` };
+  if (p.gap) labels.G = `gap ${fmt(p.gap)}″`;
+  const ofdStep = () => p.gap && add({ type: 'num', ask: `OFD runs from the <b>top</b> of the part to the film. OFD = thickness + gap = ${fmt(p.T)} + ${fmt(p.gap)}`,
+    ans: p.OFD, unit: 'inch', hint: `Add the ${fmt(p.gap)}″ gap to the ${fmt(p.T)}″ thickness.`, show: `OFD = ${fmt(p.T)} + ${fmt(p.gap)} = ${fmt(p.OFD)}″.` },
+    `OFD = ${fmt(p.T)} + ${fmt(p.gap)} = <b>${fmt(p.OFD)}″</b>`, { OFD: `OFD = ${fmt(p.OFD)}″` });
   if (p.kind === 'ug') {
     let SOD = p.SOD;
     labels.SOD = p.SOD ? `SOD = ${fmt(p.SOD)}${u}` : 'SOD = ?';
@@ -468,6 +484,7 @@ function build(p, i) {
     labels.Ug = 'Ug = ?';
     add({ type: 'mc', ask: 'What are you solving for? Pick the formula.', opts: ['Ug = F × OFD ÷ SOD', 'Min SOD = F × OFD ÷ Ug', 'SFD = SOD + OFD'], ans: 0,
       right: 'Yes. You have F, OFD and the distance, so solve for Ug.', wrong: 'Which value is missing from the problem?' }, '<span class="wf">Ug = F × OFD ÷ SOD</span>');
+    ofdStep();
     if (p.SFD) {
       SOD = p.SFD - p.OFD;
       if (p.trap) add({ type: 'mc', ask: `You're given SFD = ${fmt(p.SFD)}${u}. Can you put it straight into the formula as SOD?`, opts: ['Yes', 'No'], ans: 1,
@@ -481,9 +498,12 @@ function build(p, i) {
       `F × OFD = ${fmt(p.F)} × ${fmt(p.OFD)} = <b>${fmt(top)}</b>`);
     add({ type: 'num', ask: `Ug = ${fmt(top)} ÷ ${fmt(SOD)}`, ans: ug, unit: UW(p.u), hint: `Divide ${fmt(top)} by ${fmt(SOD)}.`, show: `Ug = ${fmt(top)} ÷ ${fmt(SOD)} = ${ugS}.` },
       `Ug = ${fmt(top)} ÷ ${fmt(SOD)} = <b>${ugS}</b>`, { Ug: `Ug = ${ugS}` });
-    if (p.thick) {
-      const [, lim, row] = limitFor(p.thick), ok = ug <= lim + 1e-9;
-      add({ type: 'mc', ask: `The part is ${fmt(p.thick)}″ thick, so Ug max is ${LF(lim)} (${row}). Does the setup pass?`, opts: ['Accept', 'Reject'], ans: ok ? 0 : 1,
+    if (p.code) {
+      const [, lim, row] = limitFor(p.T), ok = ug <= lim + 1e-9;
+      if (p.tableTrap) add({ type: 'mc', ask: 'Which number do you look up in the code table?', opts: [`Thickness, ${fmt(p.T)}″`, `OFD, ${fmt(p.OFD)}″`], ans: 0,
+        right: 'Right. The table goes by material thickness. OFD also includes the air gap.', wrong: 'The table\'s first column is <i>material</i> thickness. Is the air gap material?' },
+        `<span class="wf">Code table: use thickness ${fmt(p.T)}″, not OFD</span>`);
+      add({ type: 'mc', ask: `The part is ${fmt(p.T)}″ thick, so Ug max is ${LF(lim)} (${row}). Does the setup pass?`, opts: ['Accept', 'Reject'], ans: ok ? 0 : 1,
         right: ok ? `Accept. ${LF(ug)} does not exceed ${LF(lim)}. Equal to the limit is still OK.` : `Reject. ${LF(ug)} is over ${LF(lim)}.`,
         wrong: `Compare ${LF(ug)} with ${LF(lim)}. The code says Ug must not <i>exceed</i> the limit.` },
         `${LF(ug)} vs. ${LF(lim)} limit → <b>${ok ? 'Accept' : 'Reject'}</b>`);
@@ -492,16 +512,17 @@ function build(p, i) {
     let lim = p.Ug;
     labels.SOD = 'SOD = ?'; labels.Ug = p.Ug ? `Ug max = ${p.u === 'in' ? LF(p.Ug) : fmt(p.Ug) + u}` : 'Ug max = ?';
     if (p.sfd) labels.SFD = 'SFD = ?';
-    if (p.thick) {
-      const L = limitFor(p.thick); lim = L[1];
-      add({ type: 'mc', ask: `The part is ${fmt(p.thick)}″ thick. What is Ug max?`, opts: LIMITS.map(l => LF(l[1])), ans: LIMITS.indexOf(L),
-        right: `${fmt(p.thick)}″ falls in "${L[2]}", so ${LF(lim)}.`, wrong: 'Find the row in the code table that includes this thickness.' },
-        `Ug max for ${fmt(p.thick)}″ = <b>${LF(lim)}</b>`, { Ug: `Ug max = ${LF(lim)}` });
+    if (p.code) {
+      const L = limitFor(p.T); lim = L[1];
+      add({ type: 'mc', ask: `The part is ${fmt(p.T)}″ thick. What is Ug max?`, opts: LIMITS.map(l => LF(l[1])), ans: LIMITS.indexOf(L),
+        right: `${fmt(p.T)}″ falls in "${L[2]}", so ${LF(lim)}.${p.gap ? ' Use the thickness, not OFD: the gap isn\'t material.' : ''}`, wrong: 'Find the row in the code table that includes this thickness.' },
+        `Ug max for ${fmt(p.T)}″ thick = <b>${LF(lim)}</b>`, { Ug: `Ug max = ${LF(lim)}` });
     }
     const top = p.F * p.OFD, sod = top / lim;
     const ls = p.u === 'in' ? lim.toFixed(3) : fmt(lim);
     add({ type: 'mc', ask: 'What are you solving for? Pick the formula.', opts: ['Ug = F × OFD ÷ SOD', 'Min SOD = F × OFD ÷ Ug', 'SFD = SOD + OFD'], ans: 1,
       right: 'Yes. Ug is the limit, so solve for the distance.', wrong: 'Which value is missing from the problem?' }, '<span class="wf">Min SOD = F × OFD ÷ Ug</span>');
+    ofdStep();
     add({ type: 'num', ask: `Top of the fraction: F × OFD = ${fmt(p.F)} × ${fmt(p.OFD)}`, ans: top, unit: '', hint: `Multiply ${fmt(p.F)} by ${fmt(p.OFD)}.`, show: `${fmt(p.F)} × ${fmt(p.OFD)} = ${fmt(top)}.` },
       `F × OFD = ${fmt(p.F)} × ${fmt(p.OFD)} = <b>${fmt(top)}</b>`);
     add({ type: 'num', ask: `Min SOD = ${fmt(top)} ÷ ${ls}`, ans: sod, unit: UW(p.u), hint: `Divide ${fmt(top)} by ${fmt(lim)}.`, show: `Min SOD = ${fmt(top)} ÷ ${ls} = ${fmt(sod)}${u}.` },
@@ -521,11 +542,10 @@ function build(p, i) {
   // DOM
   const tab = document.createElement('button'); tab.dataset.k = k; tab.textContent = k; tab.setAttribute('aria-label', 'Problem ' + k); tab.onclick = () => pick(k);
   $('#setTabs').append(tab);
-  const given = [`F = ${fmt(p.F)}${u}`, `OFD = ${fmt(p.OFD)}${u}`];
+  const given = [`F = ${fmt(p.F)}${u}`, `Thickness = ${fmt(p.T)}″`, p.gap ? `Film gap = ${fmt(p.gap)}″` : `Film touching the part`];
   if (p.SOD) given.push(`SOD = ${fmt(p.SOD)}${u}`);
   if (p.SFD) given.push(`SFD = ${fmt(p.SFD)}${u}`);
   if (p.Ug) given.push(`Ug max = ${p.u === 'in' ? LF(p.Ug) : fmt(p.Ug) + u}`);
-  if (p.thick) given.push(`Thickness = ${fmt(p.thick)}″`);
   const q = document.createElement('div'); q.dataset.prob = k; q.className = 'pstack';
   q.innerHTML = `${p.note ? `<p class="muted" style="margin:0">${p.note}</p>` : ''}<div class="given">${given.map(g => `<span>${g}</span>`).join('')}</div>`
     + steps.map((_, j) => `<div class="q" id="q-${id}-${j}"></div>`).join('')
@@ -535,7 +555,7 @@ function build(p, i) {
   const w = document.createElement('div'); w.dataset.prob = k; w.className = 'panel';
   w.innerHTML = `<div class="dia-wrap"></div><div class="wlog"><span class="todo">Your worked solution builds here.</span></div>`;
   $('#setW').append(w);
-  const drawW = () => w.querySelector('.dia-wrap').innerHTML = schematic(labels);
+  const drawW = () => w.querySelector('.dia-wrap').innerHTML = schematic(labels, p.T, p.gap);
   drawW();
   steps.forEach((st, j) => {
     QZ[`q-${id}-${j}`] = Object.assign({}, st, j ? { after: `q-${id}-${j - 1}` } : {}, {
@@ -639,7 +659,7 @@ addEventListener('keydown', e => {
 });
 
 /* scene 0: point vs real source */
-const draw0 = m => $('#dia0').innerHTML = dia({ yS: 40, yO: 190, fHalf: 34, point: m === 'point' });
+const draw0 = m => $('#dia0').innerHTML = dia({ yS: 40, yO: 262, fHalf: 34, tPx: 30, point: m === 'point' });
 $$('#srcSeg button').forEach(b => b.onclick = () => { $$('#srcSeg button').forEach(x => x.classList.toggle('on', x === b)); draw0(b.dataset.s); });
 draw0('point');
 
@@ -650,7 +670,7 @@ function draw1() {
   $('#oF').textContent = fmt(F) + '″'; $('#oSOD').textContent = fmt(sod) + '″'; $('#oOFD').textContent = fmt(ofd) + '″';
   $('#ug1').textContent = ug.toFixed(3) + '″';
   const yO = 292 - ofd * S;
-  $('#dia1').innerHTML = dia({ yS: yO - sod * S, yO, fHalf: F * EX * S / 2, labels: { F: `F = ${fmt(F)}″`, SOD: `SOD`, OFD: `OFD`, Ug: `Ug = ${ug.toFixed(3)}″` } });
+  $('#dia1').innerHTML = dia({ yS: yO - sod * S, yO, fHalf: F * EX * S / 2, tPx: ofd * S, labels: { F: `F = ${fmt(F)}″`, SOD: `SOD`, OFD: `OFD`, Ug: `Ug = ${ug.toFixed(3)}″` } });
 }
 ['sF', 'sSOD', 'sOFD'].forEach(id => $('#' + id).addEventListener('input', draw1));
 draw1();
