@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ug Math Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one idea per screen, stepped like a lab procedure. Words on the left, an instrument panel on the right. */
+:root{
+  --bg:#EDF0F2; --surface:#FFFFFF; --ink:#141D25; --muted:#5A6772; --line:#D2D9DF;
+  --accent:#D69A00; --accent-ink:#875C00; --on-accent:#141D25;
+  --ir:#D8612A; --co:#2D68D2; --daughter:#BCC4CB; --gamma:#E0AA00;
+  --good:#23824F; --on-good:#FFFFFF; --bad:#C0392F;
+  --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1418; --surface:#161F26; --ink:#E5EBEF; --muted:#94A2AD; --line:#29353F;
+  --accent:#F2B630; --accent-ink:#F2B630; --on-accent:#141D25;
+  --ir:#F2864A; --co:#5E97F2; --daughter:#36434E; --gamma:#FFD24A;
+  --good:#58C487; --on-good:#0E1418; --bad:#EE6A62; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1418; --surface:#161F26; --ink:#E5EBEF; --muted:#94A2AD; --line:#29353F;
+  --accent:#F2B630; --accent-ink:#F2B630; --on-accent:#141D25;
+  --ir:#F2864A; --co:#5E97F2; --daughter:#36434E; --gamma:#FFD24A;
+  --good:#58C487; --on-good:#0E1418; --bad:#EE6A62; color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 var(--f-body);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:12px 16px}
+.top .in{max-width:1040px;margin:0 auto;display:flex;align-items:center;gap:16px}
+.brand{font-family:var(--f-display);font-weight:700;font-size:17px;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.brand svg{color:var(--accent)}
+.prog{flex:1;display:flex;gap:4px;min-width:0}
+.prog button{flex:1;height:6px;padding:0;border:0;border-radius:3px;background:var(--line);cursor:pointer;transition:background .3s}
+.prog button.done{background:var(--accent)}
+.prog button.cur{background:var(--ink)}
+.count{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+main{max-width:1040px;margin:0 auto;padding:40px 16px 128px}
+.scene{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:48px;align-items:start}
+.scene.solo{grid-template-columns:minmax(0,1fr)}
+@media (max-width:840px){.scene{grid-template-columns:minmax(0,1fr);gap:28px}}
+.text{display:flex;flex-direction:column;gap:18px;min-width:0}
+.text p{margin:0;max-width:42ch}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--accent-ink)}
+h1,h2{font-family:var(--f-display);text-wrap:balance;margin:0}
+h1{font-size:clamp(54px,10vw,96px);line-height:.92;letter-spacing:-.035em;font-weight:700}
+h2{font-size:clamp(30px,4.6vw,42px);line-height:1.05;letter-spacing:-.02em;font-weight:700}
+.lead{font-size:19px;color:var(--muted)}
+.big{font-family:var(--f-display);font-size:clamp(22px,3vw,28px);line-height:1.2;font-weight:500;letter-spacing:-.01em}
+.big b{color:var(--accent-ink);font-weight:700}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+sup{font-size:.62em;line-height:0}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;min-width:0;display:flex;flex-direction:column;gap:14px}
+canvas{display:block;width:100%}
+.cap{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.04em;color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.wave{width:18px;height:8px;display:inline-block}
+
+/* questions */
+.q{border-top:1px solid var(--line);padding-top:18px;display:flex;flex-direction:column;gap:12px}
+.q .ask{font-weight:600;font-size:17px;line-height:1.4;max-width:44ch}
+.q .ask .tag{display:block;font-family:var(--f-mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--accent-ink);font-weight:500;margin-bottom:4px}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opt{font-size:15px;padding:9px 16px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);cursor:pointer;transition:border-color .15s,background .15s,transform .15s}
+.opt:hover:not(:disabled){border-color:var(--ink)}
+.opt:disabled{cursor:default}
+.opt.right{background:var(--good);border-color:var(--good);color:var(--on-good)}
+.opt.picked{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.opt.wrong{border-color:var(--bad);color:var(--bad);text-decoration:line-through;animation:shake .35s}
+.opts.locked .opt:not(.right):not(.picked):not(.wrong){opacity:.45}
+.numrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.numrow input{width:120px;font:500 17px var(--f-mono);padding:8px 12px;border-radius:8px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink)}
+.numrow input:focus{border-color:var(--ink);outline:none}
+.numrow .unit{color:var(--muted);font-size:15px}
+.fb{font-size:15px;min-height:0;max-width:46ch}
+.fb:empty{display:none}
+.fb.good{color:var(--good)}
+.fb.bad{color:var(--bad)}
+.fb.neutral{color:var(--muted)}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+.btn{font-size:15px;font-weight:500;padding:10px 18px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.btn:hover:not(:disabled){border-color:var(--ink)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.btn.accent{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:999px;padding:3px;gap:2px;align-self:flex-start}
+.seg button{border:0;background:none;padding:6px 14px;border-radius:999px;cursor:pointer;font-size:14px;font-weight:500;color:var(--muted)}
+.seg button.on{background:var(--ink);color:var(--bg)}
+.seg button.done:not(.on){color:var(--good)}
+
+.reads{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:520px){.reads{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.read{display:flex;flex-direction:column;gap:2px;min-width:0}
+.read .k{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.read .v{font-family:var(--f-display);font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em;white-space:nowrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--f-mono);font-size:12px;padding:4px 10px;border-radius:999px;background:var(--bg);color:var(--muted)}
+.log{font-family:var(--f-mono);font-size:13.5px;color:var(--ink);min-height:1.5em;border-left:3px solid var(--accent);padding-left:10px}
+.log:empty{display:none}
+
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.duo figure{margin:0;display:flex;flex-direction:column;gap:6px;align-items:center}
+.duo .lbl{font-family:var(--f-display);font-weight:700;font-size:22px}
+.duo .dim{font-family:var(--f-mono);font-size:12px;color:var(--ink)}
+.duo .rate{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+.def{display:flex;flex-direction:column;gap:10px}
+.def .eq{font-family:var(--f-mono);font-size:clamp(16px,2.2vw,19px);padding:12px 14px;border-radius:10px;background:var(--surface);border:1px solid var(--line)}
+.meter{display:flex;flex-direction:column;gap:6px}
+.meter input[type=range]{width:100%;accent-color:var(--accent)}
+.meter .val{font-family:var(--f-display);font-weight:700;font-size:clamp(30px,5vw,44px);letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
+
+.bars2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.bars{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;height:170px;align-items:end;border-bottom:1.5px solid var(--muted)}
+.bcol{display:flex;flex-direction:column;justify-content:flex-end;height:100%;gap:4px;text-align:center}
+.bcol span{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.bar{height:var(--h);border-radius:4px 4px 0 0;transform-origin:bottom}
+.bars.count .bar{background:var(--accent)}
+.bars.energy .bar{background:var(--muted)}
+.bx{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-family:var(--f-mono);font-size:11px;color:var(--muted);text-align:center;margin-top:6px}
+
+.steps{display:flex;flex-direction:column;gap:8px;font-family:var(--f-mono);font-size:clamp(15px,2vw,18px)}
+.steps div{display:grid;grid-template-columns:7.5em 1fr;gap:12px;padding:10px 14px;border-radius:10px;background:var(--surface);border:1px solid var(--line)}
+.steps div span:first-child{color:var(--muted)}
+.formula{font-family:var(--f-display);font-size:clamp(26px,4vw,38px);font-weight:700;letter-spacing:-.02em;line-height:1.1;padding:20px 22px;border-radius:14px;background:var(--accent);color:var(--on-accent)}
+.formula small{display:block;font-family:var(--f-body);font-size:15px;font-weight:500;letter-spacing:0;margin-top:6px}
+
+.given{display:flex;flex-wrap:wrap;gap:8px}
+.given span{font-family:var(--f-mono);font-size:14px;padding:6px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--line)}
+.work{font-family:var(--f-mono);font-size:15px;line-height:1.7;padding:16px 18px;border-radius:12px;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;gap:14px}
+.wl{display:flex;flex-direction:column;gap:2px;padding-left:12px;border-left:3px solid var(--line);transition:border-color .3s}
+.wl.ok{border-left-color:var(--good)}
+.wk{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink)}
+.wf{color:var(--muted)}
+.slot{display:inline-block;min-width:1.6em;text-align:center;border-bottom:1.5px dashed var(--muted);color:var(--muted);font-weight:500}
+.slot.ok{border-bottom-color:transparent;color:var(--ink);font-weight:600}
+.work .ans{font-weight:600;color:var(--good)}
+
+.calc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:520px){.calc{grid-template-columns:minmax(0,1fr)}}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.field input,.field select{font:500 16px var(--f-mono);padding:8px 10px;border-radius:8px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);width:100%;min-width:0}
+.field .pair{display:flex;gap:6px}
+.result{font-family:var(--f-display);font-weight:700;font-size:clamp(34px,5vw,48px);letter-spacing:-.02em;line-height:1}
+.recap{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.recap li{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:baseline}
+.recap li b{font-family:var(--f-mono);color:var(--accent-ink);font-weight:500}
+.ref{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-family:var(--f-mono);font-size:14px}
+.ref span:nth-child(odd){color:var(--muted)}
+.foot{font-size:13px;color:var(--muted);max-width:52ch}
+
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:5;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--line)}
+.nav .in{max-width:1040px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.nav .hint{font-size:13px;color:var(--muted);text-align:center;flex:1}
+.btn.ready{animation:nudge 1.8s ease-in-out infinite}
+@keyframes nudge{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 35%,transparent)}}
+
+/* reveal */
+.scene.on .rv{animation:rise .65s cubic-bezier(.2,.75,.2,1) backwards;animation-delay:calc(var(--i,0) * 120ms)}
+.pop{animation:rise .55s cubic-bezier(.2,.75,.2,1) backwards}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}}
+.scene.on .bar{animation:grow .9s cubic-bezier(.2,.75,.2,1) backwards;animation-delay:calc(var(--j) * 160ms + 400ms)}
+@keyframes grow{from{transform:scaleY(0)}}
+@media (prefers-reduced-motion: reduce){
+  .scene.on .rv,.pop,.scene.on .bar,.opt.wrong,.btn.ready{animation:none}
+}
+
+/* Ug lab additions */
+.dia{width:100%;height:auto;display:block}
+.dia text{font-family:var(--f-mono);font-size:12px}
+.sl{display:grid;grid-template-columns:5.5em 1fr 6.5em;gap:10px;align-items:center}
+.sl label{font-family:var(--f-mono);font-size:12px;color:var(--muted);letter-spacing:.04em}
+.sl input{width:100%;accent-color:var(--accent)}
+.sl output{font-family:var(--f-mono);font-size:14px;text-align:right;font-variant-numeric:tabular-nums}
+.ugbig{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.ugbig .v{font-family:var(--f-display);font-weight:700;font-size:clamp(30px,5vw,42px);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.tri{display:flex;flex-direction:column;gap:8px}
+.tri div{padding:10px 14px;border-radius:10px;background:var(--surface);border:1px solid var(--line);font-size:15px}
+.tri i{font-style:normal;font-family:var(--f-mono);font-weight:500}
+.tbl{width:100%;border-collapse:collapse;font-family:var(--f-mono);font-size:14px;font-variant-numeric:tabular-nums}
+.tbl th,.tbl td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line)}
+.tbl th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.tbl tr.hl td{background:color-mix(in srgb,var(--accent) 18%,transparent)}
+.wlog{display:flex;flex-direction:column;gap:6px;font-family:var(--f-mono);font-size:14.5px;line-height:1.55}
+.wlog .wf{color:var(--muted)}
+.wlog .ln{padding-left:10px;border-left:3px solid var(--good)}
+.wlog .ln b{color:var(--good)}
+.wlog .todo{color:var(--muted);font-style:italic;font-family:var(--f-body);font-size:14px}
+#setTabs{flex-wrap:wrap;border-radius:16px;max-width:100%}
+#setTabs button{min-width:2.4em}
+.pstack{display:flex;flex-direction:column;gap:18px}
+</style>
+</head>
+<body>
+
+
+<header class="top">
+  <div class="in">
+    <div class="brand">
+      <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="3" rx="1" fill="currentColor"/><path d="M7 6 L3 21 M17 6 L21 21" stroke="currentColor" stroke-width="2" fill="none"/><rect x="2" y="20" width="20" height="2" fill="currentColor"/></svg>
+      Ug Math Lab
+    </div>
+    <nav class="prog" id="prog" aria-label="Lesson progress"></nav>
+    <div class="count" id="count">1 / 7</div>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- 0 · Hook -->
+<section class="scene" data-key="hook">
+  <div class="text">
+    <div class="eyebrow rv">Radiography · Chapter 4</div>
+    <h1 class="rv">Geometric unsharpness</h1>
+    <p class="lead rv">Why the edges on a radiograph blur, and how to calculate by how much.</p>
+    <div class="q" id="q-hook"></div>
+  </div>
+  <div class="panel rv">
+    <div class="seg" id="srcSeg" role="group" aria-label="Source type">
+      <button data-s="point" class="on">Point source</button><button data-s="real">Real source</button>
+    </div>
+    <div id="dia0"></div>
+    <div class="cap">Source size drawn larger so you can see it.</div>
+  </div>
+</section>
+
+<!-- 1 · What controls Ug -->
+<section class="scene" data-key="controls" hidden>
+  <div class="text">
+    <div class="eyebrow rv">Predict, then test</div>
+    <h2 class="rv">Three distances control the blur</h2>
+    <div class="q" id="q-F"></div>
+    <div class="q" id="q-SOD"></div>
+    <div class="q" id="q-OFD"></div>
+    <p class="big" data-after="q-OFD" hidden>Big <b>F</b> and big <b>OFD</b> blur the edge. Big <b>SOD</b> sharpens it.</p>
+  </div>
+  <div class="panel rv">
+    <div id="dia1"></div>
+    <div class="sl"><label for="sF">F</label><input type="range" id="sF" min="1" max="6" step="0.5" value="3"><output id="oF">3 mm</output></div>
+    <div class="sl"><label for="sSOD">SOD</label><input type="range" id="sSOD" min="100" max="600" step="10" value="300"><output id="oSOD">300 mm</output></div>
+    <div class="sl"><label for="sOFD">OFD</label><input type="range" id="sOFD" min="10" max="100" step="5" value="50"><output id="oOFD">50 mm</output></div>
+    <div class="ugbig"><span class="cap">Ug</span><span class="v" id="ug1">0.5 mm</span></div>
+    <div class="cap">To scale, except source size and Ug, which are drawn 40× larger.</div>
+  </div>
+</section>
+
+<!-- 2 · Similar triangles -->
+<section class="scene" data-key="tri" hidden>
+  <div class="text">
+    <div class="eyebrow rv">Where the formula comes from</div>
+    <h2 class="rv">Two triangles, same shape</h2>
+    <div class="tri rv" id="tri">
+      <div>Top triangle: width <i>F</i>, height <i>SOD</i>.</div>
+      <div hidden>Bottom triangle: width <i>Ug</i>, height <i>OFD</i>.</div>
+      <div hidden>They meet at the object's edge, so their angles match.</div>
+    </div>
+    <div class="row rv"><button class="btn" id="triMore">Next</button></div>
+    <div class="q" id="q-ratio"></div>
+    <div class="formula" data-after="q-ratio" hidden>Ug = F × OFD ÷ SOD<small>F = source (focal spot) size · OFD = object-to-film distance · SOD = source-to-object distance</small></div>
+  </div>
+  <div class="panel rv">
+    <div id="dia2"></div>
+    <div class="legend">
+      <span><i class="dot" style="background:var(--co)"></i>Top triangle</span>
+      <span><i class="dot" style="background:var(--ir)"></i>Bottom triangle</span>
+    </div>
+  </div>
+</section>
+
+<!-- 3 · Rearrange -->
+<section class="scene" data-key="flip" hidden>
+  <div class="text">
+    <div class="eyebrow rv">Turn it around</div>
+    <h2 class="rv">The code sets Ug. You set the distance.</h2>
+    <p class="muted rv">F and OFD are usually fixed: F comes with the source, and OFD comes from the part.</p>
+    <div class="q" id="q-what"></div>
+    <div class="q" id="q-sodf"></div>
+    <div class="q" id="q-sfd"></div>
+  </div>
+  <div class="text">
+    <div class="formula rv">Ug = F × OFD ÷ SOD</div>
+    <div class="formula" data-after="q-sodf" hidden>Min SOD = F × OFD ÷ Ug</div>
+    <div class="formula" data-after="q-sfd" hidden>Min SFD = SOD + OFD</div>
+  </div>
+</section>
+
+<!-- 4 · Code limits -->
+<section class="scene" data-key="code" hidden>
+  <div class="text">
+    <div class="eyebrow rv">Where Ug max comes from</div>
+    <h2 class="rv">The code table</h2>
+    <p class="muted rv">ASME Section V, T-274.2. Look up the material thickness.</p>
+    <div class="q" id="q-t25"></div>
+    <div class="q" id="q-t2"></div>
+  </div>
+  <div class="panel rv">
+    <table class="tbl" id="codeTbl">
+      <thead><tr><th>Material thickness</th><th>Ug max</th></tr></thead>
+      <tbody>
+        <tr><td>Under 2″</td><td>0.020″</td></tr>
+        <tr><td>2″ through 3″</td><td>0.030″</td></tr>
+        <tr><td>Over 3″ through 4″</td><td>0.040″</td></tr>
+        <tr><td>Over 4″</td><td>0.070″</td></tr>
+      </tbody>
+    </table>
+    <div class="cap">Check the edition and procedure your job is written to.</div>
+  </div>
+</section>
+
+<!-- 5 · Practice -->
+<section class="scene" data-key="set" hidden>
+  <div class="text">
+    <div class="eyebrow rv">Practice</div>
+    <h2 class="rv">Twelve problems, one step at a time</h2>
+    <div class="row rv"><span class="cap">Problem</span><div class="seg" id="setTabs" role="group" aria-label="Problem"></div></div>
+    <div id="setQ"></div>
+  </div>
+  <div class="text" id="setW"></div>
+</section>
+
+<!-- 6 · Calculator + recap -->
+<section class="scene" data-key="calc" hidden>
+  <div class="text">
+    <div class="eyebrow rv">Wrap-up</div>
+    <h2 class="rv">Check any setup</h2>
+    <div class="panel rv">
+      <div class="seg" id="cMode" role="group" aria-label="Solve for"><button data-m="ug" class="on">Find Ug</button><button data-m="sod">Find min SOD</button></div>
+      <div class="calc">
+        <div class="field"><label for="cF">F</label><input id="cF" type="number" inputmode="decimal" value="0.1" step="any"></div>
+        <div class="field"><label for="cOFD">OFD</label><input id="cOFD" type="number" inputmode="decimal" value="1.5" step="any"></div>
+        <div class="field"><label for="cX" id="cXl">SOD</label><input id="cX" type="number" inputmode="decimal" value="10" step="any"></div>
+      </div>
+      <div class="field" style="max-width:12em"><label for="cU">Units</label><select id="cU"><option value="in">inches (″)</option><option value="mm">mm</option></select></div>
+      <div class="result" id="cRes"></div>
+      <div class="cap" id="cWork"></div>
+    </div>
+  </div>
+  <div class="text">
+    <ul class="recap rv">
+      <li><b>1</b><span>A real source has size, so edges get a blurred band: Ug.</span></li>
+      <li><b>2</b><span>Ug = F × OFD ÷ SOD.</span></li>
+      <li><b>3</b><span>Min SOD = F × OFD ÷ Ug max. Round up, never down.</span></li>
+      <li><b>4</b><span>SFD = SOD + OFD. Given SFD? Subtract OFD first.</span></li>
+    </ul>
+    <p class="cap rv" id="scoreLine"></p>
+  </div>
+</section>
+
+</main>
+
+<footer class="nav">
+  <div class="in">
+    <button class="btn" id="prev">Back</button>
+    <span class="hint" id="navHint">Answer, then continue</span>
+    <button class="btn primary" id="next">Next</button>
+  </div>
+</footer>
+
+<script>
+(() => {
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const fmt = v => { const a = Math.abs(v); return String(+v.toFixed(a < 1 ? 4 : a < 100 ? 2 : 1)); };
+
+/* ---------- setup diagram (SVG) ---------- */
+// geometry in px: source at yS, object edge at (xe, yO), film at yF.
+// Rays from both ends of the source past the edge bound the penumbra: width = F·OFD/SOD.
+function dia({ yS, yO, fHalf, labels = {}, tri = false, point = false }) {
+  const yF = 292, xe = 200, f = point ? 0 : fHalf, k = (yF - yO) / (yO - yS);
+  const L = xe - f * k, R = xe + f * k;
+  const t = (x, y, s, a = 'middle', c = 'var(--ink)') => `<text x="${x}" y="${y}" text-anchor="${a}" style="fill:${c}">${s}</text>`;
+  const dim = (x, y1, y2, s) => `<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" style="stroke:var(--muted)"/><line x1="${x - 5}" y1="${y1}" x2="${x + 5}" y2="${y1}" style="stroke:var(--muted)"/><line x1="${x - 5}" y1="${y2}" x2="${x + 5}" y2="${y2}" style="stroke:var(--muted)"/>` + t(x + 9, (y1 + y2) / 2 + 4, s, 'start');
+  let g = '';
+  // shadow on film
+  g += `<rect x="20" y="${yF}" width="340" height="9" style="fill:var(--daughter)"/>`;
+  g += `<rect x="20" y="${yF}" width="${Math.max(0, L - 20)}" height="9" style="fill:var(--ink)"/>`;
+  if (R > L) g += `<rect x="${L}" y="${yF}" width="${R - L}" height="9" style="fill:url(#pen)"/>`;
+  // penumbra wedge and rays
+  if (!point) {
+    g += `<polygon points="${xe},${yO} ${L},${yF} ${R},${yF}" style="fill:var(--accent);opacity:.28"/>`;
+    g += `<line x1="${xe - f}" y1="${yS}" x2="${R}" y2="${yF}" style="stroke:var(--accent);stroke-width:1.3"/>`;
+    g += `<line x1="${xe + f}" y1="${yS}" x2="${L}" y2="${yF}" style="stroke:var(--accent);stroke-width:1.3"/>`;
+  } else {
+    g += `<line x1="${xe}" y1="${yS}" x2="${xe}" y2="${yF}" style="stroke:var(--accent);stroke-width:1.3"/>`;
+  }
+  if (tri && !point) {
+    g += `<polygon points="${xe - f},${yS} ${xe + f},${yS} ${xe},${yO}" style="fill:var(--co);opacity:.35;stroke:var(--co)"/>`;
+    g += `<polygon points="${xe},${yO} ${L},${yF} ${R},${yF}" style="fill:var(--ir);opacity:.4;stroke:var(--ir)"/>`;
+  }
+  // object (opaque edge) and source
+  g += `<rect x="40" y="${yO - 12}" width="${xe - 40}" height="12" style="fill:var(--muted)"/>`;
+  g += point ? `<circle cx="${xe}" cy="${yS}" r="4" style="fill:var(--accent)"/>` : `<rect x="${xe - f}" y="${yS - 5}" width="${2 * f}" height="10" rx="2" style="fill:var(--accent)"/>`;
+  g += t(xe, yS - 12, labels.F || (point ? 'point source' : 'F'));
+  g += t(70, yO - 18, 'object', 'start', 'var(--muted)') + t(26, yF + 26, 'film', 'start', 'var(--muted)');
+  // dimensions
+  g += dim(276, yS, yO, labels.SOD || 'SOD') + dim(276, yO, yF, labels.OFD || 'OFD');
+  if (labels.SFD) g += dim(388, yS, yF, '') + t(392, yS - 10, labels.SFD, 'end', 'var(--muted)');
+  if (!point) g += `<line x1="${L}" y1="${yF + 14}" x2="${R}" y2="${yF + 14}" style="stroke:var(--ink)"/>` + t(xe, yF + 30, labels.Ug || 'Ug');
+  else g += t(xe, yF + 30, 'sharp edge');
+  return `<svg class="dia" viewBox="0 0 400 330" role="img" aria-label="Source, object and film geometry"><defs><linearGradient id="pen"><stop offset="0" style="stop-color:var(--ink)"/><stop offset="1" style="stop-color:var(--daughter)"/></linearGradient></defs>${g}</svg>`;
+}
+const schematic = (labels, tri) => dia({ yS: 40, yO: 200, fHalf: 30, labels, tri });
+
+/* ---------- quizzes ---------- */
+const score = { total: 0, first: 0 };
+const QZ = {
+  'q-hook': { ask: 'Switch to a <b>real source</b>, which has size. What happens to the shadow\'s edge?', opts: ['Stays sharp', 'Gets a blurred band', 'Disappears'], ans: 1,
+    right: 'Yes. Each point on the source casts its own shadow. That blurred band is <b>geometric unsharpness, Ug</b>.', wrong: 'Try the "Real source" button and look at the edge on the film.' },
+  'q-F': { ask: '<span class="tag">Predict</span>Use a <b>bigger source</b> (F up). Ug gets…', opts: ['Bigger', 'Smaller', 'No change'], ans: 0,
+    right: 'Right. Drag F and watch the band widen.', wrong: 'Drag the F slider and watch the band on the film.' },
+  'q-SOD': { after: 'q-F', ask: '<span class="tag">Predict</span>Move the source <b>farther away</b> (SOD up). Ug gets…', opts: ['Bigger', 'Smaller', 'No change'], ans: 1,
+    right: 'Right. From far away, the source looks more like a point.', wrong: 'Drag SOD to the right. What happens to the band?' },
+  'q-OFD': { after: 'q-SOD', ask: '<span class="tag">Predict</span>Move the film <b>away from the part</b> (OFD up). Ug gets…', opts: ['Bigger', 'Smaller', 'No change'], ans: 0,
+    right: 'Right. The rays keep spreading after the edge, so keep film tight to the part.', wrong: 'Drag OFD and watch the band.' },
+  'q-ratio': { hidden: true, ask: 'Same shape means same ratio. Ug ÷ OFD equals…', opts: ['F ÷ SOD', 'SOD ÷ F', 'F × SOD'], ans: 0,
+    right: 'Yes. Multiply both sides by OFD and you get the formula.', wrong: 'Compare width to height in each triangle: Ug to OFD, and F to …?' },
+  'q-what': { ask: 'The code gives you Ug max. F and OFD are fixed. What do you solve for?', opts: ['F', 'SOD', 'OFD'], ans: 1,
+    right: 'Yes. SOD is the one distance you control on the job.', wrong: 'You can\'t change the source or the part. What can you move?' },
+  'q-sodf': { after: 'q-what', ask: 'Rearrange Ug = F × OFD ÷ SOD. SOD equals…', opts: ['F × OFD ÷ Ug', 'Ug × OFD ÷ F', 'F × Ug ÷ OFD'], ans: 0,
+    right: 'Yes. SOD and Ug swap places. This gives the <b>minimum</b> SOD: any closer and Ug is too big.', wrong: 'Multiply both sides by SOD, then divide both sides by Ug.' },
+  'q-sfd': { after: 'q-sodf', ask: 'SFD is source-to-film. Looking at the diagram, SFD equals…', opts: ['SOD + OFD', 'SOD − OFD', 'SOD × OFD'], ans: 0,
+    right: 'Yes. The source-to-film distance is the two pieces added end to end.', wrong: 'Follow the distance from the source down to the film.' },
+  'q-t25': { ask: 'You\'re shooting a 2.5″ weld. What is Ug max?', opts: ['0.020″', '0.030″', '0.040″', '0.070″'], ans: 1,
+    right: '2.5″ falls in "2″ through 3″", so 0.030″.', wrong: 'Find the row that includes 2.5″.', onDone: () => hl(1) },
+  'q-t2': { after: 'q-t25', ask: 'Exactly 2.000″?', opts: ['0.020″', '0.030″'], ans: 1,
+    right: 'Right. "Under 2″" stops below 2.000″, so 2.000″ goes in the 0.030″ row.', wrong: '"Under 2″" means less than 2.000″. Which row includes 2.000″ itself?' },
+};
+const hl = i => $$('#codeTbl tbody tr').forEach((r, j) => r.classList.toggle('hl', j === i));
+
+/* ---------- practice problems ---------- */
+const LIMITS = [[2, 0.020, 'Under 2″'], [3, 0.030, '2″ through 3″'], [4, 0.040, 'Over 3″ through 4″'], [Infinity, 0.070, 'Over 4″']];
+const limitFor = t => LIMITS.find(([max], i) => i === 0 ? t < max : t <= max);
+const P = [
+  { kind: 'ug', u: 'mm', F: 2, OFD: 10, SOD: 100, note: 'Whole numbers to start.' },
+  { kind: 'ug', u: 'mm', F: 3, OFD: 20, SOD: 200 },
+  { kind: 'ug', u: 'mm', F: 4, OFD: 25, SOD: 400 },
+  { kind: 'ug', u: 'mm', F: 5, OFD: 40, SFD: 440, trap: true, note: 'Read carefully: this one gives SFD, not SOD.' },
+  { kind: 'ug', u: 'in', F: 0.1, OFD: 2, SOD: 20, note: 'Same math, now in inches.' },
+  { kind: 'sod', u: 'mm', F: 2, OFD: 20, Ug: 0.2, note: 'Now solve for the distance.' },
+  { kind: 'sod', u: 'mm', F: 3, OFD: 30, Ug: 0.3, sfd: true },
+  { kind: 'sod', u: 'in', F: 0.12, OFD: 1.5, Ug: 0.02, sfd: true },
+  { kind: 'sod', u: 'in', F: 0.1, OFD: 2.5, thick: 2.5, sfd: true, tape: true, note: 'Look up Ug max in the code table first.' },
+  { kind: 'ug', u: 'in', F: 0.14, OFD: 1.5, SFD: 12, thick: 1.5, note: 'Does this setup pass?' },
+  { kind: 'sod', u: 'in', F: 0.117, OFD: 0.75, thick: 0.75, sfd: true, note: 'A 50 Ci Ir-192 source (0.117″ focal size) on a 0.75″ plate.' },
+  { kind: 'sod', u: 'in', F: 0.184, OFD: 3.25, thick: 3.25, sfd: true, note: 'A 150 Ci Ir-192 source (0.184″ focal size) on a 3.25″ weld.' },
+];
+const LF = v => v.toFixed(3) + '″';
+const U = u => u === 'in' ? '″' : ' mm';
+const UW = u => u === 'in' ? 'inch' : 'mm';
+const tol = v => Math.max(Math.abs(v) * 0.012, 1e-6);
+
+function build(p, i) {
+  const k = i + 1, id = 'p' + k, u = U(p.u), steps = [], lines = [];
+  const add = (st, line, lab) => steps.push(Object.assign(st, { line, lab }));
+  const labels = { F: `F = ${fmt(p.F)}${u}`, OFD: `OFD = ${fmt(p.OFD)}${u}` };
+  if (p.kind === 'ug') {
+    let SOD = p.SOD;
+    labels.SOD = p.SOD ? `SOD = ${fmt(p.SOD)}${u}` : 'SOD = ?';
+    if (p.SFD) labels.SFD = `SFD = ${fmt(p.SFD)}${u}`;
+    labels.Ug = 'Ug = ?';
+    add({ type: 'mc', ask: 'What are you solving for? Pick the formula.', opts: ['Ug = F × OFD ÷ SOD', 'Min SOD = F × OFD ÷ Ug', 'SFD = SOD + OFD'], ans: 0,
+      right: 'Yes. You have F, OFD and the distance, so solve for Ug.', wrong: 'Which value is missing from the problem?' }, '<span class="wf">Ug = F × OFD ÷ SOD</span>');
+    if (p.SFD) {
+      SOD = p.SFD - p.OFD;
+      if (p.trap) add({ type: 'mc', ask: `You're given SFD = ${fmt(p.SFD)}${u}. Can you put it straight into the formula as SOD?`, opts: ['Yes', 'No'], ans: 1,
+        right: 'Right. SFD runs all the way to the film. It includes OFD.', wrong: 'Look at the diagram: SFD and SOD end in different places.' }, '<span class="wf">SFD ≠ SOD. SOD = SFD − OFD</span>');
+      add({ type: 'num', ask: `SOD = SFD − OFD = ${fmt(p.SFD)} − ${fmt(p.OFD)}`, ans: SOD, unit: UW(p.u), hint: `Subtract ${fmt(p.OFD)} from ${fmt(p.SFD)}.`, show: `SOD = ${fmt(SOD)}${u}.` },
+        `SOD = ${fmt(p.SFD)} − ${fmt(p.OFD)} = <b>${fmt(SOD)}${u}</b>`, { SOD: `SOD = ${fmt(SOD)}${u}` });
+    }
+    const top = p.F * p.OFD, ug = top / SOD;
+    add({ type: 'num', ask: `Top of the fraction: F × OFD = ${fmt(p.F)} × ${fmt(p.OFD)}`, ans: top, unit: '', hint: `Multiply ${fmt(p.F)} by ${fmt(p.OFD)}.`, show: `${fmt(p.F)} × ${fmt(p.OFD)} = ${fmt(top)}.` },
+      `F × OFD = ${fmt(p.F)} × ${fmt(p.OFD)} = <b>${fmt(top)}</b>`);
+    add({ type: 'num', ask: `Ug = ${fmt(top)} ÷ ${fmt(SOD)}`, ans: ug, unit: UW(p.u), hint: `Divide ${fmt(top)} by ${fmt(SOD)}.`, show: `Ug = ${fmt(top)} ÷ ${fmt(SOD)} = ${fmt(ug)}${u}.` },
+      `Ug = ${fmt(top)} ÷ ${fmt(SOD)} = <b>${fmt(ug)}${u}</b>`, { Ug: `Ug = ${fmt(ug)}${u}` });
+    if (p.thick) {
+      const [, lim, row] = limitFor(p.thick), ok = ug <= lim + 1e-9;
+      add({ type: 'mc', ask: `The part is ${fmt(p.thick)}″ thick, so Ug max is ${LF(lim)} (${row}). Does the setup pass?`, opts: ['Accept', 'Reject'], ans: ok ? 0 : 1,
+        right: ok ? `Accept. ${LF(ug)} does not exceed ${LF(lim)}. Equal to the limit is still OK.` : `Reject. ${LF(ug)} is over ${LF(lim)}.`,
+        wrong: `Compare ${LF(ug)} with ${LF(lim)}. The code says Ug must not <i>exceed</i> the limit.` },
+        `${LF(ug)} vs. ${LF(lim)} limit → <b>${ok ? 'Accept' : 'Reject'}</b>`);
+    }
+  } else {
+    let lim = p.Ug;
+    labels.SOD = 'SOD = ?'; labels.Ug = p.Ug ? `Ug max = ${p.u === 'in' ? LF(p.Ug) : fmt(p.Ug) + u}` : 'Ug max = ?';
+    if (p.sfd) labels.SFD = 'SFD = ?';
+    if (p.thick) {
+      const L = limitFor(p.thick); lim = L[1];
+      add({ type: 'mc', ask: `The part is ${fmt(p.thick)}″ thick. What is Ug max?`, opts: LIMITS.map(l => LF(l[1])), ans: LIMITS.indexOf(L),
+        right: `${fmt(p.thick)}″ falls in "${L[2]}", so ${LF(lim)}.`, wrong: 'Find the row in the code table that includes this thickness.' },
+        `Ug max for ${fmt(p.thick)}″ = <b>${LF(lim)}</b>`, { Ug: `Ug max = ${LF(lim)}` });
+    }
+    const top = p.F * p.OFD, sod = top / lim;
+    const ls = p.u === 'in' ? lim.toFixed(3) : fmt(lim);
+    add({ type: 'mc', ask: 'What are you solving for? Pick the formula.', opts: ['Ug = F × OFD ÷ SOD', 'Min SOD = F × OFD ÷ Ug', 'SFD = SOD + OFD'], ans: 1,
+      right: 'Yes. Ug is the limit, so solve for the distance.', wrong: 'Which value is missing from the problem?' }, '<span class="wf">Min SOD = F × OFD ÷ Ug</span>');
+    add({ type: 'num', ask: `Top of the fraction: F × OFD = ${fmt(p.F)} × ${fmt(p.OFD)}`, ans: top, unit: '', hint: `Multiply ${fmt(p.F)} by ${fmt(p.OFD)}.`, show: `${fmt(p.F)} × ${fmt(p.OFD)} = ${fmt(top)}.` },
+      `F × OFD = ${fmt(p.F)} × ${fmt(p.OFD)} = <b>${fmt(top)}</b>`);
+    add({ type: 'num', ask: `Min SOD = ${fmt(top)} ÷ ${ls}`, ans: sod, unit: UW(p.u), hint: `Divide ${fmt(top)} by ${fmt(lim)}.`, show: `Min SOD = ${fmt(top)} ÷ ${ls} = ${fmt(sod)}${u}.` },
+      `Min SOD = ${fmt(top)} ÷ ${ls} = <b>${fmt(sod)}${u}</b>`, { SOD: `SOD = ${fmt(sod)}${u}` });
+    if (p.sfd) {
+      const sfd = sod + p.OFD;
+      add({ type: 'num', ask: `Min SFD = SOD + OFD = ${fmt(sod)} + ${fmt(p.OFD)}`, ans: sfd, unit: UW(p.u), hint: `Add ${fmt(p.OFD)} to ${fmt(sod)}.`, show: `Min SFD = ${fmt(sod)} + ${fmt(p.OFD)} = ${fmt(sfd)}${u}.` },
+        `Min SFD = ${fmt(sod)} + ${fmt(p.OFD)} = <b>${fmt(sfd)}${u}</b>`, { SFD: `SFD = ${fmt(sfd)}${u}` });
+      if (p.tape) {
+      const lo = Math.floor(sfd * 8) / 8, hi = Math.ceil(sfd * 8) / 8, fr = v => `${Math.floor(v)}${['', '⅛', '¼', '⅜', '½', '⅝', '¾', '⅞'][Math.round((v % 1) * 8)]}″`;
+      add({ type: 'mc', ask: `You measure source-to-film with a tape marked in ⅛″. Set SFD at…`, opts: [fr(lo), fr(hi)], ans: 1,
+        right: `Yes, ${fmt(sfd)}″ is a minimum. Round up to ${fr(hi)}. Rounding down puts Ug over the limit.`, wrong: `At ${fr(lo)} the source is closer than the minimum. What does that do to Ug?` },
+        `Set at <b>${fr(hi)}</b> (round up)`);
+    }
+    }
+  }
+  // DOM
+  const tab = document.createElement('button'); tab.dataset.k = k; tab.textContent = k; tab.setAttribute('aria-label', 'Problem ' + k); tab.onclick = () => pick(k);
+  $('#setTabs').append(tab);
+  const given = [`F = ${fmt(p.F)}${u}`, `OFD = ${fmt(p.OFD)}${u}`];
+  if (p.SOD) given.push(`SOD = ${fmt(p.SOD)}${u}`);
+  if (p.SFD) given.push(`SFD = ${fmt(p.SFD)}${u}`);
+  if (p.Ug) given.push(`Ug max = ${p.u === 'in' ? LF(p.Ug) : fmt(p.Ug) + u}`);
+  if (p.thick) given.push(`Thickness = ${fmt(p.thick)}″`);
+  const q = document.createElement('div'); q.dataset.prob = k; q.className = 'pstack';
+  q.innerHTML = `${p.note ? `<p class="muted" style="margin:0">${p.note}</p>` : ''}<div class="given">${given.map(g => `<span>${g}</span>`).join('')}</div>`
+    + steps.map((_, j) => `<div class="q" id="q-${id}-${j}"></div>`).join('')
+    + (k < P.length ? `<div class="row" data-after="q-${id}-${steps.length - 1}" hidden><button class="btn accent">Next problem</button></div>` : `<p class="fb good" data-after="q-${id}-${steps.length - 1}" hidden>All twelve done.</p>`);
+  q.querySelector('.btn')?.addEventListener('click', () => pick(k + 1));
+  $('#setQ').append(q);
+  const w = document.createElement('div'); w.dataset.prob = k; w.className = 'panel';
+  w.innerHTML = `<div class="dia-wrap"></div><div class="wlog"><span class="todo">Your worked solution builds here.</span></div>`;
+  $('#setW').append(w);
+  const drawW = () => w.querySelector('.dia-wrap').innerHTML = schematic(labels);
+  drawW();
+  steps.forEach((st, j) => {
+    QZ[`q-${id}-${j}`] = Object.assign({}, st, j ? { after: `q-${id}-${j - 1}` } : {}, {
+      onDone: () => {
+        const log = w.querySelector('.wlog'); log.querySelector('.todo')?.remove();
+        const d = document.createElement('div'); d.className = st.line.includes('class="wf"') ? '' : 'ln'; d.innerHTML = st.line; log.append(d);
+        if (st.lab) { Object.assign(labels, st.lab); drawW(); }
+        if (j === steps.length - 1) $(`#setTabs [data-k="${k}"]`).classList.add('done');
+      },
+    });
+    if (st.type === 'num') QZ[`q-${id}-${j}`].tol = tol(st.ans);
+  });
+}
+function pick(k) {
+  $$('#setTabs button').forEach(b => b.classList.toggle('on', +b.dataset.k === k));
+  $$('[data-prob]').forEach(el => el.hidden = +el.dataset.prob !== k);
+  $$(`[data-prob="${k}"]`).forEach(el => { el.classList.remove('pop'); void el.offsetWidth; if (!RM) el.classList.add('pop'); });
+}
+P.forEach(build);
+
+function buildQuiz(id, cfg) {
+  const el = document.getElementById(id);
+  el.classList.add('rv');
+  if (cfg.after || cfg.hidden) el.hidden = true;
+  el.innerHTML = `<div class="ask">${cfg.ask}</div>`;
+  const fb = document.createElement('div'); fb.className = 'fb'; fb.setAttribute('aria-live', 'polite');
+  let tries = 0, done = false;
+  const finish = ok => {
+    done = true; el.dataset.done = '1'; score.total++; if (ok && tries === 1) score.first++;
+    cfg.onDone && cfg.onDone(); revealAfter(id); checkDone();
+  };
+  if (cfg.type === 'num') {
+    const row = document.createElement('div'); row.className = 'numrow';
+    row.innerHTML = `<input id="${id}-in" type="text" inputmode="decimal" autocomplete="off" aria-label="Your answer"><span class="unit">${cfg.unit}</span><button class="btn">Check</button>`;
+    const inp = row.querySelector('input'), b = row.querySelector('button');
+    const check = () => {
+      if (done) return;
+      const v = parseFloat(inp.value.replace(',', '.'));
+      if (isNaN(v)) { fb.className = 'fb neutral'; fb.textContent = 'Enter a number.'; return; }
+      tries++;
+      if (Math.abs(v - cfg.ans) <= cfg.tol) { fb.className = 'fb good'; fb.innerHTML = 'Correct. ' + cfg.show; inp.disabled = b.disabled = true; finish(true); }
+      else if (tries < 2) { fb.className = 'fb bad'; fb.innerHTML = 'Not quite. ' + cfg.hint; }
+      else { fb.className = 'fb bad'; fb.innerHTML = 'Answer: ' + cfg.show; inp.disabled = b.disabled = true; finish(false); }
+    };
+    b.onclick = check; inp.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+    el.append(row);
+  } else {
+    const wrap = document.createElement('div'); wrap.className = 'opts';
+    const lock = () => { wrap.classList.add('locked'); $$('.opt', wrap).forEach(x => x.disabled = true); };
+    cfg.opts.forEach((o, i) => {
+      const b = document.createElement('button'); b.className = 'opt'; b.innerHTML = o;
+      b.onclick = () => {
+        if (done) return; tries++;
+        if (i === cfg.ans) { b.classList.add('right'); lock(); fb.className = 'fb good'; fb.innerHTML = cfg.right; finish(true); }
+        else { b.classList.add('wrong'); b.disabled = true; fb.className = 'fb bad'; fb.innerHTML = cfg.wrong; }
+      };
+      wrap.append(b);
+    });
+    el.append(wrap);
+  }
+  el.append(fb);
+}
+function show(el) { el.hidden = false; el.classList.remove('pop'); void el.offsetWidth; if (!RM) el.classList.add('pop'); }
+function revealAfter(id) {
+  for (const [k, c] of Object.entries(QZ)) if (c.after === id) show(document.getElementById(k));
+  $$(`[data-after="${id}"]`).forEach(show);
+}
+Object.entries(QZ).forEach(([k, c]) => buildQuiz(k, c));
+pick(1);
+
+/* ---------- scenes & navigation ---------- */
+const scenes = $$('.scene'), ctrl = {};
+let cur = 0;
+const prog = $('#prog');
+scenes.forEach((s, i) => { const b = document.createElement('button'); b.setAttribute('aria-label', 'Go to step ' + (i + 1)); b.onclick = () => go(i); prog.append(b); });
+function checkDone() {
+  const ok = $$('.q', scenes[cur]).every(q => q.dataset.done);
+  const last = cur === scenes.length - 1;
+  $('#next').classList.toggle('ready', ok && !last);
+  $('#navHint').textContent = last ? 'Done. Use Back to review.' : ok ? 'Nice. Continue when ready.' : 'Answer, then continue';
+}
+function go(i) {
+  i = Math.max(0, Math.min(scenes.length - 1, i));
+  scenes[cur].classList.remove('on'); scenes[cur].hidden = true;
+  cur = i; const s = scenes[cur]; s.hidden = false;
+  let j = 0; $$('.rv', s).forEach(el => el.style.setProperty('--i', el.closest('[hidden]') ? 0 : Math.min(j++, 8)));
+  void s.offsetWidth; s.classList.add('on');
+  ctrl[s.dataset.key]?.();
+  [...prog.children].forEach((b, j) => { b.className = j < cur ? 'done' : j === cur ? 'cur' : ''; });
+  $('#count').textContent = `${cur + 1} / ${scenes.length}`;
+  $('#prev').disabled = cur === 0; $('#next').disabled = cur === scenes.length - 1;
+  checkDone();
+  window.scrollTo({ top: 0, behavior: RM ? 'auto' : 'smooth' });
+}
+$('#prev').onclick = () => go(cur - 1);
+$('#next').onclick = () => go(cur + 1);
+addEventListener('keydown', e => {
+  if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName)) return;
+  if (e.key === 'ArrowRight') go(cur + 1);
+  if (e.key === 'ArrowLeft') go(cur - 1);
+});
+
+/* scene 0: point vs real source */
+const draw0 = m => $('#dia0').innerHTML = dia({ yS: 40, yO: 190, fHalf: 34, point: m === 'point' });
+$$('#srcSeg button').forEach(b => b.onclick = () => { $$('#srcSeg button').forEach(x => x.classList.toggle('on', x === b)); draw0(b.dataset.s); });
+draw0('point');
+
+/* scene 1: sliders, to scale (700 mm = 252 px), F and Ug drawn 40× */
+const S = 252 / 700, EX = 40;
+function draw1() {
+  const F = +$('#sF').value, sod = +$('#sSOD').value, ofd = +$('#sOFD').value, ug = F * ofd / sod;
+  $('#oF').textContent = F + ' mm'; $('#oSOD').textContent = sod + ' mm'; $('#oOFD').textContent = ofd + ' mm';
+  $('#ug1').textContent = fmt(ug) + ' mm';
+  const yO = 292 - ofd * S;
+  $('#dia1').innerHTML = dia({ yS: yO - sod * S, yO, fHalf: F * EX * S / 2, labels: { F: `F = ${F} mm`, SOD: `SOD`, OFD: `OFD`, Ug: `Ug = ${fmt(ug)} mm` } });
+}
+['sF', 'sSOD', 'sOFD'].forEach(id => $('#' + id).addEventListener('input', draw1));
+draw1();
+
+/* scene 2: triangles */
+const draw2 = () => $('#dia2').innerHTML = schematic({}, true);
+draw2();
+$('#triMore').onclick = () => {
+  const hid = $$('#tri > div').find(d => d.hidden);
+  if (hid) show(hid);
+  if (!$$('#tri > div').some(d => d.hidden)) { $('#triMore').disabled = true; show($('#q-ratio')); }
+};
+
+/* scene 6: calculator + score */
+let mode = 'ug';
+$$('#cMode button').forEach(b => b.onclick = () => {
+  mode = b.dataset.m; $$('#cMode button').forEach(x => x.classList.toggle('on', x === b));
+  $('#cXl').textContent = mode === 'ug' ? 'SOD' : 'Ug max';
+  $('#cX').value = mode === 'ug' ? ($('#cU').value === 'in' ? 10 : 300) : ($('#cU').value === 'in' ? 0.02 : 0.2);
+  calc();
+});
+$('#cU').addEventListener('change', () => {
+  const inch = $('#cU').value === 'in';
+  $('#cF').value = inch ? 0.1 : 3; $('#cOFD').value = inch ? 1.5 : 40;
+  $('#cX').value = mode === 'ug' ? (inch ? 10 : 300) : (inch ? 0.02 : 0.2); calc();
+});
+function calc() {
+  const F = +$('#cF').value, ofd = +$('#cOFD').value, x = +$('#cX').value, u = $('#cU').value === 'in' ? '″' : ' mm';
+  if (!(F > 0 && ofd >= 0 && x > 0)) { $('#cRes').textContent = '—'; $('#cWork').textContent = 'Enter positive numbers.'; return; }
+  if (mode === 'ug') {
+    const ug = F * ofd / x;
+    $('#cRes').textContent = `Ug = ${fmt(ug)}${u}`;
+    $('#cWork').textContent = `${fmt(F)} × ${fmt(ofd)} ÷ ${fmt(x)} = ${fmt(ug)}${u} · SFD = ${fmt(x + ofd)}${u}`;
+  } else {
+    const sod = F * ofd / x;
+    $('#cRes').textContent = `Min SOD = ${fmt(sod)}${u}`;
+    $('#cWork').textContent = `${fmt(F)} × ${fmt(ofd)} ÷ ${fmt(x)} = ${fmt(sod)}${u} · Min SFD = ${fmt(sod + ofd)}${u}`;
+  }
+}
+['cF', 'cOFD', 'cX'].forEach(id => $('#' + id).addEventListener('input', calc));
+calc();
+ctrl.calc = () => { $('#scoreLine').textContent = score.total ? `First-try answers: ${score.first} of ${score.total}` : ''; };
+
+go(0);
+})();
+</script>
+
+</body>
+</html>
