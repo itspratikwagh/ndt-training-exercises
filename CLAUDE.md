@@ -32,8 +32,12 @@ python3 tools/voiceover/kokoro_say.py --json lines.json   # [{"text": ..., "out"
 
 ## Eddy current lessons: one physics model
 
-`ET-Impedance-Plane.html` and `ET-Frequency-and-Thickness.html` compute every curve from the Dodd and Deeds model of a
-probe coil above a nonmagnetic plate. Each page carries an exact copy of `tools/eddy/dodd_deeds_core.js` in its
-`<script id="physics">` block, so each page stays self-contained and can be embedded on its own. After changing the
-core, a lesson's numbers or its narration claims, update both copies and run `node tools/eddy/check_dodd_deeds.cjs`.
+`ET-Impedance-Plane.html`, `ET-Frequency-and-Thickness.html` and `ET-Steel-and-Signals.html` compute every curve from
+the Dodd and Deeds model of a probe coil above a plate. Each page carries an exact copy of `tools/eddy/dodd_deeds_core.js`
+in its `<script id="physics">` block, so each page stays self-contained and can be embedded on its own. Lesson 3
+(`ET-Steel-and-Signals.html`) also carries `tools/eddy/dodd_deeds_mu.js`, which adds the plate's relative permeability;
+its steel uses an assumed effective mu_r of 100, stated on the page. After changing the core, the extension, a lesson's
+numbers or its narration claims, update every copy and run `node tools/eddy/check_dodd_deeds.cjs`.
+
+The lessons are independent pages with no lesson picker, so each can be embedded on its own.
 

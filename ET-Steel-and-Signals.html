@@ -1,0 +1,2084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ET: Steel and Signal Separation</title>
+<style>
+  :root {
+    --bg: #f7f5f0;
+    --panel: #ffffff;
+    --panel2: #f1eee7;
+    --ink: #1b1d22;
+    --ink-soft: #4b4f58;
+    --ink-faded: #8a8e96;
+    --rule: #dcd7cc;
+    --grid: #e7e3da;
+    --accent: #b54515;
+    --accent-soft: #fbeee4;
+    --hl: #d9480f;
+    --locus: #c2551b;
+    --lift: #0b7f8f;
+    --dot: #2847c4;
+    --thk1: #3b5bdb;
+    --thk2: #2b8a3e;
+    --mu: #6f42c1;
+    --crack: #c2255c;
+    --edge: #2b8a3e;
+    --field: #2f6fd6;
+    --eddy: #e07b12;
+    --heat: #d62f2f;
+    --good: #23784a;
+    --good-soft: #e5f4ea;
+    --bad: #b8322a;
+    --bad-soft: #fbe9e7;
+    --coil: #5a5f6b;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 10px 28px -14px rgba(40,30,20,0.22);
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161b; --panel: #1c1f26; --panel2: #232731; --ink: #eceef2; --ink-soft: #b7bcc7;
+      --ink-faded: #7d8391; --rule: #333846; --grid: #262a34; --accent: #f08a4b; --accent-soft: #3a2a20;
+      --hl: #ff8c4a; --locus: #f0904f; --lift: #43c4d3; --dot: #8ea6ff; --thk1: #91a7ff; --thk2: #69db7c; --mu: #b197fc; --crack: #f783ac; --edge: #69db7c; --field: #6fa0ff; --eddy: #ffae4d;
+      --heat: #ff6b60; --good: #5fd08f; --good-soft: #1d3327; --bad: #ff7b70; --bad-soft: #3a2222; --coil: #9aa1af;
+      --shadow: 0 1px 0 rgba(0,0,0,0.3), 0 10px 28px -14px rgba(0,0,0,0.6);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161b; --panel: #1c1f26; --panel2: #232731; --ink: #eceef2; --ink-soft: #b7bcc7;
+    --ink-faded: #7d8391; --rule: #333846; --grid: #262a34; --accent: #f08a4b; --accent-soft: #3a2a20;
+    --hl: #ff8c4a; --locus: #f0904f; --lift: #43c4d3; --dot: #8ea6ff; --thk1: #91a7ff; --thk2: #69db7c; --mu: #b197fc; --crack: #f783ac; --edge: #69db7c; --field: #6fa0ff; --eddy: #ffae4d;
+    --heat: #ff6b60; --good: #5fd08f; --good-soft: #1d3327; --bad: #ff7b70; --bad-soft: #3a2222; --coil: #9aa1af;
+    --shadow: 0 1px 0 rgba(0,0,0,0.3), 0 10px 28px -14px rgba(0,0,0,0.6);
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { font: 16px/1.5 var(--sans); -webkit-text-size-adjust: 100%; }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 12px 16px 48px; }
+
+  header.top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; justify-content: space-between; margin-bottom: 10px; }
+  .titles { min-width: 0; }
+  .eyebrow { font: 600 11px/1.2 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
+  h1 { font-size: clamp(20px, 3.4vw, 28px); line-height: 1.15; margin: 4px 0 0; letter-spacing: -.01em; }
+  a.back { font: 500 12px var(--mono); color: var(--ink-faded); text-decoration: none; }
+  a.back:hover { color: var(--accent); }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .tab, .iconbtn {
+    border: 1px solid var(--rule); background: var(--panel); border-radius: 999px; padding: 6px 12px;
+    font-size: 14px; cursor: pointer; white-space: nowrap;
+  }
+  .tab[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .tab:disabled { opacity: .45; cursor: not-allowed; }
+  .tab:focus-visible, .iconbtn:focus-visible, .chap:focus-visible, .opt:focus-visible, .btn:focus-visible, .ctl:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .chapters { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 8px; scrollbar-width: thin; }
+  .chap {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 6px; border: 1px solid var(--rule);
+    background: var(--panel); border-radius: 10px; padding: 6px 10px; font-size: 13px; cursor: pointer;
+  }
+  .chap .n { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font: 600 11px var(--mono); border: 1px solid var(--ink-faded); color: var(--ink-soft); }
+  .chap.done .n { background: var(--good); border-color: var(--good); color: var(--bg); }
+  .chap.current { border-color: var(--accent); background: var(--accent-soft); }
+  .chap.current .n { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+  .chap:disabled { opacity: .45; cursor: not-allowed; }
+
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 16px; align-items: start; }
+  @media (max-width: 920px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+  .stage { background: var(--panel); border: 1px solid var(--rule); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+  .video { position: relative; width: 100%; display: flex; flex-direction: column; background: var(--panel); }
+  .plotbox { position: relative; width: 100%; height: clamp(300px, 54vh, 560px); }
+  .probebox { position: relative; width: 100%; height: clamp(160px, 25vh, 220px); border-top: 1px solid var(--rule); }
+  @media (max-width: 600px) { .plotbox { height: auto; aspect-ratio: 1 / 1.1; } .probebox { height: 178px; } }
+  #plane, #probe { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: manipulation; }
+  .bridge-on #plane { touch-action: none; cursor: crosshair; }
+  .hud { position: absolute; right: 8px; top: 8px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; pointer-events: none; max-width: 60%; }
+  .chip { background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--rule); border-radius: 8px; padding: 4px 8px; font-size: 12px; line-height: 1.3; }
+  .chip b { font-family: var(--mono); font-size: 15px; }
+  .modelnote { font-size: 11.5px; color: var(--ink-soft); padding: 5px 14px; border-top: 1px solid var(--rule); background: var(--panel2); }
+  @media (max-width: 600px) {
+    .hud { position: static; flex-direction: row; flex-wrap: wrap; max-width: none; align-items: center; padding: 0 8px 6px; }
+    .chip b { font-size: 13px; }
+  }
+  .depthbar { width: 120px; height: 8px; border-radius: 4px; background: var(--grid); overflow: hidden; margin-top: 3px; }
+  .depthbar i { display: block; height: 100%; background: var(--field); width: 50%; }
+  .hidden { display: none !important; }
+  .titlecard {
+    position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); text-align: center;
+    background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--rule); border-radius: 12px;
+    padding: 12px 20px; box-shadow: var(--shadow); pointer-events: none; max-width: 86%;
+  }
+  .titlecard .eyebrow { margin-bottom: 4px; }
+  .titlecard div:last-child { font-size: clamp(18px, 3vw, 26px); font-weight: 650; }
+  .startover {
+    position: absolute; inset: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--panel) 80%, transparent);
+    backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); text-align: center; padding: 16px;
+  }
+  .startover .box { max-width: 420px; }
+  .startover p { color: var(--ink-soft); margin: 8px 0 14px; font-size: 14px; }
+  .bigplay { font-size: 18px; font-weight: 650; padding: 12px 22px; border-radius: 999px; border: 0; background: var(--accent); color: #fff; cursor: pointer; }
+
+  .caption { padding: 10px 14px 8px; min-height: 4.6em; font-size: 17px; line-height: 1.45; border-top: 1px solid var(--rule); }
+  .caption .w { color: var(--ink-faded); transition: color .12s; }
+  .caption .w.on { color: var(--ink); }
+  .controls { display: flex; align-items: center; gap: 8px; padding: 6px 10px 10px; flex-wrap: wrap; }
+  .ctl { border: 1px solid var(--rule); background: var(--panel2); border-radius: 8px; height: 36px; min-width: 40px; padding: 0 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; }
+  .ctl:disabled { opacity: .45; cursor: not-allowed; }
+  .ctl svg { width: 18px; height: 18px; }
+  .prog { flex: 1 1 100px; height: 6px; background: var(--grid); border-radius: 3px; overflow: hidden; min-width: 60px; }
+  .prog i { display: block; height: 100%; width: 0; background: var(--accent); }
+  select.ctl { appearance: auto; }
+
+  .side { display: flex; flex-direction: column; gap: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--rule); border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .card h2 { font-size: 17px; margin: 2px 0 8px; line-height: 1.35; }
+  .card p { margin: 6px 0; }
+  .card.ask { border-color: var(--accent); }
+  .muted { color: var(--ink-soft); font-size: 14px; }
+  .opts { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+  .opt {
+    display: flex; gap: 10px; align-items: flex-start; text-align: left; width: 100%; border: 1.5px solid var(--rule);
+    background: var(--panel); border-radius: 10px; padding: 10px 12px; cursor: pointer; font-size: 15px; line-height: 1.35;
+  }
+  .opt .k { flex: 0 0 auto; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--ink-faded); font: 600 12px var(--mono); }
+  .opt[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .opt[aria-checked="true"] .k { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .opt.tried { opacity: .5; text-decoration: line-through; }
+  .opt.right { border-color: var(--good); background: var(--good-soft); }
+  .opt.wrong { border-color: var(--bad); background: var(--bad-soft); }
+  .opt.right .k { background: var(--good); border-color: var(--good); color: #fff; }
+  .opt.wrong .k { background: var(--bad); border-color: var(--bad); color: #fff; }
+  .opt:disabled { cursor: default; }
+  textarea { width: 100%; min-height: 54px; border: 1px solid var(--rule); border-radius: 8px; background: var(--panel2); padding: 8px; font-size: 14px; resize: vertical; }
+  .btn { border: 0; border-radius: 10px; padding: 9px 16px; font-weight: 600; cursor: pointer; background: var(--accent); color: #fff; font-size: 15px; }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--rule); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+  .fb { border-radius: 10px; padding: 10px 12px; margin-top: 10px; font-size: 15px; }
+  .fb.good { background: var(--good-soft); border-left: 4px solid var(--good); }
+  .fb.bad { background: var(--bad-soft); border-left: 4px solid var(--bad); }
+  .fb .tag { font: 700 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  .fb.good .tag { color: var(--good); } .fb.bad .tag { color: var(--bad); }
+  .fb .note { margin-top: 6px; font-size: 13px; color: var(--ink-soft); }
+
+  .slider { margin: 12px 0; }
+  .slider label { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; }
+  .slider label span { font-family: var(--mono); font-weight: 500; color: var(--accent); }
+  .slider input[type=range] { width: 100%; accent-color: var(--accent); height: 28px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; }
+  .presets button { border: 1px solid var(--rule); background: var(--panel2); border-radius: 999px; padding: 4px 10px; font-size: 13px; cursor: pointer; }
+  .readout { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 14px; margin-top: 8px; }
+  .readout b { font-family: var(--mono); font-weight: 600; text-align: right; }
+  .readout .big { color: var(--accent); font-size: 17px; }
+
+  .view { margin-top: 4px; }
+  .recap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .recap-card { background: var(--panel); border: 1px solid var(--rule); border-radius: 14px; padding: 12px; box-shadow: var(--shadow); display: flex; gap: 12px; align-items: center; }
+  .recap-card svg { flex: 0 0 120px; width: 120px; height: 110px; background: var(--panel2); border-radius: 10px; }
+  .recap-card h3 { margin: 0 0 4px; font-size: 15px; }
+  .recap-card p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+  .quiz { max-width: 720px; margin: 0 auto; }
+  .qmeta { font: 600 12px var(--mono); color: var(--ink-faded); letter-spacing: .08em; text-transform: uppercase; }
+  .qprog { height: 6px; border-radius: 3px; background: var(--grid); overflow: hidden; margin: 8px 0 12px; }
+  .qprog i { display: block; height: 100%; background: var(--accent); }
+  .key { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .key .item { border: 1px solid var(--rule); border-radius: 12px; padding: 10px 12px; background: var(--panel); }
+  .key .item.ok { border-left: 4px solid var(--good); }
+  .key .item.no { border-left: 4px solid var(--bad); }
+  .key .ans { font-size: 14px; margin: 4px 0; }
+  .score { font-size: 34px; font-weight: 700; }
+  .toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; box-shadow: var(--shadow); z-index: 10; max-width: calc(100% - 32px); }
+
+  svg text { font-family: var(--sans); }
+  .t-tick { font-size: 11px; fill: var(--ink-faded); font-family: var(--mono); }
+  .t-axis { font-size: 13px; fill: var(--ink-soft); font-weight: 600; }
+  .t-lbl { font-size: 12.5px; fill: var(--ink); font-weight: 600; paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
+  .t-ang { font-size: 13px; font-weight: 700; fill: var(--ink); font-family: var(--mono); paint-order: stroke; stroke: var(--panel); stroke-width: 4px; }
+  .gl { stroke: var(--grid); stroke-width: 1; }
+  .ax { stroke: var(--ink-soft); stroke-width: 1.6; }
+  .p-locus { stroke: var(--locus); fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .p-lift { stroke: var(--lift); fill: none; stroke-width: 3; stroke-linecap: round; }
+  .p-thick { stroke: var(--thk1); fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .p-thick2 { stroke: var(--thk2); fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .p-guide { stroke: var(--ink-faded); fill: none; stroke-width: 1.5; stroke-dasharray: 5 5; }
+  .p-faint { opacity: .35; }
+  .p-dash { stroke-dasharray: 6 6; }
+  .p-thin { stroke-width: 2; }
+  .t-sm { font-size: 11px; }
+  .t-xs { font-size: 11px; fill: var(--ink-soft); font-weight: 600; }
+  .t-xs.b { fill: var(--ink); font-weight: 700; }
+  .presets button.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .p-mu { stroke: var(--mu); fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .p-edge { stroke: var(--edge); fill: none; stroke-width: 3; stroke-dasharray: 7 5; stroke-linecap: round; }
+  .p-crack { stroke: var(--crack); fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .p-heat { stroke: var(--heat); fill: none; stroke-width: 2.5; stroke-dasharray: 4 3; }
+  .p-airline { stroke: var(--ink-soft); stroke-width: 1.5; stroke-dasharray: 8 5; fill: none; }
+  .p-cross { stroke: var(--ink-faded); stroke-width: 1.2; }
+  .p-circle { stroke: var(--ink-soft); stroke-width: 1.5; fill: none; }
+  .p-rope { stroke: var(--ink-soft); stroke-width: 1.2; stroke-dasharray: 2 3; }
+  .t-zone { font-size: 11.5px; font-weight: 700; fill: var(--ink-soft); letter-spacing: .04em; paint-order: stroke; stroke: var(--panel); stroke-width: 4px; }
+  .t-legend { font-size: 11.5px; fill: var(--ink-soft); font-weight: 600; paint-order: stroke; stroke: var(--panel); stroke-width: 4px; }
+  .t-meter { font: 700 22px var(--mono); fill: var(--ink); }
+  .t-meter.off { fill: var(--bad); font-size: 16px; }
+  .t-axis.hi { fill: var(--heat); }
+  .fb.hint { background: var(--accent-soft); border-left: 4px solid var(--accent); }
+  .fb.hint .tag { color: var(--accent); }
+  .opt.unsure { border-style: dashed; }
+  .chip sub { font-size: 9px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="titles">
+      <a class="back" href="index.html">&larr; All exercises</a>
+      <div class="eyebrow" style="margin-top:6px">Eddy Current Testing</div>
+      <h1>Steel and Signal Separation on the Impedance Plane</h1>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Mode">
+      <button class="tab" role="tab" id="tabLesson" aria-selected="true">Lesson</button>
+      <button class="tab" role="tab" id="tabMaterials" aria-selected="false" disabled title="Unlocks after Step 3">Materials &#128274;</button>
+      <button class="tab" role="tab" id="tabBridge" aria-selected="false" disabled title="Unlocks after Step 4">Bridge meter &#128274;</button>
+      <button class="tab" role="tab" id="tabRecap" aria-selected="false" disabled title="Unlocks after Step 6">Recap</button>
+      <button class="tab" role="tab" id="tabQuiz" aria-selected="false" disabled title="Unlocks after Step 6">Quiz</button>
+      <button class="iconbtn" id="themeBtn" aria-label="Color theme">Theme: auto</button>
+    </nav>
+  </header>
+
+  <nav class="chapters" id="chapters" aria-label="Lesson steps"></nav>
+
+  <section id="viewPlayer" class="layout">
+    <div class="stage">
+      <div class="video" id="video">
+        <div class="plotbox" id="plotbox"><svg id="plane" role="img" aria-label="Impedance plane diagram"></svg></div>
+        <div class="hud" id="hud">
+          <div class="chip" id="freqChip">Frequency <b id="freqVal">100 kHz</b></div>
+          <div class="chip" id="muChip">Steel &mu;<sub>r</sub> <b id="muVal">100</b></div>
+          <div class="chip" id="depthChip">Standard depth &delta; <b id="depthVal"></b></div>
+          <div class="chip hidden" id="liftChip">Lift-off <b id="liftVal"></b></div>
+          <div class="chip hidden" id="dispChip">Display <b id="dispVal"></b></div>
+        </div>
+        <div class="probebox"><svg id="probe" role="img" aria-label="Probe view: the coil, the part under it, the magnetic field and the eddy currents"></svg></div>
+        <div class="titlecard hidden" id="titleCard"><div class="eyebrow" id="titleEyebrow">Step 1</div><div id="titleText"></div></div>
+        <div class="startover" id="startOver">
+          <div class="box">
+            <div class="eyebrow">Interactive lesson &middot; about 15 minutes</div>
+            <h2 style="margin:6px 0 0;font-size:22px">Steel, lift-off and crack signals</h2>
+            <p>Turn your sound on for narration. Captions are always on, so the lesson works fully with the sound off too. The lesson pauses at nine checkpoints to ask you a question.</p>
+            <button class="bigplay" id="startBtn">&#9654; Start lesson</button>
+          </div>
+        </div>
+      </div>
+      <div class="modelnote">Model: Dodd and Deeds with permeability. Steel: 10 %IACS, &mu;<sub>r</sub> = 100, an assumption for illustration. Edge and crack paths: illustrative, not computed.</div>
+      <div class="caption" id="caption" aria-live="polite"></div>
+      <div class="controls" id="controls">
+        <button class="ctl" id="playBtn" aria-label="Pause"></button>
+        <button class="ctl" id="replayBtn" aria-label="Replay segment" title="Replay segment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg><span>Replay</span></button>
+        <div class="prog" aria-hidden="true"><i id="progBar"></i></div>
+        <select class="ctl" id="speedSel" aria-label="Playback speed">
+          <option value="0.75">0.75x</option><option value="1" selected>1x</option><option value="1.25">1.25x</option><option value="1.5">1.5x</option>
+        </select>
+        <button class="ctl" id="muteBtn" aria-label="Mute narration"></button>
+      </div>
+    </div>
+    <aside class="side" id="side">
+      <div class="card" id="infoCard"></div>
+      <div class="card ask hidden" id="askCard" aria-live="polite"></div>
+      <div class="card hidden" id="sbCard"></div>
+    </aside>
+  </section>
+
+  <section id="viewRecap" class="view hidden"></section>
+  <section id="viewQuiz" class="view hidden"></section>
+</div>
+<div class="toast hidden" id="toast" role="status"></div>
+
+<script id="physics">
+/* ===== Physics: Dodd and Deeds (1968) analytical model =====
+   An air-core circular coil above a nonmagnetic conducting plate of thickness d, with air behind it.
+   Coil (mm): inner radius r1, outer radius r2, height h. A wear face keeps it COIL.wear above the part at contact;
+   lift-off adds to that gap. Impedance is normalized to the coil-in-air reactance, so air sits at (0, 1):
+     Zn = j (1 + I / I0)
+     I  = integral_0^inf G(a) A(a) Rf(a) da,       I0 = integral_0^inf G(a) 2 (a h + e^(-a h) - 1) da
+     G  = P(a)^2 / a^6,   P(a) = integral from a r1 to a r2 of x J1(x) dx,   A = (e^(-a l1) - e^(-a l2))^2
+     Rf = (a^2 - a1^2)(1 - e^(-2 a1 d)) / ((a + a1)^2 - (a - a1)^2 e^(-2 a1 d)),   a1 = sqrt(a^2 + j w mu0 sigma)
+   with l1 = wear face + lift-off and l2 = l1 + h. Simpson's rule on a = u^2 (160 steps) and Gauss-Legendre for P
+   keep the error under 1e-7. tools/eddy/check_dodd_deeds.cjs checks this against an independent image-coil
+   filament sum, the thick-plate and thin-sheet limits, passivity, and the claims each lesson makes. */
+var COIL = { r1: 1.0, r2: 2.0, h: 1.0, wear: 0.1 };
+var MU0 = 4e-7 * Math.PI, SIGMA_IACS = 5.8e7; /* 100 %IACS = 58.0 MS/m */
+function besselJ1(x) { /* rational and asymptotic approximations, absolute error about 1e-8 */
+  var ax = Math.abs(x), y, a1, a2, r;
+  if (ax < 8) {
+    y = x * x;
+    a1 = x * (72362614232.0 + y * (-7895059235.0 + y * (242396853.1 + y * (-2972611.439 + y * (15704.48260 + y * (-30.16036606))))));
+    a2 = 144725228442.0 + y * (2300535178.0 + y * (18583304.74 + y * (99447.43394 + y * (376.9991397 + y))));
+    return a1 / a2;
+  }
+  var z = 8 / ax, xx = ax - 2.356194491; y = z * z;
+  a1 = 1 + y * (0.183105e-2 + y * (-0.3516396496e-4 + y * (0.2457520174e-5 + y * (-0.240337019e-6))));
+  a2 = 0.04687499995 + y * (-0.2002690873e-3 + y * (0.8449199096e-5 + y * (-0.88228987e-6 + y * 0.105787412e-6)));
+  r = Math.sqrt(0.636619772 / ax) * (Math.cos(xx) * a1 - z * Math.sin(xx) * a2);
+  return x < 0 ? -r : r;
+}
+var DD = (function () {
+  var GX = [-0.9739065285, -0.8650633667, -0.6794095683, -0.4333953941, -0.1488743390, 0.1488743390, 0.4333953941, 0.6794095683, 0.8650633667, 0.9739065285];
+  var GW = [0.0666713443, 0.1494513492, 0.2190863625, 0.2692667193, 0.2955242247, 0.2955242247, 0.2692667193, 0.2190863625, 0.1494513492, 0.0666713443];
+  function intXJ1(a, b) { /* integral of x J1(x) from a to b, Gauss-Legendre on unit-length panels */
+    var n = Math.max(1, Math.ceil(b - a)), w = (b - a) / n, s = 0;
+    for (var k = 0; k < n; k++) { var m = a + (k + 0.5) * w; for (var i = 0; i < 10; i++) { var x = m + 0.5 * w * GX[i]; s += GW[i] * x * besselJ1(x); } }
+    return s * 0.5 * w;
+  }
+  var N = 160, umax = Math.sqrt(40 / COIL.r1), du = umax / N, a = [], w = [], I0 = 0;
+  for (var i = 1; i <= N; i++) { /* i = 0 has zero weight because da = 2u du */
+    var u = i * du, al = u * u, P = intXJ1(al * COIL.r1, al * COIL.r2);
+    var wt = (i === N ? 1 : (i % 2 ? 4 : 2)) * du / 3 * 2 * u * P * P / Math.pow(al, 6);
+    a.push(al); w.push(wt);
+    I0 += wt * 2 * (al * COIL.h + Math.exp(-al * COIL.h) - 1);
+  }
+  return { a: a, w: w, I0: I0 };
+})();
+var zCache = {}, zCount = 0;
+/* sigma in S/m, fHz in Hz, dmm = plate thickness in mm (Infinity or 1e5 and above = thick), lift = lift-off in mm above the
+   wear face (Infinity = coil in air). Returns {R, X}, normalized. Results are cached: do not modify the returned object. */
+function Zplate(sigma, fHz, dmm, lift) {
+  if (!(lift < 1e4) || !(sigma > 0) || !(fHz > 0) || !(dmm > 0)) return { R: 0, X: 1 };
+  var key = sigma + '|' + fHz + '|' + dmm + '|' + lift, hit = zCache[key];
+  if (hit) return hit;
+  var k2 = 2 * Math.PI * fHz * MU0 * sigma * 1e-6, l1 = COIL.wear + lift, l2 = l1 + COIL.h, thick = !(dmm < 1e5), sr = 0, si = 0;
+  for (var i = 0; i < DD.a.length; i++) {
+    var al = DD.a[i], A = Math.exp(-al * l1) - Math.exp(-al * l2), g = DD.w[i] * A * A;
+    var r = Math.hypot(al * al, k2), qr = Math.sqrt((r + al * al) / 2), qi = Math.sqrt(Math.max(0, (r - al * al) / 2));
+    var Rr, Ri, nr, ni, dr, di, dd;
+    if (thick) { /* (a - a1) / (a + a1) */
+      nr = al - qr; ni = -qi; dr = al + qr; di = qi; dd = dr * dr + di * di;
+      Rr = (nr * dr + ni * di) / dd; Ri = (ni * dr - nr * di) / dd;
+    } else {
+      var e = Math.exp(-2 * qr * dmm), ph = -2 * qi * dmm, er = e * Math.cos(ph), ei = e * Math.sin(ph);
+      var Nr = -ei * k2, Ni = -(1 - er) * k2; /* (1 - E)(-j k2) */
+      var pr = al + qr, pi = qi, mr = al - qr, mi = -qi;
+      var p2r = pr * pr - pi * pi, p2i = 2 * pr * pi, m2r = mr * mr - mi * mi, m2i = 2 * mr * mi;
+      dr = p2r - (m2r * er - m2i * ei); di = p2i - (m2r * ei + m2i * er); dd = dr * dr + di * di;
+      Rr = (Nr * dr + Ni * di) / dd; Ri = (Ni * dr - Nr * di) / dd;
+    }
+    sr += g * Rr; si += g * Ri;
+  }
+  var z = { R: -si / DD.I0, X: 1 + sr / DD.I0 };
+  if (++zCount > 60000) { zCache = {}; zCount = 0; }
+  zCache[key] = z;
+  return z;
+}
+/* Standard depth of penetration in mm for a nonmagnetic metal: delta = 1 / sqrt(pi f mu0 sigma) = 503 / sqrt(f sigma) */
+function depthMM(iacs, kHz) { return 503 / Math.sqrt(kHz * 1e3 * iacs / 100 * SIGMA_IACS) * 1000; }
+/* ===== Ferromagnetic plates: the Dodd and Deeds model with relative permeability (used by Lesson 3) =====
+   Load after tools/eddy/dodd_deeds_core.js: same coil, grid and normalization, so air still sits at (0, 1).
+   A plate with relative permeability mu_r changes only the reflection factor:
+     a1 = sqrt(a^2 + j w mu0 mu_r sigma),   m = mu_r a
+     Rf = (m - a1)(m + a1)(1 - e^(-2 a1 d)) / ((m + a1)^2 - (m - a1)^2 e^(-2 a1 d)),   thick plate: Rf = (m - a1) / (m + a1)
+   With mu_r = 1 this is the core's Zplate exactly. At low frequency Rf tends to (mu_r - 1) / (mu_r + 1) > 0, so a magnetic
+   plate raises the reactance above air (the image-coil limit). At high frequency it tends to -1, the perfect-conductor
+   point, and the plate behaves like a nonmagnetic one with conductivity sigma / mu_r. mu_r is real: hysteresis loss
+   is not modeled. tools/eddy/check_dodd_deeds.cjs checks both limits, passivity and the claims Lesson 3 makes. */
+var muCache = {}, muCount = 0;
+/* sigma in S/m, fHz in Hz, dmm = plate thickness in mm (Infinity = thick), lift = lift-off in mm, mur = relative
+   permeability. Returns {R, X}, normalized and cached: do not modify the returned object. */
+function ZplateMu(sigma, fHz, dmm, lift, mur) {
+  if (!(mur > 1)) return Zplate(sigma, fHz, dmm, lift);
+  if (!(lift < 1e4) || !(sigma > 0) || !(fHz > 0) || !(dmm > 0)) return { R: 0, X: 1 };
+  var key = sigma + '|' + fHz + '|' + dmm + '|' + lift + '|' + mur, hit = muCache[key];
+  if (hit) return hit;
+  var k2 = 2 * Math.PI * fHz * MU0 * mur * sigma * 1e-6, l1 = COIL.wear + lift, l2 = l1 + COIL.h, thick = !(dmm < 1e5), sr = 0, si = 0;
+  for (var i = 0; i < DD.a.length; i++) {
+    var al = DD.a[i], m = mur * al, A = Math.exp(-al * l1) - Math.exp(-al * l2), g = DD.w[i] * A * A;
+    var r = Math.hypot(al * al, k2), qr = Math.sqrt((r + al * al) / 2), qi = Math.sqrt(Math.max(0, (r - al * al) / 2));
+    var Rr, Ri, nr, ni, dr, di, dd;
+    if (thick) { /* (m - a1) / (m + a1) */
+      nr = m - qr; ni = -qi; dr = m + qr; di = qi; dd = dr * dr + di * di;
+      Rr = (nr * dr + ni * di) / dd; Ri = (ni * dr - nr * di) / dd;
+    } else {
+      var e = Math.exp(-2 * qr * dmm), ph = -2 * qi * dmm, er = e * Math.cos(ph), ei = e * Math.sin(ph);
+      var c = m * m - al * al, Nr = c * (1 - er) - k2 * ei, Ni = -c * ei - k2 * (1 - er); /* (m^2 - a1^2)(1 - E) = (c - j k2)(1 - E) */
+      var pr = m + qr, pi = qi, mr = m - qr, mi = -qi;
+      var p2r = pr * pr - pi * pi, p2i = 2 * pr * pi, m2r = mr * mr - mi * mi, m2i = 2 * mr * mi;
+      dr = p2r - (m2r * er - m2i * ei); di = p2i - (m2r * ei + m2i * er); dd = dr * dr + di * di;
+      Rr = (Nr * dr + Ni * di) / dd; Ri = (Ni * dr - Nr * di) / dd;
+    }
+    sr += g * Rr; si += g * Ri;
+  }
+  var z = { R: -si / DD.I0, X: 1 + sr / DD.I0 };
+  if (++muCount > 60000) { muCache = {}; muCount = 0; }
+  muCache[key] = z;
+  return z;
+}
+/* Standard depth in mm for relative permeability mu_r: delta = 503 / sqrt(f mu_r sigma) */
+function depthMuMM(iacs, kHz, mur) { return depthMM(iacs, kHz) / Math.sqrt(mur > 1 ? mur : 1); }
+/* ----- Lesson 3 view of the model: materials by %IACS and relative permeability, lift-off in mils (1 mil = 0.0254 mm) ----- */
+var MIL = 0.0254;
+/* Steel is a low-carbon steel such as 1018 or 1020, about 10 %IACS (data sheets give 7 to 11).
+   ASSUMPTION FOR ILLUSTRATION: an effective relative permeability of 100. Real steel's permeability varies widely with
+   alloy, heat treatment and field strength; Bowler (QNDE 2005) reports about 90 at 100 kHz for 1018 steel, rising to about
+   280 at low frequency. The page states this assumption on screen. */
+var STEEL_IACS = 10, STEEL_MU = 100;
+var PMIN = 1e3, PMAX = 1e10; /* frequency (Hz) x %IACS range of the drawn nonmagnetic conductivity curve */
+/* a thick nonmagnetic plate: its place on the conductivity curve depends only on frequency x %IACS (p) */
+function Zp(p, liftMils) { return Zplate(p / 100 * SIGMA_IACS / 1e5, 1e5, Infinity, (liftMils || 0) * MIL); }
+/* any plate: %IACS, frequency in kHz, lift-off in mils, relative permeability, thickness in mm (omit for a thick plate) */
+function Zs(iacs, kHz, liftMils, mu, dmm) { return ZplateMu(iacs / 100 * SIGMA_IACS, kHz * 1e3, dmm || Infinity, (liftMils || 0) * MIL, mu || 1); }
+function unitV(v) { var n = Math.hypot(v.R, v.X) || 1; return { R: v.R / n, X: v.X / n }; }
+function diffZ(a, b) { return { R: b.R - a.R, X: b.X - a.X }; }
+function degOf(v) { return Math.atan2(v.X, v.R) * 180 / Math.PI; }
+function angleBetween(u, v) { var d = Math.abs(degOf(u) - degOf(v)) % 360; return d > 180 ? 360 - d : d; }
+/* unit directions at a plate's point: more lift-off, lower permeability, lower conductivity, and the signal from a
+   10 percent thinning (the thickness curve bends, so a real 10 percent change is used rather than the tangent) */
+function dirLift(iacs, kHz, mu, dmm) { return unitV(diffZ(Zs(iacs, kHz, 0, mu, dmm), Zs(iacs, kHz, 0.1, mu, dmm))); }
+function dirMuDown(iacs, kHz, mu) { return unitV(diffZ(Zs(iacs, kHz, 0, mu), Zs(iacs, kHz, 0, mu * 0.999))); }
+function dirSigDown(iacs, kHz, mu) { return unitV(diffZ(Zs(iacs, kHz, 0, mu), Zs(iacs * 0.999, kHz, 0, mu))); }
+function dirThin(iacs, kHz, mu, dmm) { return unitV(diffZ(Zs(iacs, kHz, 0, mu, dmm), Zs(iacs, kHz, 0, mu, dmm * 0.9))); }
+/* how far that 10 percent thinning moves the dot */
+function thinSize(iacs, kHz, mu, dmm) { var a = Zs(iacs, kHz, 0, mu, dmm), b = Zs(iacs, kHz, 0, mu, dmm * 0.9); return Math.hypot(a.R - b.R, a.X - b.X); }
+</script>
+
+<script>
+"use strict";
+/* ===================== constants ===================== */
+/* Typical conductivities in %IACS (100 %IACS = 58.0 MS/m). Real parts vary with alloy, temper and temperature,
+   so the lesson calls these typical values.
+   Copper C11000, annealed: 100 (Austral Wright and Fisk Alloy C11000 data sheets).
+   Aluminum 6061-T6: 43 (MakeItFrom 6061-T6; Lugs Direct IACS table). Alloy A in Step 4.
+   Aluminum 2024-T3: 30 (MakeItFrom 2024-T3; Online Metals 2024-T3 sheet). Alloy B in Step 4.
+   Low-carbon steel, 1018 or 1020 type: about 10 (MakeItFrom lists 7 for 1018 and 11 for 1020; annealed 1018 at
+   15.9 microhm cm is about 10.8). Its relative permeability is the assumption STEEL_MU in the physics block. */
+var MATS = {
+  al:  { name: 'Aluminum 6061-T6', short: 'Al 6061', iacs: 43, mu: 1, color: '#c7d0d8' },
+  b24: { name: 'Aluminum 2024-T3', short: 'Al 2024', iacs: 30, mu: 1, color: '#b3bcc5' },
+  cu:  { name: 'Copper (C11000)', short: 'Copper', iacs: 100, mu: 1, color: '#c87533' },
+  st:  { name: 'Low-carbon steel', short: 'Steel', iacs: STEEL_IACS, mu: STEEL_MU, color: '#8a929c' }
+};
+var STEP_TITLES = ['Permeability', 'Lift-off and edges', 'Frequency and phase', 'One-number meter', 'Crack signals', 'Nonlinear responses'];
+var MATERIALS_AFTER = 2, BRIDGE_AFTER = 3; /* the steps that unlock the two sandboxes */
+var METER_FS = 0.15; /* bridge meter full scale, in normalized impedance units */
+/* a camera box around a set of points, padded, for zooming in on a detail */
+function boxAround(pts, pad, minSize) {
+  var r0 = 1e9, r1 = -1e9, x0 = 1e9, x1 = -1e9;
+  pts.forEach(function (p) { r0 = Math.min(r0, p.R); r1 = Math.max(r1, p.R); x0 = Math.min(x0, p.X); x1 = Math.max(x1, p.X); });
+  var w = Math.max(r1 - r0, x1 - x0, minSize || 0.01) * (pad || 0.25), cr = (r0 + r1) / 2, cx = (x0 + x1) / 2;
+  var hw = Math.max(r1 - r0, minSize || 0.01) / 2 + w, hh = Math.max(x1 - x0, minSize || 0.01) / 2 + w;
+  return { r0: cr - hw, r1: cr + hw, x0: cx - hh, x1: cx + hh };
+}
+
+/* ===================== small helpers ===================== */
+function $(id) { return document.getElementById(id); }
+function clone(o) { return o === undefined ? undefined : JSON.parse(JSON.stringify(o)); }
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function ease(t, k) { if (k === 'lin') return t; return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+function getP(o, k) { return k.split('.').reduce(function (a, s) { return a == null ? undefined : a[s]; }, o); }
+function setP(o, k, v) { var ks = k.split('.'), a = o; for (var i = 0; i < ks.length - 1; i++) { if (a[ks[i]] == null) a[ks[i]] = {}; a = a[ks[i]]; } a[ks[ks.length - 1]] = v; }
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function fmt(v, d) { return (Math.round(v * Math.pow(10, d)) / Math.pow(10, d)).toFixed(d); }
+var store = {
+  get: function () { try { return JSON.parse(localStorage.getItem('et-ss-progress') || '{}'); } catch (e) { return {}; } },
+  set: function (v) { try { localStorage.setItem('et-ss-progress', JSON.stringify(v)); } catch (e) {} }
+};
+
+/* ===================== timeline item constructors ===================== */
+/* T: tween a value, SET: assign at a moment, FN: custom per-frame function */
+function T(k, to, a, b, e, log) { return { k: k, to: to, a: a == null ? 0 : a, b: b == null ? 1 : b, e: e || 'io', log: !!log }; }
+function SET(k, v, at) { return { k: k, set: v, at: at || 0 }; }
+function say(text, anims, opt) { var o = { type: 'say', text: text, anims: anims || [] }; if (opt) for (var x in opt) o[x] = opt[x]; return o; }
+function ask(node) { return { type: 'ask', node: node }; }
+
+/* FN: a custom per-frame function, given the state and the item's progress from 0 to 1 */
+function FN(f) { return { fn: f }; }
+
+/* ===================== visual state ===================== */
+/* Everything on screen comes from one state object, S. The probe view under the plane shows the plate under the dot
+   (same material, frequency and lift-off) unless a scene names another material, so the two views cannot drift apart.
+   Units: lift-off in mils, frequency in kHz, plate thickness in mm. A null kHz means "use the frequency knob", S.freq.kHz. */
+var CAM_FULL = { r0: -0.02, r1: 0.2, x0: 0.57, x1: 1.46, al: 'l' };
+function probeBase(mode) { return { mode: mode || 'side', show: 1, mat: null, field: 1, eddy: 1, dom: 1, edge: null, crack: 0, bars: 0, hl: 0, ruler: 0 }; }
+function dotOf(mat, extra) {
+  var d = { show: 1, mat: mat, kHz: null, lift: 0, mu: null, dmm: null, iacs: null, label: '', free: 0, R: 0, X: 1 };
+  for (var k in extra) d[k] = extra[k];
+  return d;
+}
+function baseState() {
+  return {
+    cam: clone(CAM_FULL), axes: 1, grid: 1, hiR: 0, air: 1, airline: 1, noteR: 1, noteX: 1,
+    freq: { kHz: 100 },
+    dot: dotOf('al'),
+    ghosts: {}, paths: {}, arrows: {}, angles: {}, phase: {}, marks: {},
+    bridge: { show: 0, D: { R: 0.2, X: 0.8 }, circle: 0, rope: 0, perp: 0, perpAt: 'al', perpKind: 'lift' },
+    decomp: 0,
+    disp: { rot: 0, gy: 1, cR: 0, cX: 1, cross: 0 },
+    probe: probeBase('side'),
+    chips: 1, title: { show: 0, n: '', text: '' }, muNote: 0, phaseLbl: 0, legend: { text: '', show: 0 }
+  };
+}
+function matGhost(k, extra) { var g = { mat: k, label: MATS[k].short, show: 1 }; for (var x in extra) g[x] = extra[x]; return g; }
+function condPath(extra) { var p = { type: 'cond', lift: 0, p0: PMIN, p1: PMAX, cls: 'p-locus', show: 1 }; for (var k in extra) p[k] = extra[k]; return p; }
+function liftPath(mat, extra) { var p = { type: 'lift', mat: mat, kHz: null, l0: 0, l1: 40, lEnd: 40, cls: 'p-lift', show: 1 }; for (var k in extra) p[k] = extra[k]; return p; }
+function freqPath(mat, extra) { var p = { type: 'freq', mat: mat, k0: 0.1, k1: 1000, kEnd: 1000, cls: 'p-guide', show: 1 }; for (var k in extra) p[k] = extra[k]; return p; }
+function muPath(extra) { var p = { type: 'mu', mat: 'st', kHz: null, m0: STEEL_MU, m1: 1, mEnd: 1, cls: 'p-mu', show: 1 }; for (var k in extra) p[k] = extra[k]; return p; }
+function ptsPath(pts, extra) { var p = { type: 'pts', pts: pts, prog: 1, cls: 'p-edge', show: 1, head: 0 }; for (var k in extra) p[k] = extra[k]; return p; }
+function evenList(a, b, step) { var o = []; for (var v = a; v <= b + 1e-9; v += step) o.push(Math.round(v * 1000) / 1000); return o; }
+
+/* where a material, ghost or dot sits */
+function kOf(st, o) { return o.kHz != null ? o.kHz : st.freq.kHz; }
+function iacsOf(o) { return o.iacs != null ? o.iacs : MATS[o.mat].iacs; }
+function muOf(o) { return o.mu != null ? o.mu : MATS[o.mat].mu; }
+function zOf(st, o) { if (o.free) return { R: o.R, X: o.X }; return Zs(iacsOf(o), kOf(st, o), o.lift || 0, muOf(o), o.dmm || null); }
+function dotPos(st) { return zOf(st, st.dot); }
+function negV(v) { return { R: -v.R, X: -v.X }; }
+function rotV(u, deg) { var a = deg * Math.PI / 180; return { R: u.R * Math.cos(a) - u.X * Math.sin(a), X: u.R * Math.sin(a) + u.X * Math.cos(a) }; }
+/* a direction at a point, by name: lift (more lift-off), mu (lower permeability), muup, sig (lower conductivity), sigup,
+   thin (a thinner plate), crack (illustrative), or an explicit {R, X} */
+function dirOf(st, o, kind) {
+  if (typeof kind === 'object') return kind;
+  var ia = iacsOf(o), k = kOf(st, o), mu = muOf(o), dm = o.dmm || null;
+  if (kind === 'lift') return dirLift(ia, k, mu, dm);
+  if (kind === 'mu') return dirMuDown(ia, k, mu);
+  if (kind === 'muup') return negV(dirMuDown(ia, k, mu));
+  if (kind === 'sig') return dirSigDown(ia, k, mu);
+  if (kind === 'sigup') return negV(dirSigDown(ia, k, mu));
+  if (kind === 'thin') return dirThin(ia, k, mu, dm);
+  if (kind === 'crack') return crackDir(k);
+  return { R: 0, X: 1 };
+}
+var KIND_COLOR = { lift: 'var(--lift)', mu: 'var(--mu)', muup: 'var(--mu)', sig: 'var(--locus)', sigup: 'var(--locus)', thin: 'var(--thk1)', crack: 'var(--crack)', edge: 'var(--edge)' };
+
+/* ILLUSTRATIVE, NOT COMPUTED. The analytical model has no edges and no cracks, so these paths are drawn by hand, in
+   directions that match the physics the lesson describes:
+   - an edge path leaves the material's point a small angle off lift-off (turned toward the conductivity-drop side,
+     because the edge also cuts the eddy current loops short) and curves round to the air point;
+   - a crack signal leaves the balance point between lift-off and a conductivity drop (missing metal plus a current
+     detour), runs out and comes back as the probe passes over the crack. */
+var EDGE_TURN = -12, CRACK_TURN = -35, CRACK_LEN = 0.03;
+function edgePts(mat, kHz) {
+  var m = MATS[mat], P = Zs(m.iacs, kHz, 0, m.mu), u = rotV(dirLift(m.iacs, kHz, m.mu), EDGE_TURN), L = Math.hypot(P.R, P.X - 1);
+  var C = { R: P.R + u.R * L * 0.55, X: P.X + u.X * L * 0.55 }, pts = [];
+  for (var i = 0; i <= 40; i++) { var t = i / 40, a = (1 - t) * (1 - t), b = 2 * (1 - t) * t, c = t * t; pts.push({ R: a * P.R + b * C.R, X: a * P.X + b * C.X + c }); }
+  return pts;
+}
+function crackDir(kHz) { return rotV(dirLift(MATS.al.iacs, kHz, 1), CRACK_TURN); }
+function crackPts(kHz, len) {
+  var P = Zs(MATS.al.iacs, kHz, 0, 1), u = crackDir(kHz), n = { R: -u.X, X: u.R }, L = len || CRACK_LEN, pts = [];
+  for (var i = 0; i <= 40; i++) { var t = i / 40, s = Math.sin(Math.PI * t), w = L * 0.075 * Math.sin(2 * Math.PI * t); pts.push({ R: P.R + u.R * L * s + n.R * w, X: P.X + u.X * L * s + n.X * w }); }
+  return pts;
+}
+
+var S = baseState();
+var dirty = true;
+
+/* ===================== rendering: the impedance plane ===================== */
+var svg = $('plane'), prSvg = $('probe'), lastMap = null;
+/* maps impedance to screen with equal scales on both axes. disp is the instrument display: rotation (degrees) about a
+   centre point, then a separate vertical gain. cam.al = 'l' pins the left edge so spare width goes to the right. */
+function mapper(W, H, cam, disp) {
+  var pad = { l: 46, r: 12, t: 12, b: 38 };
+  var pw = Math.max(40, W - pad.l - pad.r), ph = Math.max(40, H - pad.t - pad.b);
+  var s = Math.min(pw / (cam.r1 - cam.r0), ph / (cam.x1 - cam.x0));
+  var cr = cam.al === 'l' ? cam.r0 + pw / 2 / s : (cam.r0 + cam.r1) / 2, cx = (cam.x0 + cam.x1) / 2, ox = pad.l + pw / 2, oy = pad.t + ph / 2;
+  var px = function (R) { return ox + (R - cr) * s; }, py = function (X) { return oy - (X - cx) * s; };
+  var ident = !disp || (Math.abs(disp.rot) < 1e-6 && Math.abs(disp.gy - 1) < 1e-6);
+  var th = disp ? disp.rot * Math.PI / 180 : 0, co = Math.cos(th), si = Math.sin(th);
+  return {
+    s: s, pad: pad, pw: pw, ph: ph, W: W, H: H, px: px, py: py, ident: ident,
+    P: function (z) {
+      if (ident) return { x: px(z.R), y: py(z.X) };
+      var dR = z.R - disp.cR, dX = z.X - disp.cX;
+      return { x: px(disp.cR + dR * co - dX * si), y: py(disp.cX + (dR * si + dX * co) * disp.gy) };
+    },
+    inv: function (x, y) { return { R: cr + (x - ox) / s, X: cx - (y - oy) / s }; },
+    Rmin: cr - pw / 2 / s, Rmax: cr + pw / 2 / s, Xmin: cx - ph / 2 / s, Xmax: cx + ph / 2 / s
+  };
+}
+/* the screen direction of a unit impedance direction u at point P (after any display rotation and gain) */
+function sdir(m, P, u) {
+  var a = m.P(P), b = m.P({ R: P.R + u.R * 1e-4, X: P.X + u.X * 1e-4 }), dx = b.x - a.x, dy = b.y - a.y, n = Math.hypot(dx, dy) || 1;
+  return { x: dx / n, y: dy / n };
+}
+/* points on a fixed grid plus the exact ends, so cached model values are reused while a path grows */
+function gridPts(a, b, step) {
+  var lo = Math.min(a, b), hi = Math.max(a, b), mid = [];
+  for (var k = Math.ceil(lo / step); k * step < hi; k++) if (k * step > lo) mid.push(k * step);
+  if (b < a) mid.reverse();
+  return [a].concat(mid, [b]);
+}
+function pathPoints(st, p) {
+  var pts = [], m;
+  if (p.type === 'cond') {
+    gridPts(Math.log(p.p0), Math.log(p.pEnd != null ? p.pEnd : p.p1), 1 / 24).forEach(function (u) { pts.push(Zp(Math.exp(u), p.lift)); });
+  } else if (p.type === 'lift') {
+    m = { mat: p.mat, kHz: p.kHz, mu: p.mu, iacs: p.iacs, dmm: p.dmm };
+    gridPts(p.l0, p.lEnd != null ? p.lEnd : p.l1, 0.5).forEach(function (l) { m.lift = l; pts.push(zOf(st, m)); });
+  } else if (p.type === 'freq') {
+    m = MATS[p.mat];
+    gridPts(Math.log(p.k0), Math.log(p.kEnd != null ? p.kEnd : p.k1), 1 / 16).forEach(function (u) { pts.push(Zs(m.iacs, Math.exp(u), p.lift || 0, p.mu != null ? p.mu : m.mu)); });
+  } else if (p.type === 'mu') {
+    m = MATS[p.mat]; var k = kOf(st, p);
+    gridPts(Math.log(p.m0), Math.log(p.mEnd != null ? p.mEnd : p.m1), 1 / 16).forEach(function (u) { pts.push(Zs(m.iacs, k, p.lift || 0, Math.exp(u))); });
+  } else if (p.type === 'pts') {
+    var n = p.pts.length - 1, f = clamp(p.prog, 0, 1) * n, i0 = Math.floor(f);
+    pts = p.pts.slice(0, i0 + 1);
+    if (i0 < n && f > i0) { var a = p.pts[i0], b = p.pts[i0 + 1], q = f - i0; pts.push({ R: lerp(a.R, b.R, q), X: lerp(a.X, b.X, q) }); }
+  } else if (p.type === 'seg') {
+    var pr = p.prog == null ? 1 : p.prog;
+    pts.push({ R: p.R0, X: p.X0 }); pts.push({ R: lerp(p.R0, p.R1, pr), X: lerp(p.X0, p.X1, pr) });
+  }
+  return pts;
+}
+function polyline(pts, m) { return pts.map(function (q, i) { var p = m.P(q); return (i ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1); }).join(''); }
+function arrowSvg(x1, y1, x2, y2, color, wid, dash, op) {
+  var dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy);
+  if (L < 1) return '';
+  var ux = dx / L, uy = dy / L, hs = Math.min(8, L * 0.45), hw = hs * 0.55;
+  return '<g opacity="' + op + '"><line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + (x2 - ux * hs * 0.6).toFixed(1) + '" y2="' + (y2 - uy * hs * 0.6).toFixed(1) + '" style="stroke:' + color + ';stroke-width:' + wid + '"' + (dash ? ' stroke-dasharray="' + dash + '"' : '') + '/>' +
+    '<path d="M' + x2.toFixed(1) + ' ' + y2.toFixed(1) + 'L' + (x2 - ux * hs - uy * hw).toFixed(1) + ' ' + (y2 - uy * hs + ux * hw).toFixed(1) + 'L' + (x2 - ux * hs + uy * hw).toFixed(1) + ' ' + (y2 - uy * hs - ux * hw).toFixed(1) + 'Z" style="fill:' + color + '"/></g>';
+}
+/* two directions from one point, with the angle between them marked */
+function angleSvg(x, y, u1, u2, c1, c2, L1, L2, deg, op) {
+  var r = 22, h = '<g opacity="' + op + '">';
+  h += arrowSvg(x, y, x + u1.x * L1, y + u1.y * L1, c1, 2.5, '', 1);
+  h += arrowSvg(x, y, x + u2.x * L2, y + u2.y * L2, c2, 2.5, '', 1);
+  if (L1 > 8 && L2 > 8) {
+    var a1 = { x: x + u1.x * r, y: y + u1.y * r }, a2 = { x: x + u2.x * r, y: y + u2.y * r }, sweep = (u1.x * u2.y - u1.y * u2.x) > 0 ? 1 : 0;
+    var bx = u1.x + u2.x, by = u1.y + u2.y, bl = Math.hypot(bx, by) || 1, rl = Math.max(r + 16, Math.min(L1, L2) * 0.55 + 12);
+    h += '<path d="M' + a1.x.toFixed(1) + ' ' + a1.y.toFixed(1) + 'A' + r + ' ' + r + ' 0 0 ' + sweep + ' ' + a2.x.toFixed(1) + ' ' + a2.y.toFixed(1) + '" style="fill:none;stroke:var(--ink);stroke-width:1.5"/>';
+    h += '<text class="t-ang" x="' + (x + bx / bl * rl).toFixed(1) + '" y="' + (y + by / bl * rl + 4).toFixed(1) + '" text-anchor="middle">' + Math.round(deg) + '&deg;</text>';
+  }
+  return h + '</g>';
+}
+function niceStep(s) {
+  var c = [0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.25, 0.5];
+  for (var i = 0; i < c.length; i++) if (c[i] * s >= 44) return c[i];
+  return 0.5;
+}
+/* keeps labels from piling up: each label tries its own spot, then steps down or up until it is clear of earlier ones */
+function makePlacer() {
+  var boxes = [];
+  function hit(x, y, w, h) { for (var j = 0; j < boxes.length; j++) { var b = boxes[j]; if (x < b.x + b.w && x + w > b.x && y < b.y + b.h && y + h > b.y) return true; } return false; }
+  return {
+    block: function (x, y, w, h) { boxes.push({ x: x, y: y, w: w, h: h }); },
+    place: function (x, y, text, anchor) {
+      var w = text.length * 6.9 + 4, h = 14, x0 = anchor === 'end' ? x - w : (anchor === 'middle' ? x - w / 2 : x);
+      var tries = [0, 13, -13, 26, -26, 39, -39, 52, -52, 65, -65], dy = 0;
+      for (var i = 0; i < tries.length; i++) if (!hit(x0, y + tries[i] - 11, w, h)) { dy = tries[i]; break; }
+      boxes.push({ x: x0, y: y + dy - 11, w: w, h: h });
+      return y + dy;
+    }
+  };
+}
+function fmtK(k) {
+  if (k >= 999.5) { var v = Math.round(k / 10) / 100; return (v >= 10 ? fmt(v, 0) : String(v)) + ' MHz'; }
+  if (k < 0.9995) return Math.round(k * 1000) + ' Hz';
+  return (k >= 99.95 ? fmt(k, 0) : String(Math.round(k * 10) / 10)) + ' kHz';
+}
+function fmtDeg(d) { var r = Math.round(d); return (r < 0 ? '−' + (-r) : String(r)) + '°'; }
+function fmtMils(v) { return v >= 100 ? fmt(v, 0) : (v >= 10 ? fmt(v, 1) : fmt(v, 2)); }
+function fmtMM(v) { return (v >= 10 ? fmt(v, 0) : v >= 1 ? fmt(v, 1) : v >= 0.1 ? fmt(v, 2) : fmt(v, 3)) + ' mm'; }
+function render() { renderPlane(S); renderProbe(S); renderHud(S); }
+function renderPlane(st) {
+  var W = svg.clientWidth, H = svg.clientHeight;
+  if (!W || !H) return;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  var m = mapper(W, H, st.cam, st.disp), out = [], pl = makePlacer(), labels = [];
+  lastMap = m;
+  var L = m.pad.l, T0 = m.pad.t, Rr = m.pad.l + m.pw, B = m.pad.t + m.ph;
+  out.push('<defs><clipPath id="clipA"><rect x="' + L + '" y="' + T0 + '" width="' + m.pw + '" height="' + m.ph + '"/></clipPath></defs>');
+  /* grid and axes belong to the unrotated plane */
+  var step = niceStep(m.s), dec = step < 0.01 ? 3 : (step < 0.1 || step === 0.25 ? 2 : 1);
+  var gOp = m.ident ? st.grid : 0, aOp = m.ident ? st.axes : 0;
+  if (gOp > 0) {
+    var g = '<g opacity="' + gOp + '">';
+    var rs = Math.max(0, Math.ceil(m.Rmin / step) * step), xs0 = Math.max(0, Math.ceil(m.Xmin / step) * step);
+    var yTop = Math.max(T0, m.py(m.Xmax)), yBot = Math.min(B, m.py(0)), xL = Math.max(L, m.px(0));
+    for (var r = rs; r <= m.Rmax + 1e-9; r += step) { var X = m.px(r); g += '<line class="gl" x1="' + X + '" y1="' + yTop + '" x2="' + X + '" y2="' + yBot + '"/>'; g += '<text class="t-tick" x="' + X + '" y="' + (B + 14) + '" text-anchor="middle">' + fmt(r, dec) + '</text>'; }
+    for (var xx = xs0; xx <= m.Xmax + 1e-9; xx += step) { var Y = m.py(xx); g += '<line class="gl" x1="' + xL + '" y1="' + Y + '" x2="' + Rr + '" y2="' + Y + '"/>'; g += '<text class="t-tick" x="' + (L - 6) + '" y="' + (Y + 4) + '" text-anchor="end">' + fmt(xx, dec) + '</text>'; }
+    out.push(g + '</g>');
+  }
+  if (aOp > 0) {
+    var ox = m.px(0), oy = m.py(0);
+    out.push('<g clip-path="url(#clipA)" opacity="' + aOp + '"><line class="ax" x1="' + ox + '" y1="' + oy + '" x2="' + m.px(m.Rmax) + '" y2="' + oy + '"/>' +
+      '<line class="ax" x1="' + ox + '" y1="' + oy + '" x2="' + ox + '" y2="' + m.py(m.Xmax) + '"/></g>');
+    var narrow = m.ph < 420;
+    out.push('<text class="t-axis' + (st.hiR > 0.5 ? ' hi' : '') + '" opacity="' + aOp + '" x="' + (L + m.pw / 2) + '" y="' + (m.H - 6) + '" text-anchor="middle">' + esc('Resistance R' + (st.noteR ? ' (heat lost)' : '') + ' →') + '</text>');
+    out.push('<text class="t-axis" opacity="' + aOp + '" transform="translate(13 ' + (T0 + m.ph / 2) + ') rotate(-90)" text-anchor="middle">' + esc((narrow ? 'Reactance X' : 'Inductive reactance X') + (st.noteX ? ' (energy stored)' : '') + ' →') + '</text>');
+  }
+  var body = '<g clip-path="url(#clipA)">';
+  /* the air line: ferromagnetic materials land above it, nonferromagnetic metals below */
+  if (st.airline > 0 && m.ident) {
+    var ya = m.py(1), zx = Math.min(Rr - 6, Math.max(L + 140, m.px(0.6))); /* on wide screens, keep the labels near the curves */
+    body += '<g opacity="' + st.airline + '"><line x1="' + L + '" y1="' + ya + '" x2="' + Rr + '" y2="' + ya + '" class="p-airline"/>' +
+      '<text class="t-zone" x="' + zx + '" y="' + (ya - 7) + '" text-anchor="end">ferromagnetic</text>' +
+      '<text class="t-zone" x="' + zx + '" y="' + (ya + 16) + '" text-anchor="end">nonferromagnetic</text></g>';
+    pl.block(zx - 130, ya - 20, 130, 40);
+  }
+  /* instrument display crosshair through the balance point */
+  if (st.disp.cross > 0) {
+    var cc = m.P({ R: st.disp.cR, X: st.disp.cX });
+    body += '<g opacity="' + st.disp.cross + '"><line x1="' + L + '" y1="' + cc.y + '" x2="' + Rr + '" y2="' + cc.y + '" class="p-cross"/><line x1="' + cc.x + '" y1="' + T0 + '" x2="' + cc.x + '" y2="' + B + '" class="p-cross"/>' +
+      '<text class="t-zone" x="' + (L + 6) + '" y="' + (B - 8) + '">instrument display</text></g>';
+  }
+  /* a legend line for anything drawn by hand rather than computed */
+  if (st.legend && st.legend.show > 0 && st.legend.text) {
+    body += '<text class="t-legend" x="' + (L + 8) + '" y="' + (T0 + 16) + '" opacity="' + st.legend.show + '">' + esc(st.legend.text) + '</text>';
+    pl.block(L + 4, T0 + 3, st.legend.text.length * 6.4 + 8, 17);
+  }
+  /* the dot first reserves its spot so labels steer around it */
+  var D = st.dot.show > 0 ? dotPos(st) : null, Dp = D ? m.P(D) : null;
+  if (Dp) pl.block(Dp.x - 10, Dp.y - 10, 20, 20);
+  /* air point */
+  if (st.air > 0) {
+    var ap = m.P({ R: 0, X: 1 });
+    body += '<g opacity="' + st.air + '"><circle cx="' + ap.x + '" cy="' + ap.y + '" r="6" style="fill:var(--panel);stroke:var(--ink);stroke-width:2"/></g>';
+    pl.block(ap.x - 7, ap.y - 7, 14, 14);
+    labels.push({ x: ap.x + 9, y: ap.y - 9, text: 'air point', px: ap.x, py: ap.y, op: st.air });
+  }
+  /* bridge: guide line, the circle of constant reading, the rope and the balance point D */
+  var br = st.bridge;
+  if (br.show > 0) {
+    var Dq = m.P(br.D);
+    if (br.perp > 0) {
+      var po = { mat: br.perpAt }, P0 = zOf(st, po), u0 = dirOf(st, po, br.perpKind === 'cond' ? 'sig' : 'lift'), nn = { R: -u0.X, X: u0.R };
+      var ga = m.P({ R: P0.R - nn.R * 0.6, X: P0.X - nn.X * 0.6 }), gb = m.P({ R: P0.R + nn.R * 0.6, X: P0.X + nn.X * 0.6 });
+      body += '<line x1="' + ga.x + '" y1="' + ga.y + '" x2="' + gb.x + '" y2="' + gb.y + '" class="p-guide" opacity="' + br.perp + '"/>';
+    }
+    if (br.circle > 0 && D) body += '<circle cx="' + Dq.x + '" cy="' + Dq.y + '" r="' + (Math.hypot(D.R - br.D.R, D.X - br.D.X) * m.s).toFixed(1) + '" class="p-circle" opacity="' + br.circle + '"/>';
+    if (br.rope > 0 && Dp) body += '<line x1="' + Dq.x + '" y1="' + Dq.y + '" x2="' + Dp.x + '" y2="' + Dp.y + '" class="p-rope" opacity="' + br.rope + '"/>';
+    body += '<g opacity="' + br.show + '"><rect x="' + (Dq.x - 6) + '" y="' + (Dq.y - 6) + '" width="12" height="12" rx="2" style="fill:var(--ink);stroke:var(--panel);stroke-width:2" transform="rotate(45 ' + Dq.x + ' ' + Dq.y + ')"/></g>';
+    pl.block(Dq.x - 8, Dq.y - 8, 16, 16);
+    labels.push({ x: Dq.x + 10, y: Dq.y + 4, text: 'D', op: br.show, bold: 1 });
+  }
+  /* paths */
+  Object.keys(st.paths).forEach(function (id) {
+    var p = st.paths[id]; if (!p || !(p.show > 0)) return;
+    var pts = pathPoints(st, p); if (pts.length < 2) return;
+    body += '<path d="' + polyline(pts, m) + '" class="' + (p.cls || 'p-locus') + '" opacity="' + p.show + '"/>';
+    if (p.head && p.prog > 0.01) { var hq = m.P(pts[pts.length - 1]); body += '<circle cx="' + hq.x + '" cy="' + hq.y + '" r="5" style="fill:' + (p.headColor || 'var(--edge)') + ';stroke:var(--panel);stroke-width:1.5" opacity="' + p.show + '"/>'; }
+    if (p.label) {
+      var q = m.P(pts[p.lat === 'start' ? 0 : (p.lat === 'mid' ? Math.floor(pts.length / 2) : pts.length - 1)]);
+      labels.push({ x: q.x + (p.dx == null ? 8 : p.dx), y: q.y + (p.dy || 0), text: p.label, anchor: p.anchor, color: p.color, op: p.show, small: p.small });
+    }
+  });
+  /* marks: dots along a lift-off path at given lift-offs */
+  Object.keys(st.marks).forEach(function (id) {
+    var mk = st.marks[id]; if (!mk || !(mk.show > 0)) return;
+    var o = { mat: mk.mat, kHz: mk.kHz, mu: mk.mu };
+    mk.list.forEach(function (l, i) {
+      if (mk.upTo != null && l > mk.upTo + 1e-6) return;
+      o.lift = l; var q = m.P(zOf(st, o));
+      body += '<circle cx="' + q.x.toFixed(1) + '" cy="' + q.y.toFixed(1) + '" r="' + (mk.r || 3.5) + '" style="fill:' + (mk.color || 'var(--lift)') + ';stroke:var(--panel);stroke-width:1" opacity="' + mk.show + '"/>';
+      var nm = mk.names ? mk.names[i] : '';
+      if (nm) labels.push({ x: q.x + (mk.ldx == null ? 8 : mk.ldx), y: q.y + (mk.ldy == null ? 4 : mk.ldy), text: nm, anchor: mk.anchor, px: q.x, py: q.y, op: mk.show, small: 1, color: mk.color });
+    });
+  });
+  /* ghosts: material markers and helpers */
+  Object.keys(st.ghosts).forEach(function (id) {
+    var gh = st.ghosts[id]; if (!gh || !(gh.show > 0)) return;
+    var q = m.P(gh.R != null ? { R: gh.R, X: gh.X } : zOf(st, gh));
+    body += '<circle cx="' + q.x + '" cy="' + q.y + '" r="' + (gh.big ? 6.5 : 4.5) + '" style="fill:' + (gh.fill || 'var(--panel)') + ';stroke:' + (gh.stroke || 'var(--ink)') + ';stroke-width:2" opacity="' + gh.show + '"/>';
+    if (gh.label) labels.push({ x: q.x + (gh.dx == null ? 9 : gh.dx), y: q.y + (gh.dy == null ? 4 : gh.dy), text: gh.label, anchor: gh.anchor, px: q.x, py: q.y, op: gh.show });
+  });
+  /* phase arrows: the direction from air to each material, drawn at a fixed length so the turn shows even near air */
+  Object.keys(st.phase).forEach(function (id) {
+    var ph = st.phase[id]; if (!ph || !(ph.show > 0)) return;
+    var mt = MATS[ph.mat], P = Zs(mt.iacs, st.freq.kHz, 0, mt.mu), a0 = m.P({ R: 0, X: 1 }), u = sdir(m, { R: 0, X: 1 }, unitV(diffZ({ R: 0, X: 1 }, P))), Lp = ph.len || 70;
+    body += arrowSvg(a0.x, a0.y, a0.x + u.x * Lp, a0.y + u.y * Lp, ph.color || 'var(--ink-soft)', 2.5, '', ph.show);
+    if (st.phaseLbl > 0) labels.push({ x: a0.x + u.x * (Lp + 12), y: a0.y + u.y * (Lp + 12) + 4, text: fmtDeg(degOf(diffZ({ R: 0, X: 1 }, P))), anchor: 'middle', op: Math.min(ph.show, st.phaseLbl), color: ph.color, small: 1 });
+  });
+  /* single arrows */
+  Object.keys(st.arrows).forEach(function (id) {
+    var ar = st.arrows[id]; if (!ar || !(ar.show > 0)) return;
+    var P = ar.at.free ? { R: ar.at.R, X: ar.at.X } : zOf(st, ar.at), q = m.P(P), u = sdir(m, P, dirOf(st, ar.at, ar.dir)), Lx = (ar.len || 50) * (ar.scale == null ? 1 : ar.scale);
+    body += arrowSvg(q.x, q.y, q.x + u.x * Lx, q.y + u.y * Lx, ar.color || KIND_COLOR[ar.dir] || 'var(--ink)', ar.w || 2.5, ar.dash || '', ar.show);
+    if (ar.label) labels.push({ x: q.x + u.x * (Lx + 8) + (u.x < -0.3 ? -2 : 2), y: q.y + u.y * (Lx + 8) + 4, text: ar.label, anchor: u.x < -0.3 ? 'end' : (u.x > 0.3 ? 'start' : 'middle'), op: ar.show, color: ar.color || KIND_COLOR[ar.dir], small: 1 });
+  });
+  /* angle markers between two directions at one point */
+  Object.keys(st.angles).forEach(function (id) {
+    var an = st.angles[id]; if (!an || !(an.show > 0)) return;
+    var o = an.at, P = zOf(st, o), d1 = dirOf(st, o, an.a), d2 = dirOf(st, o, an.b);
+    if (an.rot) { d1 = rotV(d1, an.rot); d2 = rotV(d2, an.rot); }
+    var deg = angleBetween(d1, d2);
+    if (an.fold !== false && deg > 90) { d2 = negV(d2); deg = 180 - deg; }
+    var q = m.P(P), u1 = sdir(m, P, d1), u2 = sdir(m, P, d2), Lx = 48 * (an.len || 1), L1 = Lx, L2 = Lx;
+    if (an.b === 'thin') L2 = Lx * clamp(thinSize(iacsOf(o), kOf(st, o), muOf(o), o.dmm) / (an.ref || 0.003), 0, 1);
+    var ca = an.ca || KIND_COLOR[an.a] || 'var(--lift)', cb = an.cb || KIND_COLOR[an.b] || 'var(--locus)';
+    body += angleSvg(q.x, q.y, u1, u2, ca, cb, L1, L2, deg, an.show);
+    if (an.la) labels.push({ x: q.x + u1.x * (L1 + 6), y: q.y + u1.y * (L1 + 6) + 4, text: an.la, anchor: u1.x < -0.2 ? 'end' : 'start', op: an.show, color: ca, small: 1 });
+    if (an.lb) labels.push({ x: q.x + u2.x * (Math.max(L2, 10) + 6), y: q.y + u2.y * (Math.max(L2, 10) + 6) + 4, text: L2 < 8 ? an.lb + ': gone' : an.lb, anchor: u2.x < -0.2 ? 'end' : 'start', op: an.show, color: cb, small: 1 });
+  });
+  /* a crack signal split into its two halves: missing metal (lift-off) and the current detour (lower conductivity) */
+  if (st.decomp > 0) {
+    var A0 = Zs(MATS.al.iacs, st.freq.kHz, 0, 1), ul = dirLift(MATS.al.iacs, st.freq.kHz, 1), uc = dirSigDown(MATS.al.iacs, st.freq.kHz, 1), cv = crackDir(st.freq.kHz);
+    var det = ul.R * uc.X - ul.X * uc.R, al = (cv.R * uc.X - cv.X * uc.R) / det * CRACK_LEN, be = (ul.R * cv.X - ul.X * cv.R) / det * CRACK_LEN;
+    var M1 = { R: A0.R + ul.R * al, X: A0.X + ul.X * al }, Tq = { R: A0.R + cv.R * CRACK_LEN, X: A0.X + cv.X * CRACK_LEN }, a0p = m.P(A0), m1p = m.P(M1), tqp = m.P(Tq);
+    body += '<g opacity="' + st.decomp + '">' + arrowSvg(a0p.x, a0p.y, m1p.x, m1p.y, 'var(--lift)', 2.5, '5 4', 1) + arrowSvg(m1p.x, m1p.y, tqp.x, tqp.y, 'var(--locus)', 2.5, '5 4', 1) + '</g>';
+    labels.push({ x: (a0p.x + m1p.x) / 2 - 8, y: (a0p.y + m1p.y) / 2 + 4, text: 'missing metal', anchor: 'end', op: st.decomp, color: 'var(--lift)', small: 1 });
+    labels.push({ x: (m1p.x + tqp.x) / 2 + 8, y: (m1p.y + tqp.y) / 2 + 4, text: 'current detour', op: st.decomp, color: 'var(--locus)', small: 1 });
+  }
+  /* the dot */
+  if (Dp) {
+    body += '<g opacity="' + st.dot.show + '"><circle cx="' + Dp.x + '" cy="' + Dp.y + '" r="13" style="fill:var(--dot)" opacity="0.18"/><circle cx="' + Dp.x + '" cy="' + Dp.y + '" r="7" style="fill:var(--dot);stroke:var(--panel);stroke-width:2"/></g>';
+    if (st.dot.label) labels.unshift({ x: Dp.x + 12, y: Dp.y + 4, text: st.dot.label, px: Dp.x, py: Dp.y, op: st.dot.show, color: 'var(--dot)' });
+    if (st.muNote > 0) labels.push({ x: Dp.x + 12, y: Dp.y + 20, text: 'μr = ' + STEEL_MU + ', an assumption', op: st.muNote, color: 'var(--mu)', small: 1 });
+  }
+  /* labels, placed so they do not overlap; a thin leader line joins any label pushed away from its point */
+  labels.forEach(function (lb) {
+    /* keep every label inside the plot: slide it left or right if it would run off an edge */
+    var lw = lb.text.length * (lb.small ? 6.2 : 6.9) + 4, an = lb.anchor || 'start', lx0 = an === 'end' ? lb.x - lw : (an === 'middle' ? lb.x - lw / 2 : lb.x);
+    if (lx0 + lw > Rr - 2) lb.x -= lx0 + lw - (Rr - 2); else if (lx0 < L + 2) lb.x += L + 2 - lx0;
+    var y = pl.place(lb.x, lb.y, lb.text, lb.anchor);
+    if (lb.px != null && Math.abs(y - lb.y) > 6) body += '<line x1="' + lb.px + '" y1="' + lb.py + '" x2="' + (lb.anchor === 'end' ? lb.x + 2 : lb.x - 2) + '" y2="' + (y - 4) + '" style="stroke:var(--ink-faded);stroke-width:1" opacity="' + lb.op + '"/>';
+    body += '<text class="t-lbl' + (lb.small ? ' t-sm' : '') + '" x="' + lb.x + '" y="' + y + '" text-anchor="' + (lb.anchor || 'start') + '" opacity="' + lb.op + '"' + (lb.color ? ' style="fill:' + lb.color + '"' : '') + '>' + esc(lb.text) + '</text>';
+  });
+  body += '</g>';
+  out.push(body);
+  svg.innerHTML = out.join('');
+}
+function renderHud(st) {
+  var d = st.dot, on = st.chips > 0.5 && d.show > 0.5 && !d.free, k = kOf(st, d);
+  $('hud').classList.toggle('hidden', !(st.chips > 0.5));
+  $('freqVal').textContent = fmtK(k);
+  var mu = on ? muOf(d) : 1;
+  $('muChip').classList.toggle('hidden', !(on && mu > 1));
+  $('muVal').textContent = fmt(mu, 0) + (Math.abs(mu - STEEL_MU) < 0.5 ? ' (assumed)' : '');
+  $('depthChip').classList.toggle('hidden', !on);
+  if (on) $('depthVal').textContent = fmtMM(depthMuMM(iacsOf(d), k, mu));
+  $('liftChip').classList.toggle('hidden', !(on && d.lift > 0.05));
+  $('liftVal').textContent = fmtMils(d.lift || 0) + ' mils';
+  var rotOn = Math.abs(st.disp.rot) > 0.5 || st.disp.gy > 1.05;
+  $('dispChip').classList.toggle('hidden', !rotOn);
+  $('dispVal').textContent = 'turned ' + Math.round(st.disp.rot) + '°' + (st.disp.gy > 1.05 ? ', vertical gain ×' + fmt(st.disp.gy, 1) : '');
+  var tc = $('titleCard');
+  tc.classList.toggle('hidden', !(st.title.show > 0.02));
+  tc.style.opacity = st.title.show;
+  $('titleEyebrow').textContent = st.title.n; $('titleText').textContent = st.title.text;
+}
+
+/* ===================== rendering: the probe view under the plane ===================== */
+/* side: the coil above the part, with field lines, eddy currents and (in steel) magnetic domains.
+   depth: aluminum and steel side by side, showing how deep the eddy currents reach.
+   top: the eddy current loops seen from above, detouring around a crack (illustrative).
+   meter: the bridge instrument's needle. bars: equal steps against the moves they make on the plane. */
+function seeded(i) { var x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+function lerpAngle(a, b, t) { var d = ((b - a) % (2 * Math.PI) + 3 * Math.PI) % (2 * Math.PI) - Math.PI; return a + d * t; }
+function coilSvg(cx, cb, cw) {
+  var h = '<line x1="' + cx + '" y1="0" x2="' + cx + '" y2="' + (cb - 12) + '" style="stroke:var(--coil);stroke-width:3"/>';
+  h += '<rect x="' + (cx - cw / 2) + '" y="' + (cb - 12) + '" width="' + cw + '" height="12" rx="3" style="fill:var(--panel);stroke:var(--coil);stroke-width:2"/>';
+  for (var w = 0; w < 7; w++) { var xw = cx - cw / 2 + 6 + w * (cw - 12) / 6.5; h += '<line x1="' + xw + '" y1="' + (cb - 10) + '" x2="' + (xw + 4) + '" y2="' + (cb - 2) + '" style="stroke:var(--coil);stroke-width:1.4"/>'; }
+  return h;
+}
+function depthRuler(L, y0, sc, Dmm) {
+  var h = '<text class="t-tick" x="' + (L - 6) + '" y="' + (y0 - 6) + '" text-anchor="end">mm</text>';
+  for (var v = 0; v <= Dmm + 1e-9; v += 0.5) { var y = y0 + v * sc; h += '<line x1="' + (L - 4) + '" y1="' + y + '" x2="' + L + '" y2="' + y + '" style="stroke:var(--ink-faded)"/><text class="t-tick" x="' + (L - 6) + '" y="' + (y + 4) + '" text-anchor="end">' + v + '</text>'; }
+  return h;
+}
+/* eddy current density fading with depth, e^(-z / delta), as a vertical gradient */
+function eddyGrad(id, dl, Dmm) {
+  var h = '<linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1">';
+  for (var i = 0; i <= 12; i++) h += '<stop offset="' + (i / 12).toFixed(3) + '" style="stop-color:var(--eddy);stop-opacity:' + (0.85 * Math.exp(-Dmm * i / 12 / dl)).toFixed(3) + '"/>';
+  return h + '</linearGradient>';
+}
+/* how strongly the plate's eddy currents react, 0.1 to 1: the move of the dot away from where it would sit with no eddy
+   currents (air for a nonmagnetic metal, the zero-frequency point for steel). Shading uses it so low frequencies look faint. */
+function eddyLevel(ia, k, mu, dmm) {
+  var Z = Zs(ia, k, 0, mu, dmm), Z0 = mu > 1 ? Zs(ia, 0.001, 0, mu, dmm) : { R: 0, X: 1 };
+  return clamp(Math.hypot(Z.R - Z0.R, Z.X - Z0.X) / 0.12, 0.1, 1);
+}
+function renderProbe(st) {
+  var W = prSvg.clientWidth, H = prSvg.clientHeight;
+  if (!W || !H) return;
+  prSvg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  var pr = st.probe, t = performance.now() / 1000;
+  if (!(pr.show > 0)) { prSvg.innerHTML = ''; return; }
+  var h = pr.mode === 'meter' ? meterSvg(st, W, H) : pr.mode === 'top' ? topSvg(st, W, H, t) : pr.mode === 'depth' ? depthSvg(st, W, H, t) : pr.mode === 'bars' ? barsSvg(st, W, H) : sideSvg(st, W, H, t);
+  prSvg.innerHTML = '<g opacity="' + pr.show + '">' + h + '</g>';
+}
+function sideSvg(st, W, H, t) {
+  var pr = st.probe, d = st.dot, key = pr.mat || d.mat, mat = MATS[key], k = kOf(st, d);
+  var mu = pr.mat ? mat.mu : muOf(d), ia = pr.mat ? mat.iacs : iacsOf(d), dl = depthMuMM(ia, k, mu), sheet = !pr.mat && d.dmm ? d.dmm : 0;
+  var lift = d.lift || 0, L = 40, Rx = W - 8, y0 = Math.round(H * 0.47), yb = H - 6, Dmm = 1.0, sc = (yb - y0) / Dmm;
+  var cw = clamp(W * 0.2, 64, 120), edgeOn = pr.edge != null, xEdge = edgeOn ? L + (Rx - L) * 0.62 : Rx;
+  var cx = edgeOn ? xEdge + pr.edge * cw : L + (Rx - L) * 0.42;
+  var gap = clamp(4 + lift * 1.3, 4, y0 - 34), cb = y0 - gap, ct = cb - 12, yEnd = sheet ? y0 + sheet * sc : yb;
+  var metalUnder = edgeOn ? clamp((xEdge - (cx - cw * 0.8)) / (cw * 1.6), 0, 1) : 1, couple = Math.exp(-lift / 22) * metalUnder, ev = eddyLevel(ia, k, mu, sheet || null);
+  var h = '<defs>' + eddyGrad('eg', dl, Dmm) + '</defs>';
+  /* the part */
+  h += '<rect x="' + L + '" y="' + y0 + '" width="' + (xEdge - L) + '" height="' + (yEnd - y0) + '" style="fill:' + mat.color + '" opacity="0.42"/>';
+  if (sheet) h += '<line x1="' + L + '" y1="' + yEnd + '" x2="' + xEdge + '" y2="' + yEnd + '" style="stroke:var(--ink);stroke-width:2"/><text class="t-xs" x="' + (xEdge - 4) + '" y="' + (yEnd + 13) + '" text-anchor="end">air behind the sheet</text>';
+  /* eddy currents: density fading with depth under the coil, plus current symbols (out of the page on one side, in on the other) */
+  if (pr.eddy > 0 && couple > 0.01) {
+    var xa = Math.max(L, cx - cw * 1.3), xb = Math.min(xEdge, cx + cw * 1.3);
+    if (xb > xa) h += '<rect x="' + xa + '" y="' + y0 + '" width="' + (xb - xa) + '" height="' + (yEnd - y0) + '" fill="url(#eg)" opacity="' + (pr.eddy * couple * ev).toFixed(3) + '"/>';
+    [0.35, 1.0].forEach(function (f, j) {
+      var z = f * dl; if (z > Dmm || y0 + z * sc > yEnd) return;
+      var y = Math.max(y0 + 7, y0 + z * sc), a = pr.eddy * couple * ev * Math.exp(-f) * (0.8 + 0.2 * Math.sin(t * 4 + j)), xl = cx - cw * 0.38, xr = cx + cw * 0.38;
+      if (xl > xEdge - 4) return;
+      h += '<g opacity="' + a.toFixed(3) + '" style="stroke:var(--eddy);stroke-width:1.8;fill:none"><circle cx="' + xl + '" cy="' + y + '" r="5.5"/><circle cx="' + xl + '" cy="' + y + '" r="1.6" style="fill:var(--eddy)"/>';
+      if (xr < xEdge - 4) h += '<circle cx="' + xr + '" cy="' + y + '" r="5.5"/><path d="M' + (xr - 3.5) + ' ' + (y - 3.5) + 'l7 7M' + (xr + 3.5) + ' ' + (y - 3.5) + 'l-7 7"/>';
+      h += '</g>';
+    });
+  }
+  /* magnetic domains: little magnets that swing to line up with the coil's alternating field */
+  if (mu > 1) {
+    /* the field alternates, so the lined-up domains swing round together: half a turn each half cycle */
+    var flip = Math.PI * (1 - Math.cos(t * 2 * Math.PI * 0.25)) / 2, dg = '<g style="stroke:var(--mu);fill:var(--mu)">';
+    [0.07, 0.24, 0.45, 0.7].forEach(function (zf, i) {
+      var y = y0 + zf * sc; if (y > yEnd - 5) return;
+      for (var j = 0, x = L + 12; x < xEdge - 8; j++, x += 19) {
+        var base = seeded(i * 97 + j) * 2 * Math.PI, prox = Math.exp(-Math.pow((x - cx) / (2.5 * cw), 2)), depthF = Math.exp(-zf / Math.max(dl * 3, 0.6));
+        var s = clamp(pr.dom * pr.field * couple * prox * depthF * 1.25, 0, 1), target = (x >= cx ? 0 : Math.PI) + flip, a = lerpAngle(base, target, s);
+        var ux = Math.cos(a), uy = Math.sin(a), x1 = x - ux * 5, y1 = y - uy * 5, x2 = x + ux * 5, y2 = y + uy * 5;
+        dg += '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" style="stroke-width:1.6"/>' +
+          '<path d="M' + (x2 + ux * 2).toFixed(1) + ' ' + (y2 + uy * 2).toFixed(1) + 'L' + (x2 - ux * 2 - uy * 2.4).toFixed(1) + ' ' + (y2 - uy * 2 + ux * 2.4).toFixed(1) + 'L' + (x2 - ux * 2 + uy * 2.4).toFixed(1) + ' ' + (y2 - uy * 2 - ux * 2.4).toFixed(1) + 'Z" style="stroke:none"/>';
+      }
+    });
+    h += dg + '</g>';
+  }
+  /* field lines: steel draws them in, eddy currents in a nonmagnetic metal push them back out */
+  if (pr.field > 0) {
+    var dv = clamp(dl / 0.25, 0.35, 1.6), fg = '<g style="fill:none;stroke:var(--field);stroke-width:1.6" opacity="' + (0.85 * pr.field).toFixed(3) + '" stroke-dasharray="5 5">';
+    for (var i = 0; i < 3; i++) {
+      var a = cw * (0.62 + 0.34 * i), b = 10 + 8 * i, ym = (ct + cb) / 2, nat = cb + b + 6, yl;
+      if (mu > 1) yl = lerp(nat, y0 + (6 + 7 * i) * dv, clamp(pr.dom * couple, 0, 1));
+      else yl = lerp(nat, Math.min(nat, y0 - 3 - (2 - i) * 1.5), clamp(pr.eddy * couple, 0, 1));
+      [-1, 1].forEach(function (sd) {
+        var xo = cx + sd * a;
+        fg += '<path d="M' + cx + ' ' + ct + 'C' + (cx + sd * a * 0.25) + ' ' + (ct - b * 1.3) + ' ' + xo + ' ' + (ct - b * 0.9) + ' ' + xo + ' ' + ym +
+          'C' + xo + ' ' + yl + ' ' + (cx + sd * a * 0.3) + ' ' + yl + ' ' + cx + ' ' + cb + '" stroke-dashoffset="' + (-(t * 16) % 10).toFixed(1) + '"/>';
+      });
+    }
+    h += fg + '</g>';
+  }
+  /* standard depth */
+  if (dl < Dmm && (!sheet || dl < sheet)) {
+    var yd = y0 + dl * sc;
+    h += '<line x1="' + L + '" y1="' + yd + '" x2="' + xEdge + '" y2="' + yd + '" style="stroke:var(--ink-soft);stroke-width:' + (1.2 + pr.hl) + '" stroke-dasharray="5 4"/>';
+    h += '<text class="t-xs" x="' + (L + 6) + '" y="' + (yd + (yd - y0 < 14 ? 13 : -3)) + '">1 δ = ' + fmtMM(dl) + '</text>';
+  } else if (!sheet) h += '<text class="t-xs" x="' + (L + 6) + '" y="' + (yb - 4) + '">δ = ' + fmtMM(dl) + ', deeper than shown</text>';
+  if (edgeOn) h += '<line x1="' + xEdge + '" y1="' + y0 + '" x2="' + xEdge + '" y2="' + yb + '" style="stroke:var(--ink);stroke-width:2"/><text class="t-xs b" x="' + (xEdge + 4) + '" y="' + (y0 - 4) + '">edge</text>';
+  h += '<line x1="' + L + '" y1="' + y0 + '" x2="' + xEdge + '" y2="' + y0 + '" style="stroke:var(--ink);stroke-width:1.5"/>';
+  h += depthRuler(L, y0, sc, Dmm);
+  /* the coil, held above the part by the wear face plus any lift-off */
+  h += coilSvg(cx, cb, cw);
+  if (lift >= 0.5) {
+    var xg = cx + cw / 2 + 8;
+    h += '<line x1="' + xg + '" y1="' + cb + '" x2="' + xg + '" y2="' + y0 + '" style="stroke:var(--lift);stroke-width:1.5"/><text class="t-xs" x="' + (xg + 4) + '" y="' + ((cb + y0) / 2 + 4) + '" style="fill:var(--lift)">' + fmtMils(lift) + ' mils</text>';
+  }
+  if (pr.ruler > 0) {
+    var xr0 = cx - cw / 2 - 12, rg = '<g opacity="' + pr.ruler + '" style="stroke:var(--ink-soft);stroke-width:1">';
+    for (var v = 0; v <= 30; v += 5) { var yv = y0 - 4 - v * 1.3; if (yv < 4) break; rg += '<line x1="' + (xr0 - (v % 10 ? 4 : 7)) + '" y1="' + yv + '" x2="' + xr0 + '" y2="' + yv + '"/>' + (v % 10 ? '' : '<text class="t-tick" x="' + (xr0 - 9) + '" y="' + (yv + 4) + '" text-anchor="end" style="stroke:none">' + v + '</text>'); }
+    h += rg + '<line x1="' + xr0 + '" y1="' + (y0 - 4) + '" x2="' + xr0 + '" y2="' + Math.max(4, y0 - 4 - 30 * 1.3) + '"/></g>';
+  }
+  h += '<text class="t-xs b" x="8" y="14">' + esc(mat.short + (sheet ? ' sheet, ' + fmt(sheet, 1) + ' mm' : '') + ' at ' + fmtK(k) + (mu > 1 ? ', μr ' + fmt(mu, 0) : '')) + '</text>';
+  return h;
+}
+function depthSvg(st, W, H, t) {
+  var L = 40, top = Math.round(H * 0.4), yb = H - 6, Dmm = 1.0, sc = (yb - top) / Dmm, k = st.freq.kHz, hw = (W - L - 10) / 2, h = '<defs>';
+  var sides = [{ key: 'al', x0: L }, { key: 'st', x0: L + hw + 10 }];
+  sides.forEach(function (sd, i) { var m = MATS[sd.key]; sd.dl = depthMuMM(m.iacs, k, m.mu); sd.ev = eddyLevel(m.iacs, k, m.mu); h += eddyGrad('dg' + i, sd.dl, Dmm); });
+  h += '</defs>';
+  sides.forEach(function (sd, i) {
+    var m = MATS[sd.key], x0 = sd.x0, cxs = x0 + hw / 2, cw = Math.min(64, hw * 0.42);
+    h += '<rect x="' + x0 + '" y="' + top + '" width="' + hw + '" height="' + (yb - top) + '" style="fill:' + m.color + '" opacity="0.42"/>';
+    h += '<rect x="' + x0 + '" y="' + top + '" width="' + hw + '" height="' + (yb - top) + '" fill="url(#dg' + i + ')" opacity="' + sd.ev.toFixed(3) + '"/>';
+    if (sd.dl < Dmm) {
+      var yd = top + sd.dl * sc;
+      h += '<line x1="' + x0 + '" y1="' + yd + '" x2="' + (x0 + hw) + '" y2="' + yd + '" style="stroke:var(--ink-soft);stroke-width:' + (1.2 + st.probe.hl) + '" stroke-dasharray="5 4"/>';
+    }
+    h += '<line x1="' + x0 + '" y1="' + top + '" x2="' + (x0 + hw) + '" y2="' + top + '" style="stroke:var(--ink);stroke-width:1.5"/>';
+    h += coilSvg(cxs, top - 4, cw).replace('y1="0"', 'y1="' + (top - 30) + '"');
+    h += '<text class="t-xs b" x="' + (x0 + 4) + '" y="14">' + esc(m.short + (m.mu > 1 ? ', μr ' + m.mu : '')) + '</text>';
+    h += '<text class="t-xs" x="' + (x0 + 4) + '" y="28">δ = ' + fmtMM(sd.dl) + (sd.dl > Dmm ? ', deeper than shown' : '') + '</text>';
+  });
+  h += depthRuler(L, top, sc, Dmm);
+  h += '<text class="t-tick" x="' + (W - 6) + '" y="14" text-anchor="end">' + fmtK(k) + '</text>';
+  return h;
+}
+/* a current loop of radius r around the probe centre; a crack along the vertical diameter with half-length hc blocks it,
+   so a loop smaller than the crack detours along the crack faces and round its ends */
+function loopPts(r, hc, e) {
+  var pts = [], i, ph;
+  if (r >= hc - 1) { for (i = 0; i <= 72; i++) { ph = i / 72 * 2 * Math.PI; pts.push([r * Math.cos(ph), r * Math.sin(ph)]); } return pts; }
+  var a0 = Math.asin(Math.min(1, e / r));
+  for (i = 0; i <= 30; i++) { ph = -Math.PI / 2 + a0 + (Math.PI - 2 * a0) * i / 30; pts.push([r * Math.cos(ph), r * Math.sin(ph)]); }
+  pts.push([e, hc]); for (i = 1; i < 8; i++) { ph = i / 8 * Math.PI; pts.push([e * Math.cos(ph), hc + e * Math.sin(ph)]); } pts.push([-e, hc]);
+  for (i = 0; i <= 30; i++) { ph = Math.PI / 2 + a0 + (Math.PI - 2 * a0) * i / 30; pts.push([r * Math.cos(ph), r * Math.sin(ph)]); }
+  pts.push([-e, -hc]); for (i = 1; i < 8; i++) { ph = Math.PI + i / 8 * Math.PI; pts.push([e * Math.cos(ph), -hc + e * Math.sin(ph)]); } pts.push([e, -hc]);
+  pts.push(pts[0]);
+  return pts;
+}
+function topSvg(st, W, H, t) {
+  var pr = st.probe, cx = W * 0.5, cy = H * 0.54, R0 = Math.min(H * 0.4, W * 0.26), hc = pr.crack > 0.01 ? (0.15 + 0.6 * pr.crack) * R0 : 0;
+  var h = '<rect x="0" y="0" width="' + W + '" height="' + H + '" style="fill:' + MATS.al.color + '" opacity="0.32"/>';
+  h += '<circle cx="' + cx + '" cy="' + cy + '" r="' + (R0 * 1.04) + '" style="fill:none;stroke:var(--coil);stroke-width:1.5" stroke-dasharray="4 4"/>';
+  [0.3, 0.5, 0.7, 0.9].forEach(function (f, j) {
+    var pts = loopPts(f * R0, hc, 3.5), cum = [0], per = 0, d = '';
+    for (var i = 0; i < pts.length; i++) { d += (i ? 'L' : 'M') + (cx + pts[i][0]).toFixed(1) + ' ' + (cy - pts[i][1]).toFixed(1); if (i) { per += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); cum.push(per); } }
+    h += '<path d="' + d + '" style="fill:none;stroke:var(--eddy);stroke-width:2" opacity="0.7"/>';
+    var n = Math.max(3, Math.round(per / 28)), sp = 30;
+    for (var q = 0; q < n; q++) {
+      var s = ((t * sp + q * per / n) % per + per) % per, i2 = 1;
+      while (i2 < cum.length - 1 && cum[i2] < s) i2++;
+      var u = (s - cum[i2 - 1]) / Math.max(1e-6, cum[i2] - cum[i2 - 1]), px = lerp(pts[i2 - 1][0], pts[i2][0], u), py = lerp(pts[i2 - 1][1], pts[i2][1], u);
+      h += '<circle cx="' + (cx + px).toFixed(1) + '" cy="' + (cy - py).toFixed(1) + '" r="2.6" style="fill:var(--eddy)"/>';
+    }
+  });
+  if (hc > 0) {
+    h += '<line x1="' + cx + '" y1="' + (cy - hc) + '" x2="' + cx + '" y2="' + (cy + hc) + '" style="stroke:var(--crack);stroke-width:3.5;stroke-linecap:round"/>';
+    h += '<text class="t-xs b" x="' + (cx + 8) + '" y="' + Math.min(H - 4, cy + hc + 13) + '" style="fill:var(--crack)">crack</text>';
+    if (pr.crack > 0.5) h += '<text class="t-xs" x="8" y="' + (H - 6) + '">The currents detour around its ends.</text>';
+  }
+  h += '<text class="t-xs b" x="8" y="14">Top view: eddy currents under the probe</text>';
+  h += '<text class="t-xs" x="8" y="28">illustrative, not computed</text>';
+  return h;
+}
+function meterSvg(st, W, H) {
+  var br = st.bridge, on = br.show > 0.5, Z = dotPos(st), dist = Math.hypot(Z.R - br.D.R, Z.X - br.D.X), val = on ? dist / METER_FS * 100 : 0, off = on && val > 100;
+  var r = clamp(Math.min(H - 58, W * 0.25), 40, 170), cx = W - 16 - (r + 14) * 0.866, cy = H - 18, h = '', a, i;
+  function pt(deg, rr) { var q = deg * Math.PI / 180; return { x: cx + rr * Math.sin(q), y: cy - rr * Math.cos(q) }; }
+  var p0 = pt(-60, r), p1 = pt(60, r);
+  h += '<path d="M' + p0.x.toFixed(1) + ' ' + p0.y.toFixed(1) + 'A' + r + ' ' + r + ' 0 0 1 ' + p1.x.toFixed(1) + ' ' + p1.y.toFixed(1) + '" style="fill:none;stroke:var(--ink-soft);stroke-width:2"/>';
+  for (i = 0; i <= 100; i += 5) {
+    a = -60 + 1.2 * i; var q1 = pt(a, r - (i % 20 ? 6 : 11)), q2 = pt(a, r);
+    h += '<line x1="' + q1.x.toFixed(1) + '" y1="' + q1.y.toFixed(1) + '" x2="' + q2.x.toFixed(1) + '" y2="' + q2.y.toFixed(1) + '" style="stroke:var(--ink-soft);stroke-width:' + (i % 20 ? 1 : 1.8) + '"/>';
+    if (i % 20 === 0) { var q3 = pt(a, r + 11); h += '<text class="t-tick" x="' + q3.x.toFixed(1) + '" y="' + (q3.y + 4).toFixed(1) + '" text-anchor="middle">' + i + '</text>'; }
+  }
+  var nv = on ? clamp(val, 0, 103) : 0, tip = pt(-60 + 1.2 * nv, r - 4);
+  h += '<line x1="' + cx + '" y1="' + cy + '" x2="' + tip.x.toFixed(1) + '" y2="' + tip.y.toFixed(1) + '" style="stroke:var(--hl);stroke-width:3;stroke-linecap:round"/><circle cx="' + cx + '" cy="' + cy + '" r="6" style="fill:var(--ink)"/>';
+  h += '<text class="t-xs b" x="8" y="16">Bridge meter</text><text class="t-xs" x="8" y="31">distance from the dot to D</text>';
+  h += '<text class="t-meter' + (off ? ' off' : '') + '" x="8" y="66">' + (on ? (off ? 'OFF SCALE' : fmt(val, 0)) : 'not set') + '</text>';
+  if (on) h += '<text class="t-xs" x="8" y="86">distance ' + fmt(dist, 3) + '</text><text class="t-xs" x="8" y="101">full scale ' + METER_FS + '</text>';
+  return h;
+}
+var BARS = null;
+function barsData() {
+  if (BARS) return BARS;
+  var lift = [], thin = [], i, dd = function (a, b) { return Math.hypot(a.R - b.R, a.X - b.X); };
+  for (i = 0; i < 6; i++) lift.push(dd(Zs(STEEL_IACS, 100, 5 * i, STEEL_MU), Zs(STEEL_IACS, 100, 5 * (i + 1), STEEL_MU)));
+  for (i = 30; i > 6; i -= 4) thin.push(dd(Zs(43, 100, 0, 1, i * MIL), Zs(43, 100, 0, 1, (i - 4) * MIL)));
+  BARS = [
+    { t: 'Lift-off on steel, equal 5 mil steps (computed)', v: lift, c: 'var(--lift)' },
+    { t: 'Thinning 6061 sheet, equal 4 mil steps (computed)', v: thin, c: 'var(--thk1)' },
+    { t: 'Nearing an edge (illustrative, not computed)', v: [0.03, 0.05, 0.09, 0.16, 0.3, 0.55], c: 'var(--edge)' }
+  ];
+  return BARS;
+}
+function barsSvg(st, W, H) {
+  var rows = barsData(), rh = (H - 4) / rows.length, h = '', prog = st.probe.bars;
+  rows.forEach(function (row, j) {
+    var y0 = 4 + j * rh, n = row.v.length, mx = Math.max.apply(null, row.v), bw = Math.min(46, (W - 24) / n - 6), base = y0 + rh - 4, hh = rh - 22;
+    h += '<text class="t-xs b" x="8" y="' + (y0 + 11) + '">' + esc(row.t) + '</text>';
+    row.v.forEach(function (v, i) {
+      var vis = clamp(prog * n - i, 0, 1); if (vis <= 0) return;
+      var bh = Math.max(1.5, v / mx * hh) * vis, x = 12 + i * (bw + 6);
+      h += '<rect x="' + x + '" y="' + (base - bh).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + bh.toFixed(1) + '" rx="2" style="fill:' + row.c + '" opacity="0.85"/>';
+    });
+  });
+  return h;
+}
+
+/* ===================== voice-over: pre-recorded Kokoro clips =====================
+   Every spoken line is a clip recorded offline with Kokoro v1.0, voice af_heart, speed 1.0
+   (tools/voiceover/build_lesson_audio.cjs). A clip's file name is a hash of its caption text,
+   and VO maps that hash to the clip length in seconds, so timing matches the voice even when muted. */
+var VO_DIR = 'video/audio/ET-Steel-and-Signals/';
+/*VO-MANIFEST*/var VO = {"70579258":3.96,"cd80581b":1.61,"21ed2976":11.93,"0d86f7b2":8.54,"fa4aa237":11.47,"d9c020e3":9.82,"a4433d37":7.99,"222ad20d":5.93,"ee67a675":12,"f7da7897":7.1,"80e6cc35":6.19,"6ddf1197":5.02,"6c212e29":7.51,"9e84ae6b":12.29,"a761596d":10.1,"2b5a1285":2.14,"8a4ab07e":4.75,"0043a4e6":1.63,"53b95f80":3.07,"ffba0bb4":11.86,"1bb5a191":5.23,"5f0b9612":5.66,"688de23c":4.44,"134d77c7":6.86,"ddac3ad2":2.78,"9820e70d":11.78,"d0c627e0":18.77,"641f310f":4.68,"2eaae984":4.2,"0bd3f3b8":4.66,"a2ab2494":10.68,"9ee9d40e":5.33,"b0fe4cda":2.06,"ccebc1d1":6,"8f0163b3":9.98,"01c6e4cf":4.61,"0305b457":11.64,"ff610aa1":6.12,"7f74b07b":10.68,"b7dc0621":13.68,"1b63382b":5.26,"383f12c0":11.78,"ba59e2f4":4.46,"0fb42154":4.7,"20cf4678":1.85,"0a4ff604":6.48,"481bf798":6.94,"3d6853f4":5.5,"ff428240":3.58,"a887d3bb":1.32,"9af6581f":2.9,"85d6f6e6":14.14,"cce46b89":3.89,"da1c8abd":12.82,"7a6cac53":6.67,"d4a86018":5.38,"15c2f5e2":11.16,"161adf64":7.58,"a1610c16":6.19,"9e015b49":8.02,"0907d3b3":7.94,"48c4139d":4.61,"f8849807":4.56,"c7b720f0":10.3,"9834aa36":7.39,"e5924129":1.73,"1a303d7e":5.52,"9a2c9734":5.66,"e23c4543":5.18,"2201c968":7.15,"33bcadbd":10.39,"c8447b49":4.9,"02f03727":3.84,"983e4e21":6.53,"baf28c1a":5.02,"0072a3d6":3.89,"b3d3e3c3":2.3,"71a48f03":4.3,"724a130c":8.16,"745d5ccb":3.74,"1907690c":3.26,"350cecd6":9.29,"b926896b":10.1,"6c4f7139":5.09};/*END-VO-MANIFEST*/
+var muted = false, speed = 1, speechStarted = false, curClip = null, prefetched = {};
+var voiceEl = typeof Audio !== 'undefined' ? new Audio() : null;
+if (voiceEl) voiceEl.preload = 'auto';
+function clipId(text) {
+  var h = 0x811c9dc5;
+  for (var i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return ('0000000' + h.toString(16)).slice(-8);
+}
+/* what the voice actually says: units and symbols spelled out ('eigh' makes the voice say the letter A, not 'uh') */
+function speechText(t) {
+  return t.replace(/’/g, "'").replace(/%IACS/g, ' percent I eigh C S').replace(/\bkHz\b/g, 'kilohertz').replace(/\bMHz\b/g, 'megahertz')
+    .replace(/\b6061\b/g, 'sixty sixty one').replace(/\b2024\b/g, 'twenty twenty four').replace(/\balloy A\b/g, 'alloy eigh').replace(/\bA to B\b/g, 'eigh to B')
+    .replace(/\bStep (\d)\b/g, function (_, d) { return 'Step ' + ['zero', 'one', 'two', 'three', 'four', 'five', 'six'][+d]; });
+}
+function clipDur(text) { return text ? VO[clipId(text)] || 0 : 0; }
+function stopSpeech() { curClip = null; if (voiceEl) try { voiceEl.pause(); } catch (e) {} }
+function speak(text, onEnd) {
+  stopSpeech();
+  if (muted || !voiceEl || !text) return false;
+  var id = clipId(text);
+  if (!VO[id]) return false;
+  var token = {}; curClip = token; speechStarted = false;
+  var fin = function () { if (curClip === token) { curClip = null; onEnd(); } };
+  voiceEl.onplaying = function () { if (curClip === token) speechStarted = true; };
+  voiceEl.onended = fin; voiceEl.onerror = fin;
+  voiceEl.defaultPlaybackRate = speed;
+  voiceEl.src = VO_DIR + id + '.mp3';
+  voiceEl.playbackRate = speed;
+  var pr = voiceEl.play(); if (pr && pr.catch) pr.catch(fin);
+  return true;
+}
+function voiceProgress() {
+  return (curClip && speechStarted && voiceEl.duration > 0) ? voiceEl.currentTime / voiceEl.duration : -1;
+}
+function prefetch(text) {
+  if (!text || muted || typeof Audio === 'undefined') return;
+  var id = clipId(text);
+  if (!VO[id] || prefetched[id]) return;
+  var a = new Audio(); a.preload = 'auto'; a.src = VO_DIR + id + '.mp3'; prefetched[id] = a;
+}
+/* iOS only lets audio play after a tap: play a silent clip on the Start tap to unlock the element */
+function unlockAudio() {
+  if (!voiceEl) return;
+  var b = new Uint8Array(44 + 800), v = new DataView(b.buffer), str = function (o, t) { for (var i = 0; i < t.length; i++) b[o + i] = t.charCodeAt(i); };
+  str(0, 'RIFF'); v.setUint32(4, 36 + 800, true); str(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); str(36, 'data'); v.setUint32(40, 800, true);
+  for (var i = 44; i < b.length; i++) b[i] = 128;
+  var bin = ''; for (var j = 0; j < b.length; j++) bin += String.fromCharCode(b[j]);
+  try { voiceEl.src = 'data:audio/wav;base64,' + btoa(bin); var p = voiceEl.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+}
+
+/* ===================== player: plays a list of 'say' items ===================== */
+var paused = false;
+var P = { items: null, i: 0, t: 0, dur: 1, onDone: null, speechDone: true, enterSnap: null, froms: null, applied: null, words: [], lastW: -2 };
+function durOf(it) {
+  var w = it.text ? it.text.split(/\s+/).length : 0, c = clipDur(it.text);
+  return Math.max(it.dur || 0, c ? c + 0.35 : w / 2.5 + 0.6);
+}
+function setCaption(text) {
+  var cap = $('caption');
+  if (!text) { P.words = []; return; }
+  P.words = []; var html = '', pos = 0;
+  text.split(/(\s+)/).forEach(function (tok) {
+    if (/^\s+$/.test(tok) || !tok) { html += tok; } else { P.words.push(pos); html += '<span class="w">' + esc(tok) + '</span>'; }
+    pos += tok.length;
+  });
+  cap.innerHTML = html; P.lastW = -2;
+}
+function updateCaption(p) {
+  if (!P.words.length) return;
+  var idx;
+  var vp = voiceProgress();
+  idx = Math.floor((vp >= 0 ? vp : p) * P.words.length * 1.02);
+  if (idx === P.lastW) return; P.lastW = idx;
+  var sp = $('caption').querySelectorAll('.w');
+  for (var j = 0; j < sp.length; j++) sp[j].classList.toggle('on', j <= idx);
+}
+function enterItem(fresh) {
+  var it = P.items[P.i];
+  if (fresh) P.enterSnap = clone(S); else S = clone(P.enterSnap);
+  P.applied = {};
+  P.froms = {};
+  it.anims.forEach(function (a, j) { if ('set' in a && a.at <= 0) { setP(S, a.k, clone(a.set)); P.applied[j] = 1; } });
+  /* chained tweens on one key: each starts where the previous one ends, and only runs once its window opens */
+  var lastTo = {};
+  P.first = {};
+  it.anims.forEach(function (a, j) {
+    if ('set' in a || a.fn) return;
+    if (a.k in lastTo) P.froms[j] = clone(lastTo[a.k]); else { P.froms[j] = clone(getP(S, a.k)); P.first[j] = 1; }
+    if (P.froms[j] !== undefined) lastTo[a.k] = typeof a.to === 'object' ? Object.assign({}, P.froms[j], a.to) : a.to;
+  });
+  P.t = 0; P.real = 0; P.dur = durOf(it);
+  setCaption(it.text);
+  P.speechDone = true;
+  if (!paused) startItemSpeech();
+  if (it.onEnter) it.onEnter();
+  var nx = P.items[P.i + 1] || (P.items.length === 1 && Lesson.items[Lesson.idx + 1]);
+  if (nx) prefetch(nx.type === 'ask' ? nx.node.q : nx.text);
+  dirty = true;
+}
+function startItemSpeech() {
+  var it = P.items[P.i];
+  P.speechDone = !speak(it.text, function () { P.speechDone = true; });
+}
+function frameItem(p) {
+  var it = P.items[P.i];
+  it.anims.forEach(function (a, j) {
+    if ('set' in a) { if (!P.applied[j] && p >= a.at) { setP(S, a.k, clone(a.set)); P.applied[j] = 1; } return; }
+    if (a.fn) { a.fn(S, p); return; }
+    var q = ease(clamp((p - a.a) / Math.max(1e-6, a.b - a.a), 0, 1), a.e), from = P.froms[j];
+    if (from == null || (!P.first[j] && p < a.a)) return;
+    if (typeof a.to === 'object') {
+      var o = getP(S, a.k) || {};
+      for (var kk in a.to) o[kk] = a.log ? Math.exp(lerp(Math.log(from[kk]), Math.log(a.to[kk]), q)) : lerp(from[kk], a.to[kk], q);
+      setP(S, a.k, o);
+    } else setP(S, a.k, a.log ? Math.exp(lerp(Math.log(from), Math.log(a.to), q)) : lerp(from, a.to, q));
+  });
+}
+function playerStart(items, onDone) {
+  P.items = items; P.i = 0; P.onDone = onDone; enterItem(true); updateControls();
+}
+function playerStop() { P.items = null; stopSpeech(); updateControls(); }
+function playerTick(dt) {
+  if (!P.items || paused) return;
+  P.t += dt * speed; P.real += dt;
+  /* some browsers silently drop an utterance; if it never starts, fall back to caption timing */
+  if (!P.speechDone && !speechStarted && P.real > 6) P.speechDone = true;
+  var p = Math.min(1, P.t / P.dur);
+  frameItem(p); updateCaption(p); dirty = true;
+  if (p >= 1 && (P.speechDone || muted || P.t > P.dur * 2.2 + 4)) {
+    frameItem(1); updateCaption(1);
+    P.i++;
+    if (P.i < P.items.length) enterItem(true);
+    else { var cb = P.onDone; P.items = null; updateControls(); if (cb) cb(); }
+  }
+  if (Lesson.mode === 'play' && P.items) {
+    var n = Lesson.items.length, frac = (Lesson.idx + p) / n;
+    $('progBar').style.width = (frac * 100).toFixed(1) + '%';
+  }
+}
+function setPaused(v) {
+  paused = v;
+  if (v) stopSpeech();
+  else if (P.items) enterItem(false);
+  updateControls();
+}
+
+/* ===================== lesson controller ===================== */
+var progress = store.get();
+progress.done = progress.done || [];
+if (/[?&]unlock=all/.test(location.search)) { progress.done = STEP_TITLES.map(function (_, i) { return i; }); }
+var Lesson = { step: -1, items: [], idx: 0, sceneIdx: 0, sceneSnap: null, mode: 'idle', started: false };
+
+function runStep(n) {
+  playerStop(); hideAsk();
+  Lesson.step = n; S = STEPS[n].setup(); Lesson.items = STEPS[n].items; Lesson.idx = 0;
+  Lesson.mode = 'play';
+  renderChapters(); renderInfo();
+  $('progBar').style.width = '0%';
+  if (paused) setPaused(false);
+  advance();
+}
+function advance() {
+  var items = Lesson.items;
+  if (Lesson.idx >= items.length) { stepDone(); return; }
+  if (Lesson.idx === 0 || items[Lesson.idx - 1].type === 'ask') { Lesson.sceneIdx = Lesson.idx; Lesson.sceneSnap = clone(S); }
+  var it = items[Lesson.idx];
+  if (it.type === 'ask') {
+    Lesson.mode = 'ask';
+    $('progBar').style.width = ((Lesson.idx / items.length) * 100).toFixed(1) + '%';
+    showAsk(it.node, function () { hideAsk(); Lesson.mode = 'play'; Lesson.idx++; advance(); }, { top: true });
+  } else {
+    Lesson.mode = 'play';
+    playerStart([it], function () { Lesson.idx++; advance(); });
+  }
+  updateControls();
+}
+function replaySegment() {
+  if (Lesson.mode === 'idle' || !Lesson.sceneSnap) return;
+  playerStop(); hideAsk();
+  S = clone(Lesson.sceneSnap); Lesson.idx = Lesson.sceneIdx;
+  if (paused) setPaused(false);
+  advance();
+}
+function stepDone() {
+  var n = Lesson.step;
+  var fresh = progress.done.indexOf(n) < 0;
+  if (fresh) progress.done.push(n);
+  store.set(progress);
+  if (n === MATERIALS_AFTER && fresh) toast('Materials sandbox unlocked. Try it from the tabs at the top.');
+  if (n === BRIDGE_AFTER && fresh) toast('Bridge meter sandbox unlocked. Try it from the tabs at the top.');
+  renderChapters(); renderTabs();
+  if (n < STEP_TITLES.length - 1) { Lesson.mode = 'between'; setTimeout(function () { if (Lesson.mode === 'between' && Lesson.step === n) runStep(n + 1); }, 900); }
+  else { Lesson.mode = 'finished'; $('progBar').style.width = '100%'; renderInfo(); updateControls(); toast('Lesson complete. Recap and Quiz are unlocked.'); }
+}
+function maxReachable() { var m = 0; for (var i = 0; i < STEP_TITLES.length; i++) if (progress.done.indexOf(i) >= 0) m = i + 1; return Math.min(STEP_TITLES.length - 1, m); }
+
+/* ===================== checkpoint (ask) UI ===================== */
+/* An option can be marked unsure ("I'm not sure"). The first time, it gives a hint (fb) and lets the learner try again.
+   Chosen a second time, it reveals the answer (reveal) and the lesson moves on. */
+var reasonText = '';
+var askState = null;
+function wide() { return window.matchMedia('(min-width: 921px)').matches; }
+function hideAsk() { $('askCard').classList.add('hidden'); $('askCard').innerHTML = ''; askState = null; $('infoCard').classList.remove('hidden'); }
+function showAsk(node, cont, opt) {
+  opt = opt || {};
+  playerStop();
+  if (opt.top && !opt.tried) reasonText = '';
+  askState = { node: node, cont: cont, tried: opt.tried || [], sel: -1, snap: clone(S), opt: opt };
+  var c = $('askCard');
+  c.classList.remove('hidden');
+  $('infoCard').classList.add('hidden');
+  var html = '<div class="eyebrow">' + esc(node.label || 'Checkpoint') + '</div><h2>' + esc(node.q) + '</h2>';
+  if (opt.note) html += '<p class="muted">' + esc(opt.note) + '</p>';
+  html += '<div class="opts" role="radiogroup" aria-label="Answer choices">';
+  node.opts.forEach(function (o, i) {
+    var tried = askState.tried.indexOf(i) >= 0 && !o.unsure;
+    html += '<button class="opt' + (tried ? ' tried' : '') + (o.unsure ? ' unsure' : '') + '" role="radio" aria-checked="false" data-i="' + i + '"' + (tried ? ' disabled' : '') + '><span class="k">' + 'ABCD'[i] + '</span><span>' + esc(o.t) + '</span></button>';
+  });
+  html += '</div>';
+  if (node.reason !== false) html += '<label class="muted" for="reasonBox">Your reasoning (optional)</label><textarea id="reasonBox" placeholder="Why do you think so?"></textarea>';
+  html += '<div class="row"><button class="btn" id="checkBtn" disabled>Check answer</button></div><div id="fbArea"></div>';
+  c.innerHTML = html;
+  var rb = $('reasonBox'); if (rb) { rb.value = reasonText; rb.addEventListener('input', function () { reasonText = rb.value; }); }
+  c.querySelectorAll('.opt').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (askState.locked) return;
+      askState.sel = +b.dataset.i;
+      c.querySelectorAll('.opt').forEach(function (x) { x.setAttribute('aria-checked', x === b ? 'true' : 'false'); });
+      $('checkBtn').disabled = false;
+    });
+  });
+  $('checkBtn').addEventListener('click', checkAnswer);
+  setCaption(node.q);
+  var sp = $('caption').querySelectorAll('.w'); for (var j = 0; j < sp.length; j++) sp[j].classList.add('on');
+  speak(node.q, function () {});
+  node.opts.forEach(function (o) { prefetch(o.fb); });
+  updateControls();
+  if (!window.matchMedia('(min-width: 921px)').matches && Lesson.started) setTimeout(function () { c.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 80);
+}
+function checkAnswer() {
+  var st = askState; if (!st || st.sel < 0) return;
+  var node = st.node, o = node.opts[st.sel];
+  var reveal = !!o.unsure && (st.opt.unsureN || 0) > 0, good = !!o.ok || reveal;
+  st.locked = true;
+  var c = $('askCard');
+  c.querySelectorAll('.opt').forEach(function (b) { b.disabled = true; if (+b.dataset.i === st.sel && o.ok) b.classList.add('right'); });
+  $('checkBtn').classList.add('hidden');
+  var rb = $('reasonBox'); if (rb) rb.disabled = true;
+  var notes = [];
+  var rt = (reasonText || '').trim();
+  if (rt && node.reason !== false) {
+    notes.push('You wrote: “' + rt.slice(0, 220) + (rt.length > 220 ? '…' : '') + '”');
+    (node.rules || []).forEach(function (r) { if (r.re.test(rt) && (!r.opts || r.opts.indexOf(st.sel) >= 0)) notes.push(r.note); });
+  }
+  var text = reveal ? o.reveal : o.fb, cls = o.ok ? 'good' : (o.unsure ? 'hint' : 'bad'), tag = o.ok ? 'Correct' : (reveal ? 'Here is the answer' : (o.unsure ? 'Hint' : 'Not quite'));
+  $('fbArea').innerHTML = '<div class="fb ' + cls + '"><span class="tag">' + tag + '</span>' + esc(text) +
+    notes.map(function (n) { return '<div class="note">' + esc(n) + '</div>'; }).join('') + '</div><div class="row" id="fbBtns"><span class="muted" id="fbWait">Watch the diagram&hellip;</span></div>';
+  var items = reveal ? [say(o.reveal, o.revealAnims || [])].concat(o.revealDemo || []) : [say(o.fb, o.fbAnims || [])].concat(o.demo || []);
+  var snap = clone(S);
+  if (paused) paused = false;
+  if (!wide() && Lesson.started) $('video').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  playerStart(items, function () {
+    if (!good && !o.keep) { S = snap; dirty = true; }
+    afterFeedback(st, o, good);
+  });
+}
+function afterFeedback(st, o, good) {
+  var node = st.node, btns = $('fbBtns'); if (!btns || askState !== st) return;
+  var b = document.createElement('button'); b.className = 'btn';
+  if (good) {
+    if (node.next) { b.textContent = 'Next question →'; b.onclick = function () { showAsk(node.next, st.cont, {}); }; }
+    else { b.textContent = st.opt.top ? 'Continue lesson ▶' : 'Back to the question →'; b.onclick = function () { st.cont(); }; }
+  } else if (o.sub) {
+    b.textContent = 'Think it through →';
+    b.onclick = function () {
+      var tried = st.tried.concat([st.sel]);
+      showAsk(o.sub, function () { showAsk(node, st.cont, { tried: tried, top: st.opt.top, note: 'Now try the original question again.' }); }, {});
+    };
+  } else {
+    b.textContent = 'Try again';
+    b.onclick = function () { showAsk(node, st.cont, { tried: st.tried.concat([st.sel]), top: st.opt.top, unsureN: (st.opt.unsureN || 0) + (o.unsure ? 1 : 0) }); };
+  }
+  btns.innerHTML = ''; btns.appendChild(b); b.focus({ preventScroll: true });
+  if (!wide()) setTimeout(function () { btns.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60);
+}
+
+/* ===================== lesson script ===================== */
+function titleItem(n) {
+  return say('Step ' + (n + 1) + '. ' + STEP_TITLES[n] + '.', [SET('title', { show: 1, n: 'Step ' + (n + 1) + ' of ' + STEP_TITLES.length, text: STEP_TITLES[n] }), T('title.show', 0, 0.75, 1)], { dur: 2.2 });
+}
+/* key points and camera boxes, computed from the model so they frame the real points */
+function zM(key, kHz, lift, mu, dmm) { var m = MATS[key]; return Zs(m.iacs, kHz, lift || 0, mu != null ? mu : m.mu, dmm); }
+function along(P, u, s) { return { R: P.R + u.R * s, X: P.X + u.X * s }; }
+var AIR = { R: 0, X: 1 };
+var CAM_AL = { r0: -0.01, r1: 0.2, x0: 0.56, x1: 1.03 };
+var CAM_STEEL = boxAround([AIR, zM('st', 100), zM('st', 100, 0, 10), zM('st', 100, 0, 500)], 0.12, 0.05);
+var CAM_STEEL_LF = boxAround([AIR, zM('st', 0.1), zM('st', 0.1, 0, 500)], 0.12, 0.05);
+var CAM_THIN = { r0: -0.03, r1: 0.22, x0: 1.2, x1: 1.43 };
+var CAM_S6 = boxAround([zM('st', 100), zM('st', 100, 30)], 0.3, 0.05);
+var CAM_BRIDGE = { r0: -0.03, r1: 0.36, x0: 0.6, x1: 1.02 };
+var ST100 = zM('st', 100), A_PT = zM('al', 100), B_PT = zM('b24', 100);
+var CAM_CRACK = { r0: A_PT.R - 0.06, r1: A_PT.R + 0.08, x0: A_PT.X - 0.05, x1: A_PT.X + 0.07 };
+var CAM_CRACK_DISP = { r0: A_PT.R - 0.11, r1: A_PT.R + 0.05, x0: A_PT.X - 0.035, x1: A_PT.X + 0.165 };
+/* bridge geometry at alloy A: D a short way along the line at right angles to lift-off, on the side above the curve */
+var U_LIFT_A = dirLift(MATS.al.iacs, 100, 1), N_UP = (function () { var n = { R: -U_LIFT_A.X, X: U_LIFT_A.R }; return n.R > 0 ? n : negV(n); })();
+var U_COND_A = dirSigDown(MATS.al.iacs, 100, 1), N_C = (function () { var n = { R: U_COND_A.X, X: -U_COND_A.R }; return n.R > 0 ? n : negV(n); })();
+var D_GOOD = along(A_PT, N_UP, 0.1), D_FAR = along(A_PT, N_UP, 0.25), D_BELOW = along(A_PT, N_UP, -0.1), D_ONLIFT = along(A_PT, U_LIFT_A, -0.1), D_COAT = along(A_PT, N_C, 0.1);
+var DISP_ROT = 180 - degOf(U_LIFT_A); /* turns lift-off at alloy A to point straight left */
+var EDGE_ST = edgePts('st', 100), EDGE_AL = edgePts('al', 100), EDGE_DIR_ST = rotV(dirLift(STEEL_IACS, 100, STEEL_MU), EDGE_TURN), CRACK_AL = crackPts(100);
+function bridgeAt(D, extra) { var b = { show: 1, D: D, circle: 1, rope: 1, perp: 0, perpAt: 'al', perpKind: 'lift' }; for (var k in extra) b[k] = extra[k]; return b; }
+/* a value that swings out to amp and back, n times, between a and b */
+function wobble(key, amp, a, b, n) {
+  var out = [], k = n || 2, w = (b - a) / (2 * k);
+  for (var i = 0; i < k; i++) { out.push(T(key, amp, a + 2 * i * w, a + (2 * i + 1) * w)); out.push(T(key, 0, a + (2 * i + 1) * w, a + (2 * i + 2) * w)); }
+  return out;
+}
+function angleSpec(at, a, b, extra) { var s = { at: at, a: a, b: b, show: 1, len: 1, rot: 0 }; for (var k in extra) s[k] = extra[k]; return s; }
+
+/* ---------- Step 1 pieces ---------- */
+var STEEL_RISE = [SET('dot', dotOf('st', { label: 'steel', lift: 60 })), SET('probe.mat', null), T('dot.lift', 0, 0.1, 0.6), T('arrows.up.show', 0, 0.6, 0.8), T('arrows.dn.show', 0, 0.6, 0.8), T('cam', CAM_FULL, 0, 0.4)];
+var riseDemo = [say('', [T('arrows.up.len', 90, 0, 0.3), SET('dot', dotOf('st', { lift: 60 })), SET('probe.mat', null), T('dot.lift', 0, 0.3, 0.8)], { dur: 3 })];
+var domDemo = [say('', [SET('probe.dom', 0), T('probe.dom', 1, 0.05, 0.5), SET('dot', dotOf('st', { lift: 60 }), 0.4), T('dot.lift', 0, 0.45, 0.85)], { dur: 3.6 })];
+/* ---------- Step 2 pieces ---------- */
+var LIFT_ST = [SET('paths.lst', liftPath('st', { lEnd: 0 })), T('paths.lst.lEnd', 40, 0.1, 0.8), T('dot.lift', 40, 0.1, 0.8)];
+var liftStDemo = [say('', LIFT_ST.concat([T('cam', CAM_STEEL, 0, 0.3)]), { dur: 3.4 })];
+var OVERLAP_LF = [SET('paths.lal.show', 0), SET('paths.lcu.show', 0), SET('dot.lift', 0), SET('paths.lst', liftPath('st')),
+  T('freq.kHz', 0.1, 0, 0.3, 'io', true), T('cam', CAM_STEEL_LF, 0, 0.3),
+  SET('paths.mst', muPath({ m0: 500, m1: 1, mEnd: 1, cls: 'p-mu p-dash', show: 0 })), T('paths.mst.show', 1, 0.3, 0.5),
+  SET('angles.lm', angleSpec({ mat: 'st' }, 'lift', 'mu', { la: 'lift-off', lb: 'lower permeability', show: 0 })), T('angles.lm.show', 1, 0.45, 0.7)];
+var SPLIT_HF = [SET('paths.mst.m1', 10), SET('paths.mst.mEnd', 10), T('freq.kHz', 100, 0, 0.22, 'io', true), T('cam', CAM_STEEL, 0, 0.22),
+  SET('arrows.sig', { at: { mat: 'st' }, dir: 'sigup', len: 64, label: 'conductivity rise', show: 0 }), T('arrows.sig.show', 1, 0.3, 0.42)];
+var muUpDemo = [say('', [SET('angles.lm', angleSpec({ mat: 'st' }, 'lift', 'muup', { la: 'lift-off', lb: 'higher permeability', fold: false, show: 0 })), T('angles.lm.show', 1, 0, 0.3), T('cam', CAM_STEEL, 0, 0.3)], { dur: 3.2 })];
+var alDemo = [say('', [SET('ghosts.al', matGhost('al', { big: 1 })), SET('paths.lst', liftPath('st')), T('cam', CAM_FULL, 0, 0.4)], { dur: 3 })];
+/* ---------- Step 3 pieces ---------- */
+/* frequency changes timed to land as the narration names each number */
+var SWEEP_MU = [SET('paths.mst.m1', 10), SET('paths.mst.mEnd', 10), T('freq.kHz', 1, 0.4, 0.49, 'io', true), T('freq.kHz', 10, 0.55, 0.64, 'io', true), T('cam', CAM_STEEL, 0.55, 0.7)];
+function thinSweep(w10, w30, w100) {
+  return [SET('paths', {}), SET('angles', {}), SET('arrows', {}), SET('dot', dotOf('st', { dmm: 0.3, label: 'steel sheet, 0.3 mm' })), SET('freq.kHz', 1), SET('cam', clone(CAM_THIN)),
+    SET('angles.lt', angleSpec({ mat: 'st', dmm: 0.3 }, 'lift', 'thin', { la: 'lift-off', lb: 'thinning', ref: 0.003 })),
+    T('freq.kHz', 10, w10[0], w10[1], 'io', true), T('freq.kHz', 30, w30[0], w30[1], 'io', true), T('freq.kHz', 100, w100[0], w100[1], 'io', true)];
+}
+/* ---------- Step 4 pieces ---------- */
+var CIRCLE_WALK = FN(function (s, p) {
+  var r = Math.hypot(A_PT.R - D_GOOD.R, A_PT.X - D_GOOD.X), ph = Math.atan2(A_PT.X - D_GOOD.X, A_PT.R - D_GOOD.R) + 2 * Math.PI * ease(clamp((p - 0.12) / 0.8, 0, 1));
+  s.dot.free = 1; s.dot.R = D_GOOD.R + r * Math.cos(ph); s.dot.X = D_GOOD.X + r * Math.sin(ph);
+});
+var PAST = along(D_GOOD, N_UP, 0.012);
+var PLACE_D = [SET('bridge', bridgeAt(D_GOOD, { show: 0, circle: 0, rope: 0 })), SET('dot.lift', 0), SET('dot.iacs', 43), T('bridge.perp', 1, 0, 0.2), T('bridge.show', 1, 0.2, 0.35), T('bridge.circle', 1, 0.3, 0.5), T('bridge.rope', 1, 0.3, 0.5)];
+var WOBBLE_SWITCH = wobble('dot.lift', 2, 0.04, 0.42, 2).concat([T('dot.iacs', 30, 0.54, 0.76), T('dot.iacs', 43, 0.86, 0.99)]);
+var BIG_CIRCLE = [SET('bridge', bridgeAt(along(A_PT, N_UP, 0.6))), SET('dot.lift', 0), SET('dot.iacs', 43)].concat(wobble('dot.lift', 2, 0.3, 0.9, 2));
+/* ---------- Step 6 pieces ---------- */
+var STEPS6 = [SET('marks.s6', { mat: 'st', list: [0, 5, 10, 15, 20, 25, 30], upTo: 0, show: 1, color: 'var(--lift)', names: ['contact', '5', '10', '', '', '', '30 mils'] }), SET('dot.lift', 0)];
+for (var s6 = 1; s6 <= 6; s6++) { var a6 = 0.06 + (s6 - 1) * 0.145, b6 = a6 + 0.1; STEPS6.push(T('dot.lift', 5 * s6, a6, b6, 'lin'), T('marks.s6.upTo', 5 * s6, a6, b6, 'lin')); }
+
+var STEPS = [
+/* ---------- Step 1: permeability (100 kHz) ---------- */
+{ setup: function () {
+    var s = baseState(); s.freq.kHz = 100; s.cam = clone(CAM_AL); s.airline = 0;
+    s.paths.cond = condPath({ cls: 'p-locus p-faint' });
+    s.ghosts.cu = matGhost('cu');
+    s.dot = dotOf('al', { label: 'Al 6061', lift: 60 });
+    s.probe.eddy = 0;
+    return s; },
+  items: [
+    titleItem(0),
+    say('In the last two lessons, every metal pulled the dot down from the air point. The coil’s changing field drives eddy currents in the metal, and those currents make a field that pushes back against the coil’s.',
+      [T('dot.lift', 0, 0.15, 0.6), T('probe.eddy', 1, 0.15, 0.6)]),
+    say('A weaker field stores less energy, so the reactance falls. Here are aluminum and copper at one hundred kilohertz, down and to the right of air.',
+      [SET('dot.lift', 0), SET('probe.eddy', 1), SET('arrows.dn', { at: { free: 1, R: 0, X: 1 }, dir: { R: 0, X: -1 }, len: 0, color: 'var(--eddy)', label: 'eddy currents push down', show: 1 }), T('arrows.dn.len', 56, 0.05, 0.35)]),
+    say('Steel brings a new force. It is ferromagnetic: it is made of tiny regions called magnetic domains, each a little magnet. With no field, they point every which way and cancel out.',
+      [T('dot.show', 0, 0, 0.15), SET('ghosts.al', matGhost('al', { show: 0 })), T('ghosts.al.show', 1, 0.15, 0.3), T('arrows.dn.show', 0, 0, 0.15), SET('probe.mat', 'st'), SET('probe.field', 0), SET('probe.eddy', 0), SET('probe.dom', 0), T('cam', CAM_FULL, 0.2, 0.7)]),
+    say('When the coil’s field arrives, the domains swing to line up with it and add their own field to the coil’s. How strongly a material does this is its relative permeability.',
+      [T('probe.field', 1, 0.05, 0.25), T('probe.dom', 1, 0.2, 0.65)]),
+    say('Steel still carries eddy currents too, so two forces compete: the domains reinforce the field, and the eddy currents oppose it.',
+      [T('probe.eddy', 1, 0.1, 0.4),
+       SET('arrows.up', { at: { free: 1, R: 0, X: 1 }, dir: { R: 0, X: 1 }, len: 0, color: 'var(--mu)', label: 'domains reinforce', show: 1 }), T('arrows.up.len', 70, 0.2, 0.5),
+       SET('arrows.dn', { at: { free: 1, R: 0, X: 1 }, dir: { R: 0, X: -1 }, len: 0, color: 'var(--eddy)', label: 'eddy currents oppose', show: 1 }), T('arrows.dn.len', 44, 0.5, 0.8)]),
+    ask({ label: 'Checkpoint 1', q: 'In steel, permeability usually dominates. Is steel’s dot above or below the air point, and why?',
+      rules: [{ re: /energy|stor|reinforc|domain|stronger/i, note: 'Thinking about the stored magnetic energy is exactly the right way in.' }],
+      opts: [
+        { t: 'Above: the reinforced field stores more magnetic energy, so reactance rises.', ok: true,
+          fb: 'Right. With the domains helping, the same current makes a stronger field, and a stronger field stores more energy. At one hundred kilohertz steel’s dot sits about twenty six percent above air.',
+          fbAnims: STEEL_RISE },
+        { t: 'Below, because steel carries eddy currents like any metal.', fb: 'Steel’s eddy currents do push down, but the domains push up, and in steel they usually win. Watch the two arrows.', demo: riseDemo },
+        { t: 'Below, because steel conducts poorly.', fb: 'Poor conduction only weakens the push down. Something in steel pushes the other way. Watch the domains.', demo: domDemo },
+        { t: 'On the air point, because the two effects cancel.', fb: 'In steel the domains usually win by a wide margin. Watch where the dot lands.', demo: riseDemo }
+      ] }),
+    say('Draw a line straight across through the air point. Ferromagnetic materials land above it, nonferromagnetic metals below it.',
+      [SET('dot', dotOf('st', { label: 'steel' })), SET('ghosts.al', matGhost('al')), SET('ghosts.cu', matGhost('cu')), SET('arrows', {}), SET('probe.mat', null), SET('cam', clone(CAM_FULL)), SET('airline', 0), T('airline', 1, 0.15, 0.5)]),
+    say('Steel’s dot also sits right of the axis. Resistance is energy turned into heat, and steel heats up two ways: eddy currents, plus a little hysteresis loss as the domains swing back and forth.',
+      [SET('hiR', 1), SET('paths.heat', { type: 'seg', R0: 0, X0: ST100.X, R1: ST100.R, X1: ST100.X, prog: 0, cls: 'p-heat', label: 'heat', small: 1, show: 1 }), T('paths.heat.prog', 1, 0.08, 0.35), SET('hiR', 0, 0.92)]),
+    say('Real steel’s permeability varies widely with alloy, heat treatment and field strength. This lesson assumes a relative permeability of one hundred, for illustration.',
+      [T('muNote', 1, 0.3, 0.5), T('paths.heat.show', 0, 0, 0.2)])
+  ] },
+/* ---------- Step 2: lift-off and edges in both domains (100 kHz, and 100 Hz for the overlap) ---------- */
+{ setup: function () {
+    var s = baseState(); s.freq.kHz = 100; s.cam = clone(CAM_FULL);
+    s.paths.cond = condPath({ cls: 'p-locus p-faint' });
+    s.ghosts.cu = matGhost('cu', { show: 0.7 }); s.ghosts.st = matGhost('st', { show: 0.7 });
+    s.dot = dotOf('al', { label: 'Al 6061' });
+    return s; },
+  items: [
+    titleItem(1),
+    say('Lift the probe off aluminum, and the dot slides up and to the left, back toward air.',
+      [SET('paths.lal', liftPath('al', { lEnd: 0 })), T('paths.lal.lEnd', 40, 0.15, 0.75), T('dot.lift', 40, 0.15, 0.75)]),
+    say('Now set the probe on steel.', [SET('dot', dotOf('st', { label: 'steel' })), SET('ghosts.st.show', 0), SET('ghosts.al', matGhost('al', { show: 0.7 })), T('cam', CAM_STEEL, 0.05, 0.6)], { dur: 2.4 }),
+    ask({ label: 'Checkpoint 2A', q: 'Lift the probe off steel. Which way does the dot move?',
+      rules: [{ re: /air|toward|back/i, note: 'Asking where the dot must end up, the air point, is a strong way in.' }],
+      opts: [
+        { t: 'Down and to the left, toward air.', ok: true, fb: 'Right. Less of the coil’s field reaches the steel, so the reinforcement fades and the reactance falls. Less heat is lost too, so the dot moves left. It ends at air, just like aluminum.', fbAnims: LIFT_ST },
+        { t: 'Up and to the left, like aluminum.', fb: 'Lift-off always heads for air. Steel starts above air, so which way is air from there?', demo: liftStDemo },
+        { t: 'Straight up.', fb: 'Moving away weakens every effect of the steel, so the dot heads for the no-metal point: air.', demo: liftStDemo },
+        { t: 'Down and to the right.', fb: 'Down is correct. But less steel in the field also means less heat lost.', demo: liftStDemo }
+      ] }),
+    say('Lift-off pulls every dot back to air: up and left from nonferromagnetic metals, down and left from steel.',
+      [SET('paths.lst', liftPath('st')), SET('paths.lal', liftPath('al')), SET('paths.lcu', liftPath('cu', { lEnd: 0 })), T('paths.lcu.lEnd', 40, 0.3, 0.8), T('cam', CAM_FULL, 0, 0.5), T('dot.lift', 0, 0, 0.4)]),
+    ask({ label: 'Checkpoint 2B', q: 'So lift-off on steel looks like what other change?',
+      rules: [{ re: /permeab|domain|reinforc|magnet/i, note: 'Linking lift-off to how strongly the steel reinforces the field is the key idea.' }],
+      opts: [
+        { t: 'A decrease in permeability.', ok: true,
+          fb: 'Yes. Both weaken the reinforcement, so both pull the dot toward air. At a low frequency, here one hundred hertz, the two paths lie almost on top of each other, about five degrees apart.',
+          fbAnims: OVERLAP_LF,
+          demo: [say('At one hundred kilohertz they split by about forty degrees, but now a permeability drop looks exactly like a rise in conductivity. Either way, one change can pass for another. Add permeability that varies from spot to spot in real steel, and you have one reason steel is harder to inspect than aluminum.', SPLIT_HF)] },
+        { t: 'An increase in permeability.', fb: 'An increase strengthens the reinforcement and pushes the dot up, away from air.', demo: muUpDemo },
+        { t: 'A crack.', fb: 'Cracks come later. Which property of the steel controls the reinforcement?' },
+        { t: 'Switching to aluminum.', fb: 'Aluminum lands below the line. Lift-off stops at air and never crosses it.', demo: alDemo }
+      ] }),
+    say('Now slide the probe toward the edge of a plate. Less metal sits under the coil, so the dot curves toward air along a path much like lift-off, a small angle away from it.',
+      [SET('freq.kHz', 100), SET('cam', clone(CAM_STEEL)), SET('angles', {}), SET('arrows', {}), SET('paths.mst', { show: 0 }), SET('paths.lst', liftPath('st')), SET('dot', dotOf('st', { show: 0 })),
+       SET('legend', { text: 'Edge paths: illustrative, not computed', show: 1 }), SET('ghosts.st', matGhost('st')),
+       SET('probe.edge', -2.6), T('probe.edge', 0.9, 0.1, 0.85),
+       SET('paths.est', ptsPath(EDGE_ST, { prog: 0, head: 1, label: 'edge', small: 1, color: 'var(--edge)' })), T('paths.est.prog', 1, 0.1, 0.85),
+       SET('angles.le', angleSpec({ mat: 'st' }, 'lift', EDGE_DIR_ST, { cb: 'var(--edge)', show: 0 })), T('angles.le.show', 1, 0.5, 0.7)]),
+    say('Here it is on steel and on aluminum. These edge paths are illustrative, not computed.',
+      [T('cam', CAM_FULL, 0, 0.4), T('angles.le.show', 0, 0, 0.2), SET('paths.lal', liftPath('al')), SET('paths.eal', ptsPath(EDGE_AL, { prog: 0, head: 1, label: 'edge', small: 1, color: 'var(--edge)' })), T('paths.eal.prog', 1, 0.2, 0.75),
+       SET('probe.mat', 'al'), SET('probe.edge', -2.6), T('probe.edge', 0.9, 0.2, 0.75)])
+  ] },
+/* ---------- Step 3: frequency rotates phase (100 Hz to 1 MHz) ---------- */
+{ setup: function () {
+    var s = baseState(); s.freq.kHz = 0.1; s.cam = clone(CAM_FULL);
+    s.paths.cond = condPath({ cls: 'p-locus p-faint' });
+    s.ghosts = { al: matGhost('al'), cu: matGhost('cu'), st: matGhost('st') };
+    s.phase = { al: { mat: 'al', show: 1, color: 'var(--ink-soft)' }, cu: { mat: 'cu', show: 1, color: '#c87533' }, st: { mat: 'st', show: 1, color: 'var(--mu)' } };
+    s.dot = dotOf('st', { show: 0 });
+    s.probe = probeBase('depth');
+    return s; },
+  items: [
+    titleItem(2),
+    say('Watch aluminum, copper and steel as the frequency climbs from one hundred hertz to one megahertz.', [T('freq.kHz', 1000, 0.2, 0.95, 'io', true)]),
+    say('The arrow from air to aluminum swings from nearly flat to nearly straight down. Steel’s arrow starts straight up, then leans right and down as eddy currents grow.',
+      [SET('freq.kHz', 0.1), T('freq.kHz', 1000, 0.08, 0.92, 'io', true)]),
+    say('Each signal turns through a different angle. That direction is what we call phase.', [T('freq.kHz', 100, 0, 0.45, 'io', true), T('phaseLbl', 1, 0.35, 0.6)]),
+    say('Steel also keeps its eddy currents in a very thin skin: a standard depth of about seven hundredths of a millimeter at one hundred kilohertz, against a third of a millimeter in this aluminum.',
+      [SET('freq.kHz', 100), T('probe.hl', 1.5, 0.1, 0.3), T('probe.hl', 0, 0.85, 1)]),
+    say('', [SET('phase', {}), SET('phaseLbl', 0), SET('ghosts', {}), SET('dot', dotOf('st', { label: 'steel' })), SET('probe', probeBase('side')),
+      T('freq.kHz', 0.1, 0, 0.5, 'io', true), T('cam', CAM_STEEL_LF, 0, 0.5),
+      SET('paths.lst', liftPath('st')), SET('paths.mst', muPath({ m0: 500, m1: 1, mEnd: 1, cls: 'p-mu p-dash' })),
+      SET('angles.lm', angleSpec({ mat: 'st' }, 'lift', 'mu', { la: 'lift-off', lb: 'lower permeability', show: 0 })), T('angles.lm.show', 1, 0.5, 0.8)], { dur: 2.6 }),
+    ask({ label: 'Checkpoint 3', q: 'On steel, a lift-off signal and the signal you care about point nearly the same way. What could you try?',
+      rules: [{ re: /frequen/i, note: 'Reaching for frequency is the right instinct. The question is which way to turn it.' }],
+      opts: [
+        { t: 'Try several frequencies and keep the one that opens up the angle.', ok: true,
+          fb: 'Exactly. The permeability signal is five degrees from lift-off at one hundred hertz, thirty at one kilohertz and about forty by ten kilohertz. Here, going up helped.',
+          fbAnims: SWEEP_MU,
+          demo: [say('But it depends on the material and the target. Thinning in a steel sheet 0.3 millimeters thick separates best near ten kilohertz, and above thirty kilohertz the signal fades away. So test more than one frequency.', thinSweep([0.36, 0.44], [0.56, 0.62], [0.66, 0.8]))] },
+        { t: 'Always increase the frequency.', fb: 'It helped the permeability signal. Now watch thinning in a 0.3 millimeter steel sheet.',
+          demo: [say('Eight degrees at one kilohertz, seventy nine at ten, fifteen at thirty, and by one hundred kilohertz it is gone. The eddy currents stop reaching the back of the sheet. Higher is not always better.', thinSweep([0.1, 0.16], [0.21, 0.26], [0.3, 0.4]))] },
+        { t: 'Turn up the gain.', fb: 'Gain grows both signals equally, so the angle between them stays the same.', demo: [say('', [T('angles.lm.len', 1.8, 0.05, 0.45), T('angles.lm.len', 1, 0.65, 0.95)], { dur: 2.8 })] },
+        { t: 'Rotate the display.', fb: 'Rotation turns both signals together, so the angle between them stays the same.', demo: [say('', [T('angles.lm.rot', 70, 0.05, 0.45), T('angles.lm.rot', 0, 0.65, 0.95)], { dur: 2.8 })] }
+      ] })
+  ] },
+/* ---------- Step 4: suppression with a one-number meter (alloys A and B at 100 kHz) ---------- */
+{ setup: function () {
+    var s = baseState(); s.freq.kHz = 100; s.cam = clone(CAM_BRIDGE); s.airline = 0;
+    s.paths.cond = condPath({ cls: 'p-locus p-faint' });
+    s.dot = dotOf('al', { iacs: 43 });
+    s.bridge = bridgeAt(D_GOOD, { show: 0, circle: 0, rope: 0 });
+    s.probe = probeBase('meter');
+    return s; },
+  items: [
+    titleItem(3),
+    say('Older bridge instruments showed just one number on a needle meter. You balance the bridge at one point, called D.', [T('bridge.show', 1, 0.55, 0.75), T('bridge.rope', 1, 0.65, 0.85)]),
+    say('After that, the needle shows only how far the current impedance is from D. It gives no direction, just a distance.',
+      [SET('dot', dotOf('al', { free: 1, R: A_PT.R, X: A_PT.X })), T('dot', { R: A_PT.R + 0.05, X: A_PT.X + 0.06 }, 0.1, 0.4), T('dot', { R: A_PT.R - 0.03, X: A_PT.X + 0.03 }, 0.45, 0.72), T('dot', { R: A_PT.R, X: A_PT.X }, 0.78, 0.97)]),
+    ask({ label: 'Checkpoint 4A', q: 'You’re tied to a post, and the meter reads your distance from it. What path keeps the reading constant?',
+      rules: [{ re: /circle|round|around|radius/i, note: 'Thinking of the rope as a fixed radius is exactly right.' }],
+      opts: [
+        { t: 'A circle around the post.', ok: true, fb: 'Right. Every point on that circle is the same distance away.', fbAnims: [T('bridge.circle', 1, 0, 0.15), CIRCLE_WALK] },
+        { t: 'A straight line toward the post.', fb: 'That shortens the rope.', demo: [say('', [T('dot', { R: lerp(A_PT.R, D_GOOD.R, 0.8), X: lerp(A_PT.X, D_GOOD.X, 0.8) }, 0.05, 0.6)], { dur: 2.8 })] },
+        { t: 'A straight line past the post.', fb: 'The distance shrinks, then grows. Watch the needle.', demo: [say('', [T('dot', { R: 2 * PAST.R - A_PT.R, X: 2 * PAST.X - A_PT.X }, 0.05, 0.85, 'lin')], { dur: 3.6 })] }
+      ] }),
+    say('Here are alloy A, 6061 aluminum at 43 %IACS, and alloy B, 2024 at 30 %IACS. We want the meter to see the alloy change but ignore a small lift-off.',
+      [SET('dot', dotOf('al', { iacs: 43 })), SET('bridge', bridgeAt(D_GOOD, { show: 0, circle: 0, rope: 0 })),
+       SET('ghosts.A', matGhost('al', { label: 'A: 6061', show: 0 })), SET('ghosts.B', matGhost('b24', { label: 'B: 2024', show: 0 })), T('ghosts.A.show', 1, 0.05, 0.25), T('ghosts.B.show', 1, 0.3, 0.5),
+       SET('paths.la', liftPath('al', { lEnd: 0 })), T('paths.la.lEnd', 40, 0.55, 0.9)]),
+    ask({ label: 'Checkpoint 4B', q: 'Where do you put the post D so a small lift-off doesn’t change the reading?',
+      rules: [{ re: /right angle|perpendicular|90|square|tangent/i, note: 'Using right angles to the lift-off path is the key idea.' }],
+      opts: [
+        { t: 'On a line through alloy A, at right angles to the lift-off path.', ok: true,
+          fb: 'Right. Lift-off now slides the dot around the circle, while the alloy change moves it toward D. Two mils of lift-off changes the reading by about three percent, and switching to alloy B by about thirteen.',
+          fbAnims: PLACE_D, demo: [say('', WOBBLE_SWITCH, { dur: 6 })] },
+        { t: 'On the lift-off path.', fb: 'With D on the lift-off path, every wobble moves the dot straight toward D or away from it. Watch the needle.',
+          demo: [say('', [SET('bridge', bridgeAt(D_ONLIFT))].concat(wobble('dot.lift', 2, 0.1, 0.9, 2)), { dur: 4 })] },
+        { t: 'Right on alloy A.', fb: 'Then every change moves the dot away from D, lift-off included.',
+          demo: [say('', [SET('bridge', bridgeAt(A_PT))].concat(wobble('dot.lift', 2, 0.05, 0.45, 2), [T('dot.iacs', 30, 0.55, 0.75), T('dot.iacs', 43, 0.85, 0.98)]), { dur: 5 })] },
+        { t: 'I’m not sure.', unsure: true, fb: 'A tiny piece of a large circle looks like a straight line at a right angle to the rope.', demo: [say('', BIG_CIRCLE, { dur: 4 })],
+          reveal: 'Here is the answer. Put D on a line through alloy A at right angles to the lift-off path. Lift-off then slides the dot around the circle, while the alloy change moves it toward D.',
+          revealAnims: PLACE_D, revealDemo: [say('', WOBBLE_SWITCH, { dur: 6 })] }
+      ] }),
+    say('Two practical notes. A farther D makes a bigger circle that hugs the lift-off path better, but it can drive the needle off scale.',
+      [SET('bridge', bridgeAt(D_GOOD)), SET('dot.lift', 0), SET('dot.iacs', 43), T('bridge.D', D_FAR, 0.1, 0.45)].concat(wobble('dot.lift', 2, 0.55, 0.95, 2))),
+    say('And the path curves slightly, so try D on both sides of the curve and keep whichever holds the needle stiller.',
+      [T('bridge.D', D_BELOW, 0.05, 0.3)].concat(wobble('dot.lift', 2, 0.34, 0.6, 1), [T('bridge.D', D_GOOD, 0.64, 0.78)], wobble('dot.lift', 2, 0.8, 0.98, 1))),
+    ask({ label: 'Checkpoint 4C', q: 'D is above the curve, and alloy B sits higher on the curve than alloy A. Moving from A to B, does the reading go up or down?',
+      rules: [{ re: /distance|closer|nearer|rope|shorter/i, note: 'Reading the meter as a distance is exactly the right way to think about it.' }],
+      opts: [
+        { t: 'Down.', ok: true, fb: 'Right. The meter shows distance, and B is closer to D, so the reading drops. With D below the curve, the same move makes it rise.',
+          fbAnims: [SET('bridge', bridgeAt(D_GOOD)), SET('dot.lift', 0), T('dot.iacs', 30, 0.1, 0.35), SET('dot.iacs', 43, 0.45), SET('bridge.D', D_BELOW, 0.45), T('dot.iacs', 30, 0.6, 0.85)] },
+        { t: 'Up, because B is higher.', fb: 'The meter doesn’t know up from down. It only knows the rope’s length. Watch the rope.', demo: [say('', [SET('bridge', bridgeAt(D_GOOD)), T('dot.iacs', 30, 0.1, 0.6)], { dur: 3 })] },
+        { t: 'It stays the same.', fb: 'That’s lift-off, which runs around the circle. The alloy change cuts across it.', demo: [say('', wobble('dot.lift', 2, 0.05, 0.4, 1).concat([T('dot.iacs', 30, 0.5, 0.85)]), { dur: 3.6 })] }
+      ] }),
+    say('It works in reverse too. Put D at right angles to the conductivity curve instead. Now small alloy differences slide around the circle, while lift-off moves the needle.',
+      [SET('dot.iacs', 43), SET('dot.lift', 0), SET('bridge', bridgeAt(D_GOOD, { perpKind: 'cond' })), SET('ghosts.B.show', 0.5), T('bridge.D', D_COAT, 0.08, 0.36), T('bridge.perp', 1, 0.15, 0.35),
+       T('dot.iacs', 45, 0.5, 0.64), T('dot.iacs', 41, 0.66, 0.8), T('dot.iacs', 43, 0.82, 0.95)]),
+    say('A nonconductive coating is lift-off you can’t remove, so the meter reads coating thickness without being fooled by the alloy.',
+      [T('dot.lift', 2, 0.1, 0.35), T('dot.lift', 5, 0.45, 0.7), T('dot.lift', 0, 0.85, 1)])
+  ] },
+/* ---------- Step 5: crack signals (aluminum, 100 kHz; the crack is illustrative) ---------- */
+{ setup: function () {
+    var s = baseState(); s.freq.kHz = 100; s.cam = clone(CAM_CRACK); s.airline = 0;
+    s.paths.cond = condPath({ cls: 'p-locus p-faint' });
+    s.paths.la = liftPath('al', { cls: 'p-lift p-faint' });
+    s.dot = dotOf('al', { label: 'balance point' });
+    s.probe = probeBase('top');
+    return s; },
+  items: [
+    titleItem(4),
+    say('Here is a surface crack signal on aluminum. It is drawn for illustration, not computed.',
+      [SET('legend', { text: 'Crack path: illustrative, not computed', show: 1 }), SET('paths.cr', ptsPath(CRACK_AL, { prog: 0, cls: 'p-crack', head: 1, headColor: 'var(--crack)', label: 'crack', small: 1, color: 'var(--crack)' })), T('paths.cr.prog', 1, 0.15, 0.85)]),
+    say('It leaves the balance point between two directions we know: lift-off and a drop in conductivity.',
+      [SET('arrows.l', { at: { mat: 'al' }, dir: 'lift', len: 0, label: 'lift-off', show: 1 }), T('arrows.l.len', 56, 0.2, 0.45), SET('arrows.c', { at: { mat: 'al' }, dir: 'sig', len: 0, label: 'lower conductivity', show: 1 }), T('arrows.c.len', 56, 0.5, 0.75)]),
+    ask({ label: 'Checkpoint 5', q: 'Why does a crack signal point between the lift-off direction and the conductivity direction?',
+      rules: [{ re: /detour|around|path|longer|narrow/i, note: 'Following the current around the crack is the key idea.' }],
+      opts: [
+        { t: 'Because metal is missing, so it looks like air.', fb: 'That’s the lift-off half. If that were all, the crack would point straight along lift-off. What else does the crack do to the currents?', demo: [say('', [T('probe.crack', 1, 0.05, 0.6)], { dur: 4.2 })] },
+        { t: 'Missing metal acts like lift-off, and the currents detouring around the crack act like lower conductivity.', ok: true,
+          fb: 'Yes. The currents can’t cross the crack, so they detour around its ends through a longer, narrower path. That is harder to push current through, which looks like lower conductivity.',
+          fbAnims: [T('probe.crack', 1, 0.05, 0.45), T('decomp', 1, 0.55, 0.8)] },
+        { t: 'Air in the crack has zero conductivity.', fb: 'That alone would point along the conductivity curve. The crack also takes metal away.', demo: [say('', [T('decomp', 1, 0.1, 0.4)], { dur: 3 })] },
+        { t: 'The crack makes the metal magnetic.', fb: 'It removes metal and blocks current. It adds no permeability.', demo: [say('', [T('probe.crack', 1, 0.05, 0.6)], { dur: 3.4 })] }
+      ] }),
+    say('On an instrument, rotate the display until lift-off lies flat. Then raise the vertical gain on its own.',
+      [SET('decomp', 0), SET('probe.crack', 1), SET('arrows.c', { show: 0 }), SET('paths.cond', { show: 0 }), T('grid', 0, 0, 0.15), T('axes', 0, 0, 0.15),
+       SET('disp', { rot: 0, gy: 1, cR: A_PT.R, cX: A_PT.X, cross: 0 }), T('disp.cross', 1, 0.1, 0.25), T('disp.rot', DISP_ROT, 0.2, 0.55), T('disp.gy', 8, 0.65, 0.95), T('cam', CAM_CRACK_DISP, 0.65, 0.95)]),
+    say('The crack signal stretches upward until it stands nearly vertical, while lift-off stays flat.', [SET('paths.cr.prog', 0), T('paths.cr.prog', 1, 0.1, 0.8)]),
+    say('A probe wobble now moves the dot sideways, and a crack moves it up.', wobble('dot.lift', 2, 0.1, 0.4, 2).concat([SET('paths.cr.prog', 0, 0.45), T('paths.cr.prog', 1, 0.5, 0.95)]))
+  ] },
+/* ---------- Step 6: nonlinear responses (steel, 100 kHz) ---------- */
+{ setup: function () {
+    var s = baseState(); s.freq.kHz = 100; s.cam = clone(CAM_S6);
+    s.paths.lst = liftPath('st', { l1: 30, lEnd: 30, cls: 'p-lift p-faint' });
+    s.dot = dotOf('st', { label: 'steel' });
+    s.probe.ruler = 1;
+    return s; },
+  items: [
+    titleItem(5),
+    say('', [T('dot.lift', 10, 0.2, 0.5), T('dot.lift', 0, 0.6, 0.9)], { dur: 2.4 }),
+    ask({ label: 'Checkpoint 6', q: 'Which moves the dot more: the first five mils of lift-off or the next five?',
+      rules: [{ re: /field|weaker|falls|distance|exponential|less/i, note: 'Thinking about how fast the field falls off with distance is the right idea.' }],
+      opts: [
+        { t: 'The first five.', ok: true, fb: 'Right. On steel the first five mils move the dot about forty percent further than the next five, and each step after that moves it less again.', fbAnims: STEPS6 },
+        { t: 'The next five.', fb: 'Watch the dot as the probe rises in equal five mil steps.', demo: [say('', STEPS6, { dur: 5.2 })] },
+        { t: 'The same, five mils is five mils.', fb: 'The ruler steps are equal. Watch the steps on the plane.', demo: [say('', STEPS6, { dur: 5.2 })] }
+      ] }),
+    say('Edge effect, thinning, plating thickness and the gap between stacked layers respond nonlinearly too. Equal steps don’t give equal moves on the screen.',
+      [SET('probe', probeBase('bars')), T('probe.bars', 1, 0.1, 0.9)]),
+    say('A reading doesn’t scale in straight lines. So calibrate on reference standards that resemble the part: the same material, similar thickness and shape, and the same coating.', [SET('probe.bars', 1)]),
+    say('You have finished the lesson. Open the recap for a one screen summary, then try the quiz.', [])
+  ] }
+];
+
+/* every line the lesson can speak; used by tools/voiceover/build_lesson_audio.cjs */
+function allSpokenLines() {
+  var seen = {}, out = [];
+  function add(t) { if (!t) return; var id = clipId(t); if (seen[id]) return; seen[id] = 1; out.push({ id: id, caption: t, speak: speechText(t) }); }
+  function items(list) { (list || []).forEach(function (it) { if (it.type === 'ask') node(it.node); else add(it.text); }); }
+  function node(n) {
+    if (!n || seen['node:' + n.q]) return; seen['node:' + n.q] = 1;
+    add(n.q);
+    n.opts.forEach(function (o) { add(o.fb); items(o.demo); add(o.reveal); items(o.revealDemo); node(o.sub); });
+    node(n.next);
+  }
+  STEPS.forEach(function (st) { items(st.items); });
+  return out;
+}
+
+/* ===================== info card ===================== */
+var KEY_IDEAS = [
+  'Steel’s magnetic domains reinforce the coil’s field, so steel sits above the air line. Eddy current and hysteresis losses push it to the right.',
+  'Lift-off always heads back to air: up and left from nonferromagnetic metals, down and left from steel. On steel at low frequency it looks like a drop in permeability, and an edge looks a lot like lift-off.',
+  'Frequency turns each signal by a different amount. Try several frequencies on your real target and keep the one that separates it best. Higher is not always better.',
+  'A one-number bridge meter reads the distance to D. Put D on the line at right angles to the change you want to ignore.',
+  'A crack signal sits between lift-off and a conductivity drop: missing metal plus a current detour. Rotate and stretch the display so cracks stand up.',
+  'Equal changes do not give equal moves on the screen. Calibrate on reference standards that resemble the part.'
+];
+function renderInfo() {
+  var n = Lesson.step, h = '';
+  if (Lesson.mode === 'finished') {
+    h = '<div class="eyebrow">Lesson complete</div><h2>Nice work.</h2><p class="muted">Review the six ideas on the recap screen, then take the 10 question quiz. The two sandboxes stay open in the tabs at the top.</p><div class="row"><button class="btn" onclick="setView(\'recap\')">Open recap</button><button class="btn ghost" onclick="setView(\'quiz\')">Take the quiz</button></div>';
+  } else if (n < 0) {
+    h = '<div class="eyebrow">How this works</div><h2>Watch, predict, then check.</h2><p class="muted">The lesson plays like a short video and stops at checkpoints. Pick an answer, and if you like, type your reasoning. Wrong answers get a hint and a short animation before you try again.</p><p class="muted">The panel under the plane shows the probe and the part under it. Use the step bar to go back to any step you have finished.</p>';
+  } else {
+    h = '<div class="eyebrow">Step ' + (n + 1) + ' of ' + STEP_TITLES.length + '</div><h2>' + esc(STEP_TITLES[n]) + '</h2>';
+    var done = progress.done.indexOf(n) >= 0;
+    h += done ? '<p class="muted"><b>Key idea:</b> ' + esc(KEY_IDEAS[n]) + '</p>' : '<p class="muted">A checkpoint question is coming up in this step. It will appear here.</p>';
+    h += '<p class="muted" style="font-size:12.5px">The diagram is computed from the Dodd and Deeds model of a probe coil above a plate, extended to magnetic steel. Steel’s relative permeability of ' + STEEL_MU + ' is an assumption for illustration. Edge and crack paths are drawn by hand.</p>';
+  }
+  $('infoCard').innerHTML = h;
+}
+
+/* ===================== chapters, tabs, controls ===================== */
+function renderChapters() {
+  var nav = $('chapters'), mr = maxReachable(), h = '';
+  STEP_TITLES.forEach(function (t, i) {
+    var done = progress.done.indexOf(i) >= 0, cur = i === Lesson.step && view === 'lesson';
+    var allowed = done || i === Lesson.step || i <= mr;
+    h += '<button class="chap' + (done ? ' done' : '') + (cur ? ' current' : '') + '" data-i="' + i + '"' + (allowed ? '' : ' disabled') + ' aria-current="' + (cur ? 'step' : 'false') + '"><span class="n">' + (done ? '✓' : i + 1) + '</span>' + esc(t) + '</button>';
+  });
+  nav.innerHTML = h;
+  nav.querySelectorAll('.chap').forEach(function (b) {
+    b.addEventListener('click', function () { var i = +b.dataset.i; setView('lesson'); startIfNeeded(); runStep(i); });
+  });
+  var cur = nav.querySelector('.current'); if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+var TABS = [['Lesson', 'lesson'], ['Materials', 'materials'], ['Bridge', 'bridge'], ['Recap', 'recap'], ['Quiz', 'quiz']];
+function renderTabs() {
+  var mOpen = progress.done.indexOf(MATERIALS_AFTER) >= 0, bOpen = progress.done.indexOf(BRIDGE_AFTER) >= 0, allDone = progress.done.indexOf(STEP_TITLES.length - 1) >= 0;
+  $('tabMaterials').disabled = !mOpen; $('tabMaterials').innerHTML = 'Materials' + (mOpen ? '' : ' &#128274;');
+  $('tabBridge').disabled = !bOpen; $('tabBridge').innerHTML = 'Bridge meter' + (bOpen ? '' : ' &#128274;');
+  $('tabRecap').disabled = !allDone; $('tabQuiz').disabled = !allDone;
+  TABS.forEach(function (p) { $('tab' + p[0]).setAttribute('aria-selected', view === p[1] ? 'true' : 'false'); });
+}
+var ICON = {
+  play: '<svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z" fill="currentColor"/></svg>',
+  pause: '<svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg>',
+  sound: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/></svg>',
+  mute: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 9l6 6M22 9l-6 6"/></svg>'
+};
+function updateControls() {
+  var pb = $('playBtn');
+  var canPlay = !!P.items;
+  pb.innerHTML = (paused || !canPlay) ? ICON.play : ICON.pause;
+  pb.setAttribute('aria-label', paused ? 'Play' : 'Pause');
+  pb.disabled = !canPlay && !paused;
+  $('replayBtn').disabled = !(Lesson.mode === 'play' || Lesson.mode === 'ask');
+  var mb = $('muteBtn'); mb.innerHTML = muted ? ICON.mute : ICON.sound; mb.setAttribute('aria-label', muted ? 'Unmute narration' : 'Mute narration');
+  mb.title = muted ? 'Narration off' : 'Narration on';
+}
+var toastT = null;
+function toast(msg) { var t = $('toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toastT); toastT = setTimeout(function () { t.classList.add('hidden'); }, 3600); }
+
+/* ===================== sandboxes ===================== */
+var lessonSnapshot = null, sbBuilt = '';
+function logSlider(v, lo, hi) { return Math.exp(Math.log(lo) + (Math.log(hi) - Math.log(lo)) * v / 1000); }
+function logPos(x, lo, hi) { return Math.round((Math.log(x) - Math.log(lo)) / (Math.log(hi) - Math.log(lo)) * 1000); }
+
+/* ----- 1. Materials: aluminum, copper or steel; frequency, lift-off and steel's permeability ----- */
+var SB1 = { mat: 'st', kHz: 100, lift: 0, mu: STEEL_MU, zoom: false };
+var SB_MATS = ['al', 'cu', 'st'];
+function sb1State() {
+  var s = baseState(), m = MATS[SB1.mat], isSt = SB1.mat === 'st', mu = isSt ? SB1.mu : 1, magnetic = isSt && mu > 1.5;
+  s.freq.kHz = SB1.kHz;
+  s.paths.cond = condPath({ cls: 'p-locus p-faint' });
+  s.paths.fr = freqPath(SB1.mat, { mu: mu });
+  if (isSt) s.paths.mu = muPath({ m0: 500, m1: 1, mEnd: 1, cls: 'p-mu p-dash p-thin' });
+  s.paths.lf = liftPath(SB1.mat, { mu: mu, l1: 40, lEnd: 40 });
+  SB_MATS.forEach(function (k) { if (k !== SB1.mat) s.ghosts[k] = matGhost(k, { show: 0.7 }); });
+  s.dot = dotOf(SB1.mat, { mu: mu, lift: SB1.lift, label: m.short });
+  s.angles.a = angleSpec({ mat: SB1.mat, mu: mu }, 'lift', magnetic ? 'mu' : 'sig', { la: 'lift-off', lb: magnetic ? 'lower μr' : 'lower conductivity' });
+  var P = zOf(s, s.dot);
+  s.cam = SB1.zoom ? { r0: P.R - 0.07, r1: P.R + 0.07, x0: P.X - 0.07, x1: P.X + 0.07 } : clone(CAM_FULL);
+  return s;
+}
+function buildMaterials() {
+  sbBuilt = 'materials';
+  var c = $('sbCard');
+  c.innerHTML = '<div class="eyebrow">Materials sandbox</div><h2>Change the material and watch the dot</h2>' +
+    '<div class="slider"><label>Material <span id="sbMv"></span></label><div class="presets" id="sbMats"></div><p class="muted" id="sbMnote" style="font-size:12.5px;margin:6px 0 0"></p></div>' +
+    '<div class="slider"><label for="sbF">Test frequency <span id="sbFv"></span></label><input type="range" id="sbF" min="0" max="1000"></div>' +
+    '<div class="slider"><label for="sbL">Lift-off <span id="sbLv"></span></label><input type="range" id="sbL" min="0" max="80"></div>' +
+    '<div class="slider" id="sbMuBox"><label for="sbMu"><i style="font-style:normal">Steel’s permeability &mu;<sub>r</sub></i> <span id="sbMuv"></span></label><input type="range" id="sbMu" min="0" max="1000">' +
+    '<p class="muted" style="font-size:12.5px;margin:4px 0 0">The lesson assumes 100. Real steels vary widely with alloy, heat treatment and field strength.</p></div>' +
+    '<label class="muted" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="sbZ"> Zoom in around the dot</label>' +
+    '<div class="readout" id="sbOut"></div><p class="fb hint hidden" id="sbWarn" style="font-size:13.5px"></p>' +
+    '<p class="muted" style="font-size:12.5px;margin-top:10px"><span style="color:var(--lift);font-weight:700">Teal</span>: lift-off path to 40 mils. ' +
+    '<span style="color:var(--ink-soft);font-weight:700">Grey dashes</span>: where this material sits from 100 Hz to 1 MHz. ' +
+    '<span style="color:var(--mu);font-weight:700">Purple dashes</span> (steel): permeability from 500 down to 1 at this frequency. Orange: the conductivity curve of nonmagnetic metals.</p>' +
+    '<p class="muted" style="font-size:12.5px">Try this: pick steel, then lower its permeability toward 1 and watch the dot cross the line. Then compare the lift-off angle at 100 Hz and at 100 kHz.</p>';
+  var box = $('sbMats');
+  SB_MATS.forEach(function (k) {
+    var b = document.createElement('button'); b.textContent = MATS[k].short; b.dataset.k = k;
+    b.title = MATS[k].name + ', about ' + MATS[k].iacs + ' %IACS';
+    b.onclick = function () { SB1.mat = k; syncMaterials(); }; box.appendChild(b);
+  });
+  $('sbF').oninput = function () { SB1.kHz = logSlider(+this.value, 0.1, 1000); syncMaterials(true); };
+  $('sbL').oninput = function () { SB1.lift = +this.value / 2; syncMaterials(true); };
+  $('sbMu').oninput = function () { SB1.mu = Math.round(logSlider(+this.value, 1, 500)); syncMaterials(true); };
+  $('sbZ').onchange = function () { SB1.zoom = this.checked; syncMaterials(true); };
+}
+function syncMaterials(fromInput) {
+  if (!fromInput) { $('sbF').value = logPos(SB1.kHz, 0.1, 1000); $('sbL').value = Math.round(SB1.lift * 2); $('sbMu').value = logPos(SB1.mu, 1, 500); $('sbZ').checked = SB1.zoom; }
+  var m = MATS[SB1.mat], isSt = SB1.mat === 'st', mu = isSt ? SB1.mu : 1;
+  $('sbMats').querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b.dataset.k === SB1.mat); b.setAttribute('aria-pressed', b.dataset.k === SB1.mat ? 'true' : 'false'); });
+  $('sbMv').textContent = m.short;
+  $('sbMnote').textContent = m.name + ': about ' + m.iacs + ' %IACS, a typical value.' + (isSt ? ' Its permeability is set below.' : '');
+  $('sbFv').textContent = fmtK(SB1.kHz);
+  $('sbLv').textContent = SB1.lift === 0 ? 'contact' : fmtMils(SB1.lift) + ' mils';
+  $('sbMuBox').classList.toggle('hidden', !isSt);
+  $('sbMuv').textContent = SB1.mu + (SB1.mu === STEEL_MU ? ' (lesson value)' : '');
+  S = sb1State(); dirty = true;
+  var Z = dotPos(S), Z0 = Zs(m.iacs, SB1.kHz, 0, mu), dl = depthMuMM(m.iacs, SB1.kHz, mu);
+  var magnetic = isSt && mu > 1.5, d1 = dirLift(m.iacs, SB1.kHz, mu), d2 = magnetic ? dirMuDown(m.iacs, SB1.kHz, mu) : dirSigDown(m.iacs, SB1.kHz, mu), ang = angleBetween(d1, d2);
+  if (ang > 90) ang = 180 - ang;
+  $('sbOut').innerHTML =
+    '<span>Side of the air line</span><b class="big">' + (Z0.X > 1 ? 'above' : 'below') + '</b>' +
+    '<span>Angle, lift-off to ' + (magnetic ? 'lower μr' : 'lower conductivity') + '</span><b>' + Math.round(ang) + '°</b>' +
+    '<span>Standard depth</span><b>' + fmtMM(dl) + '</b>' +
+    '<span>Normalized R</span><b>' + fmt(Z.R, 4) + '</b><span>Normalized X</span><b>' + fmt(Z.X, 4) + '</b>';
+  var w = $('sbWarn');
+  w.classList.toggle('hidden', !(isSt && Z0.X <= 1));
+  if (isSt && Z0.X <= 1) w.textContent = mu < 1.5 ? 'With a relative permeability of 1 this steel is nonmagnetic, so it lands below the line like any other metal.' : 'At this permeability and frequency the eddy currents outweigh the magnetic reinforcement, so this steel lands below the line.';
+}
+
+/* ----- 2. Bridge meter: drag the balance point D, wobble the lift-off, switch alloy A to B ----- */
+var SB2 = { D: null, iacs: 43, lift: 0, anim: null, guide: false, wob: null, sw: null };
+function sb2State() {
+  var s = baseState(); s.freq.kHz = 100; s.cam = clone(CAM_BRIDGE); s.airline = 0;
+  s.paths.cond = condPath({ cls: 'p-locus p-faint' });
+  s.paths.la = liftPath('al', { l1: 40 }); s.paths.lb = liftPath('b24', { l1: 40, cls: 'p-lift p-faint' });
+  s.ghosts.A = matGhost('al', { label: 'A: 6061' }); s.ghosts.B = matGhost('b24', { label: 'B: 2024' });
+  s.dot = dotOf('al', { iacs: SB2.iacs, lift: SB2.lift });
+  s.bridge = bridgeAt(SB2.D, { perp: SB2.guide ? 1 : 0 });
+  s.probe = probeBase('meter');
+  return s;
+}
+function readingNow() { var Z = Zs(SB2.iacs, 100, SB2.lift, 1); return Math.hypot(Z.R - SB2.D.R, Z.X - SB2.D.X); }
+function needle(d) { return d / METER_FS * 100; }
+function buildBridge() {
+  sbBuilt = 'bridge';
+  if (!SB2.D) SB2.D = { R: D_ONLIFT.R, X: D_ONLIFT.X };
+  var c = $('sbCard');
+  c.innerHTML = '<div class="eyebrow">Bridge meter sandbox</div><h2>Find a balance point that ignores lift-off</h2>' +
+    '<p class="muted">Drag on the plane to move the balance point D. The needle shows only the distance from the dot to D. The faint circle marks every point at the same distance.</p>' +
+    '<div class="row"><button class="btn" id="sbWob">Wobble lift-off</button><button class="btn" id="sbSw">Switch alloy A to B</button><button class="btn ghost" id="sbReset">Reset D</button></div>' +
+    '<label class="muted" style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="sbG"> Show the line through A at right angles to lift-off</label>' +
+    '<div class="readout" id="sbOut2"></div>' +
+    '<p class="muted" style="font-size:12.5px;margin-top:10px">Goal: the needle holds still when you wobble the lift-off, but moves clearly when you switch alloys. Try D on both sides of the curve, near and far. A wobble lifts the probe to 2 mils and back.</p>';
+  $('sbWob').onclick = function () { if (SB2.anim) return; SB2.anim = { kind: 'wobble', t0: performance.now(), dur: 2400, lo: 1e9, hi: -1e9 }; };
+  $('sbSw').onclick = function () { if (SB2.anim) return; var toB = SB2.iacs > 36; SB2.anim = { kind: 'switch', t0: performance.now(), dur: 1200, from: SB2.iacs, to: toB ? 30 : 43, lo: 1e9, hi: -1e9 }; };
+  $('sbReset').onclick = function () { SB2.D = { R: D_ONLIFT.R, X: D_ONLIFT.X }; SB2.wob = SB2.sw = null; syncBridge(); };
+  $('sbG').onchange = function () { SB2.guide = this.checked; syncBridge(); };
+}
+function bridgeTick(now) {
+  var a = SB2.anim; if (!a) return;
+  var p = clamp((now - a.t0) / a.dur, 0, 1);
+  if (a.kind === 'wobble') SB2.lift = 2 * Math.pow(Math.sin(Math.PI * p * 2), 2);
+  else SB2.iacs = lerp(a.from, a.to, ease(p));
+  var r = needle(readingNow()); a.lo = Math.min(a.lo, r); a.hi = Math.max(a.hi, r);
+  if (p >= 1) {
+    if (a.kind === 'wobble') { SB2.lift = 0; SB2.wob = a.hi - a.lo; } else { SB2.iacs = a.to; SB2.sw = a.hi - a.lo; }
+    SB2.anim = null;
+  }
+  syncBridge(true);
+}
+function syncBridge(anim) {
+  S = sb2State(); dirty = true;
+  var onB = SB2.iacs < 36.5, d = readingNow(), v = needle(d);
+  $('sbSw').textContent = onB ? 'Switch alloy B to A' : 'Switch alloy A to B';
+  if (anim && SB2.anim) return;
+  $('sbOut2').innerHTML =
+    '<span>Needle</span><b class="big">' + (v > 100 ? 'off scale' : fmt(v, 0) + ' of 100') + '</b>' +
+    '<span>Distance to D</span><b>' + fmt(d, 3) + '</b>' +
+    '<span>Last wobble moved the needle</span><b>' + (SB2.wob == null ? 'not tried' : fmt(SB2.wob, 1)) + '</b>' +
+    '<span>Last alloy switch moved it</span><b>' + (SB2.sw == null ? 'not tried' : fmt(SB2.sw, 1)) + '</b>';
+}
+var dragD = false;
+function moveD(e) {
+  if (!lastMap) return;
+  var r = svg.getBoundingClientRect(), z = lastMap.inv(e.clientX - r.left, e.clientY - r.top);
+  SB2.D = { R: clamp(z.R, lastMap.Rmin, lastMap.Rmax), X: clamp(z.X, lastMap.Xmin, lastMap.Xmax) }; SB2.wob = SB2.sw = null;
+  syncBridge();
+}
+svg.addEventListener('pointerdown', function (e) { if (view !== 'bridge') return; dragD = true; try { svg.setPointerCapture(e.pointerId); } catch (x) {} moveD(e); e.preventDefault(); });
+svg.addEventListener('pointermove', function (e) { if (dragD && view === 'bridge') moveD(e); });
+svg.addEventListener('pointerup', function () { dragD = false; });
+svg.addEventListener('pointercancel', function () { dragD = false; });
+
+/* ===================== views ===================== */
+var view = 'lesson';
+function setView(v) {
+  if (v === view) return;
+  if (view === 'lesson') { lessonSnapshot = S; if (!paused && P.items) setPaused(true); stopSpeech(); }
+  dragD = false;
+  view = v;
+  var player = v === 'lesson' || v === 'materials' || v === 'bridge', lessonish = v === 'lesson';
+  $('viewPlayer').classList.toggle('hidden', !player);
+  $('viewRecap').classList.toggle('hidden', v !== 'recap');
+  $('viewQuiz').classList.toggle('hidden', v !== 'quiz');
+  $('caption').classList.toggle('hidden', !lessonish); $('controls').classList.toggle('hidden', !lessonish);
+  $('infoCard').classList.toggle('hidden', !lessonish || !!askState);
+  $('askCard').classList.toggle('hidden', !lessonish || !askState);
+  $('sbCard').classList.toggle('hidden', !(v === 'materials' || v === 'bridge'));
+  $('startOver').classList.toggle('hidden', !(lessonish && !Lesson.started));
+  $('video').classList.toggle('bridge-on', v === 'bridge');
+  if (v === 'materials') { if (sbBuilt !== 'materials') buildMaterials(); syncMaterials(); }
+  if (v === 'bridge') { if (sbBuilt !== 'bridge') buildBridge(); syncBridge(); }
+  if (v === 'lesson' && lessonSnapshot) { S = lessonSnapshot; }
+  if (v === 'recap') buildRecap();
+  if (v === 'quiz') buildQuiz();
+  renderTabs(); renderChapters(); dirty = true;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function startIfNeeded() {
+  if (Lesson.started) return;
+  Lesson.started = true; $('startOver').classList.add('hidden');
+}
+
+/* ===================== recap ===================== */
+var RECAP = [
+  { t: '1. Permeability', d: 'Steel’s magnetic domains reinforce the coil’s field, so steel sits above the air line. Eddy current and hysteresis losses push it to the right.' },
+  { t: '2. Lift-off and edges', d: 'Lift-off heads back to air: up and left from nonferromagnetic metals, down and left from steel. On steel at low frequency it looks like a permeability drop. Edges look a lot like lift-off.' },
+  { t: '3. Frequency and phase', d: 'Frequency turns each signal by a different amount. Try several frequencies on your real target; higher is not always better.' },
+  { t: '4. One-number meter', d: 'A bridge meter reads the distance to D. Put D at right angles to the change you want to ignore, and that change runs around the circle.' },
+  { t: '5. Crack signals', d: 'Missing metal plus a current detour put a crack signal between lift-off and a conductivity drop. Rotate and stretch the display so cracks stand up.' },
+  { t: '6. Nonlinear responses', d: 'Equal changes do not give equal moves on the screen. Calibrate on reference standards that resemble the part.' }
+];
+function buildRecap() {
+  var v = $('viewRecap');
+  v.innerHTML = '<div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0;font-size:20px">Recap: six ideas</h2><button class="btn" onclick="setView(\'quiz\')">Take the quiz &rarr;</button></div><div class="recap-grid">' +
+    RECAP.map(function (r, i) { return '<div class="recap-card"><svg id="mini' + i + '" viewBox="0 0 120 110" aria-hidden="true"></svg><div><h3>' + esc(r.t) + '</h3><p>' + esc(r.d) + '</p></div></div>'; }).join('') +
+    '</div><p class="muted" style="margin-top:12px">Simplified model for understanding trends, not for reading real instrument values. Steel’s relative permeability of ' + STEEL_MU + ' is an assumption for illustration; edge and crack paths are illustrative, not computed.</p>';
+}
+function miniMap(cam) {
+  var W = 120, H = 110, pad = 8, s = Math.min((W - 2 * pad) / (cam.r1 - cam.r0), (H - 2 * pad) / (cam.x1 - cam.x0));
+  var cr = cam.al === 'l' ? cam.r0 + (W - 2 * pad) / 2 / s : (cam.r0 + cam.r1) / 2, cx = (cam.x0 + cam.x1) / 2;
+  return { s: s, P: function (z) { return { x: W / 2 + (z.R - cr) * s, y: H / 2 - (z.X - cx) * s }; } };
+}
+function miniPath(m, pts, cls) { return '<path d="' + pts.map(function (q, i) { var p = m.P(q); return (i ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1); }).join('') + '" class="' + cls + '"/>'; }
+function miniDot(m, P, col, r) { var p = m.P(P); return '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + (r || 4.5) + '" style="fill:' + (col || 'var(--dot)') + ';stroke:var(--panel);stroke-width:1.5"/>'; }
+function miniAir(m, line) {
+  var a = m.P(AIR);
+  return (line ? '<line x1="4" y1="' + a.y + '" x2="116" y2="' + a.y + '" class="p-airline"/>' : '') + '<circle cx="' + a.x + '" cy="' + a.y + '" r="3.5" style="fill:var(--panel);stroke:var(--ink);stroke-width:1.5"/>';
+}
+function miniArrow(m, P, u, L, col) { var p = m.P(P); return arrowSvg(p.x, p.y, p.x + u.R * L, p.y - u.X * L, col, 2, '', 1); }
+function liftPts(key, kHz, l1) { var o = []; gridPts(0, l1, 1).forEach(function (l) { o.push(zM(key, kHz, l)); }); return o; }
+function tri(t, period) { var ph = (t % period) / period; return ph < 0.5 ? ease(ph * 2) : 1 - ease((ph - 0.5) * 2); }
+var MINI_FULL = { r0: -0.03, r1: 0.25, x0: 0.6, x1: 1.44 };
+function renderRecap(t) {
+  var e = $('mini0'); if (!e) return;
+  var mf = miniMap(MINI_FULL), up = tri(t, 6);
+  e.innerHTML = miniAir(mf, true) + miniDot(mf, zM('al', 100), 'var(--ink-soft)', 3.5) + miniDot(mf, zM('st', 100, 60 * (1 - up))) +
+    '<text x="116" y="14" text-anchor="end" style="font-size:9px;fill:var(--ink-soft)">ferromagnetic</text><text x="116" y="106" text-anchor="end" style="font-size:9px;fill:var(--ink-soft)">nonferromagnetic</text>';
+  var l = 40 * tri(t, 5);
+  $('mini1').innerHTML = miniAir(mf, true) + miniPath(mf, liftPts('st', 100, 40), 'p-lift p-thin') + miniPath(mf, liftPts('al', 100, 40), 'p-lift p-thin') +
+    miniPath(mf, EDGE_ST, 'p-edge p-thin') + miniDot(mf, zM('st', 100, l), 'var(--dot)', 3.5) + miniDot(mf, zM('al', 100, l), 'var(--dot)', 3.5);
+  var k = Math.exp(lerp(Math.log(0.1), Math.log(1000), tri(t, 8))), ap = mf.P(AIR), h2 = miniAir(mf, true);
+  [['al', 'var(--ink-soft)'], ['st', 'var(--mu)']].forEach(function (p) { var u = unitV(diffZ(AIR, zM(p[0], k))); h2 += arrowSvg(ap.x, ap.y, ap.x + u.R * 34, ap.y - u.X * 34, p[1], 2, '', 1); });
+  $('mini2').innerHTML = h2 + '<text x="62" y="106" style="font-size:9px;fill:var(--ink-soft)" text-anchor="middle">' + fmtK(k) + '</text>';
+  var mb = miniMap({ r0: 0.0, r1: 0.25, x0: 0.62, x1: 0.86 }), ph = (t % 6) / 6, Z;
+  if (ph < 0.5) Z = Zs(43, 100, 2 * Math.pow(Math.sin(ph * 4 * Math.PI), 2), 1); else Z = Zs(lerp(43, 30, tri((ph - 0.5) * 2, 1)), 100, 0, 1);
+  var dq = mb.P(D_GOOD), zq = mb.P(Z), rr = Math.hypot(Z.R - D_GOOD.R, Z.X - D_GOOD.X) * mb.s;
+  $('mini3').innerHTML = '<circle cx="' + dq.x + '" cy="' + dq.y + '" r="' + rr.toFixed(1) + '" class="p-circle"/><line x1="' + dq.x + '" y1="' + dq.y + '" x2="' + zq.x + '" y2="' + zq.y + '" class="p-rope"/>' +
+    '<rect x="' + (dq.x - 4) + '" y="' + (dq.y - 4) + '" width="8" height="8" style="fill:var(--ink)" transform="rotate(45 ' + dq.x + ' ' + dq.y + ')"/>' + miniDot(mb, Z, 'var(--dot)', 3.5) +
+    '<text x="6" y="106" style="font-size:9px;fill:var(--ink-soft)">' + (ph < 0.5 ? 'lift-off: still' : 'alloy: moves') + '</text>';
+  var mc = miniMap({ r0: A_PT.R - 0.035, r1: A_PT.R + 0.035, x0: A_PT.X - 0.02, x1: A_PT.X + 0.045 }), pr = clamp((t % 4) / 3, 0, 1);
+  $('mini4').innerHTML = miniArrow(mc, A_PT, U_LIFT_A, 36, 'var(--lift)') + miniArrow(mc, A_PT, U_COND_A, 36, 'var(--locus)') +
+    miniPath(mc, CRACK_AL.slice(0, Math.max(2, Math.round(pr * 40) + 1)), 'p-crack') + miniDot(mc, A_PT, 'var(--dot)', 3.5);
+  var ms = miniMap(CAM_S6), n6 = Math.floor((t % 7) / 1);
+  var h6 = miniPath(ms, liftPts('st', 100, 30), 'p-lift p-thin p-faint');
+  for (var i = 0; i <= Math.min(6, n6); i++) h6 += miniDot(ms, zM('st', 100, 5 * i), 'var(--lift)', 3);
+  $('mini5').innerHTML = h6 + '<text x="6" y="106" style="font-size:9px;fill:var(--ink-soft)">equal 5 mil steps</text>';
+}
+
+/* ===================== quiz ===================== */
+/* As this lesson's brief asks, answers stay hidden until the last question is submitted; then the full key appears. */
+var QUIZ = [
+  { s: 0, q: 'Why does a steel part move the dot above the air point?', o: ['Its magnetic domains reinforce the coil’s field, so the coil stores more energy and its reactance rises.', 'Steel conducts electricity better than aluminum.', 'Eddy currents in steel flow the same way as the coil current and add to its field.', 'Steel’s higher resistance raises the reactance.'], a: 0,
+    x: 'In steel the domains line up with the coil’s field and add to it. A stronger field for the same current stores more energy, and stored energy is what reactance measures. In this model steel at 100 kHz sits about 26 percent above air.' },
+  { s: 0, q: 'Steel’s dot also sits to the right of the reactance axis. What does that rightward shift stand for?', o: ['Energy stored in the magnetic domains.', 'Energy lost as heat in the steel, from eddy currents plus a little hysteresis.', 'A drop in the coil’s inductance.', 'The steel’s permeability rising.'], a: 1,
+    x: 'Resistance on the impedance plane is energy turned into heat. Steel heats through eddy currents and, a little, through hysteresis as the domains swing back and forth. This lesson’s model computes the eddy current part.' },
+  { s: 1, q: 'You slowly lift the probe off a steel plate. Which way does the dot move?', o: ['Up and to the left, toward air.', 'Down and to the left, toward air.', 'Straight down, past the air line.', 'To the right, away from the axis.'], a: 1,
+    x: 'Lift-off always heads back to the air point. Steel sits above and to the right of air, so the dot moves down as the reinforcement fades and left as less heat is lost.' },
+  { s: 1, q: 'On steel at a low frequency, which change gives a signal that looks most like lift-off?', o: ['A drop in permeability.', 'A rise in permeability.', 'A switch to copper.', 'A rise in the test frequency.'], a: 0,
+    x: 'Both lift-off and a drop in permeability weaken the reinforcement. At 100 Hz the two paths in this model are about 5 degrees apart. At 100 kHz they split by about 40 degrees, and a permeability drop then looks like a rise in conductivity instead.' },
+  { s: 2, q: 'On steel, lift-off and the signal you care about point nearly the same way. What is the best first move?', o: ['Always raise the frequency.', 'Turn up the gain.', 'Try several frequencies and keep the one that separates your signal from lift-off best.', 'Rotate the display until the two signals separate.'], a: 2,
+    x: 'Frequency turns different signals by different amounts, so it can open the angle. The best direction depends on the material and the target: here the permeability signal opens up as frequency rises, but thinning in a 0.3 mm steel sheet separates best near 10 kHz and fades away above 30 kHz. Gain and rotation never change the angle.' },
+  { s: 2, q: 'Why can raising the frequency make the thinning signal from a thin steel sheet disappear?', o: ['Higher frequency lowers the steel’s permeability to 1.', 'The standard depth shrinks until the eddy currents no longer reach the back of the sheet.', 'The instrument loses gain at high frequency.', 'Lift-off grows at high frequency.'], a: 1,
+    x: 'Standard depth falls as frequency rises, and steel’s high permeability makes it very small: about 0.07 mm at 100 kHz in this model. Once the currents stay well above the back of the sheet, changes there no longer reach the coil.' },
+  { s: 3, q: 'A bridge meter is balanced at a point D below the curve. Moving from alloy A to alloy B, which sits higher on the curve, the reading:', o: ['Goes down.', 'Goes up.', 'Stays the same.', 'Drops to zero.'], a: 1,
+    x: 'The meter reads the distance from the dot to D. With D below the curve, B is farther from D than A is, so the distance grows and the reading goes up. With D above the curve the same move makes it go down.' },
+  { s: 3, q: 'You want a bridge meter to read a nonconductive coating’s thickness and ignore small alloy differences. Where do you put D?', o: ['On the lift-off path.', 'On a line through the bare metal’s point at right angles to the conductivity curve.', 'Exactly on the bare metal’s point.', 'At the air point.'], a: 1,
+    x: 'With D on that line, small conductivity changes move the dot around a circle centred on D, so the reading holds still. A coating acts like lift-off, which moves the dot toward or away from D. In this model a 41 to 45 %IACS change moves the reading by 0.0001, while a 2 mil coating moves it by 0.02.' },
+  { s: 4, q: 'Why does a surface crack signal point between the lift-off direction and the conductivity direction?', o: ['Air in the crack has zero conductivity, so the signal follows the conductivity curve.', 'Missing metal acts like lift-off, and currents detouring around the crack act like lower conductivity.', 'The crack makes the metal magnetic.', 'The crack raises the coil’s inductance.'], a: 1,
+    x: 'Missing metal moves the dot toward air, like lift-off. The currents also have to detour around the crack’s ends through a longer, narrower path, which looks like lower conductivity. Adding the two gives a direction between them.' },
+  { s: 5, q: 'Why should reference standards resemble the part being inspected?', o: ['Because responses are nonlinear, so a calibration only holds near the conditions it was made in.', 'Because the instrument scale is linear, so one reference point is enough.', 'Because standards must always be thicker than the part.', 'Because nonlinear effects only appear on steel.'], a: 0,
+    x: 'Equal changes do not give equal moves on the screen: in this model the first 5 mils of lift-off on steel move the dot about 40 percent further than the next 5. Lift-off, edges, thinning, plating and spacing all respond nonlinearly, so calibrate on standards like the part.' }
+];
+var QZ = { i: 0, ans: [], done: false };
+function buildQuiz() {
+  var v = $('viewQuiz');
+  if (QZ.done) { showResults(); return; }
+  var q = QUIZ[QZ.i], sel = QZ.ans[QZ.i], last = QZ.i === QUIZ.length - 1;
+  var answered = QZ.ans.filter(function (x) { return x != null; }).length;
+  var h = '<div class="quiz card"><div class="qmeta">Question ' + (QZ.i + 1) + ' of ' + QUIZ.length + ' &middot; ' + answered + ' answered</div><div class="qprog"><i style="width:' + (answered / QUIZ.length * 100) + '%"></i></div>' +
+    '<h2>' + esc(q.q) + '</h2><div class="opts" role="radiogroup">' +
+    q.o.map(function (t, i) { return '<button class="opt" role="radio" aria-checked="' + (sel === i) + '" data-i="' + i + '"><span class="k">' + 'ABCD'[i] + '</span><span>' + esc(t) + '</span></button>'; }).join('') + '</div>' +
+    '<p class="muted" style="font-size:13px">The answer key with explanations appears after you submit the last question. You can go back and change answers until then.</p>' +
+    '<div class="row"><button class="btn ghost" id="qBack"' + (QZ.i ? '' : ' disabled') + '>Back</button>' +
+    '<button class="btn" id="qNext"' + (sel == null ? ' disabled' : '') + '>' + (last ? 'Submit quiz' : 'Next question') + '</button></div></div>';
+  v.innerHTML = h;
+  v.querySelectorAll('.opt').forEach(function (b) { b.onclick = function () { QZ.ans[QZ.i] = +b.dataset.i; buildQuiz(); }; });
+  $('qBack').onclick = function () { QZ.i--; buildQuiz(); };
+  $('qNext').onclick = function () { if (!last) { QZ.i++; buildQuiz(); } else { QZ.done = true; showResults(); window.scrollTo({ top: 0, behavior: 'smooth' }); } };
+}
+function showResults() {
+  var score = 0, miss = {};
+  QUIZ.forEach(function (q, i) { if (QZ.ans[i] === q.a) score++; else miss[q.s] = 1; });
+  var steps = Object.keys(miss).map(Number).sort();
+  var h = '<div class="quiz"><div class="card"><div class="eyebrow">Quiz results</div><div class="score">' + score + ' / ' + QUIZ.length + '</div>' +
+    (steps.length ? '<p>Steps to revisit:</p><div class="row">' + steps.map(function (s) { return '<button class="btn ghost" data-s="' + s + '">Step ' + (s + 1) + ': ' + esc(STEP_TITLES[s]) + '</button>'; }).join('') + '</div>'
+      : '<p>Perfect score. Every step is solid.</p>') +
+    '<div class="row"><button class="btn" id="qRetry">Retake quiz</button></div></div><h2 style="font-size:18px;margin:18px 0 6px">Answer key</h2><div class="key">';
+  QUIZ.forEach(function (q, i) {
+    var ok = QZ.ans[i] === q.a;
+    h += '<div class="item ' + (ok ? 'ok' : 'no') + '"><b>' + (i + 1) + '. ' + esc(q.q) + '</b>' +
+      '<div class="ans">Your answer: ' + esc(q.o[QZ.ans[i]] || 'none') + (ok ? ' ✓' : ' ✗') + '</div>' +
+      (ok ? '' : '<div class="ans">Correct answer: <b>' + esc(q.o[q.a]) + '</b></div>') +
+      '<div class="muted">' + esc(q.x) + ' <span style="white-space:nowrap">(Step ' + (q.s + 1) + ')</span></div></div>';
+  });
+  h += '</div></div>';
+  $('viewQuiz').innerHTML = h;
+  $('viewQuiz').querySelectorAll('[data-s]').forEach(function (b) { b.onclick = function () { setView('lesson'); startIfNeeded(); runStep(+b.dataset.s); }; });
+  $('qRetry').onclick = function () { QZ.i = 0; QZ.ans = []; QZ.done = false; buildQuiz(); };
+}
+
+/* ===================== wiring ===================== */
+$('startBtn').onclick = function () {
+  startIfNeeded();
+  unlockAudio();
+  var mr = maxReachable(); runStep(progress.done.length && mr < STEP_TITLES.length && progress.done.indexOf(mr) < 0 ? mr : 0);
+};
+$('playBtn').onclick = function () { if (P.items) setPaused(!paused); else if (paused) setPaused(false); };
+$('replayBtn').onclick = replaySegment;
+$('speedSel').onchange = function () { speed = +this.value; if (voiceEl) { voiceEl.defaultPlaybackRate = speed; voiceEl.playbackRate = speed; } };
+$('muteBtn').onclick = function () { muted = !muted; if (muted) { stopSpeech(); P.speechDone = true; } updateControls(); };
+TABS.forEach(function (p) { $('tab' + p[0]).onclick = function () { setView(p[1]); }; });
+var themes = ['auto', 'light', 'dark'], themeI = 0;
+try { themeI = Math.max(0, themes.indexOf(localStorage.getItem('et-ss-theme') || 'auto')); } catch (e) {}
+function applyTheme() {
+  var t = themes[themeI];
+  if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
+  $('themeBtn').textContent = 'Theme: ' + t; dirty = true;
+}
+$('themeBtn').onclick = function () { themeI = (themeI + 1) % 3; try { localStorage.setItem('et-ss-theme', themes[themeI]); } catch (e) {} applyTheme(); };
+document.addEventListener('keydown', function (e) {
+  if (view !== 'lesson' || /input|textarea|select/i.test(e.target.tagName)) return;
+  if (e.code === 'Space' && e.target.tagName !== 'BUTTON') { e.preventDefault(); $('playBtn').click(); }
+});
+if (window.ResizeObserver) new ResizeObserver(function () { dirty = true; }).observe($('video'));
+window.addEventListener('resize', function () { dirty = true; });
+document.addEventListener('visibilitychange', function () { if (document.hidden && P.items && !paused) setPaused(true); });
+
+var lastT = performance.now(), lastDraw = 0;
+function loop(now) {
+  var dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
+  if (view === 'lesson') playerTick(dt);
+  if (view === 'bridge') bridgeTick(now);
+  if (view === 'lesson' || view === 'materials' || view === 'bridge') {
+    if (dirty || now - lastDraw > 66) { render(); dirty = false; lastDraw = now; } /* the probe view animates gently */
+  }
+  if (view === 'recap') renderRecap(now / 1000);
+  requestAnimationFrame(loop);
+}
+applyTheme(); renderChapters(); renderTabs(); renderInfo(); updateControls();
+/* show steel and aluminum on the plane behind the start screen */
+S = STEPS[0].setup(); S.dot.lift = 0; S.cam = clone(CAM_FULL); S.airline = 1; S.ghosts.st = matGhost('st');
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

@@ -3,26 +3,34 @@
 //
 //   node tools/eddy/check_dodd_deeds.cjs
 //
-// 1. Each lesson page carries an exact copy of tools/eddy/dodd_deeds_core.js in its <script id="physics"> block.
+// 1. Each lesson page carries an exact copy of tools/eddy/dodd_deeds_core.js in its <script id="physics"> block, and
+//    Lesson 3 also an exact copy of tools/eddy/dodd_deeds_mu.js (plates with relative permeability).
 // 2. The model passes independent checks: an image-coil filament sum (elliptic integrals), the thick-plate and
 //    thin-sheet limits, zero thickness = air, and passivity (resistance never negative, reactance never above air).
+//    The permeability extension matches the core at mu_r = 1, magnetic image theory at zero frequency, and the
+//    sigma / mu_r equivalence at high frequency.
 // 3. The claims each lesson makes still hold. Run this after changing the model, the coil or the lesson numbers.
 const fs = require('fs');
 const path = require('path');
 const root = path.resolve(__dirname, '..', '..');
 const core = fs.readFileSync(path.join(__dirname, 'dodd_deeds_core.js'), 'utf8').trim();
+const muExt = fs.readFileSync(path.join(__dirname, 'dodd_deeds_mu.js'), 'utf8').trim();
 let fails = 0;
 const ck = (name, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + name + (detail ? '  [' + detail + ']' : '')); if (!ok) fails++; };
-function load(page, exports) {
+function load(page, exports, withMu) {
   const html = fs.readFileSync(path.join(root, page), 'utf8');
   const src = html.match(/<script id="physics">([\s\S]*?)<\/script>/)[1];
   ck(page + ': physics block carries the shared core unchanged', src.includes(core));
+  if (withMu) ck(page + ': physics block carries the permeability extension unchanged', src.includes(muExt));
   return new Function(src + ';return {' + exports + '};')();
 }
 const L1 = load('ET-Impedance-Plane.html', 'Zplate,depthMM,COIL,MU0,SIGMA_IACS,Zn,fOf,sepAngle,XPC,P_PEAK,FMIN,liftOfEta');
 const L2 = load('ET-Frequency-and-Thickness.html', 'Zplate,Zm,Zp,deltaMils,sepDirs,THICK,MIL');
+const L3 = load('ET-Steel-and-Signals.html', 'Zplate,ZplateMu,Zs,dirLift,dirMuDown,dirSigDown,dirThin,thinSize,depthMuMM,STEEL_MU,STEEL_IACS,MIL,angleBetween,degOf,diffZ,unitV', true);
+const L3main = fs.readFileSync(path.join(root, 'ET-Steel-and-Signals.html'), 'utf8');
 const { Zplate, COIL, MU0 } = L1;
 const air = { R: 0, X: 1 }, dist = (a, b) => Math.hypot(a.R - b.R, a.X - b.X), IACS = 5.8e7;
+let imageDrop = 0; /* reactance drop for a perfect conductor from the filament sum, reused for the magnetic image check */
 
 console.log('\n--- model checks');
 {
@@ -48,6 +56,7 @@ console.log('\n--- model checks');
     L += p === q ? MU * p[0] * 1e-3 * (Math.log(8 * p[0] / (0.44705 * side)) - 2) : Mloops(p[0] * 1e-3, q[0] * 1e-3, Math.abs(p[1] - q[1]) * 1e-3);
   }
   const pc = Zplate(1e15, 1e7, Infinity, 0);
+  imageDrop = M / L;
   ck('perfect-conductor drop matches the image-coil filament sum within 1%', Math.abs((1 - pc.X) / (M / L) - 1) < 0.01, `model ${(1 - pc.X).toFixed(4)}, filaments ${(M / L).toFixed(4)}`);
 }
 
@@ -137,6 +146,91 @@ console.log('\n--- Lesson 2 (Frequency and Thickness) claims');
     ck('Step 5: 10 to 14 mils spread over about twice as much curve at 200 kHz as at 400 kHz', g(200) / g(400) > 1.8, `${(g(200) / g(400)).toFixed(2)}x`);
     ck('Step 5: at 400 kHz the 14-mil point is within about 1% of thick brass', dist(Z(28, 400, 14), e400) / dist(air, e400) < 0.015);
     ck('Step 5: standard depth about 11 mils at 200 kHz and under 8 at 400 kHz', Math.abs(deltaMils(28, 200) - 11) < 0.5 && deltaMils(28, 400) < 8);
+  }
+}
+console.log('\n--- permeability extension checks');
+{
+  const { ZplateMu } = L3;
+  let d1 = 0; for (const p of [3, 43, 100]) for (const f of [1e3, 1e5, 1e7]) for (const d of [Infinity, 0.3]) for (const l of [0, 0.5]) { const s = p / 100 * IACS; d1 = Math.max(d1, dist(ZplateMu(s, f, d, l, 1 + 1e-9), Zplate(s, f, d, l)), dist(ZplateMu(s, f, d, l, 1), Zplate(s, f, d, l))); }
+  ck('mu_r = 1 gives the core result', d1 < 1e-9, d1.toExponential(1));
+  const dc = [2, 10, 100].map(mu => { const z = ZplateMu(0.1 * IACS, 1, Infinity, 0, mu), K = (mu - 1) / (mu + 1); return { mu, model: z.X - 1, image: K * imageDrop, R: z.R }; });
+  ck('zero frequency: reactance rise matches magnetic image theory, (mu-1)/(mu+1) times the filament sum, within 1%', dc.every(r => Math.abs(r.model / r.image - 1) < 0.01 && r.R < 1e-3), dc.map(r => `mu ${r.mu}: ${r.model.toFixed(4)} vs ${r.image.toFixed(4)}`).join('; '));
+  const hf = [1e7, 1e8, 1e9].map(f => { const a = ZplateMu(0.1 * IACS, f, Infinity, 0, 100), b = Zplate(0.1 * IACS / 100, f, Infinity, 0), pc = Zplate(1e15, 1e7, Infinity, 0); return dist(a, b) / dist(b, pc); });
+  ck('high frequency: steel approaches a nonmagnetic metal with conductivity sigma / mu_r', hf[1] < hf[0] && hf[2] < hf[1] && hf[2] < 0.005, hf.map(x => (x * 100).toFixed(2) + '%').join(' -> '));
+  let neg = 0; for (const mu of [1.5, 10, 100, 1000]) for (const p of [1, 10, 100]) for (let e = 1; e <= 8; e += 0.5) for (const d of [Infinity, 1, 0.05]) for (const l of [0, 0.3]) if (ZplateMu(p / 100 * IACS, 10 ** e, d, l, mu).R < -1e-12) neg++;
+  ck('resistance never negative for magnetic plates', neg === 0);
+  const s = 0.1 * IACS, dl = L3.depthMuMM(10, 100, 100);
+  ck('magnetic plate 25 standard depths thick equals the half-space; zero thickness gives air', dist(ZplateMu(s, 1e5, Infinity, 0, 100), ZplateMu(s, 1e5, 25 * dl, 0, 100)) < 1e-9 && dist(ZplateMu(s, 1e5, 1e-7, 0, 100), air) < 1e-4);
+}
+
+console.log('\n--- Lesson 3 (Steel and Signal Separation) claims');
+{
+  const { Zs, dirLift, dirMuDown, dirSigDown, dirThin, thinSize, depthMuMM, STEEL_MU, STEEL_IACS, angleBetween, degOf, diffZ } = L3;
+  const ST = (kHz, lift, mu, dmm) => Zs(STEEL_IACS, kHz, lift || 0, mu || STEEL_MU, dmm), AL = (kHz, lift, iacs) => Zs(iacs || 43, kHz, lift || 0, 1), CU = kHz => Zs(100, kHz, 0, 1);
+  const axis = (u, v) => { const d = angleBetween(u, v); return d > 90 ? 180 - d : d; };
+  const num = re => +L3main.match(re)[1];
+  const EDGE_TURN = num(/EDGE_TURN = (-?[\d.]+)/), CRACK_TURN = num(/CRACK_TURN = (-?[\d.]+)/), METER_FS = num(/METER_FS = ([\d.]+)/);
+  ck('assumption shown on the page: steel is 10 %IACS with mu_r = 100', STEEL_IACS === 10 && STEEL_MU === 100 && /mu_r = 100|&mu;<sub>r<\/sub> = 100/.test(L3main));
+  // check 1
+  const fr = [0.1, 1, 10, 100, 1000];
+  ck('check 1: steel sits above the air line from 100 Hz to 1 MHz; aluminum and copper below', fr.every(k => ST(k).X > 1 && AL(k).X < 1 && CU(k).X < 1), fr.map(k => `${k} kHz steel X ${ST(k).X.toFixed(3)}`).join(', '));
+  ck('Step 1: "about twenty six percent above air" at 100 kHz', ST(100).X > 1.24 && ST(100).X < 1.28, ST(100).X.toFixed(3));
+  // check 2
+  {
+    const mono = (fz, sx) => { let prev = fz(0), ok = true; for (let m = 1; m <= 200; m++) { const z = fz(m * 0.1); if (z.R > prev.R + 1e-12 || sx * (z.X - prev.X) < -1e-12) ok = false; prev = z; } return ok; };
+    const ts = dirLift(STEEL_IACS, 100, STEEL_MU), ta = dirLift(43, 100, 1);
+    ck('check 2: lift-off from steel moves the dot down and left all the way to 20 mils', ts.R < 0 && ts.X < 0 && mono(l => ST(100, l), -1), `starts at ${degOf(ts).toFixed(0)} deg`);
+    ck('check 2: lift-off from aluminum moves it up and left all the way', ta.R < 0 && ta.X > 0 && mono(l => AL(100, l), 1), `starts at ${degOf(ta).toFixed(0)} deg`);
+  }
+  // check 3, with the frequency dependence the lesson relies on
+  {
+    const g = k => angleBetween(dirLift(STEEL_IACS, k, STEEL_MU), dirMuDown(STEEL_IACS, k, STEEL_MU)), v = { f100Hz: g(0.1), f1k: g(1), f10k: g(10), f100k: g(100) };
+    ck('check 3: on steel at 100 Hz, lift-off and a permeability drop point within a small angle ("about five degrees")', Math.round(v.f100Hz) === 5, v.f100Hz.toFixed(1) + ' deg');
+    ck('Steps 2 and 3: "thirty at one kilohertz", "about forty by ten kilohertz", "about forty" at 100 kHz', Math.round(v.f1k) === 30 && Math.abs(v.f10k - 40) < 1.5 && Math.abs(v.f100k - 40) < 2, Object.entries(v).map(([k, x]) => k + ' ' + x.toFixed(1)).join(', '));
+    const mc = angleBetween(dirMuDown(STEEL_IACS, 100, STEEL_MU), { R: -dirSigDown(STEEL_IACS, 100, STEEL_MU).R, X: -dirSigDown(STEEL_IACS, 100, STEEL_MU).X });
+    ck('Step 2: at 100 kHz "a permeability drop looks exactly like a rise in conductivity"', mc < 1, mc.toFixed(2) + ' deg');
+  }
+  // check 4: the bridge meter
+  {
+    const A = AL(100), B = AL(100, 0, 30), u = dirLift(43, 100, 1), n0 = { R: -u.X, X: u.R }, n = n0.R > 0 ? n0 : { R: -n0.R, X: -n0.X };
+    const at = (P, v, s) => ({ R: P.R + v.R * s, X: P.X + v.X * s }), rd = (z, D) => dist(z, D);
+    const Dg = at(A, n, 0.1), Db = at(A, n, -0.1), Df = at(A, n, 0.25), Dl = at(A, u, -0.1), d0 = rd(A, Dg);
+    const lift2 = rd(AL(100, 2), Dg) - d0, ab = rd(B, Dg) - d0;
+    ck('check 4: with D on the perpendicular, 2 mils of lift-off barely changes the reading ("about three percent") while A to B does ("about thirteen")', Math.abs(lift2 / d0 - 0.03) < 0.012 && Math.abs(-ab / d0 - 0.13) < 0.015 && Math.abs(ab) > 3 * Math.abs(lift2), `lift-off ${(lift2 / d0 * 100).toFixed(1)}%, A to B ${(ab / d0 * 100).toFixed(1)}%`);
+    ck('check 4: 1 mil of lift-off changes it by under a tenth of the alloy change', Math.abs(rd(AL(100, 1), Dg) - d0) < 0.1 * Math.abs(ab));
+    ck('Step 4: with D on the lift-off path, 2 mils of lift-off moves the reading more than the alloy change', Math.abs(rd(AL(100, 2), Dl) - rd(A, Dl)) > Math.abs(rd(B, Dl) - rd(A, Dl)));
+    ck('Step 4: a farther D hugs lift-off better but drives the needle off scale', Math.abs(rd(AL(100, 2), Df) - rd(A, Df)) < Math.abs(lift2) && rd(A, Df) > METER_FS && d0 < METER_FS);
+    ck('Checkpoint 4C: B sits higher on the curve; D above the curve: the reading goes down; D below: it goes up', B.X > A.X && rd(B, Dg) < rd(A, Dg) && rd(B, Db) > rd(A, Db));
+    const c = dirSigDown(43, 100, 1), m0 = { R: c.X, X: -c.R }, Dc = at(A, m0.R > 0 ? m0 : { R: -m0.R, X: -m0.X }, 0.1), e0 = rd(A, Dc);
+    const alloyMax = Math.max(Math.abs(rd(AL(100, 0, 41), Dc) - e0), Math.abs(rd(AL(100, 0, 45), Dc) - e0)), coat = Math.abs(rd(AL(100, 2), Dc) - e0);
+    ck('Step 4 reverse trick: D at right angles to the conductivity curve ignores 41 to 45 %IACS but reads a 2-mil coating', alloyMax < 0.001 && coat > 0.01, `alloy ${alloyMax.toFixed(4)}, coating ${coat.toFixed(4)}`);
+  }
+  // check 5
+  {
+    const steps = f => { const o = []; for (let i = 0; i < 6; i++) o.push(dist(f(5 * i), f(5 * (i + 1)))); return o; };
+    const s = steps(l => ST(100, l)), a = steps(l => AL(100, l)), dec = x => x.every((v, i) => i === 0 || v < x[i - 1]);
+    ck('check 5: equal 5-mil lift-off steps make shrinking moves on steel and aluminum', dec(s) && dec(a), s.map(x => x.toFixed(4)).join(', '));
+    ck('Step 6: "the first five mils move the dot about forty percent further than the next five"', s[0] / s[1] > 1.3 && s[0] / s[1] < 1.5, (s[0] / s[1]).toFixed(2) + 'x');
+    const th = []; for (let d = 30; d > 6; d -= 4) th.push(dist(Zs(43, 100, 0, 1, d * L3.MIL), Zs(43, 100, 0, 1, (d - 4) * L3.MIL)));
+    ck('Step 6: thinning a 6061 sheet in equal steps makes growing moves (nonlinear the other way)', th.every((v, i) => i === 0 || v > th[i - 1]));
+  }
+  // Step 3: frequency rotates phase, steel's thin skin and the thin-sheet example
+  {
+    const ph = (z) => degOf(diffZ(air, z));
+    ck('Step 3: aluminum\'s arrow goes from nearly flat (100 Hz) to nearly straight down (1 MHz); steel\'s from straight up, leaning right and down', Math.abs(ph(AL(0.1))) < 15 && ph(AL(1000)) < -80 && ph(ST(0.1)) > 85 && ph(ST(1000)) < 30 && ph(ST(1000)) > 0,
+      `Al ${ph(AL(0.1)).toFixed(0)} to ${ph(AL(1000)).toFixed(0)}, steel ${ph(ST(0.1)).toFixed(0)} to ${ph(ST(1000)).toFixed(0)}`);
+    ck('Step 3: standard depth about seven hundredths of a millimeter in steel at 100 kHz, a third of a millimeter in 6061', Math.abs(depthMuMM(STEEL_IACS, 100, STEEL_MU) - 0.07) < 0.008 && Math.abs(depthMuMM(43, 100, 1) - 0.33) < 0.03,
+      `${depthMuMM(STEEL_IACS, 100, STEEL_MU).toFixed(3)} and ${depthMuMM(43, 100, 1).toFixed(3)} mm`);
+    const sep = k => axis(dirLift(STEEL_IACS, k, STEEL_MU, 0.3), dirThin(STEEL_IACS, k, STEEL_MU, 0.3)), size = k => thinSize(STEEL_IACS, k, STEEL_MU, 0.3);
+    ck('Step 3: 0.3 mm steel sheet, lift-off vs thinning "eight degrees at 1 kHz, seventy nine at 10, fifteen at 30"', Math.round(sep(1)) === 8 && Math.round(sep(10)) === 79 && Math.round(sep(30)) === 15, [1, 10, 30].map(k => sep(k).toFixed(1)).join(', '));
+    ck('Step 3: it separates best near 10 kHz', [2, 3, 5, 7, 15, 20, 30].every(k => sep(k) < sep(10)));
+    ck('Step 3: above 30 kHz the signal fades away, and by 100 kHz it is gone', size(30) < 0.3 * size(1) && size(50) < 0.15 * size(1) && size(100) < 0.02 * size(1), [1, 10, 30, 50, 100].map(k => size(k).toExponential(1)).join(', '));
+  }
+  // illustrative paths point the way the script describes
+  {
+    const sepA = angleBetween(dirLift(43, 100, 1), dirSigDown(43, 100, 1));
+    ck('illustrative crack: between lift-off and a conductivity drop', CRACK_TURN < 0 && -CRACK_TURN < sepA, `${-CRACK_TURN} of ${sepA.toFixed(1)} deg`);
+    ck('illustrative edge: a small angle off lift-off, toward the conductivity-drop side', EDGE_TURN < 0 && -EDGE_TURN <= 15);
   }
 }
 console.log(fails ? `\n${fails} FAILED` : '\nALL CHECKS PASSED');
