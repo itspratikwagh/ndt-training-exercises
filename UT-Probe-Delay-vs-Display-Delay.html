@@ -116,7 +116,9 @@
       <button class="play" id="play">▶ Play</button>
       <input type="range" id="scrub" min="0" max="1000" value="0" step="1" aria-label="Seek">
       <span class="time" id="time">0:00 / 0:00</span>
+      <label><input type="checkbox" id="voiceToggle" checked> Voice-over</label>
       <label><input type="checkbox" id="ccToggle" checked> Narration text</label>
+      <audio id="voice" src="video/audio/UT-Probe-Delay-vs-Display-Delay-voice.mp3" preload="auto"></audio>
     </div>
     <div class="cc" id="cc"></div>
     <div class="chapters" id="chapters"></div>
@@ -885,17 +887,27 @@ if (new URLSearchParams(location.search).has('embed')) document.body.classList.a
   SCENES.forEach((s, i) => {
     const b = document.createElement('button');
     b.innerHTML = '<span class="n">' + String(i + 1).padStart(2, '0') + '</span>' + s.title;
-    b.addEventListener('click', () => { tNow = s.start; draw(); });
+    b.addEventListener('click', () => { tNow = s.start; seekVoice(); draw(); });
     chapWrap.appendChild(b);
   });
+  // voice-over: one track for the whole lesson, kept in step with the timeline
+  const voice = document.getElementById('voice'), voiceToggle = document.getElementById('voiceToggle');
+  const voiceOn = () => !RECORD && voiceToggle.checked;
+  function syncVoice() {
+    if (playing && voiceOn()) { if (Math.abs(voice.currentTime - tNow) > 0.25) voice.currentTime = tNow; if (voice.paused) voice.play().catch(() => {}); }
+    else if (!voice.paused) voice.pause();
+  }
+  const seekVoice = () => { try { voice.currentTime = tNow; } catch (e) {} };
+  voiceToggle.addEventListener('change', syncVoice);
   function setPlaying(p) {
     playing = p; if (p && tNow >= TOTAL - 0.01) tNow = 0;
     playBtn.textContent = p ? '❚❚ Pause' : '▶ Play'; bigPlay.hidden = p || tNow > 0; lastTs = null;
+    seekVoice(); syncVoice();
   }
   playBtn.addEventListener('click', () => setPlaying(!playing));
   bigPlay.addEventListener('click', () => setPlaying(true));
   stage.addEventListener('click', () => setPlaying(!playing));
-  scrub.addEventListener('input', () => { tNow = scrub.value / 1000 * TOTAL; bigPlay.hidden = true; draw(); });
+  scrub.addEventListener('input', () => { tNow = scrub.value / 1000 * TOTAL; bigPlay.hidden = true; seekVoice(); draw(); });
   ccToggle.addEventListener('change', () => { cc.hidden = !ccToggle.checked; });
   document.addEventListener('keydown', e => { if (e.code === 'Space' && e.target === document.body) { e.preventDefault(); setPlaying(!playing); } });
   function draw() {
@@ -909,7 +921,8 @@ if (new URLSearchParams(location.search).has('embed')) document.body.classList.a
   }
   function loop(ts) {
     if (playing) {
-      if (lastTs != null) tNow += (ts - lastTs) / 1000;
+      if (voiceOn() && !voice.paused && voice.readyState >= 2) tNow = voice.currentTime;   // the voice leads, so words and pictures stay together
+      else if (lastTs != null) tNow += (ts - lastTs) / 1000;
       lastTs = ts;
       if (tNow >= TOTAL) { tNow = TOTAL; setPlaying(false); }
       draw();
