@@ -92,6 +92,7 @@
   body.record .player > *:not(.stage-wrap) { display: none; }
   body.record #stage { width: 1920px; height: 1080px; border-radius: 0; }
   body.record .bigplay { display: none; }
+  body.embed header a.back { display: none; }
 </style>
 </head>
 <body>
@@ -182,6 +183,7 @@
 </main>
 
 <script>
+if (new URLSearchParams(location.search).has('embed')) document.body.classList.add('embed');   // ?embed: for iframes, hides the link back to the hub
 (function () {
   'use strict';
 
