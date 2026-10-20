@@ -50,6 +50,12 @@
     .cvwrap { display: flex; flex-direction: column; }
     .cvwrap .toolbar { position: static; order: -1; margin: 0 0 8px; }
   }
+  /* full screen: the plate, A-scan, top view and the steps fill the screen; Esc or the button leaves */
+  .fsbtn { position: absolute; top: 14px; right: 14px; z-index: 2; padding: 5px 10px; font-size: 13px; background: rgba(255,255,255,0.92); }
+  .trainer:fullscreen, .trainer.fs { background: var(--page); padding: 12px; overflow: auto; align-content: start; grid-template-columns: minmax(0, 1fr) 340px; }
+  .trainer.fs { position: fixed; inset: 0; z-index: 1000; }
+  .trainer:fullscreen .stage, .trainer.fs .stage { width: 100%; max-width: calc((100vh - 70px) * 1000 / 700); justify-self: center; }
+  @media (max-width: 700px) { .trainer:fullscreen, .trainer.fs { grid-template-columns: 1fr; } }
   .help { font-size: 13px; color: var(--ink-soft); margin-top: 8px; }
 
   .side { display: grid; gap: 10px; }
@@ -108,8 +114,9 @@
 </header>
 <main class="wrap">
   <p class="lede">Pick your weld plate and your probe, enter your probe's beam exit point, and the exercise works out where to put the probe to cover the root, the middle, the toe and the HAZ, from both sides.</p>
-  <div class="trainer">
+  <div class="trainer" id="trainer">
     <div class="stage" id="stage">
+      <button class="fsbtn" id="fsbtn" aria-label="Full screen" title="Full screen">⛶ Full screen</button>
       <div class="cvwrap">
         <canvas id="cv" width="1500" height="1050" aria-label="Cross-section of the welded plate with an angle-beam probe, and the A-scan below"></canvas>
         <div class="toolbar"><span class="lab">Exit point to weld centerline</span><span class="big" id="dist">---</span><span class="lab" id="side"></span></div>
@@ -539,6 +546,23 @@
   document.getElementById('reset').addEventListener('click', () => { if (q.phase === 'setup') return; derive(); st.e = null; st.flaw = 0; q = fresh(); q.answered.setup = true; q.phase = plate().custom ? 'skip' : 'thick'; render(); });
   document.getElementById('setup').addEventListener('click', () => { st.flaw = 0; q = fresh(); derive(); st.e = -Math.min(G.EMIN + 0.6, G.XR - (cfg.foot - cfg.bep) - 0.1); render(); });
   if (new URLSearchParams(location.search).has('embed')) document.body.classList.add('embed');
+  // full screen: the real thing where the browser allows it, otherwise fill the window (iPhone, or an iframe without allowfullscreen)
+  const trainerEl = document.getElementById('trainer'), fsBtn = document.getElementById('fsbtn');
+  const fsOn = () => document.fullscreenElement === trainerEl || document.webkitFullscreenElement === trainerEl || trainerEl.classList.contains('fs');
+  const fsLabel = () => { fsBtn.textContent = fsOn() ? '✕ Exit full screen' : '⛶ Full screen'; };
+  fsBtn.addEventListener('click', () => {
+    if (fsOn()) {
+      if (trainerEl.classList.contains('fs')) { trainerEl.classList.remove('fs'); document.body.style.overflow = ''; }
+      else (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    } else {
+      const req = trainerEl.requestFullscreen || trainerEl.webkitRequestFullscreen;
+      const fallback = () => { trainerEl.classList.add('fs'); document.body.style.overflow = 'hidden'; fsLabel(); };
+      if (req && (document.fullscreenEnabled || document.webkitFullscreenEnabled)) { const r = req.call(trainerEl); if (r && r.catch) r.catch(fallback); } else fallback();
+    }
+    fsLabel();
+  });
+  document.addEventListener('fullscreenchange', fsLabel); document.addEventListener('webkitfullscreenchange', fsLabel);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && trainerEl.classList.contains('fs')) { trainerEl.classList.remove('fs'); document.body.style.overflow = ''; fsLabel(); } });
 
   // ---------- drawing ----------
   function txt(s, x, y, o) { o = o || {}; ctx.font = `${o.w || 600} ${o.size || 14}px ${o.mono ? MONO : SANS}`; ctx.fillStyle = o.c || C.ink; ctx.textAlign = o.a || 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillText(s, x, y); }
