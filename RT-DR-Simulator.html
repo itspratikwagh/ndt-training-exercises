@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Digital Radiography Step by Step</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Layout idea: an assembly-manual page on the left, a line-art workbench on the right. One visual world, light paper. */
+  --paper:#e9edf0;
+  --sheet:#ffffff;
+  --ink:#16191c;
+  --muted:#5a636b;
+  --accent:#1b5fd1;
+  --warn:#c2410c;
+  --ok:#22803a;
+  --rule:#cfd5da;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Barlow","Helvetica Neue",Arial,sans-serif;
+  /* stage palette (normal white light) */
+  --st-bg:#f7f8f9; --st-ink:#1b1f23; --st-fill:#ffffff; --st-fill2:#e3e7ea; --st-fill3:#c2c9cf;
+  --st-bench:#eef0f1; --st-film:#d8dfcd; --st-lead:#a9b1b8; --st-al:#d3d9de; --st-liq:#d3e4ee; --st-hole:#2a2f34;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.4}
+button{font:inherit}
+.app{display:grid;grid-template-rows:auto 1fr;height:100%;min-height:640px}
+/* header */
+.top{display:flex;align-items:center;gap:18px;padding:10px 16px;background:var(--sheet);border-bottom:2px solid var(--ink);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.logo{width:40px;height:40px;border:2px solid var(--ink);border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:18px;flex:none}
+.brand h1{font-family:var(--display);font-weight:700;font-size:22px;margin:0;letter-spacing:.2px;text-wrap:balance;line-height:1.1}
+.brand p{margin:0;color:var(--muted);font-size:13px}
+.phases{display:flex;gap:6px;flex:1;flex-wrap:wrap;justify-content:center}
+.ph{display:flex;align-items:center;gap:6px;padding:4px 8px;border:1.5px solid var(--rule);border-radius:999px;font-family:var(--display);font-weight:600;font-size:14px;color:var(--muted);background:var(--sheet)}
+.ph.cur{border-color:var(--ink);color:var(--ink)}
+.ph.done{color:var(--ok);border-color:var(--ok)}
+.dots{display:flex;gap:3px}
+.dot{width:9px;height:9px;border-radius:50%;border:1.5px solid currentColor;background:transparent;padding:0;cursor:pointer}
+.dot.done{background:currentColor}
+.dot.here{outline:2px solid var(--accent);outline-offset:1px}
+.dot:disabled{cursor:default;opacity:.5}
+.btn{border:2px solid var(--ink);background:var(--sheet);color:var(--ink);border-radius:8px;padding:7px 12px;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--paper)}
+.btn.primary{background:var(--ink);color:#fff}
+.btn.primary:hover{background:#2c3238}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn:focus-visible,.dot:focus-visible,.tool:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+/* main */
+.main{display:grid;grid-template-columns:340px 1fr;min-height:0}
+.manual{background:var(--sheet);border-right:2px solid var(--ink);padding:16px 18px;display:flex;flex-direction:column;gap:14px;overflow:auto;min-height:0}
+.phase-label{font-family:var(--display);font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);font-size:13px}
+.stephead{display:flex;align-items:flex-start;gap:12px}
+.stepnum{font-family:var(--display);font-weight:700;font-size:64px;line-height:.85;min-width:40px;flex:none;font-variant-numeric:tabular-nums}
+.stephead h2{font-family:var(--display);font-weight:700;font-size:24px;line-height:1.1;margin:4px 0 0;text-wrap:balance}
+.tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.tasks li{display:grid;grid-template-columns:22px 1fr;gap:8px;align-items:start}
+.tasks li .box{width:20px;height:20px;border:2px solid var(--ink);border-radius:4px;display:grid;place-items:center;font-size:13px;font-weight:700;margin-top:1px}
+.tasks li.ok .box{background:var(--ok);border-color:var(--ok);color:#fff}
+.tasks li.ok span{color:var(--muted)}
+.parts-h,.tip-h{font-family:var(--display);font-weight:700;font-size:14px;letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px}
+.parts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
+.part{border:1.5px solid var(--rule);border-radius:8px;padding:6px;display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;font-size:12px;line-height:1.2}
+.part svg{width:72px;height:46px}
+.part .n{font-family:var(--display);font-weight:700;font-size:15px;align-self:flex-start}
+.tip{border-left:4px solid var(--ink);background:var(--paper);padding:8px 10px;border-radius:0 8px 8px 0;font-size:14px}
+.tip.warnbox{border-left-color:var(--warn)}
+.tip p{margin:0 0 6px}.tip p:last-child{margin:0}
+.navrow{display:flex;gap:8px;margin-top:auto;padding-top:6px}
+.navrow .btn{flex:1}
+.complete-badge{display:none;align-items:center;gap:8px;color:var(--ok);font-weight:600}
+.complete-badge.show{display:flex}
+/* stage */
+.stage{position:relative;background:var(--st-bg);min-height:0;overflow:hidden;transition:background .3s}
+.stage.safelight{--st-bg:#170605;--st-ink:#ff7d6b;--st-fill:#2a0c09;--st-fill2:#3a120e;--st-fill3:#521a13;--st-bench:#1e0807;--st-film:#7a2d22;--st-lead:#4b1913;--st-al:#3a120e;--st-liq:#2d0b08;--st-hole:#0c0303}
+.stage.blackout{--st-bg:#030303;--st-ink:#272727;--st-fill:#070707;--st-fill2:#090909;--st-fill3:#0c0c0c;--st-bench:#050505;--st-film:#0a0a0a;--st-lead:#0b0b0b;--st-al:#0a0a0a;--st-liq:#060606;--st-hole:#020202}
+.stage.dim{--st-bg:#23272b;--st-ink:#9aa4ad;--st-fill:#2e3338;--st-fill2:#383e44;--st-fill3:#484f56;--st-bench:#2a2f33}
+#svg{width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+.bg{fill:var(--st-bg)}
+.bench{fill:var(--st-bench)}
+.grain{fill:none;stroke:var(--st-ink);stroke-width:1.2;opacity:.09}
+.s{fill:var(--st-fill);stroke:var(--st-ink);stroke-width:2;stroke-linejoin:round}
+.s2{fill:var(--st-fill2);stroke:var(--st-ink);stroke-width:2;stroke-linejoin:round}
+.s3{fill:var(--st-fill3);stroke:var(--st-ink);stroke-width:2;stroke-linejoin:round}
+.ln{fill:none;stroke:var(--st-ink);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.thin{stroke-width:1.2}
+.dash{stroke-dasharray:6 5}
+.dashdot{stroke-dasharray:14 4 3 4}
+.tx{fill:var(--st-ink);font-family:var(--display);font-weight:600;font-size:14px}
+.tx.small{font-size:12px}.tx.tiny{font-size:9.5px}.tx.big{font-size:22px}.tx.huge{font-size:30px}
+.tx.acc{fill:var(--accent)}
+.film{fill:var(--st-film);stroke:var(--st-ink);stroke-width:1.5}
+.pb{fill:var(--st-lead);stroke:var(--st-ink);stroke-width:1.5}
+.hatch{fill:url(#hatch);stroke:none}
+.al{fill:var(--st-al);stroke:var(--st-ink);stroke-width:2}
+.al2{fill:var(--st-fill3);stroke:var(--st-ink);stroke-width:1.2}
+.hole{fill:var(--st-hole);stroke:var(--st-ink);stroke-width:1}
+.tag{fill:var(--st-fill);stroke:var(--st-ink);stroke-width:1.2}
+.liq{fill:var(--st-liq);stroke:none}
+.opening{fill:#fffbe6;stroke:var(--st-ink);stroke-width:1.5}
+.spill{fill:#fff6c8;opacity:.55}
+.stage:not(.safelight):not(.blackout) .spill{display:none}
+.glow{fill:url(#redglow);pointer-events:none}
+.stage:not(.safe-on) .glow{display:none}
+.lampf{fill:var(--st-fill3);stroke:var(--st-ink);stroke-width:1.5}
+.stage.safe-on .lampf{fill:#ff4a3a}
+.stage.safelight .filmh,.stage.safelight .tint{filter:sepia(1) saturate(3) hue-rotate(-35deg) brightness(.75)}
+.ipf{fill:#4a7bd6;stroke:var(--st-ink);stroke-width:1.5}
+.ipb{fill:#5d646b;stroke:var(--st-ink);stroke-width:1.5}
+.scr{fill:none;stroke:#eaf2ff;stroke-width:1.6;stroke-linecap:round}
+.dust{fill:#f3efe2}
+.cf{fill:#33383d;stroke:var(--st-ink);stroke-width:1.5}
+.hud select{font:inherit;padding:5px 6px;border:1.5px solid var(--ink);border-radius:6px;background:var(--sheet);color:var(--ink)}
+.hud input[type=range]{width:100%;accent-color:var(--accent)}
+.zone{fill:rgba(27,95,209,.06);stroke:var(--accent);stroke-width:2;stroke-dasharray:8 6;pointer-events:none}
+.zone.hot{fill:rgba(27,95,209,.2)}
+.zone.pulse,.hint.pulse{animation:pulse .5s ease-in-out 5 alternate}
+@keyframes pulse{from{stroke-width:2}to{stroke-width:6}}
+.zlabel{fill:var(--accent);font-family:var(--display);font-weight:600;font-size:12px;pointer-events:none}
+.hint{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-dasharray:1 7;stroke-linecap:round;marker-end:url(#arrowhead);pointer-events:none}
+.draggable{cursor:grab}
+.dragging{cursor:grabbing}
+.sel{filter:drop-shadow(0 0 3px var(--accent)) drop-shadow(0 0 1px var(--accent))}
+.clickable{cursor:pointer}
+.clickable:hover .s,.clickable:hover .s2,.clickable:hover .s3{stroke:var(--accent)}
+.knob{cursor:grab}
+.on-lamp{fill:#ffcf33}
+.xr-lamp{fill:var(--st-fill3);stroke:var(--st-ink);stroke-width:2}
+.xr-lamp.lit{fill:#ff3b2f;filter:drop-shadow(0 0 8px #ff3b2f)}
+.viewer-panel{fill:#d6d9d2;stroke:var(--st-ink);stroke-width:2}
+.viewer-panel.lit{fill:#fffdf0;filter:drop-shadow(0 0 18px rgba(255,250,220,.9))}
+/* overlays on the stage */
+.tools{position:absolute;left:10px;top:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:var(--sheet);border:2px solid var(--ink);border-radius:10px;padding:5px;max-width:calc(100% - 20px)}
+.tool{border:1.5px solid var(--rule);background:var(--sheet);border-radius:7px;min-width:34px;height:34px;padding:0 8px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:4px;color:var(--ink)}
+.tool:hover{border-color:var(--ink)}
+.tool:disabled{opacity:.35;cursor:not-allowed}
+.tool svg{width:18px;height:18px}
+.zoomval{font-family:var(--display);font-weight:600;min-width:46px;text-align:center;font-variant-numeric:tabular-nums}
+.sep{width:1px;height:24px;background:var(--rule)}
+.selname{font-size:12px;color:var(--muted);padding:0 4px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.viewtag{position:absolute;right:10px;top:10px;font-family:var(--display);font-weight:700;letter-spacing:1px;font-size:13px;background:var(--sheet);border:2px solid var(--ink);border-radius:999px;padding:3px 10px;display:flex;gap:6px;align-items:center}
+.hud{position:absolute;right:10px;top:48px;width:min(300px,calc(100% - 20px));background:var(--sheet);border:2px solid var(--ink);border-radius:10px;padding:10px 12px;display:none;flex-direction:column;gap:8px;font-size:14px}
+.hud.show{display:flex}
+.hud.low{top:auto;bottom:64px}
+#svg [tabindex]:focus{outline:none}
+#svg [tabindex]:focus-visible{outline:2px solid var(--accent)}
+.hud .row{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.hud .lbl{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.hud .val{font-family:var(--display);font-weight:700;font-size:22px;font-variant-numeric:tabular-nums}
+.hud .bar{height:8px;border:1.5px solid var(--ink);border-radius:4px;overflow:hidden}
+.hud .bar i{display:block;height:100%;background:var(--ink);width:0}
+.hud .btns{display:flex;gap:6px;flex-wrap:wrap}
+.hud .btns .btn{padding:5px 10px;font-size:14px}
+.hud table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+.hud td{padding:2px 0;border-bottom:1px solid var(--rule)}
+.hud td:last-child{text-align:right;font-weight:600}
+.hud .good{color:var(--ok);font-weight:600}.hud .bad{color:var(--warn);font-weight:600}
+.btn.attn{border-color:var(--accent);background:var(--accent);color:#fff;animation:pulseb .6s ease-in-out infinite alternate}
+@keyframes pulseb{to{box-shadow:0 0 0 5px rgba(27,95,209,.25)}}
+.toast{position:absolute;left:50%;bottom:14px;transform:translate(-50%,20px);max-width:min(620px,calc(100% - 24px));background:var(--sheet);border:2px solid var(--ink);border-radius:10px;padding:9px 14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;font-size:15px;display:flex;gap:10px;align-items:flex-start}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast.warn{border-color:var(--warn)}
+.toast.ok{border-color:var(--ok)}
+.toast .ic{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:14px;background:var(--ink)}
+.toast.warn .ic{background:var(--warn)}.toast.ok .ic{background:var(--ok)}
+.overlay{position:absolute;inset:0;overflow:auto;padding:70px 20px 20px;background:var(--st-bg)}
+.sheetcard{max-width:760px;margin:0 auto;background:var(--sheet);border:2px solid var(--ink);border-radius:12px;padding:20px 22px}
+.sheetcard h3{font-family:var(--display);font-weight:700;font-size:26px;margin:0 0 4px}
+.sheetcard h4{font-family:var(--display);font-weight:700;font-size:17px;margin:16px 0 6px;text-transform:uppercase;letter-spacing:.5px}
+.sheetcard p{margin:0 0 8px;max-width:65ch}
+.tech{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:14px}
+.tech th,.tech td{padding:5px 8px;border-bottom:1px solid var(--rule);text-align:left;vertical-align:top}
+.tech th{width:42%;font-weight:600;color:var(--muted)}
+.compare{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.compare div{border:1.5px solid var(--rule);border-radius:8px;padding:8px;font-size:13px}
+.compare b{font-family:var(--display);font-size:16px;display:block}
+.compare .now{border-color:var(--ink)}
+.modal{position:fixed;inset:0;background:rgba(10,12,14,.55);display:grid;place-items:center;padding:16px;z-index:10}
+.modal[hidden]{display:none}
+.modal .sheetcard{max-height:calc(100% - 20px);overflow:auto;width:100%}
+.modal .close{float:right}
+.note{font-size:12.5px;color:var(--muted)}
+@media (max-width:860px){
+  .app{height:auto}
+  .main{grid-template-columns:1fr}
+  .manual{border-right:none;border-bottom:2px solid var(--ink);max-height:none}
+  .stage{height:68vh;min-height:430px}
+  .navrow{margin-top:4px}
+  .compare{grid-template-columns:1fr}
+}
+@media (max-width:600px){
+  .top{gap:8px}
+  .phases{justify-content:flex-start;gap:4px}
+  .ph{font-size:12px;padding:3px 6px}
+  .ph > span:first-child{max-width:92px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stepnum{font-size:48px}
+  .selname{display:none}
+  .hud{width:200px;font-size:12px;padding:7px 9px;top:auto;bottom:10px}
+  .hud .val{font-size:17px}
+  .viewtag{top:auto;bottom:10px;left:10px;right:auto}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">DR</div>
+      <div>
+        <h1>Digital Radiography (DR), Step by Step</h1>
+        <p id="subline">Same aluminum casting, flat-panel detector, frame averaging</p>
+      </div>
+    </div>
+    <nav class="phases" id="phases" aria-label="Progress"></nav>
+    <button class="btn" id="fsBtn" type="button" hidden>Full screen</button>
+    <button class="btn" id="techBtn" type="button">Technique sheet</button>
+  </header>
+  <main class="main">
+    <aside class="manual" aria-live="polite">
+      <div class="phase-label" id="phaseLabel"></div>
+      <div class="stephead"><div class="stepnum" id="stepNum">1</div><h2 id="stepTitle"></h2></div>
+      <ol class="tasks" id="tasks"></ol>
+      <div class="complete-badge" id="doneBadge"><span class="ic" aria-hidden="true">&#10003;</span> Step complete. Press Next.</div>
+      <div class="parts" id="partsBox"><div class="parts-h">Parts for this step</div><div class="parts-grid" id="partsGrid"></div></div>
+      <div class="tip" id="tip"></div>
+      <div class="navrow">
+        <button class="btn" id="backBtn" type="button">Back</button>
+        <button class="btn" id="hintBtn" type="button">Show me</button>
+        <button class="btn primary" id="nextBtn" type="button">Next</button>
+      </div>
+    </aside>
+    <section class="stage" id="stage" aria-label="Workbench">
+      <svg id="svg" viewBox="0 0 1000 625" xmlns="http://www.w3.org/2000/svg" role="application" aria-label="Interactive workbench. Drag parts, select to rotate, scroll or use buttons to zoom.">
+        <defs>
+          <filter id="noise" x="0" y="0" width="1" height="1"><feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="1" seed="7"/><feColorMatrix type="saturate" values="0"/></filter>
+          <filter id="wl" color-interpolation-filters="sRGB" x="0" y="0" width="1" height="1"><feComponentTransfer><feFuncR type="linear" slope="1" intercept="0"/><feFuncG type="linear" slope="1" intercept="0"/><feFuncB type="linear" slope="1" intercept="0"/></feComponentTransfer></filter>
+          <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="7" style="stroke:var(--st-ink);stroke-width:1.2;opacity:.35"/>
+          </pattern>
+          <radialGradient id="redglow">
+            <stop offset="0" stop-color="#ff3b2f" stop-opacity=".35"/>
+            <stop offset="1" stop-color="#ff3b2f" stop-opacity="0"/>
+          </radialGradient>
+          <marker id="arrowhead" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 Z" fill="#1b5fd1"/>
+          </marker>
+          <marker id="dimarrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M0 1 L10 5 L0 9 Z" style="fill:var(--st-ink)"/>
+          </marker>
+        </defs>
+        <g id="world"></g>
+      </svg>
+      <div class="tools" role="toolbar" aria-label="Workbench tools">
+        <button class="tool" id="zOut" type="button" aria-label="Zoom out" title="Zoom out (-)">&#8722;</button>
+        <span class="zoomval" id="zoomVal">100%</span>
+        <button class="tool" id="zIn" type="button" aria-label="Zoom in" title="Zoom in (+)">+</button>
+        <button class="tool" id="zFit" type="button" title="Fit to screen (0)">Fit</button>
+        <span class="sep"></span>
+        <button class="tool" id="rotL" type="button" aria-label="Rotate selected part left" title="Rotate left (Shift+R)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 3v5h5"/></svg></button>
+        <button class="tool" id="rotR" type="button" aria-label="Rotate selected part right" title="Rotate right (R)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M20 3v5h-5"/></svg></button>
+        <button class="tool" id="flipBtn" type="button" title="Flip selected part over (F)">Flip</button>
+        <span class="selname" id="selName">Click a part to select it</span>
+      </div>
+      <div class="viewtag" id="viewTag">VIEW</div>
+      <div class="hud" id="hud"></div>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+      <div class="overlay" id="overlay" hidden></div>
+    </section>
+  </main>
+</div>
+<div class="modal" id="startModal">
+  <div class="sheetcard" role="dialog" aria-modal="true" aria-labelledby="startTitle" style="max-width:520px">
+    <h3 id="startTitle">Digital Radiography (DR), Step by Step</h3>
+    <p>Power up a flat-panel detector, take a check shot, average frames for the final image, then evaluate it on screen.</p>
+    <p class="note">Drag parts into place. Select a part to rotate or flip it. Use the mouse wheel, pinch or the + and - buttons to zoom. Full screen gives you the most room.</p>
+    <div class="btns" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <button class="btn primary" id="startFs" type="button">Start in full screen</button>
+      <button class="btn" id="startHere" type="button">Start in this window</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="techModal" hidden>
+  <div class="sheetcard" role="dialog" aria-modal="true" aria-labelledby="techTitle">
+    <button class="btn close" id="techClose" type="button">Close</button>
+    <h3 id="techTitle">Technique sheet</h3>
+    <p class="note">Training values for this exercise. On the job, always follow your written procedure, technique chart and the detector manufacturer's instructions.</p>
+    <div id="techBody"></div>
+  </div>
+</div>
+<script>
+/* =========================================================
+   EXERCISE VALUES: edit these to match your own technique.
+   ========================================================= */
+const CFG = {
+  part: 'Aluminum bracket casting',
+  thk: 0.50,            // in, part thickness (also OFD)
+  detector: 'Flat-panel detector (DDA), 75 \u00b5m pixel pitch, 9.05 x 11.33 in active area',
+  focal: 0.040,         // in
+  sfd: 40,              // in, source-to-detector distance (SDD)
+  kv: 70,
+  ma: 2,
+  time: 60,             // s, generator timer (must cover frames x frame time)
+  frameTime: 3,         // s per frame
+  frames: 16,           // frames averaged
+  iqi: 10,
+  pixel: 75
+};
+const SOD = () => +(CFG.sfd - CFG.thk).toFixed(2);
+const UG = () => CFG.focal * CFG.thk / SOD();
+
+let viewHook = null;
+/* ---------- basic helpers ---------- */
+const NS = 'http://www.w3.org/2000/svg';
+const $ = s => document.querySelector(s);
+const svg = $('#svg'), world = $('#world'), stageEl = $('#stage');
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const norm = r => ((Math.round(r) % 360) + 360) % 360;
+const fmtT = s => { s = Math.round(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+const RM = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function el(tag, attrs = {}, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+let L = {};
+function grp(mk, parent) { const g = el('g', {}, parent || L.bg); g.innerHTML = mk; return g; }
+function pt(e) { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(world.getScreenCTM().inverse()); }
+
+/* ---------- view: zoom and pan ---------- */
+const VB = { w: 1000, h: 625 };
+let view = { x: 0, y: 0, z: 1 };
+function applyView() {
+  const w = VB.w / view.z, h = VB.h / view.z;
+  view.x = clamp(view.x, 0, VB.w - w); view.y = clamp(view.y, 0, VB.h - h);
+  svg.setAttribute('viewBox', `${view.x} ${view.y} ${w} ${h}`);
+  $('#zoomVal').textContent = Math.round(view.z * 100) + '%';
+  viewHook && viewHook();
+}
+function zoomAt(f, cx, cy) {
+  const nz = clamp(view.z * f, 1, 24), k = view.z / nz;
+  view.x = cx - (cx - view.x) * k; view.y = cy - (cy - view.y) * k; view.z = nz; applyView();
+}
+function zoomCenter(f) { const w = VB.w / view.z, h = VB.h / view.z; zoomAt(f, view.x + w / 2, view.y + h / 2); }
+function resetView() { view = { x: 0, y: 0, z: 1 }; applyView(); }
+$('#zIn').onclick = () => zoomCenter(1.5);
+$('#zOut').onclick = () => zoomCenter(1 / 1.5);
+$('#zFit').onclick = resetView;
+svg.addEventListener('wheel', e => { e.preventDefault(); const p = pt(e); zoomAt(e.deltaY < 0 ? 1.18 : 1 / 1.18, p.x, p.y); }, { passive: false });
+
+let wasPan = false;
+const ptrs = new Map(); let pan = null, pinch = null;
+svg.addEventListener('pointerdown', e => {
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  wasPan = false;
+  if (ptrs.size === 1) pan = { cx: e.clientX, cy: e.clientY, vx: view.x, vy: view.y, a: world.getScreenCTM().a };
+  if (ptrs.size === 2) {
+    const [p1, p2] = [...ptrs.values()];
+    pinch = { d: Math.hypot(p1.x - p2.x, p1.y - p2.y), z: view.z }; pan = null;
+  }
+});
+window.addEventListener('pointermove', e => {
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && ptrs.size === 2) {
+    const [p1, p2] = [...ptrs.values()];
+    const d = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+    const mid = pt({ clientX: (p1.x + p2.x) / 2, clientY: (p1.y + p2.y) / 2 });
+    zoomAt((pinch.z * d / pinch.d) / view.z, mid.x, mid.y); wasPan = true; return;
+  }
+  if (pan) {
+    const dx = e.clientX - pan.cx, dy = e.clientY - pan.cy;
+    if (Math.abs(dx) + Math.abs(dy) > 5) wasPan = true;
+    if (wasPan && view.z > 1) { view.x = pan.vx - dx / pan.a; view.y = pan.vy - dy / pan.a; applyView(); }
+  }
+});
+function endPtr(e) {
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.delete(e.pointerId);
+  if (ptrs.size < 2) pinch = null;
+  if (ptrs.size === 0) { if (!wasPan && pan) select(null); pan = null; }
+}
+window.addEventListener('pointerup', endPtr);
+window.addEventListener('pointercancel', endPtr);
+
+/* ---------- objects, selection, drag, rotate ---------- */
+let objs = [], zones = [], selected = null, timers = [], hints = [];
+function obj(mk, x, y, rot = 0, o = {}) {
+  const g = el('g', { class: 'obj' }, o.parent || L.obj);
+  if (o.fixed) { const fg = el('g', {}, g); fg.innerHTML = o.fixed; }
+  const rg = el('g', {}, g); rg.innerHTML = mk;
+  const ob = Object.assign({ g, rg, x, y, rot, home: { x, y }, name: 'Part' }, o);
+  ob.place = (nx = ob.x, ny = ob.y, nr = ob.rot) => {
+    ob.x = nx; ob.y = ny; ob.rot = nr;
+    g.setAttribute('transform', `translate(${nx} ${ny})`);
+    rg.setAttribute('transform', `rotate(${nr})`);
+  };
+  ob.place(x, y, rot);
+  if (rg.querySelector('.face-front')) setFace(ob, ob.face || 'front');
+  objs.push(ob);
+  return ob;
+}
+function setFace(ob, f) {
+  ob.face = f;
+  ob.rg.querySelectorAll('.face-front').forEach(n => n.style.display = f === 'front' ? '' : 'none');
+  ob.rg.querySelectorAll('.face-back').forEach(n => n.style.display = f === 'back' ? '' : 'none');
+}
+function tween(ob, x, y, r = ob.rot, dur = 220, cb) {
+  if (RM) dur = 0;
+  const x0 = ob.x, y0 = ob.y, r0 = ob.rot, t0 = performance.now();
+  const step = now => {
+    let k = dur ? Math.min(1, (now - t0) / dur) : 1; const e = 1 - Math.pow(1 - k, 3);
+    ob.place(x0 + (x - x0) * e, y0 + (y - y0) * e, r0 + (r - r0) * e);
+    if (k < 1) requestAnimationFrame(step); else { ob.place(x, y, r); cb && cb(); }
+  };
+  requestAnimationFrame(step);
+}
+function goHome(ob) { tween(ob, ob.home.x, ob.home.y, ob.rot); }
+function lock(ob) { ob.locked = true; ob.g.classList.remove('draggable'); ob.g.removeAttribute('tabindex'); if (L.bg && ob.g.parentNode === L.obj) L.bg.appendChild(ob.g); if (selected === ob) select(null); }
+function select(ob) {
+  if (selected) selected.g.classList.remove('sel');
+  selected = ob && !ob.locked ? ob : null;
+  if (selected) selected.g.classList.add('sel');
+  updateTools();
+}
+function updateTools() {
+  const s = selected;
+  $('#rotL').disabled = $('#rotR').disabled = !(s && s.rotStep);
+  $('#flipBtn').disabled = !(s && s.flippable);
+  $('#selName').textContent = s ? 'Selected: ' + s.name : 'Click a part to select it';
+}
+function rotateSel(dir) {
+  const ob = selected; if (!ob || !ob.rotStep) return;
+  let nr = ob.rot + dir * ob.rotStep;
+  if (ob.rotMin !== undefined) nr = clamp(nr, ob.rotMin, ob.rotMax);
+  if (nr === ob.rot) { toast(ob.rotLimitMsg || 'It does not turn any further that way.', 'warn'); return; }
+  tween(ob, ob.x, ob.y, nr, 180, () => ob.onRotate && ob.onRotate(ob));
+}
+function flipSel() { const ob = selected; if (!ob || !ob.flippable) return; setFace(ob, ob.face === 'front' ? 'back' : 'front'); ob.onFlip && ob.onFlip(ob); }
+$('#rotL').onclick = () => rotateSel(-1);
+$('#rotR').onclick = () => rotateSel(1);
+$('#flipBtn').onclick = flipSel;
+
+function draggable(ob, opt = {}) {
+  ob.g.classList.add('draggable');
+  ob.g.setAttribute('tabindex', '0');
+  ob.g.setAttribute('role', 'button');
+  ob.g.setAttribute('aria-label', ob.name);
+  ob.g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(ob); } });
+  ob.g.addEventListener('pointerdown', e => {
+    if (ob.locked) return;
+    if (opt.canStart) { const m = opt.canStart(ob); if (m !== true) { if (typeof m === 'string') toast(m, 'warn'); e.stopPropagation(); return; } }
+    e.stopPropagation(); e.preventDefault(); select(ob);
+    const p = pt(e), dx = p.x - ob.x, dy = p.y - ob.y; let moved = false;
+    ob.g.parentNode.appendChild(ob.g); ob.g.classList.add('dragging');
+    const mv = ev => {
+      const q = pt(ev); let nx = q.x - dx, ny = q.y - dy;
+      if (opt.axis === 'y') nx = ob.x;
+      if (opt.bounds) { ny = clamp(ny, opt.bounds.y0, opt.bounds.y1); nx = clamp(nx, opt.bounds.x0 ?? -1e9, opt.bounds.x1 ?? 1e9); }
+      if (opt.snapY) ny = opt.snapY(ny);
+      ob.place(nx, ny); moved = true;
+      zones.forEach(z => z.el.classList.toggle('hot', !z.done && z.has(ob)));
+      opt.onMove && opt.onMove(ob);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up);
+      ob.g.classList.remove('dragging'); zones.forEach(z => z.el.classList.remove('hot'));
+      if (!moved) return;
+      const r = opt.onDrop ? opt.onDrop(ob) : undefined;
+      if (r === false || typeof r === 'string') { if (typeof r === 'string') toast(r, 'warn'); goHome(ob); }
+    };
+    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+  });
+}
+function clickable(node, fn, label) {
+  node.classList.add('clickable');
+  node.setAttribute('tabindex', '0'); node.setAttribute('role', 'button');
+  if (label) node.setAttribute('aria-label', label);
+  node.addEventListener('click', e => { if (wasPan) return; e.stopPropagation(); fn(e); });
+  node.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(e); } });
+}
+function zone(x, y, w, h, label, o = {}) {
+  const r = el('rect', { class: 'zone', x: x - w / 2, y: y - h / 2, width: w, height: h, rx: o.rx ?? 6 }, L.zone);
+  let t = null;
+  if (label) { t = el('text', { class: 'zlabel', x: x, y: o.labelBelow ? y + h / 2 + 15 : y - h / 2 - 6, 'text-anchor': 'middle' }, L.zone); t.textContent = label; }
+  const z = { x, y, w, h, el: r, t, done: false, has: ob => Math.abs(ob.x - x) <= Math.max(w / 2, 34) && Math.abs(ob.y - y) <= Math.max(h / 2, 34), hide() { r.style.display = 'none'; if (t) t.style.display = 'none'; z.done = true; } };
+  zones.push(z); return z;
+}
+function arrow(x1, y1, x2, y2, bend = 0.25) {
+  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, dx = x2 - x1, dy = y2 - y1;
+  const cx = mx - dy * bend, cy = my + dx * bend;
+  const p = el('path', { class: 'hint', d: `M${x1} ${y1} Q${cx} ${cy} ${x2} ${y2}` }, L.fx);
+  hints.push(p); return p;
+}
+
+/* ---------- messages and HUD ---------- */
+let toastT;
+function toast(msg, kind = 'info') {
+  const t = $('#toast');
+  const ic = kind === 'warn' ? '!' : kind === 'ok' ? '&#10003;' : 'i';
+  t.innerHTML = `<span class="ic" aria-hidden="true">${ic}</span><span>${msg}</span>`;
+  t.className = 'toast show ' + kind;
+  clearTimeout(toastT); toastT = setTimeout(() => t.className = 'toast ' + kind, kind === 'warn' ? 5600 : 3800);
+}
+let hudLow = false;
+function hud(html) { const h = $('#hud'); h.innerHTML = html || ''; h.classList.toggle('show', !!html); h.classList.toggle('low', hudLow); return h; }
+let ffwd = 1;
+function timerHud(label, total, speedLabel) {
+  const h = hud(`<div class="row"><span class="lbl">${label}</span><span class="val" id="hClock">0:00</span></div>
+    <div class="row note"><span>of ${fmtT(total)}</span><span id="hSpeed">${speedLabel}</span></div>
+    <div class="bar"><i id="hBar"></i></div>
+    <div class="note" id="hMsg"></div>
+    <div class="btns"><button class="btn" id="hFF" type="button">Fast-forward</button><button class="btn attn" id="hAct" type="button" hidden>Agitate</button></div>`);
+  $('#hFF').onclick = () => { ffwd = ffwd === 1 ? 4 : 1; $('#hFF').textContent = ffwd === 1 ? 'Fast-forward' : 'Normal speed'; };
+  return {
+    update(t) { $('#hClock').textContent = fmtT(t); $('#hBar').style.width = (100 * t / total) + '%'; },
+    msg(m) { $('#hMsg').innerHTML = m; },
+    action(label, fn) { const b = $('#hAct'); b.textContent = label; b.hidden = false; b.onclick = () => { b.hidden = true; fn(); }; b.focus(); },
+    hideAction() { $('#hAct').hidden = true; }
+  };
+}
+function simTimer({ total, speed, pauses = [], onTick, onPause, onDone }) {
+  let t = 0, paused = false, last = performance.now(), pi = 0, stopped = false;
+  const id = setInterval(() => {
+    const now = performance.now(), dt = (now - last) / 1000; last = now;
+    if (paused || stopped) return;
+    t += dt * speed * ffwd;
+    if (pi < pauses.length && t >= pauses[pi]) { t = pauses[pi]; paused = true; onTick && onTick(t); onPause && onPause(pi++); return; }
+    if (t >= total) { t = total; stopped = true; clearInterval(id); onTick && onTick(t); onDone && onDone(); return; }
+    onTick && onTick(t);
+  }, 50);
+  timers.push(id);
+  return { resume() { paused = false; last = performance.now(); } };
+}
+
+/* ---------- room light state ---------- */
+function applyRoom(r) {
+  stageEl.classList.toggle('safelight', !r.white && !!r.safe && !r.dim);
+  stageEl.classList.toggle('blackout', !r.white && !r.safe && !r.dim);
+  stageEl.classList.toggle('safe-on', !!r.safe);
+  stageEl.classList.toggle('dim', !!r.dim);
+}
+function switchPanel(x, y, room, onChange, keys = [['white', 'WHITE'], ['safe', 'SAFELIGHT']]) {
+  const w = keys.length * 62 + 20;
+  grp(`<g transform="translate(${x} ${y})"><rect class="s" x="${-w / 2}" y="-62" width="${w}" height="132" rx="10"/><text class="tx small" x="0" y="-44" text-anchor="middle">WALL SWITCHES</text></g>`, L.obj);
+  keys.forEach(([key, label], i) => {
+    const dx = -w / 2 + 41 + i * 62;
+    const t = el('g', { transform: `translate(${x + dx} ${y + 6})` }, L.obj);
+    t.innerHTML = `<rect class="s2" x="-17" y="-30" width="34" height="62" rx="6"/><rect class="lever s3" x="-12" width="24" height="26" rx="4"/><text class="tx tiny st" x="0" y="46" text-anchor="middle"></text>`;
+    const upd = () => { t.querySelector('.lever').setAttribute('y', room[key] ? -27 : 2); t.querySelector('.st').textContent = label + (room[key] ? ' ON' : ' OFF'); };
+    upd();
+    clickable(t, () => { const nv = !room[key]; if (onChange(key, nv) === false) return; room[key] = nv; upd(); applyRoom(room); onChange(key, nv, true); }, label + ' light switch');
+  });
+}
+
+/* ---------- drawings (centered at 0,0) ---------- */
+function filmMk(W, H, label = 'FILM') {
+  return `<rect class="film" x="${-W / 2}" y="${-H / 2}" width="${W}" height="${H}" rx="2"/>
+  <path class="ln thin" d="M${W / 2 - 16} ${-H / 2} L${W / 2} ${-H / 2 + 16}"/>
+  <text class="tx small" x="0" y="0" text-anchor="middle">${label}</text>
+  <text class="tx tiny" x="0" y="14" text-anchor="middle">hold by edges</text>`;
+}
+function screenMk(W, H, label) {
+  return `<rect class="pb" x="${-W / 2}" y="${-H / 2}" width="${W}" height="${H}" rx="2"/><rect class="hatch" x="${-W / 2}" y="${-H / 2}" width="${W}" height="${H}"/>
+  <rect class="tag" x="-62" y="-12" width="124" height="24" rx="4"/><text class="tx small" x="0" y="5" text-anchor="middle">${label}</text>`;
+}
+function cassetteBaseMk(W, H) {
+  const m = 18;
+  return `<rect class="s3" x="${-W / 2 - m}" y="${-H / 2 - m}" width="${W + 2 * m}" height="${H + 2 * m}" rx="8"/>
+  <rect class="s" x="${-W / 2 - 2}" y="${-H / 2 - 2}" width="${W + 4}" height="${H + 4}" rx="3"/>
+  <text class="tx tiny" x="${-W / 2 - m + 8}" y="${-H / 2 - 5}">CASSETTE 8 x 10</text>`;
+}
+function cassetteLidMk(W, H) {
+  const m = 18;
+  return `<rect class="s2" x="${-W / 2 - m}" y="${-H / 2 - m}" width="${W + 2 * m}" height="${H + 2 * m}" rx="8"/>
+  <rect class="ln thin dash" x="${-W / 2}" y="${-H / 2}" width="${W}" height="${H}" rx="3"/>
+  <text class="tx small" x="0" y="-6" text-anchor="middle">FRONT COVER</text><text class="tx tiny" x="0" y="10" text-anchor="middle">faces the tube</text>
+  <rect class="s3" x="${W / 2 + 4}" y="-14" width="10" height="28" rx="2"/>`;
+}
+function cassetteClosedMk(W, H, side = 'FRONT') {
+  const m = 18;
+  return `<rect class="${side === 'FRONT' ? 's2' : 's3'}" x="${-W / 2 - m}" y="${-H / 2 - m}" width="${W + 2 * m}" height="${H + 2 * m}" rx="8"/>
+  <rect class="ln thin" x="${-W / 2}" y="${-H / 2}" width="${W}" height="${H}" rx="3"/>
+  <text class="tx" x="0" y="${side === 'FRONT' ? -4 : 4}" text-anchor="middle">${side}</text>
+  ${side === 'FRONT' ? `<text class="tx tiny" x="0" y="12" text-anchor="middle">TUBE SIDE</text>` : ''}
+  <rect class="s" x="${-W / 2 - m - 4}" y="-10" width="8" height="20" rx="2"/><rect class="s" x="${W / 2 + m - 4}" y="-10" width="8" height="20" rx="2"/>`;
+}
+/* exposure-table scale: 40 px per inch, film 10 x 8 in landscape */
+const CW = 400, CH = 320;
+function bMk() { return `<rect class="pb" x="-14" y="-18" width="28" height="36" rx="2"/><text class="tx" x="0" y="10" text-anchor="middle" style="font-size:26px">B</text>`; }
+function cassPlanMk(withB) {
+  const m = 16;
+  return `<g class="face-front"><rect class="s2" x="${-CW / 2 - m}" y="${-CH / 2 - m}" width="${CW + 2 * m}" height="${CH + 2 * m}" rx="10"/>
+    <rect class="s" x="${-CW / 2}" y="${-CH / 2}" width="${CW}" height="${CH}" rx="4"/>
+    <text class="tx" x="0" y="${-CH / 2 + 26}" text-anchor="middle">FRONT (TUBE SIDE)</text>
+    <path class="ln thin" d="M0 ${-CH / 2 + 40} l-8 12 h16 z"/>
+    ${[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([a, b]) => `<rect class="s3" x="${a * (CW / 2 + m) - 5}" y="${b * (CH / 2 - 40) - 10}" width="10" height="20" rx="2"/>`).join('')}</g>
+  <g class="face-back"><rect class="s3" x="${-CW / 2 - m}" y="${-CH / 2 - m}" width="${CW + 2 * m}" height="${CH + 2 * m}" rx="10"/>
+    <rect class="ln thin" x="${-CW / 2}" y="${-CH / 2}" width="${CW}" height="${CH}" rx="4"/>
+    <text class="tx" x="0" y="${-CH / 2 + 26}" text-anchor="middle">BACK</text>
+    ${withB ? `<g>${bMk()}</g>` : ''}</g>`;
+}
+function partMk() {
+  return `<rect class="al" x="-120" y="-60" width="240" height="120" rx="14"/>
+  <rect class="al2" x="-40" y="-60" width="10" height="120"/><rect class="al2" x="30" y="-60" width="10" height="120"/>
+  <circle class="al2" cx="-80" cy="0" r="30"/><circle class="hole" cx="-80" cy="0" r="18"/>
+  <text class="tx tiny" x="80" y="-36" text-anchor="middle">AL CASTING</text><text class="tx tiny" x="80" y="-24" text-anchor="middle">0.50 in THK</text>`;
+}
+function iqiMk(n) {
+  return `<rect class="al" x="-30" y="-10" width="60" height="20" rx="1.5" style="stroke-width:1.5"/>
+  <circle class="hole" cx="-22" cy="0" r="2.6"/><circle class="hole" cx="-8" cy="0" r="1"/><circle class="hole" cx="6" cy="0" r="1.6"/>
+  <text class="tx" x="20" y="5" text-anchor="middle" style="font-size:12px">${n}</text>`;
+}
+function markerMk(n) { return `<rect class="pb" x="-13" y="-13" width="26" height="26" rx="2"/><text class="tx" x="0" y="7" text-anchor="middle" style="font-size:19px">${n}</text>`; }
+function idMk() { return `<rect class="pb" x="-70" y="-15" width="140" height="30" rx="3"/><text class="tx small" x="0" y="5" text-anchor="middle">AATA 101  10-29-26  A</text>`; }
+function tablePlan() {
+  grp(`<rect class="bg" width="1000" height="625"/>
+  <rect class="s2" x="345" y="60" width="630" height="520" rx="10"/>
+  <text class="tx small" x="360" y="84">EXPOSURE TABLE</text>
+  <line class="ln thin dash" x1="355" y1="320" x2="965" y2="320"/><line class="ln thin dash" x1="600" y1="70" x2="600" y2="570"/>
+  <circle class="ln thin" cx="600" cy="320" r="10"/>
+  <text class="tx tiny" x="612" y="588">BEAM CENTER (collimator light)</text>
+  <rect class="s" x="20" y="60" width="300" height="520" rx="10"/><text class="tx small" x="34" y="84">PARTS TRAY</text>`);
+}
+function hangerMk() {
+  return `<rect class="s3" x="-70" y="-6" width="140" height="10" rx="3"/>
+  <path class="ln" d="M-70 -1 q-9 0 -9 12"/><path class="ln" d="M70 -1 q9 0 9 12"/>
+  <rect class="ln thin" x="-62" y="4" width="124" height="150" rx="2"/>
+  <rect class="filmh" x="-56" y="10" width="112" height="140" style="fill:#e8e2c8;stroke:#333;stroke-width:1"/>
+  <rect class="milk" x="-56" y="10" width="112" height="140" style="fill:#efe9d2;opacity:0"/>
+  <rect class="s" x="-60" y="6" width="10" height="10"/><rect class="s" x="50" y="6" width="10" height="10"/>
+  <rect class="s" x="-60" y="144" width="10" height="10"/><rect class="s" x="50" y="144" width="10" height="10"/>`;
+}
+function setHangerFilm(ob, fill, milk) {
+  ob.g.querySelector('.filmh').style.fill = fill;
+  ob.g.querySelector('.milk').style.opacity = milk;
+}
+function mix(a, b, k) {
+  const pa = a.match(/\w\w/g).map(h => parseInt(h, 16)), pb = b.match(/\w\w/g).map(h => parseInt(h, 16));
+  return '#' + pa.map((v, i) => Math.round(v + (pb[i] - v) * k).toString(16).padStart(2, '0')).join('');
+}
+const FILM_LATENT = '#e8e2c8', FILM_DEV = '#2e2f31', FILM_FIXED = '#26292d';
+
+/* the processed radiograph (10 x 8 in at 40 px/in), as seen from the tube side */
+function radiographMk() {
+  const pores = [[-14, 10, 1.3], [-8, 16, .9], [-3, 8, .7], [4, 14, 1.1], [-10, 22, .6], [-1, 19, 2.1], [8, 6, .8]];
+  return `<rect x="-200" y="-160" width="400" height="320" fill="#101112" stroke="#000" stroke-width="1"/>
+  <rect x="-200" y="-160" width="400" height="320" fill="url(#heel)" opacity=".25"/>
+  <rect x="-120" y="-60" width="240" height="120" rx="14" fill="#8a8a8a"/>
+  <rect x="-40" y="-60" width="10" height="120" fill="#9a9a9a"/><rect x="30" y="-60" width="10" height="120" fill="#9a9a9a"/>
+  <circle cx="-80" cy="0" r="30" fill="#a6a6a6"/><circle cx="-80" cy="0" r="18" fill="#141414"/>
+  ${pores.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#5c5c5c"/>`).join('')}
+  <rect x="38" y="32" width="60" height="20" fill="#9b9b9b"/>
+  <circle cx="46" cy="42" r=".8" fill="#4a4a4a"/><circle cx="60" cy="42" r=".2" fill="#929292"/><circle cx="74" cy="42" r=".4" fill="#6a6a6a"/>
+  <text x="88" y="45" font-size="7" fill="#f2f2f2" text-anchor="middle" font-family="Arial" font-weight="700">10</text>
+  <text x="-100" y="-28" font-size="16" fill="#f4f4f4" text-anchor="middle" font-family="Arial" font-weight="700">1</text>
+  <text x="100" y="-28" font-size="16" fill="#f4f4f4" text-anchor="middle" font-family="Arial" font-weight="700">2</text>
+  <text x="-120" y="149" font-size="10" fill="#f4f4f4" text-anchor="middle" font-family="Arial" font-weight="700">AATA 101  10-29-26  A</text>`;
+}
+
+/* rotary knob */
+function knob(cx, cy, { label, values, fmt, idx = 0, onChange }) {
+  const g = el('g', { class: 'knob', transform: `translate(${cx} ${cy})`, tabindex: 0, role: 'slider', 'aria-label': label }, L.obj);
+  const N = values.length, a0 = -135, a1 = 135;
+  const ang = i => a0 + (a1 - a0) * i / (N - 1);
+  let ticks = '';
+  const every = Math.max(1, Math.round((N - 1) / 6));
+  for (let i = 0; i < N; i++) {
+    const a = ang(i) * Math.PI / 180, major = i % every === 0 || i === N - 1;
+    const r1 = 66, r2 = major ? 78 : 72;
+    ticks += `<line class="ln thin" x1="${Math.sin(a) * r1}" y1="${-Math.cos(a) * r1}" x2="${Math.sin(a) * r2}" y2="${-Math.cos(a) * r2}"/>`;
+    if (major) ticks += `<text class="tx tiny" x="${Math.sin(a) * 92}" y="${-Math.cos(a) * 92 + 4}" text-anchor="middle">${fmt(values[i])}</text>`;
+  }
+  g.innerHTML = `${ticks}<circle class="s2" r="60"/><g class="kp"><circle class="s" r="48"/>
+    ${[0, 60, 120, 180, 240, 300].map(a => `<line class="ln thin" x1="${Math.sin(a * Math.PI / 180) * 40}" y1="${Math.cos(a * Math.PI / 180) * 40}" x2="${Math.sin(a * Math.PI / 180) * 46}" y2="${Math.cos(a * Math.PI / 180) * 46}"/>`).join('')}
+    <rect x="-4" y="-46" width="8" height="26" rx="3" style="fill:var(--st-ink)"/></g>
+    <text class="tx" x="0" y="112" text-anchor="middle">${label}</text>`;
+  const kp = g.querySelector('.kp');
+  const set = i => { idx = clamp(i, 0, N - 1); kp.setAttribute('transform', `rotate(${ang(idx)})`); g.setAttribute('aria-valuetext', fmt(values[idx])); onChange(values[idx], idx); };
+  g.addEventListener('pointerdown', e => {
+    e.stopPropagation(); e.preventDefault(); g.focus();
+    const mv = ev => { const p = pt(ev); let a = Math.atan2(p.x - cx, -(p.y - cy)) * 180 / Math.PI; a = clamp(a, a0, a1); set(Math.round((a - a0) / (a1 - a0) * (N - 1))); };
+    mv(e);
+    const up = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); };
+    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
+  });
+  g.addEventListener('wheel', e => { e.preventDefault(); e.stopPropagation(); set(idx + (e.deltaY < 0 ? 1 : -1)); }, { passive: false });
+  g.addEventListener('keydown', e => {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { e.preventDefault(); set(idx + 1); }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { e.preventDefault(); set(idx - 1); }
+  });
+  // fine-adjust buttons
+  [[-1, '-', -34], [1, '+', 34]].forEach(([d, s, dx]) => {
+    const b = el('g', { transform: `translate(${cx + dx} ${cy + 140})` }, L.obj);
+    b.innerHTML = `<circle class="s" r="14"/><text class="tx" y="6" text-anchor="middle" style="font-size:18px">${s}</text>`;
+    clickable(b, () => set(idx + d), `${label} ${d > 0 ? 'up' : 'down'}`);
+  });
+  set(idx);
+  return { set, get: () => values[idx] };
+}
+
+/* =========================================================
+   DR STEPS
+   ========================================================= */
+const PHASES = ['Prepare the detector', 'Set up the shot', 'Acquire the image', 'Evaluate the image', 'Done'];
+const icon = (mk, vb) => `<svg viewBox="${vb}" aria-hidden="true">${mk}</svg>`;
+let T = [], stepDone = false;
+const S = { ft: CFG.frameTime, gen: false };
+function markTask(i, v = true) {
+  T[i] = !!v;
+  const li = document.querySelectorAll('#tasks li')[i];
+  if (li) { li.classList.toggle('ok', !!v); li.querySelector('.box').innerHTML = v ? '&#10003;' : ''; }
+  if (!stepDone && T.length && T.every(Boolean)) complete();
+}
+function complete() {
+  stepDone = true; done[cur] = true; maxReached = Math.max(maxReached, cur + 1);
+  $('#nextBtn').disabled = false; $('#doneBadge').classList.add('show');
+  renderPhases();
+  const n = cur; setTimeout(() => { if (cur === n) toast('Step ' + (n + 1) + ' complete. Press Next.', 'ok'); }, 350);
+}
+/* ---------- CR drawings ---------- */
+function plateMk(W, H, o = {}) {
+  const id = o.id || 'IP-0417';
+  const dust = o.dust ? [[-60, -30, 2.2], [-20, 18, 1.6], [34, -42, 2.6], [70, 30, 1.8], [-90, 50, 1.5], [10, 60, 2], [95, -10, 1.4], [-40, -60, 1.7]].map(([x, y, r]) => `<circle class="dust" cx="${x * W / 280}" cy="${y * H / 224}" r="${r}"/>`).join('') + `<ellipse class="dust" cx="${40 * W / 280}" cy="${10 * H / 224}" rx="9" ry="12" style="opacity:.45"/>` : '';
+  const scr = o.scratch ? `<path class="scr" d="M${-W * .38} ${-H * .25} C ${-W * .1} ${-H * .05}, ${W * .05} ${H * .05}, ${W * .36} ${H * .3}"/><path class="scr" d="M${-W * .3} ${H * .32} l${W * .12} ${-H * .06}" style="stroke-width:1"/>` : '';
+  return `<g class="face-front"><rect class="ipf" x="${-W / 2}" y="${-H / 2}" width="${W}" height="${H}" rx="4"/>${dust}${scr}
+      <text class="tx tiny" x="${-W / 2 + 8}" y="${H / 2 - 8}" style="fill:#e8f0ff">PHOSPHOR SIDE  ${id}</text></g>
+    <g class="face-back"><rect class="ipb" x="${-W / 2}" y="${-H / 2}" width="${W}" height="${H}" rx="4"/>
+      <rect class="tag" x="-46" y="-16" width="92" height="32" rx="3"/>
+      ${[...Array(14)].map((_, i) => `<rect x="${-40 + i * 5.6}" y="-11" width="${i % 3 ? 2 : 3.4}" height="14" style="fill:var(--st-ink)"/>`).join('')}
+      <text class="tx tiny" x="0" y="13" text-anchor="middle">${id}</text>
+      <text class="tx tiny" x="0" y="${H / 2 - 10}" text-anchor="middle" style="fill:#e3e6ea">BACK (no phosphor)</text></g>`;
+}
+function wipeMk() { return `<path class="s" d="M-38 -26 L34 -32 L40 24 L-30 30 Z"/><path class="ln thin" d="M-26 -14 L26 -18 M-24 0 L28 -4 M-22 14 L30 10"/><text class="tx tiny" x="2" y="46" text-anchor="middle">LINT-FREE WIPE</text>`; }
+function scannerScene() {
+  grp(`<rect class="bg" width="1000" height="625"/>
+    <rect class="s2" x="30" y="470" width="940" height="20"/><line class="ln" x1="0" y1="610" x2="1000" y2="610"/>
+    <rect class="s" x="60" y="490" width="16" height="120"/><rect class="s" x="924" y="490" width="16" height="120"/>
+    <path class="s2" d="M470 282 L730 282 L708 196 L492 196 Z"/><path class="ln thin" d="M500 205 L700 205"/>
+    <text class="tx tiny" x="600" y="190" text-anchor="middle">FEED GUIDE</text>
+    <rect class="s" x="430" y="280" width="340" height="190" rx="14"/>
+    <rect class="s3" x="470" y="276" width="260" height="8" rx="3"/>
+    <rect class="s3" x="640" y="304" width="110" height="66" rx="5"/><rect x="648" y="311" width="94" height="52" rx="3" style="fill:#14202b"/>
+    <text x="695" y="341" text-anchor="middle" style="fill:#9fd1ff;font:600 11px var(--display)">READY</text>
+    <text class="tx small" x="450" y="312">CR SCANNER</text><text class="tx tiny" x="450" y="328">35 cm plate width</text>
+    <rect class="s3" x="470" y="436" width="260" height="10" rx="3"/><text class="tx tiny" x="600" y="430" text-anchor="middle">OUTPUT</text>`);
+}
+function screenFrame(title) {
+  grp(`<rect class="bg" width="1000" height="625"/>
+    <rect class="s2" x="110" y="40" width="780" height="545" rx="22"/>
+    <rect x="140" y="70" width="720" height="485" rx="8" style="fill:#13202b;stroke:var(--st-ink);stroke-width:2"/>
+    <rect x="140" y="70" width="720" height="48" rx="8" style="fill:#1d3446"/>
+    <text x="164" y="101" style="fill:#e7f1f8;font:700 20px var(--display)">${title}</text>
+    <text x="840" y="101" text-anchor="end" style="fill:#9fb4c4;font:600 13px var(--display)">SCANNER TOUCHSCREEN</text>`);
+}
+function screenRow(parent, x, y, w, label, sub, fn, sel) {
+  const g = el('g', {}, parent);
+  g.innerHTML = `<rect x="${x}" y="${y}" width="${w}" height="62" rx="8" style="fill:${sel ? '#2f6db5' : '#22394c'};stroke:#4d6b82;stroke-width:1.5"/>
+    <text x="${x + 20}" y="${y + 28}" style="fill:#f1f6fa;font:700 19px var(--display)">${label}</text>
+    <text x="${x + 20}" y="${y + 48}" style="fill:#a9bfcf;font:500 13px var(--body)">${sub}</text>`;
+  clickable(g, fn, label);
+  return g;
+}
+const gx = v => { const h = Math.round(clamp(v, 0, 1) * 255).toString(16).padStart(2, '0'); return '#' + h + h + h; };
+/* raw (unprocessed) CR image of the same shot, low contrast until windowed */
+function crImageMk(ghost) {
+  const pores = [[-14, 10, 1.3], [-8, 16, .9], [-3, 8, .7], [4, 14, 1.1], [-10, 22, .6], [-1, 19, 2.1], [8, 6, .8]];
+  const lead = gx(.95), bg = gx(.18);
+  let gh = '';
+  if (ghost) {
+    gh = `<g style="opacity:.05">
+      <rect x="-200" y="-26" width="400" height="52" fill="#fff"/>
+      ${[...Array(28)].map((_, i) => `<path d="M${-196 + i * 14} -20 q7 20 0 40" fill="none" stroke="#fff" stroke-width="4"/>`).join('')}
+      <rect x="-200" y="-34" width="400" height="5" fill="#fff"/><rect x="-200" y="29" width="400" height="5" fill="#fff"/>
+      <text x="150" y="-60" font-size="18" fill="#fff" font-family="Arial" font-weight="700">W-12</text></g>`;
+  }
+  return `<rect x="-200" y="-160" width="400" height="320" fill="${bg}"/>
+    <rect x="-120" y="-60" width="240" height="120" rx="14" fill="${gx(.52)}"/>
+    <rect x="-40" y="-60" width="10" height="120" fill="${gx(.555)}"/><rect x="30" y="-60" width="10" height="120" fill="${gx(.555)}"/>
+    <circle cx="-80" cy="0" r="30" fill="${gx(.585)}"/><circle cx="-80" cy="0" r="18" fill="${gx(.2)}"/>
+    ${pores.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${gx(.488)}"/>`).join('')}
+    <rect x="38" y="32" width="60" height="20" fill="${gx(.566)}"/>
+    <circle cx="46" cy="42" r=".8" fill="${gx(.532)}"/><circle cx="60" cy="42" r=".2" fill="${gx(.561)}"/><circle cx="74" cy="42" r=".4" fill="${gx(.547)}"/>
+    <text x="88" y="45" font-size="7" fill="${lead}" text-anchor="middle" font-family="Arial" font-weight="700">10</text>
+    <text x="-100" y="-28" font-size="16" fill="${lead}" text-anchor="middle" font-family="Arial" font-weight="700">1</text>
+    <text x="100" y="-28" font-size="16" fill="${lead}" text-anchor="middle" font-family="Arial" font-weight="700">2</text>
+    <text x="-120" y="149" font-size="10" fill="${lead}" text-anchor="middle" font-family="Arial" font-weight="700">AATA 101  10-29-26  A</text>
+    ${gh}`;
+}
+function setWL(w, l) {
+  const slope = 1 / w, ic = -(l - w / 2) / w;
+  document.querySelectorAll('#wl feFuncR, #wl feFuncG, #wl feFuncB').forEach(f => { f.setAttribute('slope', slope); f.setAttribute('intercept', ic); });
+}
+function benchPlan() {
+  grp(`<rect class="bench" width="1000" height="625"/>${[70, 190, 310, 430, 550].map(y => `<path class="grain" d="M0 ${y} C 260 ${y - 16}, 620 ${y + 18}, 1000 ${y - 8}"/>`).join('')}`);
+}
+function controlPanel(extra) {
+  grp(`<rect class="bg" width="1000" height="625"/>
+    <rect class="s2" x="70" y="30" width="860" height="565" rx="16"/><rect class="s" x="90" y="44" width="820" height="36" rx="6"/>
+    <text class="tx" x="110" y="68">X-RAY CONTROL UNIT</text><text class="tx small" x="890" y="68" text-anchor="end">TUBE: 160 kV MAX, ${CFG.focal} in FOCAL SPOT</text>
+    <line class="ln thin" x1="90" y1="430" x2="910" y2="430"/>
+    <circle class="s3" cx="200" cy="485" r="34"/><circle class="hole" cx="200" cy="485" r="7"/><text class="tx tiny" x="158" y="456">OFF</text><text class="tx tiny" x="236" y="456">ON</text><text class="tx tiny" x="200" y="540" text-anchor="middle">KEY SWITCH</text>
+    <text class="tx tiny" x="430" y="540" text-anchor="middle">START</text>
+    <text class="tx tiny" x="640" y="540" text-anchor="middle">X-RAY ON LAMP</text>
+    <rect class="s" x="760" y="460" width="130" height="50" rx="5"/><text class="tx tiny" x="825" y="480" text-anchor="middle">DOOR INTERLOCK</text><text class="tx small" x="825" y="498" text-anchor="middle">CLOSED</text>`);
+  if (!extra) grp(`<circle class="s3" cx="430" cy="485" r="32"/><circle class="s" cx="430" cy="485" r="24"/><text class="tx tiny" x="430" y="489" text-anchor="middle">X-RAY ON</text><circle class="xr-lamp" cx="640" cy="485" r="22"/>`);
+}
+/* run the scanner: plate goes in the feed guide, comes out the bottom erased */
+function runScanner(plate, { erase }, onOut) {
+  lock(plate);
+  tween(plate, 600, 238, 0, 250, () => {
+    tween(plate, 600, 300, 0, 400, () => {
+      plate.g.style.opacity = 0;
+      const steps = erase ? [['Erasing (LED)', 100]] : [['Scanning ' + CFG.pixel + ' µm', 100], ['Erasing (LED)', 100]];
+      const total = steps.reduce((a, s) => a + s[1], 0);
+      const th = hud(`<div class="row"><span class="lbl" id="scLbl">${steps[0][0]}</span><span class="val" id="scPct">0%</span></div><div class="bar"><i id="scBar"></i></div><div class="note">Plate is inside the scanner, away from room light.</div>`);
+      simTimer({ total, speed: erase ? 40 : 30, onTick: t => {
+        let acc = 0, lbl = steps[0][0];
+        for (const s of steps) { if (t >= acc) lbl = s[0]; acc += s[1]; }
+        $('#scLbl').textContent = lbl; $('#scPct').textContent = Math.round(100 * t / total) + '%'; $('#scBar').style.width = (100 * t / total) + '%';
+      }, onDone: () => {
+        $('#scLbl').textContent = erase ? 'Erase complete' : 'Scan and erase complete';
+        plate.place(600, 520, 0); plate.g.style.opacity = 1;
+        plate.locked = false; plate.g.classList.add('draggable'); plate.home = { x: 600, y: 520 };
+        onOut && onOut();
+      } });
+    });
+  });
+}
+
+
+/* ---------- DR drawings ---------- */
+function detMk(s, o = {}) {
+  const aw = 11.33 * s, ah = 9.05 * s, m = .6 * s, W = aw + 2 * m, H = ah + 2 * m;
+  const cm = (x, y, dx, dy) => `<path class="ln thin" style="stroke:#9fd1ff" d="M${x + dx * 14} ${y} L${x} ${y} L${x} ${y + dy * 14}"/>`;
+  const bx = W / 2 - m - 2.2 * s, bw = 1.8 * s, bh = 3.6 * s;
+  return `<g class="face-front"><rect class="s3" x="${-W / 2}" y="${-H / 2}" width="${W}" height="${H}" rx="12"/>
+      <rect class="cf" x="${-aw / 2}" y="${-ah / 2}" width="${aw}" height="${ah}" rx="3"/>
+      ${cm(-aw / 2 + 6, -ah / 2 + 6, 1, 1)}${cm(aw / 2 - 6, -ah / 2 + 6, -1, 1)}${cm(-aw / 2 + 6, ah / 2 - 6, 1, -1)}${cm(aw / 2 - 6, ah / 2 - 6, -1, -1)}
+      <text x="0" y="${-ah / 2 + 26}" text-anchor="middle" style="fill:#cfe6ff;font:600 13px var(--display)">ACTIVE AREA  |  TUBE SIDE</text>
+      <circle cx="${W / 2 - m / 2}" cy="${-H / 2 + m / 2}" r="5" style="fill:${o.on ? '#34d058' : '#55606a'};stroke:var(--st-ink)"/></g>
+    <g class="face-back"><rect class="s2" x="${-W / 2}" y="${-H / 2}" width="${W}" height="${H}" rx="12"/>
+      <text class="tx" x="${-W / 2 + 24}" y="${-H / 2 + 32}">BACK</text><text class="tx tiny" x="${-W / 2 + 24}" y="${-H / 2 + 48}">Do not expose from this side</text>
+      <rect class="ln thin dash" x="${bx - bw / 2}" y="${-bh / 2}" width="${bw}" height="${bh}" rx="5"/><text class="tx tiny" x="${bx}" y="${bh / 2 + 14}" text-anchor="middle">BATTERY</text>
+      ${o.batt ? `<g transform="translate(${bx} 0)">${battMk(100, bw - 6, bh - 6)}</g>` : ''}
+      <circle class="s3" cx="${-W / 2 + 40}" cy="${H / 2 - 40}" r="14"/><path class="ln thin" d="M${-W / 2 + 40} ${H / 2 - 48} v8 M${-W / 2 + 34} ${H / 2 - 44} a8 8 0 1 0 12 0"/>
+      <circle cx="${-W / 2 + 64}" cy="${H / 2 - 40}" r="5" style="fill:${o.on ? '#34d058' : '#55606a'};stroke:var(--st-ink)"/></g>`;
+}
+function battMk(pct, w = 56, h = 112) {
+  const c = pct > 50 ? '#2f9e44' : '#d9480f';
+  return `<rect class="s" x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" rx="6"/><rect class="s3" x="${-w / 4}" y="${-h / 2 - 6}" width="${w / 2}" height="6" rx="2"/>
+    <rect x="${-w / 2 + 6}" y="${h / 2 - 6 - (h - 12) * pct / 100}" width="${w - 12}" height="${(h - 12) * pct / 100}" style="fill:${c}"/>
+    <text class="tx small" x="0" y="4" text-anchor="middle">${pct}%</text>`;
+}
+function drImageMk(e, f) {
+  const wash = clamp((0.6 - e) * 1.2, 0, .8);
+  const noise = clamp(.5 * Math.sqrt(.15 / (e * f)), 0, .6);
+  const bgSat = e * 3.2 >= 1, partSat = e >= .95;
+  return crImageMk(false) +
+    `<rect x="-200" y="-160" width="400" height="320" fill="#fff" opacity="${wash}"/>` +
+    `<rect x="-200" y="-160" width="400" height="320" filter="url(#noise)" opacity="${noise}"/>` +
+    (bgSat ? `<path d="M-200 -160 H200 V160 H-200 Z M-120 -60 V60 H120 V-60 Z" fill="#ff2a2a" fill-rule="evenodd" opacity=".35"/>` : '') +
+    (partSat ? `<rect x="-120" y="-60" width="240" height="120" rx="14" fill="#ff2a2a" opacity=".4"/>` : '');
+}
+const expo = ft => +(0.15 * ft * CFG.ma / 2).toFixed(3);
+function softwareScene(title) {
+  grp(`<rect class="bg" width="1000" height="625"/>
+    <rect x="15" y="15" width="970" height="595" rx="8" style="fill:#0c0f12;stroke:#3a4148;stroke-width:2"/>
+    <rect x="15" y="15" width="970" height="34" rx="8" style="fill:#262d34"/>
+    <text x="32" y="38" style="fill:#d8e0e6;font:600 15px var(--display)">${title}</text>
+    <rect x="15" y="49" width="52" height="561" style="fill:#1a2026"/>
+    ${['ACQ', 'W/L', 'ZOOM', 'MEAS', 'ROI'].map((t, i) => `<rect x="22" y="${62 + i * 50}" width="38" height="40" rx="5" style="fill:${i === 0 ? '#2f6db5' : '#2a323a'}"/><text x="41" y="${87 + i * 50}" text-anchor="middle" style="fill:#e3eaf0;font:600 9.5px var(--display)">${t}</text>`).join('')}
+    <rect x="160" y="119" width="540" height="432" style="fill:#000"/>`);
+}
+
+const STEPS = [
+/* 1 ------------------------------------------------------ */
+{ phase: 0, title: 'Power up and connect the detector', view: 'TOP VIEW',
+  tasks: ['Insert a charged battery', 'Switch the detector on', 'Connect it to the software and check its status'],
+  parts: [[1, 'Flat-panel detector (DDA)', `<rect class="s3" x="-42" y="-30" width="84" height="60" rx="5"/><rect x="-34" y="-22" width="68" height="44" style="fill:#33383d"/>`, '-45 -34 90 68'], [2, 'Detector batteries', battMk(100, 28, 56), '-20 -36 40 72']],
+  tip: `<p>No film, no plate: the detector itself turns X-rays into a digital image. It is an electronic device, so it needs power, a data link and a valid calibration before you shoot.</p><p>The software shows battery, link and calibration status. Calibrate per your procedure if it is out of date.</p>`,
+  build() {
+    applyRoom({ white: true });
+    benchPlan();
+    const s = 32;
+    const det = obj(detMk(s), 430, 300, 0, { name: 'Detector', flippable: true, face: 'back' }); lock(det);
+    const bay = zone(430 + 11.33 * s / 2 + .6 * s - .6 * s - 2.2 * s, 300, 1.8 * s + 10, 3.6 * s + 10, 'Battery bay', { labelBelow: false });
+    const b1 = obj(battMk(15), 760, 500, 0, { name: 'Battery 15%', pct: 15 });
+    const b2 = obj(battMk(100), 890, 500, 0, { name: 'Battery 100%', pct: 100 });
+    grp(`<text class="tx tiny" x="760" y="580" text-anchor="middle">SPARE A</text><text class="tx tiny" x="890" y="580" text-anchor="middle">SPARE B</text>`);
+    let batt = false, on = false, conn = false;
+    [b1, b2].forEach(b => draggable(b, { onDrop(o) {
+      if (!bay.has(o)) return false;
+      if (o.pct < 50) return 'This battery is at 15%. A battery dying mid-shot loses the image. Use the charged one.';
+      o.g.remove(); bay.hide(); batt = true; det.rg.innerHTML = detMk(s, { batt: true }); setFace(det, 'back'); hints.forEach(h => h.remove()); markTask(0); drawPw();
+    } }));
+    arrow(870, 440, 600, 330, .2);
+    const pw = el('g', {}, L.obj);
+    const drawPw = () => { pw.innerHTML = `<circle cx="${430 - 11.33 * s / 2 - .6 * s + 40}" cy="${300 + 9.05 * s / 2 + .6 * s - 40}" r="18" fill="transparent"/>`; };
+    drawPw();
+    clickable(pw, () => {
+      if (!batt) { toast('No power. Insert a battery first.', 'warn'); return; }
+      if (on) return;
+      on = true; det.rg.innerHTML = detMk(s, { batt: true, on: true }); setFace(det, 'back'); markTask(1); showHud(); toast('Detector on. Status LED green.', 'ok');
+    }, 'Detector power button');
+    const showHud = () => {
+      hud(`<div class="row"><span class="lbl">Acquisition software</span></div>
+        ${conn ? `<table><tr><td>Detector</td><td>DDA, 75 µm pitch</td></tr><tr><td>Link</td><td class="good">WLAN, connected</td></tr><tr><td>Battery</td><td class="good">100%</td></tr><tr><td>Temperature</td><td class="good">OK</td></tr><tr><td>Calibration (offset, gain)</td><td class="good">Today 07:42</td></tr></table>`
+          : `<div class="note">${on ? 'Detector found on the network.' : 'No detector found. Is it powered on?'}</div><div class="btns"><button class="btn primary" id="connBtn" type="button">Connect detector</button></div>`}`);
+      const cb = $('#connBtn');
+      if (cb) cb.onclick = () => { if (!on) { toast('No detector found. Switch it on first.', 'warn'); return; } conn = true; showHud(); markTask(2); };
+    };
+    showHud();
+  } },
+/* 2 ------------------------------------------------------ */
+{ phase: 1, title: 'Place the detector on the table', view: 'TOP VIEW',
+  tasks: ['Flip the detector so the ACTIVE AREA faces up (tube side)', 'Center it on the beam crosshair'],
+  parts: [],
+  tip: `<p>A detector is exposed from one side only. The back holds electronics and the battery. Flip it so the carbon-fiber window with the active-area corner marks faces the tube.</p><p>Select it and press <b>Flip</b> (F), then drag it onto the crosshair.</p>`,
+  build() {
+    applyRoom({ white: true });
+    tablePlan();
+    const outline = el('rect', { class: 'zone', x: 600 - 250, y: 320 - 205, width: 501, height: 410, rx: 12 }, L.zone);
+    zones.push({ el: outline, has: () => false, done: false });
+    const d = obj(detMk(40, { batt: true, on: true }), 300, 340, 0, { name: 'Detector', flippable: true, face: 'back' });
+    const check = () => { markTask(0, d.face === 'front'); markTask(1, Math.hypot(d.x - 600, d.y - 320) < 2); };
+    d.onFlip = check;
+    draggable(d, { onDrop(o) {
+      if (Math.hypot(o.x - 600, o.y - 320) < 70) { tween(o, 600, 320, o.rot, 200, () => { check(); if (o.face !== 'front') toast('Centered, but the BACK faces the tube. Select it and press Flip.', 'warn'); }); return; }
+      check();
+    } });
+    arrow(300, 120, 520, 100, .2);
+  } },
+/* 5 ------------------------------------------------------ */
+{ phase: 1, title: 'Place the casting, IQI and markers', view: 'TOP VIEW',
+  tasks: ['Rotate the casting and set it in the outline', `Place IQI #${CFG.iqi} (2-2T) at the marked spot`, 'Location markers 1 and 2 at the ends', 'ID plate on the detector window, clear of the part'],
+  parts: [[1, 'Aluminum casting 0.50 in', `<g transform="scale(.3)">${partMk()}</g>`, '-42 -24 84 48'], [3, 'Hole-type IQIs #5, #10, #20', iqiMk(''), '-34 -14 68 28'], [3, 'Lead markers 1, 2 and ID plate', markerMk('1'), '-16 -16 32 32']],
+  tip: `<p>Same part, IQI and markers as the film shot, so you can compare the images directly.</p><p>IQI: 2% of ${CFG.thk.toFixed(2)} in = ${(CFG.thk * .02).toFixed(3)} in, so #${CFG.iqi}.</p>`,
+  build() {
+    applyRoom({ white: true });
+    tablePlan();
+    lock(obj(detMk(40, { batt: true, on: true }), 600, 320, 0));
+    const pz = zone(600, 320, 250, 130, 'Casting outline', { rx: 16 });
+    const iz = zone(668, 362, 80, 34, 'IQI', { labelBelow: true });
+    const z1 = zone(500, 285, 36, 36, '1'), z2 = zone(700, 285, 36, 36, '2'), zid = zone(480, 465, 150, 40, 'ID plate', { labelBelow: true });
+    let partIn = false, mk = 0;
+    const p = obj(partMk(), 170, 200, 90, { name: 'Aluminum casting', rotStep: 90 });
+    draggable(p, { onDrop(o) {
+      if (!pz.has(o)) return;
+      if (norm(o.rot) % 180 !== 0) { toast('Select the casting and rotate it 90 degrees to match the outline.', 'warn'); return; }
+      tween(o, 600, 320, Math.round(o.rot / 180) * 180); lock(o); pz.hide(); partIn = true; markTask(0);
+    } });
+    [[5, 370], [10, 430], [20, 490]].forEach(([n, y]) => {
+      grp(`<text class="tx tiny" x="120" y="${y + 4}">#${n}</text>`);
+      const q = obj(iqiMk(n), 75, y, 0, { name: 'IQI #' + n, n });
+      draggable(q, { onDrop(o) {
+        if (!iz.has(o)) return false;
+        if (!partIn) return 'Place the casting first. The IQI goes on its source side.';
+        if (o.n !== CFG.iqi) return `#${o.n} is ${o.n / CFG.thk / 10}% of the thickness. 2-2T needs #${CFG.iqi}.`;
+        tween(o, 668, 362); lock(o); iz.hide(); markTask(1);
+      } });
+    });
+    const zs = { m1: z1, m2: z2, id: zid };
+    const placed = {};
+    [[markerMk('1'), 260, 370, 'm1', 'Location marker 1'], [markerMk('2'), 260, 430, 'm2', 'Location marker 2'], [idMk(), 200, 545, 'id', 'Lead ID plate']].forEach(([m, x, y, k, nm]) => {
+      const o = obj(m, x, y, 0, { name: nm, k });
+      draggable(o, { onDrop(ob) {
+        const z = zs[ob.k];
+        if (z.has(ob)) {
+          if (ob.k !== 'id' && !partIn) return 'Place the casting first. Markers 1 and 2 go on its ends.';
+          tween(ob, z.x, z.y); lock(ob); z.hide(); placed[ob.k] = true;
+          markTask(2, placed.m1 && placed.m2); markTask(3, !!placed.id); return;
+        }
+        for (const kk in zs) if (kk !== ob.k && zs[kk].has(ob)) return kk === 'id' ? 'That spot is for the ID plate.' : ob.k === 'id' ? 'The ID plate goes on the detector below the part.' : `That spot is for marker ${kk === 'm1' ? '1' : '2'}.`;
+      } });
+    });
+    arrow(220, 160, 470, 260, .2);
+  } },
+
+/* 10 ----------------------------------------------------- */
+{ phase: 1, title: 'Aim the tube and set the distance', view: 'SIDE VIEW',
+  tasks: ['Tilt the tube head to 0 degrees (central ray straight down)', `Raise or lower the tube to SDD = ${CFG.sfd.toFixed(1)} in`],
+  parts: [],
+  tip: `<p><b>SDD</b> (source-to-detector distance, the DR term for SFD) is measured from the focal spot mark to the detector. <b>SOD</b> = SDD - OFD = ${CFG.sfd} - ${CFG.thk.toFixed(2)} = ${SOD()} in.</p><p><b>Geometric unsharpness</b> Ug = F x t / SOD = ${CFG.focal} x ${CFG.thk} / ${SOD()} = ${UG().toFixed(4)} in. Compare with the limit in your procedure.</p><p>Drag the tube head up or down. Select it and use Rotate to tilt it.</p>`,
+  build() {
+    applyRoom({ white: true });
+    const PX = 9, filmY = 467, X0 = 500;
+    grp(`<rect class="bg" width="1000" height="625"/>
+      <line class="ln" x1="0" y1="585" x2="1000" y2="585"/>
+      <rect class="s2" x="300" y="470" width="400" height="12"/><line class="ln" x1="320" y1="482" x2="320" y2="585"/><line class="ln" x1="680" y1="482" x2="680" y2="585"/>
+      <rect class="s3" x="190" y="20" width="18" height="565"/><rect class="s2" x="170" y="575" width="58" height="10"/>
+      <rect class="s3" x="455" y="464" width="90" height="6"/>
+      <rect class="al" x="473" y="459.5" width="54" height="4.5" style="stroke-width:1"/>
+      <circle class="ln" cx="500" cy="462" r="26"/><line class="ln thin" x1="522" y1="476" x2="742" y2="496"/>
+      <circle class="s" cx="830" cy="490" r="100"/>
+      <rect class="s3" x="745" y="512" width="170" height="16"/><text class="tx tiny" x="830" y="544" text-anchor="middle">DETECTOR (sensor plane)</text>
+      <rect class="al" x="760" y="470" width="140" height="42"/><text class="tx tiny" x="830" y="495" text-anchor="middle">CASTING</text>
+      <line class="ln thin" x1="912" y1="470" x2="912" y2="512" marker-start="url(#dimarrow)" marker-end="url(#dimarrow)"/><text class="tx tiny" x="905" y="462" text-anchor="end">OFD ${CFG.thk.toFixed(2)} in</text>`);
+    // ruler
+    let ruler = `<line class="ln thin" x1="250" y1="${filmY}" x2="250" y2="${filmY - 50 * PX}"/>`;
+    for (let i = 0; i <= 50; i++) { const y = filmY - i * PX, maj = i % 5 === 0; ruler += `<line class="ln thin" x1="250" y1="${y}" x2="${maj ? 266 : 258}" y2="${y}"/>`; if (maj) ruler += `<text class="tx tiny" x="244" y="${y + 3}" text-anchor="end">${i}</text>`; }
+    grp(ruler + `<text class="tx tiny" x="232" y="${filmY - 50 * PX - 8}">in</text>`);
+    const dim = grp('', L.fx);
+    const tube = obj(`
+      <g class="beam"><line class="ln thin dashdot cr" x1="0" y1="0" x2="0" y2="300"/><line class="ln thin dash b1" x1="0" y1="0" x2="0" y2="300"/><line class="ln thin dash b2" x1="0" y1="0" x2="0" y2="300"/></g>
+      <rect class="s2" x="-110" y="-62" width="220" height="56" rx="26"/>
+      <path class="s3" d="M-24 -6 L24 -6 L16 8 L-16 8 Z"/>
+      <circle cx="0" cy="0" r="4" style="fill:var(--st-ink)"/>
+      <line class="ln thin" x1="-110" y1="0" x2="-130" y2="0"/><text class="tx tiny" x="-134" y="4" text-anchor="end">focal spot mark</text>
+      <text class="tx small" x="0" y="-30" text-anchor="middle">X-RAY TUBE HEAD</text>`, X0, filmY - 30 * PX, 15,
+      { name: 'X-ray tube head', rotStep: 5, rotMin: -30, rotMax: 30, rotLimitMsg: 'The yoke stops at 30 degrees.',
+        fixed: `<rect class="s3" x="-292" y="-46" width="182" height="14"/><rect class="s2" x="-306" y="-60" width="34" height="42" rx="4"/>` });
+    const half = Math.atan(5 / CFG.sfd);
+    const upd = () => {
+      const sfd = (filmY - tube.y) / PX, tilt = norm(tube.rot) > 180 ? norm(tube.rot) - 360 : norm(tube.rot);
+      const Lc = (filmY - tube.y) / Math.cos(tilt * Math.PI / 180);
+      const setL = (cls, a) => { const l = tube.rg.querySelector(cls); const Ln = (filmY - tube.y) / Math.cos((tilt * Math.PI / 180) + a); l.setAttribute('x2', -Math.sin(a) * Ln); l.setAttribute('y2', Math.cos(a) * Ln); };
+      tube.rg.querySelector('.cr').setAttribute('y2', Lc);
+      setL('.b1', half); setL('.b2', -half);
+      const sod = sfd - CFG.thk;
+      dim.innerHTML = `<line class="ln thin" x1="${X0 + 150}" y1="${tube.y}" x2="${X0 + 150}" y2="${filmY}" marker-start="url(#dimarrow)" marker-end="url(#dimarrow)"/>
+        <line class="ln thin dash" x1="${X0 + 6}" y1="${tube.y}" x2="${X0 + 160}" y2="${tube.y}"/>
+        <rect class="tag" x="${X0 + 158}" y="${(tube.y + filmY) / 2 - 14}" width="96" height="26" rx="4"/><text class="tx small" x="${X0 + 206}" y="${(tube.y + filmY) / 2 + 4}" text-anchor="middle">SDD ${sfd.toFixed(1)} in</text>`;
+      const okS = Math.abs(sfd - CFG.sfd) < 0.01, okT = tilt === 0;
+      hud(`<div class="row"><span class="lbl">Setup check</span></div><table>
+        <tr><td>Tube tilt</td><td class="${okT ? 'good' : 'bad'}">${tilt} deg</td></tr>
+        <tr><td>SDD (target ${CFG.sfd.toFixed(1)})</td><td class="${okS ? 'good' : 'bad'}">${sfd.toFixed(1)} in</td></tr>
+        <tr><td>OFD (part thickness)</td><td>${CFG.thk.toFixed(2)} in</td></tr>
+        <tr><td>SOD = SDD - OFD</td><td>${sod.toFixed(2)} in</td></tr>
+        <tr><td>Ug = F x t / SOD</td><td>${(CFG.focal * CFG.thk / sod).toFixed(4)} in</td></tr></table>
+        <div class="note">F = ${CFG.focal} in focal spot, t = ${CFG.thk.toFixed(2)} in</div>`);
+      markTask(0, okT); markTask(1, okS);
+    };
+    tube.onRotate = upd;
+    draggable(tube, { axis: 'y', bounds: { y0: filmY - 48 * PX, y1: filmY - 20 * PX }, snapY: y => filmY - Math.round((filmY - y) / PX * 2) / 2 * PX, onMove: upd });
+    upd();
+    arrow(660, 170, 620, 220, .3);
+  } },
+/* 11 ----------------------------------------------------- */
+{ phase: 2, title: 'Make the exposure area safe', view: 'FLOOR PLAN',
+  tasks: ['Get everyone out of the exposure room', 'Close the shielded door (interlock)', 'Test the warning light', 'Switch on the survey meter and check it reads background'],
+  parts: [[1, 'Survey meter (calibrated)', `<rect class="s2" x="-30" y="-20" width="60" height="40" rx="6"/><rect class="s" x="-20" y="-12" width="40" height="16"/>`, '-35 -25 70 50']],
+  tip: `<p>Before every exposure: area clear, door closed, warning lights working, survey meter on, battery checked and in calibration.</p><p>Drag the person out of the room. Click the door, the warning light and the meter.</p>`,
+  build() {
+    applyRoom({ white: true });
+    let out = false, door = false, light = false, meter = false;
+    grp(`<rect class="bg" width="1000" height="625"/>
+      <rect class="ln" x="120" y="70" width="480" height="440" style="stroke-width:12"/>
+      <text class="tx" x="140" y="100">EXPOSURE ROOM (shielded)</text>
+      <rect class="s2" x="300" y="230" width="140" height="120" rx="4"/><circle class="s3" cx="370" cy="290" r="26"/><text class="tx tiny" x="370" y="370" text-anchor="middle">TABLE + TUBE</text>
+      <rect class="s" x="700" y="440" width="200" height="90" rx="8"/><text class="tx small" x="800" y="464" text-anchor="middle">CONTROL CONSOLE</text>
+      <text class="tx small" x="800" y="140" text-anchor="middle">OUTSIDE, BEHIND SHIELDING</text>`);
+    const outZ = zone(800, 260, 200, 150, 'Safe area');
+    const doorG = el('g', {}, L.obj);
+    const drawDoor = () => {
+      doorG.innerHTML = `<rect x="390" y="490" width="110" height="40" fill="var(--st-bg)" stroke="none"/>` + (door
+        ? `<rect class="s3" x="392" y="502" width="106" height="16"/><text class="tx tiny" x="445" y="545" text-anchor="middle">DOOR CLOSED</text>`
+        : `<path class="s3" d="M392 510 L470 590 L482 580 L404 500 Z"/><path class="ln thin dash" d="M392 510 A106 106 0 0 1 498 510"/><text class="tx tiny" x="445" y="610" text-anchor="middle">DOOR OPEN</text>`);
+    };
+    drawDoor();
+    const lamp = el('g', { transform: 'translate(560 560)' }, L.obj);
+    const drawLamp = () => lamp.innerHTML = `<circle class="xr-lamp ${light ? 'lit' : ''}" r="16"/><text class="tx tiny" x="24" y="4">WARNING LIGHT</text>`;
+    drawLamp();
+    const met = el('g', { transform: 'translate(680 360)' }, L.obj);
+    const drawMeter = () => met.innerHTML = `<rect class="s2" x="-44" y="-30" width="88" height="60" rx="8"/><rect class="s" x="-34" y="-20" width="68" height="24" rx="3"/><text class="tx small" x="0" y="-3" text-anchor="middle">${meter ? 'BKG 0.02 mR/h' : 'OFF'}</text><text class="tx tiny" x="0" y="20" text-anchor="middle">SURVEY METER</text>`;
+    drawMeter();
+    const person = obj(`<circle class="s" cx="0" cy="-22" r="12"/><path class="s" d="M-16 18 L-12 -8 Q0 -14 12 -8 L16 18 Z"/><text class="tx tiny" x="0" y="34" text-anchor="middle">CO-WORKER</text>`, 200, 200, 0, { name: 'Co-worker' });
+    draggable(person, { onDrop(o) {
+      if (outZ.has(o)) { tween(o, 800, 270); lock(o); outZ.hide(); out = true; markTask(0); return; }
+      return 'Move the co-worker all the way out to the safe area behind the shielding.';
+    } });
+    arrow(220, 170, 720, 210, -.2);
+    clickable(doorG, () => {
+      if (!out) { toast('Someone is still inside the exposure room. Clear the room first.', 'warn'); return; }
+      door = !door; drawDoor(); markTask(1, door);
+    }, 'Shielded door');
+    clickable(lamp, () => {
+      if (!door) { toast('Close the door first. The interlock must be made before the lights can be tested.', 'warn'); return; }
+      light = true; drawLamp(); markTask(2); setTimeout(() => { light = false; drawLamp(); }, 1200); toast('Warning light works.', 'ok');
+    }, 'Warning light');
+    clickable(met, () => { meter = true; drawMeter(); markTask(3); toast('Battery OK, calibration in date, reading background.', 'ok'); }, 'Survey meter');
+  } },
+
+/* 6 ------------------------------------------------------ */
+{ phase: 2, title: 'Set kV, mA and the generator timer', view: 'FRONT VIEW',
+  tasks: [`Set kV to ${CFG.kv}`, `Set mA to ${CFG.ma}`, `Set the timer to ${fmtT(CFG.time)}`],
+  parts: [],
+  tip: `<p><b>Different from film and CR:</b> the tube stays on while the detector collects frames. The timer must cover the whole acquisition: ${CFG.frames} frames x ${CFG.frameTime} s = ${CFG.frames * CFG.frameTime} s, so set ${fmtT(CFG.time)}.</p><p>The software decides how long each frame integrates. You will tune that with a check shot.</p>`,
+  build() {
+    applyRoom({ white: true });
+    controlPanel();
+    const kvs = []; for (let v = 40; v <= 160; v += 5) kvs.push(v);
+    const mas = []; for (let v = 1; v <= 10; v += .5) mas.push(v);
+    const ts = []; for (let v = 5; v <= 180; v += 5) ts.push(v);
+    const disp = grp('', L.obj);
+    const st = { kv: 100, ma: 5, t: 20 };
+    const show = () => {
+      disp.innerHTML = [[260, st.kv + ' kV'], [500, st.ma + ' mA'], [740, fmtT(st.t)]].map(([x, s]) => `<rect class="s" x="${x - 75}" y="96" width="150" height="42" rx="5"/><text class="tx big" x="${x}" y="125" text-anchor="middle">${s}</text>`).join('') +
+        `<text class="tx small" x="500" y="158" text-anchor="middle">TIMER MUST COVER ${CFG.frames} x ${CFG.frameTime} s = ${CFG.frames * CFG.frameTime} s</text>`;
+      markTask(0, st.kv === CFG.kv); markTask(1, st.ma === CFG.ma); markTask(2, st.t === CFG.time);
+    };
+    knob(260, 268, { label: 'kV', values: kvs, fmt: v => v, idx: kvs.indexOf(100), onChange: v => { st.kv = v; show(); } });
+    knob(500, 268, { label: 'mA', values: mas, fmt: v => v, idx: mas.indexOf(5), onChange: v => { st.ma = v; show(); } });
+    knob(740, 268, { label: 'TIMER', values: ts, fmt: v => fmtT(v), idx: ts.indexOf(20), onChange: v => { st.t = v; show(); } });
+    show();
+  } },
+/* 7 ------------------------------------------------------ */
+{ phase: 2, title: 'Take a check shot and tune the frame time', view: 'SOFTWARE',
+  tasks: ['Turn the X-ray tube ON', 'Take a 1-frame check shot', 'Adjust the frame time until the casting reads 40% to 80% of full scale'],
+  parts: [],
+  tip: `<p>A DR image appears in seconds, so you can check the exposure before the real shot. Aim for a grey value in the casting well above the noise and well below saturation.</p><p>Too little signal is grainy. Too much and pixels <b>saturate</b> (shown red): detail there is lost for good.</p>`,
+  build() {
+    applyRoom({ white: true });
+    softwareScene(`ACQUISITION  |  AATA 101  |  DDA 75 µm  |  CHECK SHOT`);
+    const img = el('g', { transform: 'translate(430 335) scale(1.35)' }, L.bg);
+    img.innerHTML = `<text x="0" y="0" text-anchor="middle" style="fill:#6b7781;font:600 12px var(--body)">No image yet</text>`;
+    let busy = false;
+    const opts = [0.5, 1, 2, 3, 4, 6];
+    hud(`<div class="row"><span class="lbl">Generator</span><span id="genSt"></span></div>
+      <div class="note">${CFG.kv} kV, ${CFG.ma} mA, timer ${fmtT(CFG.time)}</div>
+      <div class="btns"><button class="btn" id="genBtn" type="button"></button></div>
+      <div class="row"><span class="lbl">Acquisition</span></div>
+      <label class="note" for="ft">Frame time (integration per frame)</label>
+      <select id="ft">${opts.map(v => `<option value="${v}"${v === 1 ? ' selected' : ''}>${v} s</option>`).join('')}</select>
+      <div class="note">Frames: 1 (check shot)</div>
+      <div class="btns"><button class="btn primary" id="acq" type="button">Acquire check shot</button></div>
+      <table id="res"><tr><td>Grey in casting</td><td>-</td></tr></table>`);
+    const drawGen = () => { $('#genSt').textContent = S.gen ? 'X-RAY ON' : 'X-RAY OFF'; $('#genSt').className = S.gen ? 'bad' : ''; $('#genBtn').textContent = S.gen ? 'X-ray OFF' : 'X-ray ON'; };
+    S.gen = false; drawGen();
+    $('#genBtn').onclick = () => { S.gen = !S.gen; drawGen(); if (S.gen) markTask(0); };
+    $('#acq').onclick = () => {
+      if (busy) return;
+      if (!S.gen) { toast('The tube is off. Turn the X-ray tube ON first: the detector only integrates while the beam is on.', 'warn'); return; }
+      busy = true; const ft = +$('#ft').value; S.ft = ft;
+      $('#acq').disabled = true; $('#acq').textContent = `Integrating ${ft} s...`;
+      setTimeout(() => {
+        $('#acq').textContent = 'Transferring...';
+        setTimeout(() => {
+          busy = false; $('#acq').disabled = false; $('#acq').textContent = 'Acquire check shot';
+          const e = expo(ft), pct = Math.round(e * 100), g = Math.round(Math.min(e, 1) * 65535);
+          img.innerHTML = drImageMk(e, 1);
+          const ok = e >= .4 && e <= .8;
+          $('#res').innerHTML = `<tr><td>Frame time</td><td>${ft} s</td></tr><tr><td>Grey in casting</td><td class="${ok ? 'good' : 'bad'}">${g.toLocaleString()} (${pct}%)</td></tr><tr><td>Background</td><td>${e * 3.2 >= 1 ? 'saturated (red)' : Math.round(e * 320) + '%'}</td></tr>`;
+          markTask(1);
+          if (e < .4) toast(`Casting at ${pct}% of full scale: too little signal, so the image is grainy. Increase the frame time.`, 'warn');
+          else if (e > .8) toast(`Casting at ${pct}%: too close to saturation. Reduce the frame time.`, 'warn');
+          else { markTask(2); toast(`Casting at ${pct}%: inside the 40% to 80% target. Red shows saturated open background outside the part; check your procedure on that.`, 'ok'); }
+        }, 600);
+      }, Math.max(500, ft * 400));
+    };
+  } },
+/* 8 ------------------------------------------------------ */
+{ phase: 2, title: 'Average frames and acquire the final image', view: 'SOFTWARE',
+  tasks: [`Set ${CFG.frames} frames at ${CFG.frameTime} s each (technique sheet)`, 'Acquire the final image', 'Turn the X-ray tube OFF'],
+  parts: [],
+  tip: `<p><b>Frame averaging</b> adds several frames together. Random noise drops with the square root of the number of frames: 4 frames halve it, 16 frames cut it to a quarter. Doubling the frames again only gains a little more, for twice the time.</p>`,
+  build() {
+    applyRoom({ white: true });
+    softwareScene(`ACQUISITION  |  AATA 101  |  DDA 75 µm  |  FINAL`);
+    const img = el('g', { transform: 'translate(430 335) scale(1.35)' }, L.bg);
+    img.innerHTML = drImageMk(expo(S.ft), 1);
+    grp(`<text x="430" y="575" text-anchor="middle" style="fill:#8a96a0;font:500 13px var(--body)" id="imgCap">Showing: check shot (1 frame)</text>`, L.bg);
+    S.gen = true;
+    let acquired = false, busy = false;
+    const fts = [0.5, 1, 2, 3, 4, 6], ns = [1, 4, 8, 16, 32];
+    hud(`<div class="row"><span class="lbl">Generator</span><span id="genSt"></span></div>
+      <div class="btns"><button class="btn" id="genBtn" type="button"></button></div>
+      <div class="row"><span class="lbl">Acquisition</span></div>
+      <label class="note" for="ft">Frame time</label><select id="ft">${fts.map(v => `<option value="${v}"${v === S.ft ? ' selected' : ''}>${v} s</option>`).join('')}</select>
+      <label class="note" for="nf">Frames to average</label><select id="nf">${ns.map(v => `<option value="${v}"${v === 1 ? ' selected' : ''}>${v}</option>`).join('')}</select>
+      <table id="plan"></table>
+      <div class="btns"><button class="btn primary" id="acq" type="button">Acquire final image</button></div>
+      <div class="bar"><i id="pBar"></i></div><div class="note" id="pMsg"></div>`);
+    const drawGen = () => { $('#genSt').textContent = S.gen ? 'X-RAY ON' : 'X-RAY OFF'; $('#genSt').className = S.gen ? 'bad' : ''; $('#genBtn').textContent = S.gen ? 'X-ray OFF' : 'X-ray ON'; };
+    drawGen();
+    const plan = () => {
+      const ft = +$('#ft').value, n = +$('#nf').value, tot = ft * n;
+      $('#plan').innerHTML = `<tr><td>Acquisition time</td><td class="${tot <= CFG.time ? '' : 'bad'}">${n} x ${ft} s = ${tot} s</td></tr><tr><td>Generator timer</td><td>${CFG.time} s</td></tr><tr><td>Noise vs 1 frame</td><td>${Math.round(100 / Math.sqrt(n))}%</td></tr>`;
+      markTask(0, ft === CFG.frameTime && n === CFG.frames);
+    };
+    $('#ft').onchange = () => { plan(); };
+    $('#nf').onchange = () => {
+      plan(); const n = +$('#nf').value;
+      if (n < CFG.frames) toast(`${n} frame${n > 1 ? 's' : ''}: noise is ${Math.round(100 / Math.sqrt(n))}% of a single frame. More noise than the technique allows; fine detail like the 2T hole can disappear.`, 'warn');
+      if (n > CFG.frames) toast(`${n} frames: noise only drops from ${Math.round(100 / Math.sqrt(CFG.frames))}% to ${Math.round(100 / Math.sqrt(n))}%, for twice the beam time. Use ${CFG.frames}.`, 'warn');
+    };
+    plan();
+    $('#genBtn').onclick = () => {
+      if (busy) { toast('Acquisition running. Turning the tube off now would spoil the image.', 'warn'); return; }
+      if (S.gen && !acquired) { toast('Acquire the final image first, then turn the tube off.', 'info'); return; }
+      S.gen = !S.gen; drawGen(); if (!S.gen && acquired) markTask(2);
+    };
+    $('#acq').onclick = () => {
+      if (busy || acquired) return;
+      const ft = +$('#ft').value, n = +$('#nf').value;
+      if (!S.gen) { toast('Turn the X-ray tube ON first.', 'warn'); return; }
+      if (ft * n > CFG.time) { toast(`${n} x ${ft} s = ${ft * n} s is longer than the ${CFG.time} s generator timer. The tube would switch off mid-acquisition.`, 'warn'); return; }
+      if (!T[0]) { toast(`Set the technique values first: ${CFG.frames} frames at ${CFG.frameTime} s.`, 'warn'); return; }
+      busy = true; $('#acq').disabled = true;
+      simTimer({ total: ft * n, speed: 8, onTick: t => { $('#pBar').style.width = (100 * t / (ft * n)) + '%'; $('#pMsg').textContent = `Frame ${Math.min(n, Math.floor(t / ft) + 1)} of ${n}`; }, onDone: () => {
+        $('#pMsg').textContent = 'Transferring image...';
+        setTimeout(() => {
+          busy = false; acquired = true;
+          img.innerHTML = drImageMk(expo(ft), n);
+          document.getElementById('imgCap').textContent = `Showing: final image (${n} frames averaged)`;
+          $('#pMsg').textContent = `Done: ${n} frames averaged, image saved to AATA 101.`;
+          markTask(1); toast('Final image acquired. Compare the grain with the check shot, then turn the tube OFF.', 'ok');
+        }, 900);
+      } });
+    };
+  } },
+/* 9 ------------------------------------------------------ */
+{ phase: 3, title: 'Evaluate the image on screen', view: 'SOFTWARE',
+  tasks: ['Narrow the window and set the level on the casting', 'Zoom in and click the 2T hole on the IQI', 'Find and click the indication in the casting', 'Check the whole image for artifacts'],
+  parts: [],
+  tip: `<p>Same tools as CR: <b>window</b> sets how wide a band of grey values is spread from black to white, <b>level</b> sets its middle.</p><p>Zoom with the mouse wheel, pinch or +. Drag the background to pan.</p>`,
+  build() {
+    applyRoom({ dim: true });
+    const K = 1.35, RX = 430, RY = 335;
+    grp(`<rect class="bg" width="1000" height="625"/>
+      <rect x="15" y="15" width="970" height="595" rx="8" style="fill:#0c0f12;stroke:#3a4148;stroke-width:2"/>
+      <rect x="15" y="15" width="970" height="34" rx="8" style="fill:#262d34"/>
+      <text x="32" y="38" style="fill:#d8e0e6;font:600 15px var(--display)">IMAGE EVALUATION  |  AATA 101  |  DDA 75 µm  |  ${CFG.frames} frames</text>
+      <rect x="15" y="49" width="52" height="561" style="fill:#1a2026"/>
+      ${['W/L', 'ZOOM', 'MEAS', 'ROI', 'FILT'].map((t, i) => `<rect x="22" y="${62 + i * 50}" width="38" height="40" rx="5" style="fill:${i < 2 ? '#2f6db5' : '#2a323a'}"/><text x="41" y="${87 + i * 50}" text-anchor="middle" style="fill:#e3eaf0;font:600 9.5px var(--display)">${t}</text>`).join('')}
+      <g filter="url(#wl)"><g transform="translate(${RX} ${RY}) scale(${K})">${crImageMk(false)}<rect x="-200" y="-160" width="400" height="320" filter="url(#noise)" opacity=".025"/></g></g>`);
+    const hits = el('g', { transform: `translate(${RX} ${RY}) scale(${K})` }, L.obj);
+    const need = 4;
+    const mk = (cx, cy, r, fn, label) => { const c = el('circle', { cx, cy, r, fill: 'transparent' }, hits); clickable(c, fn, label); };
+    const gate = () => { if (view.z < need) { toast(`Zoom in to at least ${need * 100}% to resolve the IQI holes.`, 'info'); return false; } if (!T[0]) { toast('Set the window and level first: at full window the holes are too faint.', 'info'); return false; } return true; };
+    mk(74, 42, 1.4, () => { if (!gate()) return; markTask(1); toast('Correct: the 2T hole is visible, so 2-2T sensitivity is met.', 'ok'); }, 'IQI hole');
+    mk(46, 42, 1.8, () => { if (!gate()) return; toast('That is the 4T hole (the largest). Find the 2T hole.', 'warn'); }, 'IQI hole');
+    mk(60, 42, 1.1, () => { if (!gate()) return; toast('That is the 1T hole, the smallest. 2-2T needs the 2T hole.', 'warn'); }, 'IQI hole');
+    mk(-4, 14, 16, () => { if (view.z < 2) { toast('Something is there. Zoom in to see it clearly.', 'info'); return; } markTask(2); toast('Gas porosity: rounded dark spots. Size and count them against your acceptance standard.', 'ok'); }, 'Possible indication');
+    let told = false;
+    hud(`<div class="row"><span class="lbl">Window / Level</span></div>
+      <label class="note" for="wlW">Window: <b id="wlWv"></b> grey values</label><input type="range" id="wlW" min="2000" max="65535" step="500" value="65535">
+      <label class="note" for="wlL">Level: <b id="wlLv"></b></label><input type="range" id="wlL" min="0" max="65535" step="250" value="32768">
+      <div class="btns"><button class="btn" id="wlReset" type="button">Reset</button></div>
+      <div class="note">Artifact check (look over the whole image):</div>
+      <div class="btns"><button class="btn" id="artOk" type="button">No artifacts</button><button class="btn" id="artBad" type="button">Artifact found: reject</button></div>`);
+    const upd = () => {
+      const w = +$('#wlW').value / 65535, l = +$('#wlL').value / 65535; setWL(w, l);
+      $('#wlWv').textContent = (+$('#wlW').value).toLocaleString(); $('#wlLv').textContent = (+$('#wlL').value).toLocaleString();
+      if (w <= .25 && l >= .45 && l <= .62 && !T[0]) { markTask(0); if (!told) { told = true; toast('Good. The casting now fills the grey range.', 'ok'); } }
+    };
+    $('#wlW').oninput = upd; $('#wlL').oninput = upd;
+    $('#wlReset').onclick = () => { $('#wlW').value = 65535; $('#wlL').value = 32768; upd(); };
+    upd();
+    $('#artOk').onclick = () => { if (!T[0]) { toast('Narrow the window first. Faint artifacts hide at full window.', 'info'); return; } markTask(3); toast('Right. No bad-pixel lines, ghosting or saturation in the area of interest.', 'ok'); };
+    $('#artBad').onclick = () => { if (!T[0]) { toast('Narrow the window first. Faint artifacts hide at full window.', 'info'); return; } toast('Look again: no bad-pixel lines, ghosting or saturation on the casting. The fine grain is normal noise.', 'warn'); };
+  } },
+/* 10 ----------------------------------------------------- */
+{ phase: 4, title: 'Done: film vs CR vs DR', view: 'SUMMARY',
+  tasks: [], parts: [],
+  tip: `<p>You have now shot the same casting three ways. The physics of the shot (kV, distances, IQI, geometry) stayed the same. What changed is how the image is captured, processed and checked.</p>`,
+  build() {
+    applyRoom({ white: true });
+    grp(`<rect class="bg" width="1000" height="625"/>`);
+    const ov = $('#overlay'); ov.hidden = false;
+    ov.innerHTML = `<div class="sheetcard"><h3>DR image complete and accepted</h3>
+      <p>You powered and connected the detector, tuned the exposure with a check shot, averaged ${CFG.frames} frames and evaluated the image on screen.</p>
+      <h4>Film vs CR vs DR, same shot</h4>
+      <table class="tech"><tr><th></th><td><b>Film</b></td><td><b>CR</b></td><td><b>DR</b></td></tr>
+      <tr><th>Records the image on</th><td>Single-use film</td><td>Reusable imaging plate</td><td>Electronic detector (DDA)</td></tr>
+      <tr><th>Darkroom</th><td>Yes</td><td>No, subdued light to unload</td><td>No</td></tr>
+      <tr><th>Exposure (these exercises)</th><td>70 kV, 5 mA, 60 s</td><td>70 kV, 3 mA, 40 s</td><td>${CFG.kv} kV, ${CFG.ma} mA, ${CFG.frames} x ${CFG.frameTime} s frames</td></tr>
+      <tr><th>Getting the image</th><td>Develop, stop, fix, wash, dry</td><td>Scan plate, preview, release</td><td>On screen seconds after each frame</td></tr>
+      <tr><th>Check shot possible</th><td>No, wait for processing</td><td>Slow: expose, scan, erase</td><td>Yes, in seconds</td></tr>
+      <tr><th>Noise control</th><td>Film grain, film class</td><td>Plate type, scan settings</td><td>Frame time and frame averaging</td></tr>
+      <tr><th>Before shooting</th><td>Load film in the dark</td><td>Inspect, clean, erase plate</td><td>Power, connect, valid calibration</td></tr>
+      <tr><th>Typical artifacts</th><td>Fog, chemical streaks</td><td>Scratches, dust, ghosting</td><td>Bad pixels, saturation, lag or ghosting</td></tr></table>
+      <h4>DR technique record</h4>${techTable()}
+      <p style="margin-top:14px"><button class="btn primary" type="button" id="restart">Start again</button></p></div>`;
+    $('#restart').onclick = () => { done = []; maxReached = 0; goTo(0); };
+    complete();
+  } }
+];
+
+function techTable() {
+  const rows = [
+    ['Part', `${CFG.part}, ${CFG.thk.toFixed(2)} in thick`],
+    ['Source', `X-ray tube, ${CFG.focal} in focal spot`],
+    ['Detector', CFG.detector],
+    ['SDD / OFD / SOD', `${CFG.sfd.toFixed(1)} in / ${CFG.thk.toFixed(2)} in / ${SOD()} in`],
+    ['Geometric unsharpness Ug', `${UG().toFixed(4)} in`],
+    ['kV / mA / generator timer', `${CFG.kv} kV / ${CFG.ma} mA / ${CFG.time} s`],
+    ['Acquisition', `${CFG.frames} frames x ${CFG.frameTime} s, averaged`],
+    ['Check shot target', 'Casting at 40% to 80% of full scale'],
+    ['IQI', `ASTM E1025 hole type #${CFG.iqi}, source side, 2-2T`],
+    ['Markers', 'Lead location 1 and 2, ID plate']
+  ];
+  return `<table class="tech">${rows.map(([a, b]) => `<tr><th>${a}</th><td>${b}</td></tr>`).join('')}</table>`;
+}
+
+/* =========================================================
+   ENGINE
+   ========================================================= */
+let cur = 0, done = [], maxReached = 0;
+function renderPhases() {
+  const nav = $('#phases'); nav.innerHTML = '';
+  PHASES.forEach((p, pi) => {
+    const idx = STEPS.map((s, i) => s.phase === pi ? i : -1).filter(i => i >= 0);
+    const d = document.createElement('div');
+    const allDone = idx.every(i => done[i]);
+    d.className = 'ph' + (STEPS[cur].phase === pi ? ' cur' : '') + (allDone ? ' done' : '');
+    d.innerHTML = `<span>${pi + 1}. ${p}</span>`;
+    const dots = document.createElement('span'); dots.className = 'dots';
+    idx.forEach(i => {
+      const b = document.createElement('button'); b.type = 'button';
+      b.className = 'dot' + (done[i] ? ' done' : '') + (i === cur ? ' here' : '');
+      b.title = 'Step ' + (i + 1) + ': ' + STEPS[i].title; b.setAttribute('aria-label', b.title);
+      b.disabled = i > maxReached; b.onclick = () => goTo(i);
+      dots.appendChild(b);
+    });
+    d.appendChild(dots); nav.appendChild(d);
+  });
+}
+function goTo(i) {
+  timers.forEach(t => clearInterval(t)); timers = []; ffwd = 1; hudLow = false; viewHook = null;
+  objs = []; zones = []; hints = []; selected = null; T = STEPS[i].tasks.map(() => false); stepDone = false;
+  world.innerHTML = '';
+  L = { bg: el('g', {}, world), zone: el('g', {}, world), obj: el('g', {}, world), fx: el('g', {}, world) };
+  stageEl.className = 'stage'; resetView(); hud(''); $('#overlay').hidden = true; $('#overlay').innerHTML = '';
+  $('#toast').className = 'toast';
+  cur = i; maxReached = Math.max(maxReached, i);
+  const st = STEPS[i];
+  $('#phaseLabel').textContent = 'Part ' + (st.phase + 1) + ': ' + PHASES[st.phase];
+  $('#stepNum').textContent = i + 1;
+  $('#stepTitle').textContent = st.title;
+  $('#viewTag').textContent = st.view;
+  $('#tasks').innerHTML = st.tasks.map(t => `<li><span class="box" aria-hidden="true"></span><span>${t}</span></li>`).join('');
+  $('#partsBox').style.display = st.parts.length ? '' : 'none';
+  $('#partsGrid').innerHTML = st.parts.map(([n, label, mk, vb]) => `<div class="part"><span class="n">${n}x</span>${icon(mk, vb)}<span>${label}</span></div>`).join('');
+  $('#tip').innerHTML = st.tip;
+  $('#doneBadge').classList.remove('show');
+  $('#backBtn').disabled = i === 0;
+  $('#nextBtn').disabled = !done[i];
+  $('#nextBtn').style.display = i === STEPS.length - 1 ? 'none' : '';
+  $('#hintBtn').style.display = st.tasks.length ? '' : 'none';
+  st.build();
+  if (done[i]) { $('#nextBtn').disabled = false; }
+  updateTools(); renderPhases();
+}
+$('#nextBtn').onclick = () => { if (cur < STEPS.length - 1) goTo(cur + 1); };
+$('#backBtn').onclick = () => { if (cur > 0) goTo(cur - 1); };
+$('#hintBtn').onclick = () => {
+  const open = zones.filter(z => !z.done);
+  open.forEach(z => { z.el.classList.remove('pulse'); void z.el.getBBox(); z.el.classList.add('pulse'); });
+  hints.forEach(h => { h.classList.remove('pulse'); void h.getBBox(); h.classList.add('pulse'); });
+  const next = STEPS[cur].tasks.findIndex((t, i) => !T[i]);
+  toast(next >= 0 ? 'Next: ' + STEPS[cur].tasks[next] + '.' : 'All tasks done. Press Next.', 'info');
+};
+document.addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('input,textarea')) return;
+  if (!$('#techModal').hidden) { if (e.key === 'Escape') $('#techModal').hidden = true; return; }
+  if (!$('#startModal').hidden) return;
+  if (e.key === 'r' || e.key === 'R') rotateSel(e.shiftKey ? -1 : 1);
+  else if (e.key === 'f' || e.key === 'F') flipSel();
+  else if (e.key === '+' || e.key === '=') zoomCenter(1.5);
+  else if (e.key === '-' || e.key === '_') zoomCenter(1 / 1.5);
+  else if (e.key === '0') resetView();
+});
+$('#techBtn').onclick = () => { $('#techBody').innerHTML = techTable(); $('#techModal').hidden = false; $('#techClose').focus(); };
+$('#techClose').onclick = () => { $('#techModal').hidden = true; };
+$('#techModal').addEventListener('click', e => { if (e.target.id === 'techModal') $('#techModal').hidden = true; });
+window.addEventListener('resize', applyView);
+
+// small gradient for the heel effect on the radiograph
+(() => { const d = svg.querySelector('defs'); const g = el('linearGradient', { id: 'heel', x1: 0, y1: 0, x2: 1, y2: 0 }, d); el('stop', { offset: 0, 'stop-color': '#000' }, g); el('stop', { offset: 1, 'stop-color': '#fff', 'stop-opacity': 0 }, g); })();
+
+
+/* full screen: browsers only allow it after a click, so it is offered on the start screen and in the header */
+(() => {
+  const d = document, root = d.documentElement;
+  const can = !!(d.fullscreenEnabled || d.webkitFullscreenEnabled);
+  const isFs = () => !!(d.fullscreenElement || d.webkitFullscreenElement);
+  const enter = () => { try { const r = (root.requestFullscreen || root.webkitRequestFullscreen).call(root); if (r && r.catch) r.catch(() => toast('Full screen was blocked by the browser. You can keep working in this window.', 'info')); } catch (e) { toast('Full screen is not available here.', 'info'); } };
+  const exit = () => { try { (d.exitFullscreen || d.webkitExitFullscreen).call(d); } catch (e) {} };
+  const fsBtn = $('#fsBtn');
+  const sync = () => { fsBtn.textContent = isFs() ? 'Exit full screen' : 'Full screen'; setTimeout(applyView, 50); };
+  if (can) { fsBtn.hidden = false; fsBtn.onclick = () => isFs() ? exit() : enter(); }
+  d.addEventListener('fullscreenchange', sync); d.addEventListener('webkitfullscreenchange', sync);
+  const sm = $('#startModal');
+  const close = () => { sm.hidden = true; };
+  if (!can) { $('#startFs').hidden = true; $('#startHere').textContent = 'Start'; $('#startHere').classList.add('primary'); }
+  $('#startFs').onclick = () => { close(); enter(); };
+  $('#startHere').onclick = close;
+  (can ? $('#startFs') : $('#startHere')).focus();
+})();
+window.__sim = { goTo, STEPS, get T() { return T; }, get objs() { return objs; } };
+goTo(0);
+</script>
+</body>
+</html>
