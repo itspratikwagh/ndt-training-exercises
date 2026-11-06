@@ -59,14 +59,31 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:0 2
 @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 @media (max-height:640px){.panel{gap:10px;padding-top:16px}h1{font-size:19px}.lead{font-size:13.5px}.eq{padding:6px}}
+html:fullscreen .app{max-width:none;max-height:none}
+html:-webkit-full-screen .app{max-width:none;max-height:none}
+.hright{display:flex;align-items:center;gap:16px}
+.fsbtn{font:inherit;font-size:12px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;padding:5px 12px;cursor:pointer;white-space:nowrap}
+.fsbtn:hover{border-color:var(--ink)}
+.start{position:fixed;inset:0;background:#fff;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px}
+.start h2{font-size:30px;line-height:1.15;font-weight:700;letter-spacing:-.3px}
+.start p{color:#444;font-size:15px;line-height:1.5;max-width:440px}
+.start .btn{font-size:16px;padding:12px 34px;margin-top:6px}
+.start .note{min-height:16px}
 @media (max-width:820px){main{grid-template-columns:1fr;grid-template-rows:50% 50%}.stage{border-right:0;border-bottom:1px solid var(--line)}.panel{padding:14px 16px}h1{font-size:18px}.dot{width:10px}.brand span{display:none}}
 </style>
 </head>
 <body>
+<div class="start" id="start">
+  <div class="kicker">Eddy current · Interactive</div>
+  <h2>Faraday's Law &amp; Eddy Currents</h2>
+  <p>Nine short steps, from a moving magnet to finding a hidden crack.</p>
+  <button class="btn primary" id="startbtn">Start</button>
+  <div class="note" id="fsnote"></div>
+</div>
 <div class="app">
   <header>
     <div class="brand">Faraday's Law <span>&amp; Eddy Current Testing</span></div>
-    <div class="dots" id="dots"></div>
+    <div class="hright"><div class="dots" id="dots"></div><button class="fsbtn" id="fsb">Full screen</button></div>
   </header>
   <main>
     <div class="stage"><canvas id="cv"></canvas></div>
@@ -301,6 +318,17 @@ let last=performance.now();
 function frame(t){const dt=clamp((t-last)/1000,.001,.05);last=t;const s=scene();s.update(dt);const st=STEPS[cur];if(st.tick)st.tick.call(st,dt);
  const v=view;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);ctx.setTransform(v.d*v.s,0,0,v.d*v.s,v.d*v.ox,v.d*v.oy);s.draw();requestAnimationFrame(frame);}
 D.SREF=0.22;
+/* ---------- start screen + full screen ---------- */
+const fsOK=!!(document.fullscreenEnabled||document.webkitFullscreenEnabled);
+const isFS=()=>!!(document.fullscreenElement||document.webkitFullscreenElement);
+function enterFS(){const el=document.documentElement,f=el.requestFullscreen||el.webkitRequestFullscreen;if(!f)return;try{const r=f.call(el);if(r&&r.catch)r.catch(()=>{});}catch(_){}}
+function exitFS(){const f=document.exitFullscreen||document.webkitExitFullscreen;if(!f)return;try{const r=f.call(document);if(r&&r.catch)r.catch(()=>{});}catch(_){}}
+const fsb=$('#fsb');if(!fsOK)fsb.style.display='none';else $('#fsnote').textContent='Opens full screen. Press Esc to exit.';
+fsb.onclick=()=>isFS()?exitFS():enterFS();
+const fsUpd=()=>{fsb.textContent=isFS()?'Exit full screen':'Full screen';};
+document.addEventListener('fullscreenchange',fsUpd);document.addEventListener('webkitfullscreenchange',fsUpd);
+$('#startbtn').onclick=()=>{if(fsOK)enterFS();$('#start').remove();};
+
 go(0);requestAnimationFrame(frame);
 })();
 </script>
