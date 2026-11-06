@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Faraday's Law and Eddy Current Testing</title>
+<style>
+:root{--ink:#111;--mute:#777;--line:#e6e6e6;--acc:#ff5a1f;--fld:#2f6fed;--ok:#13895a;--bad:#d4372c}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#fff;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+.app{height:100vh;max-height:760px;max-width:1240px;margin:0 auto;display:grid;grid-template-rows:54px 1fr 62px}
+header{display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-bottom:1px solid var(--line);gap:16px}
+.brand{font-weight:650;font-size:14px;white-space:nowrap}
+.brand span{color:var(--mute);font-weight:400}
+.dots{display:flex;gap:5px}
+.dot{width:20px;height:4px;border-radius:2px;background:var(--line);transition:background .3s}
+.dot.done{background:var(--ink)}.dot.cur{background:var(--acc)}
+main{display:grid;grid-template-columns:1fr 340px;min-height:0}
+.stage{position:relative;min-height:0;border-right:1px solid var(--line)}
+canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
+.panel{padding:22px 22px 14px;display:flex;flex-direction:column;gap:13px;min-height:0;overflow-y:auto}
+.kicker{font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:var(--mute)}
+h1{font-size:21px;line-height:1.22;font-weight:680;margin-top:-6px}
+.lead{font-size:14px;line-height:1.5;color:#333}
+.eq{font-family:"Cambria Math","STIX Two Math",Georgia,serif;font-size:21px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px}
+.frac{display:inline-flex;flex-direction:column;align-items:center;font-size:17px;line-height:1.1}
+.frac span:first-child{border-bottom:1.5px solid var(--ink);padding:0 3px}
+.tasks{display:flex;flex-direction:column;gap:7px}
+.task{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.4;transition:color .3s}
+.task i{flex:0 0 16px;height:16px;border:1.5px solid var(--ink);border-radius:50%;margin-top:1px;position:relative;transition:background .25s}
+.task.ok i{background:var(--ink)}
+.task.ok i::after{content:"";position:absolute;left:4.2px;top:1.2px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.task.ok{color:var(--mute)}
+.ctrl{display:flex;flex-direction:column;gap:7px;font-size:13px}
+.ctrl label{display:flex;justify-content:space-between;color:var(--mute)}
+.ctrl b{color:var(--ink);font-weight:600}
+input[type=range]{width:100%;accent-color:var(--ink)}
+.seg{display:flex;border:1px solid var(--ink);border-radius:9px;overflow:hidden}
+.seg button{flex:1;border:0;background:#fff;padding:8px 2px;font:inherit;font-size:12.5px;cursor:pointer;border-right:1px solid var(--ink);color:var(--ink)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--ink);color:#fff}
+.note{font-size:12.5px;color:var(--mute)}
+.quiz{border-top:1px solid var(--line);padding-top:13px;display:flex;flex-direction:column;gap:7px;animation:rise .35s ease}
+.quiz .q{font-size:14px;font-weight:620;line-height:1.4;margin-bottom:2px}
+.opt{text-align:left;border:1px solid #d2d2d2;background:#fff;border-radius:9px;padding:8px 12px;font:inherit;font-size:13.5px;line-height:1.35;cursor:pointer;color:var(--ink);transition:border-color .15s,background .15s}
+.opt:hover:not(:disabled){border-color:var(--ink)}
+.opt.right{border-color:var(--ok);background:#eef9f3}
+.opt.wrong{border-color:var(--bad);background:#fdf2f1;animation:shake .3s}
+.opt:disabled{cursor:default;opacity:.55}.opt.right:disabled{opacity:1}
+.fb{font-size:13px;line-height:1.45}
+.fb.ok{color:var(--ok)}.fb.no{color:var(--bad)}
+.big{font-size:44px;font-weight:700;letter-spacing:-1px}
+footer{display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-top:1px solid var(--line);gap:12px}
+.btn{font:inherit;font-size:14px;padding:9px 20px;border-radius:999px;border:1px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;white-space:nowrap}
+.btn.primary{background:var(--ink);color:#fff}
+.btn.small{font-size:13px;padding:7px 14px;align-self:flex-start}
+.btn:disabled{opacity:.22;cursor:default}
+.hint{font-size:12.5px;color:var(--mute);text-align:center}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@media (max-height:640px){.panel{gap:10px;padding-top:16px}h1{font-size:19px}.lead{font-size:13.5px}.eq{padding:6px}}
+@media (max-width:820px){main{grid-template-columns:1fr;grid-template-rows:50% 50%}.stage{border-right:0;border-bottom:1px solid var(--line)}.panel{padding:14px 16px}h1{font-size:18px}.dot{width:10px}.brand span{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">Faraday's Law <span>&amp; Eddy Current Testing</span></div>
+    <div class="dots" id="dots"></div>
+  </header>
+  <main>
+    <div class="stage"><canvas id="cv"></canvas></div>
+    <div class="panel" id="panel"></div>
+  </main>
+  <footer>
+    <button class="btn" id="back">Back</button>
+    <div class="hint" id="hint"></div>
+    <button class="btn primary" id="next">Next</button>
+  </footer>
+</div>
+<script>
+(()=>{
+const $=s=>document.querySelector(s);
+const cv=$('#cv'),ctx=cv.getContext('2d'),panel=$('#panel');
+const W=800,H=500,MAXH=300;
+const COL={ink:'#111',mute:'#8a8a8a',wire:'#c4c4c4',acc:'#ff5a1f',fld:'#2f6fed'};
+const FONT='-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+let view={s:1,ox:0,oy:0,d:1};
+function resize(){const r=cv.getBoundingClientRect(),d=window.devicePixelRatio||1;cv.width=Math.max(1,Math.round(r.width*d));cv.height=Math.max(1,Math.round(r.height*d));const s=Math.min(r.width/W,r.height/H);view={s,ox:(r.width-W*s)/2,oy:(r.height-H*s)/2,d};}
+new ResizeObserver(resize).observe(cv);resize();
+function toL(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left-view.ox)/view.s,y:(e.clientY-r.top-view.oy)/view.s};}
+
+/* ---------- drawing helpers ---------- */
+function txt(s,x,y,o={}){ctx.save();ctx.font=`${o.w||400} ${o.size||13}px ${FONT}`;ctx.fillStyle=o.c||COL.ink;ctx.globalAlpha=o.a??1;ctx.textAlign=o.al||'left';ctx.textBaseline='middle';ctx.fillText(s,x,y);ctx.restore();}
+function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function arrow(x1,y1,x2,y2,c,w=2,hs=8,a=1){const g=Math.atan2(y2-y1,x2-x1);ctx.save();ctx.globalAlpha=a;ctx.strokeStyle=c;ctx.fillStyle=c;ctx.lineWidth=w;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2-Math.cos(g)*hs*.6,y2-Math.sin(g)*hs*.6);ctx.stroke();ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-hs*Math.cos(g-.45),y2-hs*Math.sin(g-.45));ctx.lineTo(x2-hs*Math.cos(g+.45),y2-hs*Math.sin(g+.45));ctx.closePath();ctx.fill();ctx.restore();}
+function poly(pts,c,w=2){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.stroke();}
+function plen(p){let L=0;for(let i=1;i<p.length;i++)L+=Math.hypot(p[i][0]-p[i-1][0],p[i][1]-p[i-1][1]);return L;}
+function pat(p,s){for(let i=1;i<p.length;i++){const l=Math.hypot(p[i][0]-p[i-1][0],p[i][1]-p[i-1][1]);if(s<=l){const t=s/l;return[p[i-1][0]+(p[i][0]-p[i-1][0])*t,p[i-1][1]+(p[i][1]-p[i-1][1])*t];}s-=l;}return p[p.length-1];}
+function dots(polys,phase,strength,color){const a=clamp(Math.abs(strength),0,1);if(a<.03)return;const L=polys.map(plen),T=L.reduce((x,y)=>x+y,0),g=18;ctx.save();ctx.fillStyle=color;ctx.globalAlpha=a;for(let s0=((phase%g)+g)%g;s0<T;s0+=g){let s=s0,k=0;while(k<polys.length-1&&s>L[k]){s-=L[k];k++;}const p=pat(polys[k],s);ctx.beginPath();ctx.arc(p[0],p[1],2.8,0,7);ctx.fill();}ctx.restore();}
+function meter(cx,top,v,label){const x=cx-58,w=116,h=76;ctx.save();ctx.fillStyle='#fff';ctx.strokeStyle=COL.ink;ctx.lineWidth=1.5;rr(x,top,w,h,10);ctx.fill();ctx.stroke();const oy=top+60,r=42;ctx.strokeStyle='#c8c8c8';ctx.beginPath();ctx.arc(cx,oy,r,Math.PI+.5,2*Math.PI-.5);ctx.stroke();for(const t of[-1,-.5,0,.5,1]){const a=-Math.PI/2+t*1.07,i=t?4:8;ctx.strokeStyle=t?'#c8c8c8':COL.ink;ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*(r-i),oy+Math.sin(a)*(r-i));ctx.lineTo(cx+Math.cos(a)*r,oy+Math.sin(a)*r);ctx.stroke();}const a=-Math.PI/2+clamp(v,-1,1)*1.07;ctx.strokeStyle=COL.acc;ctx.lineWidth=2.4;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(cx,oy);ctx.lineTo(cx+Math.cos(a)*(r-6),oy+Math.sin(a)*(r-6));ctx.stroke();ctx.fillStyle=COL.ink;ctx.beginPath();ctx.arc(cx,oy,3.5,0,7);ctx.fill();ctx.restore();txt(label,cx,top+h+14,{al:'center',c:COL.mute,size:12});}
+function chart(x,y,w,h,series,o={}){ctx.save();ctx.fillStyle='#fff';ctx.fillRect(x,y,w,h);ctx.strokeStyle='#e4e4e4';ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,w,h);
+ if(o.zero!==undefined){ctx.setLineDash([3,4]);ctx.strokeStyle='#d6d6d6';ctx.beginPath();ctx.moveTo(x,o.zero);ctx.lineTo(x+w,o.zero);ctx.stroke();ctx.setLineDash([]);}
+ (o.lines||[]).forEach(l=>{ctx.setLineDash([5,5]);ctx.strokeStyle=l.c;ctx.globalAlpha=.6;ctx.beginPath();ctx.moveTo(x,l.y);ctx.lineTo(x+w,l.y);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;});
+ ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();
+ series.forEach(s=>{const d=s.d,n=d.length;if(n<2)return;ctx.strokeStyle=s.c;ctx.lineWidth=s.w||2;ctx.lineJoin='round';ctx.beginPath();for(let i=0;i<n;i++){const X=x+w-(n-1-i)*(w/(MAXH-1)),v=(d[i]-s.min)/(s.max-s.min),Y=y+h-4-clamp(v,0,1)*(h-8);i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);}ctx.stroke();});
+ ctx.restore();ctx.save();ctx.font=`400 12px ${FONT}`;let lw=24;series.forEach(s=>{if(s.label)lw+=ctx.measureText(s.label).width+46;});ctx.fillStyle='rgba(255,255,255,.92)';ctx.fillRect(x+4,y+4,lw-20,20);if(o.right){const rw=ctx.measureText(o.right).width;ctx.fillRect(x+w-rw-18,y+4,rw+12,20);}ctx.restore();let lx=x+12;series.forEach(s=>{if(!s.label)return;ctx.fillStyle=s.c;ctx.fillRect(lx,y+12,12,3);txt(s.label,lx+17,y+14,{size:12,c:'#555'});lx+=ctx.measureText(s.label).width+46;});if(o.right)txt(o.right,x+w-12,y+14,{al:'right',size:12,c:'#555'});}
+
+/* field lines of two poles at (+d,0)=N and (-d,0)=S, in local coords */
+function trace(d,angs){const out=[];for(const a of angs){for(const sg of[1,-1]){const r=a*Math.PI/180;let x=d+5*Math.cos(r),y=-sg*5*Math.sin(r);const pts=[[x,y]];for(let k=0;k<1100;k++){const a1=x-d,a2=x+d,r1=Math.pow(a1*a1+y*y,1.5),r2=Math.pow(a2*a2+y*y,1.5);const bx=a1/r1-a2/r2,by=y/r1-y/r2,m=Math.hypot(bx,by);if(!m)break;x+=3*bx/m;y+=3*by/m;pts.push([x,y]);if(Math.hypot(x+d,y)<5||Math.abs(x)>1100||Math.abs(y)>800)break;}out.push(pts);if(a===0)break;}}out.push([[-1100,0],[-d-4,0]]);return out;}
+const LM=trace(60,[0,14,30,52,82,122]),LC=trace(42,[0,16,36,62,98,138]),LV=trace(24,[0,22,48,84,128]);
+function field(lines,ox,oy,vert,alpha,dir){if(alpha<.01)return;ctx.save();ctx.globalAlpha=alpha;ctx.strokeStyle=COL.fld;ctx.fillStyle=COL.fld;ctx.lineWidth=1.3;const m=vert?p=>[ox+p[1],oy+p[0]]:p=>[ox+p[0],oy+p[1]];
+ for(const L of lines){ctx.beginPath();L.forEach((p,i)=>{const q=m(p);i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]);});ctx.stroke();if(L.length<8)continue;const i=Math.min(Math.floor(L.length/2),55);let a=m(L[i]),b=m(L[i+2]);if(dir<0)[a,b]=[b,a];const g=Math.atan2(b[1]-a[1],b[0]-a[0]),s=6;ctx.beginPath();ctx.moveTo(b[0]+Math.cos(g)*s,b[1]+Math.sin(g)*s);ctx.lineTo(b[0]-s*Math.cos(g-.5),b[1]-s*Math.sin(g-.5));ctx.lineTo(b[0]-s*Math.cos(g+.5),b[1]-s*Math.sin(g+.5));ctx.closePath();ctx.fill();}
+ ctx.restore();}
+function coilBack(xs,cy,ry){ctx.strokeStyle='#cfcfcf';ctx.lineWidth=3;xs.forEach(x=>{ctx.beginPath();ctx.ellipse(x,cy,9,ry,0,-Math.PI/2,Math.PI/2);ctx.stroke();});}
+function coilFront(xs,cy,ry){ctx.strokeStyle=COL.ink;ctx.lineWidth=3;xs.forEach(x=>{ctx.beginPath();ctx.ellipse(x,cy,9,ry,0,Math.PI/2,Math.PI*1.5);ctx.stroke();});}
+function loopsX(cx,N,sp){const a=[];for(let i=0;i<N;i++)a.push(cx+(i-(N-1)/2)*sp);return a;}
+function leads(xs,cx,yb,dev,dy){const x0=xs[0],x1=xs[xs.length-1],y=yb+22;return[[[x0,yb],[x0,y],[cx-100,y],[cx-100,dy],[cx-dev,dy]],[[cx+dev,dy],[cx+100,dy],[cx+100,y],[x1,y],[x1,yb]]];}
+function hintDrag(x,y,t,label){const b=Math.sin(t*4)*4;txt(label,x,y+b,{al:'center',size:12,c:COL.acc,w:600});}
+function push(a,v){a.push(v);if(a.length>MAXH)a.shift();}
+
+/* ---------- Scene A: magnet + coil ---------- */
+const A={cx:520,cy:170,ry:58,sp:14,N:5,mx:150,drag:false,off:0,phi:0,emf:0,nd:0,ph:0,peak:0,hp:[],he:[],touched:false,chart:false,lenz:false,target:0,FS:30,t:0,
+ flux(m){const u=(this.cx-m)/80;return 1/Math.pow(1+u*u,1.5);},
+ setup(o){Object.assign(this,{mx:150,drag:false,emf:0,nd:0,peak:0,hp:[],he:[],chart:false,lenz:false,target:0,N:5},o);this.phi=this.flux(this.mx);},
+ down(p){if(Math.abs(p.x-this.mx)<95&&Math.abs(p.y-this.cy)<52){this.drag=true;this.off=p.x-this.mx;this.touched=true;}},
+ move(p){if(this.drag)this.mx=clamp(p.x-this.off,110,this.cx);},
+ over(p){return Math.abs(p.x-this.mx)<95&&Math.abs(p.y-this.cy)<52;},
+ up(){this.drag=false;},
+ update(dt){this.t+=dt;const f=this.flux(this.mx),raw=-this.N*(f-this.phi)/dt;this.phi=f;this.emf+=(raw-this.emf)*Math.min(1,dt*12);if(Math.abs(this.emf)<.002)this.emf=0;this.nd+=(clamp(this.emf/this.FS,-1,1)-this.nd)*Math.min(1,dt*14);this.ph+=this.emf*dt*5;this.peak=Math.max(this.peak,Math.abs(this.emf));push(this.hp,f);push(this.he,this.emf);},
+ draw(){const{cx,cy,ry}=this,xs=loopsX(cx,this.N,this.sp);
+  field(LM,this.mx,cy,false,.3,1);
+  coilBack(xs,cy,ry);
+  const m=this.mx;ctx.save();ctx.lineWidth=1.6;ctx.strokeStyle=COL.ink;ctx.fillStyle='#fff';rr(m-75,cy-23,150,46,5);ctx.fill();ctx.fillStyle=COL.ink;ctx.beginPath();ctx.moveTo(m,cy-23);ctx.lineTo(m+70,cy-23);ctx.arcTo(m+75,cy-23,m+75,cy+23,5);ctx.arcTo(m+75,cy+23,m,cy+23,5);ctx.lineTo(m,cy+23);ctx.closePath();ctx.fill();rr(m-75,cy-23,150,46,5);ctx.stroke();ctx.restore();
+  txt('S',m-38,cy+1,{al:'center',w:700,size:17});txt('N',m+38,cy+1,{al:'center',w:700,size:17,c:'#fff'});
+  coilFront(xs,cy,ry);
+  const[L,R]=leads(xs,cx,cy+ry,58,330);poly(L,COL.wire);poly(R,COL.wire);dots([L,R],this.ph,this.emf/5,COL.acc);
+  meter(cx,285,this.nd,'induced current');
+  txt('coil',cx,cy-ry-16,{al:'center',size:12,c:COL.mute});
+  if(this.lenz){const s=clamp(Math.abs(this.emf)/9,0,1);if(s>.04){const near=this.emf<0?'N':'S',far=near==='N'?'S':'N';txt(near,xs[0]-4,cy-ry-16,{al:'center',w:700,size:19,c:COL.acc,a:s});txt(far,xs[xs.length-1]+4,cy-ry-16,{al:'center',w:700,size:19,c:COL.acc,a:s});const y=cy-52,dir=this.emf<0?-1:1;arrow(m-dir*0,y,m+dir*56,y,COL.acc,2.5,10,s);txt(this.emf<0?'repelled':'attracted',m+dir*28,y-14,{al:'center',size:12,c:COL.acc,a:s});}}
+  if(this.chart){const y0=392,h=92;chart(30,y0,740,h,[{d:this.hp,c:'#9b9b9b',min:0,max:1.05,label:'Φ  flux through coil'},{d:this.he,c:COL.acc,min:-this.FS,max:this.FS,label:'ε  induced EMF'}],{zero:y0+h/2,right:this.target?`peak |ε|  ${this.peak.toFixed(0)} / ${this.target}`:'',lines:this.target?[{y:y0+h-4-((this.target+this.FS)/(2*this.FS))*(h-8),c:COL.acc},{y:y0+h-4-((-this.target+this.FS)/(2*this.FS))*(h-8),c:COL.acc}]:[]});}
+  if(!this.touched)hintDrag(m,cy-48,this.t,'drag me  →');}
+};
+
+/* ---------- Scene B: AC coil drives a second coil ---------- */
+const B={px:250,sx:540,cy:170,ry:58,sp:14,N:6,mode:'off',f:.8,th:0,I:0,Ip:0,emf:0,nd:0,phP:0,phS:0,hi:[],he:[],dcT:0,M:.068,
+ setup(){Object.assign(this,{mode:'off',f:.8,th:0,I:0,Ip:0,emf:0,nd:0,hi:[],he:[],dcT:0});},
+ update(dt){if(this.mode==='ac')this.th+=2*Math.PI*this.f*dt;const tg=this.mode==='off'?0:this.mode==='dc'?1:Math.sin(this.th);this.I+=(tg-this.I)*Math.min(1,dt/.035);const raw=-this.M*(this.I-this.Ip)/dt;this.Ip=this.I;this.emf+=(raw-this.emf)*Math.min(1,dt*25);this.nd+=(clamp(this.emf,-1,1)-this.nd)*Math.min(1,dt*14);this.phP+=this.I*dt*70;this.phS+=this.emf*dt*110;this.dcT=this.mode==='dc'?this.dcT+dt:0;push(this.hi,this.I);push(this.he,this.emf);},
+ draw(){const{px,sx,cy,ry}=this,xp=loopsX(px,this.N,this.sp),xq=loopsX(sx,this.N,this.sp);
+  field(LC,px,cy,false,.05+.42*Math.abs(this.I),Math.sign(this.I)||1);
+  coilBack(xp,cy,ry);coilBack(xq,cy,ry);coilFront(xp,cy,ry);coilFront(xq,cy,ry);
+  txt('coil 1',px,cy-ry-16,{al:'center',size:12,c:COL.mute});txt('coil 2',sx,cy-ry-16,{al:'center',size:12,c:COL.mute});
+  const[L,R]=leads(xp,px,cy+ry,24,330);poly(L,COL.wire);poly(R,COL.wire);dots([L,R],this.phP,this.I,COL.ink);
+  ctx.save();ctx.fillStyle='#fff';ctx.strokeStyle=COL.ink;ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(px,330,24,0,7);ctx.fill();ctx.stroke();ctx.restore();
+  if(this.mode==='ac'){ctx.save();ctx.strokeStyle=COL.ink;ctx.lineWidth=2;ctx.beginPath();for(let i=0;i<=24;i++){const x=px-13+i*26/24,y=330-8*Math.sin(i/24*2*Math.PI);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();ctx.restore();}
+  else txt(this.mode==='dc'?'DC':'OFF',px,331,{al:'center',w:650,size:12,c:this.mode==='dc'?COL.ink:COL.mute});
+  txt('power supply',px,370,{al:'center',size:12,c:COL.mute});
+  const[L2,R2]=leads(xq,sx,cy+ry,58,330);poly(L2,COL.wire);poly(R2,COL.wire);dots([L2,R2],this.phS,this.emf*2.2,COL.acc);
+  meter(sx,285,this.nd,'induced current');
+  const y0=392,h=92;chart(30,y0,740,h,[{d:this.hi,c:COL.ink,min:-1.35,max:1.35,label:'current in coil 1'},{d:this.he,c:COL.acc,min:-1.35,max:1.35,label:'EMF in coil 2'}],{zero:y0+h/2});}
+};
+
+/* ---------- Scene C: coil over a plate, eddy currents ---------- */
+const MATS={plastic:{n:'Acrylic plastic',k:0,iacs:'0',fill:'#fbfbfb'},stainless:{n:'Stainless steel 304',k:.16,iacs:'≈ 2.5',fill:'#ebebeb'},aluminum:{n:'Aluminum 6061',k:.66,iacs:'≈ 43',fill:'#f2f2f2'},copper:{n:'Copper',k:1,iacs:'≈ 100',fill:'#f7ece5'}};
+const Cc={cx:400,mat:'aluminum',kv:.66,th:0,I:0,phC:0,phE:0,
+ setup(){this.mat='aluminum';this.kv=MATS.aluminum.k;},
+ update(dt){this.th+=2*Math.PI*.55*dt;this.I=Math.sin(this.th);this.kv+=(MATS[this.mat].k-this.kv)*Math.min(1,dt*5);this.phC+=this.I*dt*45;this.phE-=this.I*dt*45;},
+ draw(){const cx=this.cx,I=this.I,k=this.kv,M=MATS[this.mat];
+  field(LV,cx,116,true,.05+.33*Math.abs(I),Math.sign(I)||1);
+  ctx.save();ctx.globalAlpha=.86;ctx.fillStyle=M.fill;ctx.beginPath();ctx.moveTo(130,250);ctx.lineTo(670,250);ctx.lineTo(740,330);ctx.lineTo(60,330);ctx.closePath();ctx.fill();ctx.globalAlpha=1;ctx.strokeStyle=COL.ink;ctx.lineWidth=1.4;ctx.stroke();ctx.fillStyle='#e2e2e2';if(this.mat==='copper')ctx.fillStyle='#ecd9cc';ctx.fillRect(60,330,680,20);ctx.strokeRect(60,330,680,20);ctx.restore();
+  txt(`${M.n}  ·  ${M.iacs} %IACS`,400,341,{al:'center',size:11.5,c:'#555'});
+  const rs=[44,84,124,164];ctx.save();ctx.lineWidth=2.4;ctx.setLineDash([7,9]);rs.forEach((r,i)=>{const a=k*Math.abs(I)*(1-i*.17);if(a<.03)return;ctx.globalAlpha=clamp(a*1.2,0,1);ctx.strokeStyle=COL.acc;ctx.lineDashOffset=this.phE;ctx.beginPath();ctx.ellipse(400,290,r,r*.2,0,0,Math.PI*2);ctx.stroke();});ctx.restore();
+  const ys=[];for(let i=0;i<5;i++)ys.push(92+i*12);
+  ctx.save();ctx.strokeStyle='#cfcfcf';ctx.lineWidth=3;ys.forEach(y=>{ctx.beginPath();ctx.ellipse(cx,y,62,14,0,Math.PI,Math.PI*2);ctx.stroke();});ctx.strokeStyle=COL.ink;ys.forEach(y=>{ctx.beginPath();ctx.ellipse(cx,y,62,14,0,0,Math.PI);ctx.stroke();});
+  ctx.strokeStyle='#fff';ctx.lineWidth=1.4;ctx.setLineDash([4,10]);ctx.lineDashOffset=this.phC;ctx.globalAlpha=clamp(Math.abs(I)*1.4,0,1);ys.forEach(y=>{ctx.beginPath();ctx.ellipse(cx,y,62,14,0,0,Math.PI);ctx.stroke();});ctx.restore();
+  poly([[cx-62,92],[cx-62,40],[cx-20,40],[cx-20,14]],COL.wire);poly([[cx+62,140],[cx+76,140],[cx+76,40],[cx+20,40],[cx+20,14]],COL.wire);
+  txt('probe coil',cx+92,62,{size:12,c:COL.mute});txt('AC from instrument',cx+30,14,{size:12,c:COL.mute});
+  const s=Math.sign(I)||1,Lc=18+44*Math.abs(I);arrow(372,206-s*Lc/2,372,206+s*Lc/2,COL.fld,2.6,9,clamp(Math.abs(I)*2,0,1));
+  const Le=6+44*Math.abs(I)*k;if(k>.03)arrow(428,206+s*Le/2,428,206-s*Le/2,COL.acc,2.6,9,clamp(Math.abs(I)*k*2.2,0,1));
+  txt('coil field',356,206,{al:'right',size:12,c:COL.fld});txt('eddy field',444,206,{size:12,c:COL.acc,a:k>.03?1:.25});
+  txt('eddy currents',400,372,{al:'center',size:12,c:COL.acc,a:k>.03?1:.25});}
+};
+
+/* ---------- Scene D: top view scan, stream-function solver ---------- */
+const D={x0:60,y0:40,h:8,nx:85,ny:38,px:160,py:195,drag:false,ox:0,oy:0,touched:false,hidden:false,found:false,S:0,Sd:0,hist:[],parts:[],peak:1,crack:null,t:0,SREF:1,dirty:true};
+(function(){const NW=D.nx+1,NH=D.ny+1,n=NW*NH;D.NW=NW;D.NH=NH;D.psi=new Float32Array(n);D.psi0=new Float32Array(n);D.src=new Float32Array(n);D.mask=new Uint8Array(n);D.cn=[];D.nb=[];})();
+function segDist(px,py,c){const dx=c.bx-c.ax,dy=c.by-c.ay,L=dx*dx+dy*dy;let t=((px-c.ax)*dx+(py-c.ay)*dy)/L;t=clamp(t,0,1);return Math.hypot(px-(c.ax+t*dx),py-(c.ay+t*dy));}
+D.setCrack=function(c){this.crack=c;const{NW,NH,h,mask}=this;mask.fill(0);this.cn=[];this.nb=[];for(let j=1;j<NH-1;j++)for(let i=1;i<NW-1;i++){if(segDist(this.x0+i*h,this.y0+j*h,c)<h*.75){const k=j*NW+i;mask[k]=1;this.cn.push(k);}}for(const k of this.cn)for(const q of[k-1,k+1,k-NW,k+NW]){const i=q%NW,j=(q-i)/NW;if(!mask[q]&&i>0&&j>0&&i<NW-1&&j<NH-1)this.nb.push(q);}};
+D.setSource=function(){const{NW,NH,h,src}=this;for(let j=0;j<NH;j++)for(let i=0;i<NW;i++){const dx=this.x0+i*h-this.px,dy=this.y0+j*h-this.py,d2=dx*dx+dy*dy;src[j*NW+i]=d2<8100?Math.exp(-d2/968):0;}};
+function sor(p,src,mask,cn,nb,NW,NH,it){const w=1.85;for(let n=0;n<it;n++){for(let j=1;j<NH-1;j++){let k=j*NW+1;for(let i=1;i<NW-1;i++,k++){if(mask&&mask[k])continue;const v=(p[k-1]+p[k+1]+p[k-NW]+p[k+NW]+src[k])*.25;p[k]+=w*(v-p[k]);}}if(mask&&cn.length){let s=0;for(const q of nb)s+=p[q];for(const q of cn)s+=src[q];const c=s/nb.length;for(const q of cn)p[q]=c;}}}
+D.solve=function(it){sor(this.psi,this.src,this.mask,this.cn,this.nb,this.NW,this.NH,it);sor(this.psi0,this.src,null,null,null,this.NW,this.NH,it);};
+D.signal=function(){let w=0,w0=0;const{src,psi,psi0}=this;for(let k=0;k<src.length;k++){if(src[k]){w+=src[k]*psi[k];w0+=src[k]*psi0[k];}}return w0>0?Math.max(0,1-w/w0):0;};
+D.setup=function(o){Object.assign(this,{px:160,py:195,drag:false,found:false,hidden:false,hist:[],Sd:0},o);this.psi.fill(0);this.psi0.fill(0);this.setCrack(this.crack);this.setSource();this.solve(320);let m=0;for(const v of this.psi0)m=Math.max(m,v);this.peak=m;this.parts=[];for(let i=0;i<150;i++)this.parts.push(this.spawn({}));};
+D.spawn=function(p){const r=6+66*Math.sqrt(Math.random()),a=Math.random()*6.283;p.x=this.px+r*Math.cos(a);p.y=this.py+r*Math.sin(a);p.max=.9+Math.random()*1.2;p.life=p.max*Math.random();return p;};
+D.grad=function(x,y,arr){const{h,NW,NH}=this,fx=(x-this.x0)/h,fy=(y-this.y0)/h,i=Math.floor(fx),j=Math.floor(fy);if(i<0||j<0||i>=NW-1||j>=NH-1)return[0,0];const tx=fx-i,ty=fy-j,k=j*NW+i,p00=arr[k],p10=arr[k+1],p01=arr[k+NW],p11=arr[k+NW+1];return[((p10-p00)*(1-ty)+(p11-p01)*ty)/h,((p01-p00)*(1-tx)+(p11-p10)*tx)/h];};
+D.down=function(p){if(Math.hypot(p.x-this.px,p.y-this.py)<46){this.drag=true;this.ox=p.x-this.px;this.oy=p.y-this.py;this.touched=true;}};
+D.over=function(p){return Math.hypot(p.x-this.px,p.y-this.py)<46;};
+D.move=function(p){if(this.drag){this.px=clamp(p.x-this.ox,95,705);this.py=clamp(p.y-this.oy,72,318);this.dirty=true;}};
+D.up=function(){this.drag=false;};
+D.update=function(dt){this.t+=dt;if(this.dirty){this.setSource();this.dirty=false;}this.solve(22);const S=this.signal()/this.SREF;this.Sd+=(S-this.Sd)*Math.min(1,dt*12);push(this.hist,this.Sd);
+ const jr=this.peak/26;for(const p of this.parts){p.life+=dt;const g=this.grad(p.x,p.y,this.psi);let vx=g[1]/jr*55,vy=-g[0]/jr*55;const sp=Math.hypot(vx,vy);if(sp>95){vx*=95/sp;vy*=95/sp;}p.x+=vx*dt;p.y+=vy*dt;if(p.life>p.max||p.x<this.x0+4||p.x>740-4||p.y<this.y0+4||p.y>344||Math.hypot(p.x-this.px,p.y-this.py)>85)this.spawn(p),p.life=0;}};
+function contour(arr,lev,NW,NH,x0,y0,h){ctx.beginPath();for(let j=0;j<NH-1;j++)for(let i=0;i<NW-1;i++){const k=j*NW+i,v=[arr[k],arr[k+1],arr[k+NW+1],arr[k+NW]];const c=[[i,j],[i+1,j],[i+1,j+1],[i,j+1]];const pts=[];for(let e=0;e<4;e++){const a=v[e]-lev,b=v[(e+1)%4]-lev;if((a<0)!==(b<0)){const t=a/(a-b),p=c[e],q=c[(e+1)%4];pts.push([x0+(p[0]+(q[0]-p[0])*t)*h,y0+(p[1]+(q[1]-p[1])*t)*h]);}}if(pts.length>=2){ctx.moveTo(pts[0][0],pts[0][1]);ctx.lineTo(pts[1][0],pts[1][1]);}if(pts.length===4){ctx.moveTo(pts[2][0],pts[2][1]);ctx.lineTo(pts[3][0],pts[3][1]);}}ctx.stroke();}
+D.draw=function(){ctx.save();ctx.fillStyle='#f5f5f5';ctx.strokeStyle=COL.ink;ctx.lineWidth=1.4;ctx.fillRect(60,40,680,304);ctx.strokeRect(60,40,680,304);ctx.restore();
+ txt('aluminum plate  ·  top view',72,30,{size:12,c:COL.mute});
+ ctx.save();ctx.beginPath();ctx.rect(60,40,680,304);ctx.clip();ctx.strokeStyle=COL.acc;ctx.lineWidth=1.2;ctx.globalAlpha=.38;for(const f of[.18,.36,.54,.72])contour(this.psi,this.peak*f,this.NW,this.NH,this.x0,this.y0,this.h);
+ ctx.globalAlpha=1;ctx.fillStyle=COL.acc;for(const p of this.parts){const a=Math.min(1,p.life*3,(p.max-p.life)*3);if(a<=0)continue;ctx.globalAlpha=a*.9;ctx.beginPath();ctx.arc(p.x,p.y,1.9,0,7);ctx.fill();}ctx.restore();
+ const c=this.crack;if(!this.hidden||this.found){ctx.save();ctx.strokeStyle=this.found?COL.acc:COL.ink;ctx.lineWidth=3;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(c.ax,c.ay);ctx.lineTo(c.bx,c.by);ctx.stroke();ctx.restore();if(!this.hidden)txt('crack',c.bx+10,c.by+4,{size:12,c:'#555'});}
+ ctx.save();ctx.strokeStyle=COL.ink;ctx.lineWidth=3;ctx.beginPath();ctx.arc(this.px,this.py,27,0,7);ctx.stroke();ctx.lineWidth=1;ctx.strokeStyle='#999';ctx.beginPath();ctx.arc(this.px,this.py,21,0,7);ctx.stroke();ctx.fillStyle=COL.ink;ctx.beginPath();ctx.arc(this.px,this.py,2.5,0,7);ctx.fill();ctx.restore();
+ if(!this.touched)hintDrag(this.px,this.py-44,this.t,'drag the probe');
+ const y0=392,h=92,th=this.hidden?0:.5;chart(30,y0,740,h,[{d:this.hist,c:COL.acc,min:0,max:1.15,label:'coil signal'}],{lines:th?[{y:y0+h-4-(th/1.15)*(h-8),c:'#999'}]:[]});};
+
+/* ---------- Scene E: concept chain ---------- */
+const E={lit:2,t:0,update(dt){this.t+=dt;},draw(){const bx=[[60,70],[300,70],[540,70],[540,250],[300,250],[60,250]],tx=[['AC current','in the probe coil'],['Changing','magnetic field'],['Eddy currents','induced in the metal'],['Eddy field','opposes the coil field'],['A flaw disturbs','the eddy paths'],['Coil signal','changes']];
+ const ar=[[[262,112],[298,112]],[[502,112],[538,112]],[[640,156],[640,248]],[[538,292],[502,292]],[[298,292],[262,292]]];
+ ar.forEach((a,i)=>{const on=i+1<this.lit;arrow(a[0][0],a[0][1],a[1][0],a[1][1],on?COL.ink:'#d8d8d8',2,8);if(on){const t=(this.t*.8+i*.13)%1;ctx.fillStyle=COL.acc;ctx.beginPath();ctx.arc(a[0][0]+(a[1][0]-a[0][0])*t,a[0][1]+(a[1][1]-a[0][1])*t,3.2,0,7);ctx.fill();}});
+ bx.forEach((b,i)=>{const on=i<this.lit;ctx.save();ctx.fillStyle='#fff';ctx.strokeStyle=on?COL.ink:'#dedede';ctx.lineWidth=on?2:1.2;rr(b[0],b[1],200,84,12);ctx.fill();ctx.stroke();ctx.restore();txt(String(i+1),b[0]+14,b[1]+16,{size:11,c:on?COL.acc:'#ccc',w:700});txt(tx[i][0],b[0]+100,b[1]+36,{al:'center',w:650,size:15,c:on?COL.ink:'#c8c8c8'});txt(tx[i][1],b[0]+100,b[1]+56,{al:'center',size:12.5,c:on?'#555':'#d0d0d0'});});
+ if(this.lit>=6)txt('That chain is eddy current testing.',400,420,{al:'center',size:15,w:600,c:COL.acc});}};
+
+const SC={A,B,C:Cc,D,E};
+
+/* ---------- steps ---------- */
+const STEPS=[
+{scene:'A',kicker:'Step 1 · Induction',title:'Move a magnet, make a current',lead:'A coil of wire is connected to a current meter. There is no battery anywhere.',
+ tasks:[{id:'swing',text:'Drag the magnet into the coil.'}],
+ enter(){A.setup({N:5});A.touched=false;},tick(){if(Math.abs(A.emf)>8)done('swing');}},
+{scene:'A',kicker:'Step 2 · The key idea',title:'Moving, not just near',lead:'Now leave the magnet sitting inside the coil and watch the meter.',
+ tasks:[{id:'still',text:'Park the magnet inside the coil and hold it still.'}],
+ enter(){A.setup({N:5});this.st=0;},tick(dt){if(A.mx>A.cx-35&&Math.abs(A.emf)<.25){this.st+=dt;if(this.st>1)done('still');}else this.st=0;},
+ quiz:[{q:'The magnet is inside the coil, but the meter reads zero. What actually drives the current?',o:['A strong magnet close to the coil','A magnetic field that is changing through the coil','The magnet touching the wire'],a:1,why:'Current flows only while the flux through the coil is changing. A still magnet, however strong, induces nothing.',hint:'The magnet is still close to the coil right now. Is there any current?'}]},
+{scene:'A',kicker:"Step 3 · Faraday's law",title:'Faster change, more voltage',eq:'ε = −N <span class="frac"><span>ΔΦ</span><span>Δt</span></span>',lead:'Φ is the magnetic flux through the coil and N is the number of turns. The trace records both.',
+ controls:()=>`<div class="ctrl"><label>Turns in the coil (N) <b id="nv">${A.N}</b></label><input id="ns" type="range" min="1" max="10" step="1" value="${A.N}"></div>`,
+ bind(){$('#ns').oninput=e=>{A.N=+e.target.value;$('#nv').textContent=A.N;done('turns');};},
+ tasks:[{id:'turns',text:'Change the number of turns.'},{id:'fast',text:'Reach a peak EMF of 24. Move faster or add turns.'}],
+ enter(){A.setup({N:4,chart:true,target:24});},tick(){if(A.peak>=24)done('fast');},
+ quiz:[{q:'On the trace, where is the EMF largest?',o:['Where Φ is at its highest','Where Φ is changing fastest','Where Φ is zero'],a:1,why:'EMF follows the slope of Φ, not its height. At the top of the Φ curve the slope is flat, so the EMF is zero.',hint:'Compare the orange peaks with the steep parts of the gray curve.'},
+       {q:'You double N and move the magnet at the same speed. The EMF:',o:['Doubles','Stays the same','Halves'],a:0,why:'Every turn adds its own EMF, so ε scales directly with N.',hint:'Each turn of wire sees the same change in flux.'}]},
+{scene:'A',kicker:"Step 4 · Lenz's law",title:'The coil pushes back',lead:'The minus sign means the induced current makes its own field that opposes the change that created it.',
+ tasks:[{id:'in',text:'Push the magnet in.'},{id:'out',text:'Pull it back out.'}],
+ enter(){A.setup({N:6,lenz:true,chart:true});},tick(){if(A.emf<-7)done('in');if(A.emf>7&&state[cur].tasks.in)done('out');},
+ quiz:[{q:'As the N pole is pushed in, the face of the coil nearest the magnet becomes:',o:['An N pole, repelling the magnet','An S pole, attracting the magnet','Neither, it stays neutral'],a:0,why:'The coil resists the rising flux by repelling the magnet. Pull the magnet out and the coil flips to attract it.',hint:'Watch the orange letter at the left end of the coil as you push.'}]},
+{scene:'B',kicker:'Step 5 · No motion needed',title:'Let alternating current do the moving',lead:'Swap the magnet for a coil carrying current. When its current changes, its field changes, and coil 2 responds.',
+ controls:()=>`<div class="ctrl"><div class="seg" id="mode"><button data-m="off" class="${B.mode==='off'?'on':''}">Off</button><button data-m="dc" class="${B.mode==='dc'?'on':''}">DC</button><button data-m="ac" class="${B.mode==='ac'?'on':''}">AC</button></div></div><div class="ctrl" id="fbox" style="${B.mode==='ac'?'':'opacity:.3;pointer-events:none'}"><label>AC frequency <b id="fv">${fLabel()}</b></label><input id="fs" type="range" min="0.4" max="2" step="0.1" value="${B.f}"></div>`,
+ bind(){document.querySelectorAll('#mode button').forEach(b=>b.onclick=()=>{B.mode=b.dataset.m;document.querySelectorAll('#mode button').forEach(x=>x.classList.toggle('on',x===b));const fb=$('#fbox');fb.style.opacity=B.mode==='ac'?1:.3;fb.style.pointerEvents=B.mode==='ac'?'auto':'none';if(B.mode==='ac')done('ac');});$('#fs').oninput=e=>{B.f=+e.target.value;$('#fv').textContent=fLabel();if(B.f>=1.5&&B.mode==='ac')done('freq');};},
+ tasks:[{id:'dc',text:'Switch on DC and watch coil 2.'},{id:'ac',text:'Switch to AC.'},{id:'freq',text:'Raise the frequency.'}],
+ enter(){B.setup();},tick(){if(B.dcT>1.2)done('dc');},
+ quiz:[{q:'With steady DC, coil 2 only blips at switch on. Why?',o:['The DC field is too weak to reach coil 2','A steady field is not changing','DC cannot travel through air'],a:1,why:'Only the moment of switching changes the field. After that it is constant, so ΔΦ/Δt is zero.',hint:'Look at the gray-blue field lines once DC has settled. Are they changing?'},
+       {q:'Raising the AC frequency makes the induced EMF:',o:['Larger','Smaller','Unchanged'],a:0,why:'Faster alternation means the flux changes faster, so ε grows with frequency.',hint:'Check the height of the orange trace before and after.'}]},
+{scene:'C',kicker:'Step 6 · Eddy currents',title:'Inside the metal',lead:'Hold the AC coil over a plate. The changing field induces loops of current inside the conductor. These are eddy currents.',
+ controls:()=>`<div class="ctrl"><div class="seg" id="mat">${Object.keys(MATS).map(k=>`<button data-k="${k}" class="${Cc.mat===k?'on':''}">${{plastic:'Plastic',stainless:'Stainless',aluminum:'Aluminum',copper:'Copper'}[k]}</button>`).join('')}</div><div class="note">Higher conductivity means stronger eddy currents.</div></div>`,
+ bind(){document.querySelectorAll('#mat button').forEach(b=>b.onclick=()=>{Cc.mat=b.dataset.k;document.querySelectorAll('#mat button').forEach(x=>x.classList.toggle('on',x===b));if(Cc.mat==='plastic')done('plastic');if(Cc.mat==='copper')done('copper');});},
+ tasks:[{id:'plastic',text:'Try the plastic plate.'},{id:'copper',text:'Try the copper plate.'}],
+ enter(){Cc.setup();},
+ quiz:[{q:"The eddy currents create their own field. Compared with the coil's field, it:",o:['Reinforces it','Opposes it','Has no effect'],a:1,why:"Lenz's law again. The eddy field opposes the coil's field, and the coil can sense that opposition.",hint:'Compare the directions of the blue and orange arrows.'},
+       {q:'Why does the plastic plate show no eddy currents?',o:['It is not magnetic','It is too thin','It does not conduct electricity'],a:2,why:'Eddy currents need a conductive path. Conductivity, not magnetism, is the requirement.',hint:'Aluminum and copper are not magnetic either, yet they carry eddy currents.'}]},
+{scene:'D',kicker:'Step 7 · Finding a flaw',title:'A crack gets in the way',lead:'Eddy currents (orange) circle under the probe. A crack cannot carry current, so they must flow around it.',
+ tasks:[{id:'scan',text:'Drag the probe across the crack.'}],
+ enter(){D.touched=false;D.setup({crack:{ax:480,ay:125,bx:480,by:265}});},tick(){if(D.Sd>.5)done('scan');},
+ quiz:[{q:'Why does the signal rise over the crack?',o:['The eddy currents must detour around it, changing the field the coil senses','The crack is magnetic','The probe touches the crack'],a:0,why:'The crack interrupts the eddy current paths. Their opposing field changes, and the coil reads that change as a signal.',hint:'Watch how the orange loops bend when the probe sits on the crack.'}]},
+{scene:'D',kicker:'Step 8 · Your turn',title:'Find the hidden crack',lead:'A crack is hidden somewhere in this plate. Scan for the signal peak, then mark it.',
+ controls:()=>`<div class="ctrl"><button class="btn primary small" id="mark">Mark crack at probe</button><div class="fb" id="mfb"></div></div>`,
+ bind(){$('#mark').onclick=()=>{const f=$('#mfb');if(D.found){return;}const d=segDist(D.px,D.py,D.crack);if(d<20){D.found=true;f.className='fb ok';f.textContent='Found it. That signal peak was the crack.';done('mark');}else{f.className='fb no';f.textContent=d<60?'Close. Move slowly and find the highest point of the signal.':'No crack under the probe. Look for where the signal peaks.';}};},
+ tasks:[{id:'mark',text:'Mark the crack location.'}],
+ enter(){D.setup({crack:randCrack()});D.hidden=true;}},
+{scene:'E',kicker:'Final check',title:'Put it all together',lead:'Four quick questions. The chain on the left fills in as you go.',final:true,
+ enter(){E.lit=2+state[cur].solved.filter(Boolean).length;},onSolve(){E.lit=2+state[cur].solved.filter(Boolean).length;},
+ quiz:[{q:"Faraday's law says the induced EMF depends on:",o:['How much flux passes through the coil','The thickness of the wire','How fast the flux through the coil changes'],a:2,why:'It is the rate of change of flux that counts.'},
+       {q:'A probe sits still on a plate. Which drive current induces eddy currents?',o:['AC','Steady DC','Either one'],a:0,why:'Only a changing current gives a changing field. With the probe still, that means AC.'},
+       {q:'The field produced by the eddy currents:',o:["Opposes the coil's field","Adds to the coil's field","Exists only in magnetic metals"],a:0,why:"Lenz's law: induced currents always oppose the change that drives them."},
+       {q:'A crack is detected because it:',o:['Reflects the magnetic field like a mirror','Generates its own current','Changes the eddy current paths under the probe'],a:2,why:'The crack forces the eddy currents to detour. The coil senses the changed opposing field.'}]}
+];
+function fLabel(){return B.f<.8?'low':B.f<1.4?'medium':'high';}
+function randCrack(){for(;;){const cx=180+Math.random()*440,cy=110+Math.random()*165,L=100+Math.random()*40,a=Math.random()*Math.PI;if(Math.hypot(cx-160,cy-195)<150)continue;return{ax:cx-Math.cos(a)*L/2,ay:cy-Math.sin(a)*L/2,bx:cx+Math.cos(a)*L/2,by:cy+Math.sin(a)*L/2};}}
+
+/* ---------- step engine ---------- */
+let cur=0,state=STEPS.map(()=>({tasks:{},solved:[],view:0,first:[]}));
+const tasksDone=(i=cur)=>!STEPS[i].tasks||STEPS[i].tasks.every(t=>state[i].tasks[t.id]);
+const quizDone=(i=cur)=>!STEPS[i].quiz||STEPS[i].quiz.every((q,k)=>state[i].solved[k]);
+const stepDone=(i=cur)=>tasksDone(i)&&quizDone(i);
+function done(id){const S=state[cur];if(S.tasks[id])return;S.tasks[id]=true;const el=panel.querySelector(`[data-t="${id}"]`);if(el)el.classList.add('ok');const at=cur;if(tasksDone()){setTimeout(()=>{if(cur===at){renderQuiz();updateNav();}},450);}updateNav();}
+function renderPanel(){const st=STEPS[cur],S=state[cur];let h=`<div class="kicker">${st.kicker}</div><h1>${st.title}</h1><p class="lead">${st.lead}</p>`;if(st.eq)h+=`<div class="eq">${st.eq}</div>`;if(st.controls)h+=st.controls();if(st.tasks)h+=`<div class="tasks">${st.tasks.map(t=>`<div class="task ${S.tasks[t.id]?'ok':''}" data-t="${t.id}"><i></i><span>${t.text}</span></div>`).join('')}</div>`;h+='<div id="quizbox"></div>';panel.innerHTML=h;panel.scrollTop=0;if(st.bind)st.bind();renderQuiz();updateNav();}
+function renderQuiz(){const st=STEPS[cur],S=state[cur],box=$('#quizbox');if(!box)return;if(!st.quiz||!tasksDone()){box.innerHTML='';return;}const n=st.quiz.length;
+ if(st.final&&S.view>=n){const sc=S.first.filter(Boolean).length;box.innerHTML=`<div class="quiz"><div class="kicker">Result</div><div class="big">${sc} / ${n}</div><div class="lead">correct on the first try.</div><button class="btn primary small" id="restart">Start over</button></div>`;$('#restart').onclick=restart;return;}
+ const k=S.view,q=st.quiz[k],sol=S.solved[k];
+ box.innerHTML=`<div class="quiz"><div class="kicker">Check${n>1?` ${k+1} of ${n}`:''}</div><div class="q">${q.q}</div>${q.o.map((o,j)=>`<button class="opt${sol&&j===q.a?' right':''}" data-j="${j}" ${sol?'disabled':''}>${o}</button>`).join('')}<div class="fb ${sol?'ok':''}">${sol?q.why:''}</div>${sol&&k<n-1?'<button class="btn small" id="qn">Next question</button>':''}${sol&&st.final&&k===n-1?'<button class="btn primary small" id="qn">See result</button>':''}</div>`;
+ box.querySelectorAll('.opt').forEach(b=>b.onclick=()=>answer(+b.dataset.j));const qn=$('#qn');if(qn)qn.onclick=()=>{S.view++;renderQuiz();};}
+function answer(j){const st=STEPS[cur],S=state[cur],k=S.view,q=st.quiz[k];if(S.first[k]===undefined)S.first[k]=j===q.a;
+ if(j===q.a){S.solved[k]=true;if(st.onSolve)st.onSolve();renderQuiz();updateNav();}
+ else{const b=$(`#quizbox .opt[data-j="${j}"]`);b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');const f=$('#quizbox .fb');f.className='fb no';f.textContent=q.hint||'Not quite. Try again.';}}
+function updateNav(){const d=$('#dots');d.innerHTML=STEPS.map((s,i)=>`<div class="dot ${i===cur?'cur':stepDone(i)?'done':''}"></div>`).join('');$('#back').disabled=cur===0;const last=cur===STEPS.length-1;$('#next').style.visibility=last?'hidden':'visible';$('#next').disabled=!stepDone();$('#hint').textContent=stepDone()?(last?'':'Nice. Continue when ready.'):!tasksDone()?'Complete the task to continue':'Answer the check to continue';}
+function go(i){cur=clamp(i,0,STEPS.length-1);STEPS[cur].enter&&STEPS[cur].enter();renderPanel();}
+function restart(){state=STEPS.map(()=>({tasks:{},solved:[],view:0,first:[]}));go(0);}
+$('#next').onclick=()=>{if(stepDone())go(cur+1);};$('#back').onclick=()=>go(cur-1);
+
+/* ---------- input + loop ---------- */
+const scene=()=>SC[STEPS[cur].scene];
+cv.addEventListener('pointerdown',e=>{const s=scene();if(s.down){s.down(toL(e));try{cv.setPointerCapture(e.pointerId);}catch(_){}}});
+cv.addEventListener('pointermove',e=>{const s=scene(),p=toL(e);if(s.move)s.move(p);cv.style.cursor=s.drag?'grabbing':(s.over&&s.over(p)?'grab':'default');});
+const up=()=>{const s=scene();if(s.up)s.up();};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+let last=performance.now();
+function frame(t){const dt=clamp((t-last)/1000,.001,.05);last=t;const s=scene();s.update(dt);const st=STEPS[cur];if(st.tick)st.tick.call(st,dt);
+ const v=view;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);ctx.setTransform(v.d*v.s,0,0,v.d*v.s,v.d*v.ox,v.d*v.oy);s.draw();requestAnimationFrame(frame);}
+D.SREF=0.22;
+go(0);requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
