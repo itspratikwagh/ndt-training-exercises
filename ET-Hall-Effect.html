@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Hall Effect and Eddy Current Testing</title>
+<style>
+:root{--ink:#111;--mute:#777;--line:#e6e6e6;--acc:#ff5a1f;--fld:#2f6fed;--ok:#13895a;--bad:#d4372c}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#fff;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+.app{height:100vh;max-height:760px;max-width:1240px;margin:0 auto;display:grid;grid-template-rows:54px 1fr 62px}
+header{display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-bottom:1px solid var(--line);gap:16px}
+.brand{font-weight:650;font-size:14px;white-space:nowrap}
+.brand span{color:var(--mute);font-weight:400}
+.dots{display:flex;gap:5px}
+.dot{width:20px;height:4px;border-radius:2px;background:var(--line);transition:background .3s}
+.dot.done{background:var(--ink)}.dot.cur{background:var(--acc)}
+main{display:grid;grid-template-columns:1fr 340px;min-height:0}
+.stage{position:relative;min-height:0;border-right:1px solid var(--line)}
+canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
+.panel{padding:22px 22px 14px;display:flex;flex-direction:column;gap:13px;min-height:0;overflow-y:auto}
+.kicker{font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:var(--mute)}
+h1{font-size:21px;line-height:1.22;font-weight:680;margin-top:-6px}
+.lead{font-size:14px;line-height:1.5;color:#333}
+.eq{font-family:"Cambria Math","STIX Two Math",Georgia,serif;font-size:21px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px}
+.frac{display:inline-flex;flex-direction:column;align-items:center;font-size:17px;line-height:1.1}
+.frac span:first-child{border-bottom:1.5px solid var(--ink);padding:0 3px}
+.tasks{display:flex;flex-direction:column;gap:7px}
+.task{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.4;transition:color .3s}
+.task i{flex:0 0 16px;height:16px;border:1.5px solid var(--ink);border-radius:50%;margin-top:1px;position:relative;transition:background .25s}
+.task.ok i{background:var(--ink)}
+.task.ok i::after{content:"";position:absolute;left:4.2px;top:1.2px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.task.ok{color:var(--mute)}
+.ctrl{display:flex;flex-direction:column;gap:7px;font-size:13px}
+.ctrl label{display:flex;justify-content:space-between;color:var(--mute)}
+.ctrl b{color:var(--ink);font-weight:600}
+input[type=range]{width:100%;accent-color:var(--ink)}
+.seg{display:flex;border:1px solid var(--ink);border-radius:9px;overflow:hidden}
+.seg button{flex:1;border:0;background:#fff;padding:8px 2px;font:inherit;font-size:12.5px;cursor:pointer;border-right:1px solid var(--ink);color:var(--ink)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--ink);color:#fff}
+.note{font-size:12.5px;color:var(--mute)}
+.quiz{border-top:1px solid var(--line);padding-top:13px;display:flex;flex-direction:column;gap:7px;animation:rise .35s ease}
+.quiz .q{font-size:14px;font-weight:620;line-height:1.4;margin-bottom:2px}
+.opt{text-align:left;border:1px solid #d2d2d2;background:#fff;border-radius:9px;padding:8px 12px;font:inherit;font-size:13.5px;line-height:1.35;cursor:pointer;color:var(--ink);transition:border-color .15s,background .15s}
+.opt:hover:not(:disabled){border-color:var(--ink)}
+.opt.right{border-color:var(--ok);background:#eef9f3}
+.opt.wrong{border-color:var(--bad);background:#fdf2f1;animation:shake .3s}
+.opt:disabled{cursor:default;opacity:.55}.opt.right:disabled{opacity:1}
+.fb{font-size:13px;line-height:1.45}
+.fb.ok{color:var(--ok)}.fb.no{color:var(--bad)}
+.big{font-size:44px;font-weight:700;letter-spacing:-1px}
+footer{display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-top:1px solid var(--line);gap:12px}
+.btn{font:inherit;font-size:14px;padding:9px 20px;border-radius:999px;border:1px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;white-space:nowrap}
+.btn.primary{background:var(--ink);color:#fff}
+.btn.small{font-size:13px;padding:7px 14px;align-self:flex-start}
+.btn:disabled{opacity:.22;cursor:default}
+.hint{font-size:12.5px;color:var(--mute);text-align:center}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@media (max-height:640px){.panel{gap:10px;padding-top:16px}h1{font-size:19px}.lead{font-size:13.5px}.eq{padding:6px}}
+html:fullscreen .app{max-width:none;max-height:none}
+html:-webkit-full-screen .app{max-width:none;max-height:none}
+.hright{display:flex;align-items:center;gap:16px}
+.fsbtn{font:inherit;font-size:12px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;padding:5px 12px;cursor:pointer;white-space:nowrap}
+.fsbtn:hover{border-color:var(--ink)}
+.viewbtns{position:absolute;left:12px;top:12px;display:none;gap:6px;z-index:2}
+.viewbtns button{font:inherit;font-size:12px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;padding:5px 12px;cursor:pointer}
+.viewbtns button:hover{border-color:var(--ink)}
+.start{position:fixed;inset:0;background:#fff;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px}
+.start h2{font-size:30px;line-height:1.15;font-weight:700;letter-spacing:-.3px}
+.start p{color:#444;font-size:15px;line-height:1.5;max-width:440px}
+.start .btn{font-size:16px;padding:12px 34px;margin-top:6px}
+.start .note{min-height:16px}
+@media (max-width:820px){main{grid-template-columns:1fr;grid-template-rows:50% 50%}.stage{border-right:0;border-bottom:1px solid var(--line)}.panel{padding:14px 16px}h1{font-size:18px}.dot{width:10px}.brand span{display:none}}
+</style>
+</head>
+<body>
+<div class="start" id="start">
+  <div class="kicker">Eddy current · Interactive</div>
+  <h2>The Hall Effect &amp; Eddy Currents</h2>
+  <p>Eleven short steps, from a single pushed electron to the probes you will use in the lab.</p>
+  <button class="btn primary" id="startbtn">Start</button>
+  <div class="note" id="fsnote"></div>
+</div>
+<div class="app">
+  <header>
+    <div class="brand">The Hall Effect <span>&amp; Eddy Current Testing</span></div>
+    <div class="hright"><div class="dots" id="dots"></div><button class="fsbtn" id="fsb">Full screen</button></div>
+  </header>
+  <main>
+    <div class="stage"><canvas id="cv"></canvas><div class="viewbtns" id="vb"><button data-v="top">Top view</button><button data-v="3d">3D view</button></div></div>
+    <div class="panel" id="panel"></div>
+  </main>
+  <footer>
+    <button class="btn" id="back">Back</button>
+    <div class="hint" id="hint"></div>
+    <button class="btn primary" id="next">Next</button>
+  </footer>
+</div>
+<script>
+(()=>{
+const $=s=>document.querySelector(s);
+const cv=$('#cv'),ctx=cv.getContext('2d'),panel=$('#panel');
+const W=800,H=500,MAXH=300;
+const COL={ink:'#111',mute:'#8a8a8a',wire:'#c4c4c4',acc:'#ff5a1f',fld:'#2f6fed'};
+const FONT='-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+let view={s:1,ox:0,oy:0,d:1};
+function resize(){const r=cv.getBoundingClientRect(),d=window.devicePixelRatio||1;cv.width=Math.max(1,Math.round(r.width*d));cv.height=Math.max(1,Math.round(r.height*d));const s=Math.min(r.width/W,r.height/H);view={s,ox:(r.width-W*s)/2,oy:(r.height-H*s)/2,d};}
+new ResizeObserver(resize).observe(cv);resize();
+function toL(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left-view.ox)/view.s,y:(e.clientY-r.top-view.oy)/view.s};}
+
+/* ---------- drawing helpers ---------- */
+function txt(s,x,y,o={}){ctx.save();ctx.font=`${o.w||400} ${o.size||13}px ${FONT}`;ctx.fillStyle=o.c||COL.ink;ctx.globalAlpha=o.a??1;ctx.textAlign=o.al||'left';ctx.textBaseline='middle';ctx.fillText(s,x,y);ctx.restore();}
+function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function arrow(x1,y1,x2,y2,c,w=2,hs=8,a=1){const g=Math.atan2(y2-y1,x2-x1);ctx.save();ctx.globalAlpha=a;ctx.strokeStyle=c;ctx.fillStyle=c;ctx.lineWidth=w;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2-Math.cos(g)*hs*.6,y2-Math.sin(g)*hs*.6);ctx.stroke();ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-hs*Math.cos(g-.45),y2-hs*Math.sin(g-.45));ctx.lineTo(x2-hs*Math.cos(g+.45),y2-hs*Math.sin(g+.45));ctx.closePath();ctx.fill();ctx.restore();}
+function poly(pts,c,w=2){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.stroke();}
+function plen(p){let L=0;for(let i=1;i<p.length;i++)L+=Math.hypot(p[i][0]-p[i-1][0],p[i][1]-p[i-1][1]);return L;}
+function pat(p,s){for(let i=1;i<p.length;i++){const l=Math.hypot(p[i][0]-p[i-1][0],p[i][1]-p[i-1][1]);if(s<=l){const t=s/l;return[p[i-1][0]+(p[i][0]-p[i-1][0])*t,p[i-1][1]+(p[i][1]-p[i-1][1])*t];}s-=l;}return p[p.length-1];}
+function dots(polys,phase,strength,color){const a=clamp(Math.abs(strength),0,1);if(a<.03)return;const L=polys.map(plen),T=L.reduce((x,y)=>x+y,0),g=18;ctx.save();ctx.fillStyle=color;ctx.globalAlpha=a;for(let s0=((phase%g)+g)%g;s0<T;s0+=g){let s=s0,k=0;while(k<polys.length-1&&s>L[k]){s-=L[k];k++;}const p=pat(polys[k],s);ctx.beginPath();ctx.arc(p[0],p[1],2.8,0,7);ctx.fill();}ctx.restore();}
+function meter(cx,top,v,label){const x=cx-58,w=116,h=76;ctx.save();ctx.fillStyle='#fff';ctx.strokeStyle=COL.ink;ctx.lineWidth=1.5;rr(x,top,w,h,10);ctx.fill();ctx.stroke();const oy=top+60,r=42;ctx.strokeStyle='#c8c8c8';ctx.beginPath();ctx.arc(cx,oy,r,Math.PI+.5,2*Math.PI-.5);ctx.stroke();for(const t of[-1,-.5,0,.5,1]){const a=-Math.PI/2+t*1.07,i=t?4:8;ctx.strokeStyle=t?'#c8c8c8':COL.ink;ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*(r-i),oy+Math.sin(a)*(r-i));ctx.lineTo(cx+Math.cos(a)*r,oy+Math.sin(a)*r);ctx.stroke();}const a=-Math.PI/2+clamp(v,-1,1)*1.07;ctx.strokeStyle=COL.acc;ctx.lineWidth=2.4;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(cx,oy);ctx.lineTo(cx+Math.cos(a)*(r-6),oy+Math.sin(a)*(r-6));ctx.stroke();ctx.fillStyle=COL.ink;ctx.beginPath();ctx.arc(cx,oy,3.5,0,7);ctx.fill();ctx.restore();txt(label,cx,top+h+14,{al:'center',c:COL.mute,size:12});}
+function chart(x,y,w,h,series,o={}){ctx.save();ctx.fillStyle='#fff';ctx.fillRect(x,y,w,h);ctx.strokeStyle='#e4e4e4';ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,w,h);
+ if(o.zero!==undefined){ctx.setLineDash([3,4]);ctx.strokeStyle='#d6d6d6';ctx.beginPath();ctx.moveTo(x,o.zero);ctx.lineTo(x+w,o.zero);ctx.stroke();ctx.setLineDash([]);}
+ (o.lines||[]).forEach(l=>{ctx.setLineDash([5,5]);ctx.strokeStyle=l.c;ctx.globalAlpha=.6;ctx.beginPath();ctx.moveTo(x,l.y);ctx.lineTo(x+w,l.y);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;});
+ ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();
+ series.forEach(s=>{const d=s.d,n=d.length;if(n<2)return;ctx.strokeStyle=s.c;ctx.lineWidth=s.w||2;ctx.lineJoin='round';ctx.beginPath();for(let i=0;i<n;i++){const X=x+w-(n-1-i)*(w/(MAXH-1)),v=(d[i]-s.min)/(s.max-s.min),Y=y+h-4-clamp(v,0,1)*(h-8);i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);}ctx.stroke();});
+ ctx.restore();ctx.save();ctx.font=`400 12px ${FONT}`;let lw=24;series.forEach(s=>{if(s.label)lw+=ctx.measureText(s.label).width+46;});ctx.fillStyle='rgba(255,255,255,.92)';ctx.fillRect(x+4,y+4,lw-20,20);if(o.right){const rw=ctx.measureText(o.right).width;ctx.fillRect(x+w-rw-18,y+4,rw+12,20);}ctx.restore();let lx=x+12;series.forEach(s=>{if(!s.label)return;ctx.fillStyle=s.c;ctx.fillRect(lx,y+12,12,3);txt(s.label,lx+17,y+14,{size:12,c:'#555'});lx+=ctx.measureText(s.label).width+46;});if(o.right)txt(o.right,x+w-12,y+14,{al:'right',size:12,c:'#555'});}
+
+/* field lines of two poles at (+d,0)=N and (-d,0)=S, in local coords */
+function trace(d,angs){const out=[];for(const a of angs){for(const sg of[1,-1]){const r=a*Math.PI/180;let x=d+5*Math.cos(r),y=-sg*5*Math.sin(r);const pts=[[x,y]];for(let k=0;k<1100;k++){const a1=x-d,a2=x+d,r1=Math.pow(a1*a1+y*y,1.5),r2=Math.pow(a2*a2+y*y,1.5);const bx=a1/r1-a2/r2,by=y/r1-y/r2,m=Math.hypot(bx,by);if(!m)break;x+=3*bx/m;y+=3*by/m;pts.push([x,y]);if(Math.hypot(x+d,y)<5||Math.abs(x)>1100||Math.abs(y)>800)break;}out.push(pts);if(a===0)break;}}out.push([[-1100,0],[-d-4,0]]);return out;}
+const LM=trace(60,[0,14,30,52,82,122]),LC=trace(42,[0,16,36,62,98,138]),LV=trace(24,[0,22,48,84,128]);
+function field(lines,ox,oy,vert,alpha,dir){if(alpha<.01)return;ctx.save();ctx.globalAlpha=alpha;ctx.strokeStyle=COL.fld;ctx.fillStyle=COL.fld;ctx.lineWidth=1.3;const m=vert?p=>[ox+p[1],oy+p[0]]:p=>[ox+p[0],oy+p[1]];
+ for(const L of lines){ctx.beginPath();L.forEach((p,i)=>{const q=m(p);i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]);});ctx.stroke();if(L.length<8)continue;const i=Math.min(Math.floor(L.length/2),55);let a=m(L[i]),b=m(L[i+2]);if(dir<0)[a,b]=[b,a];const g=Math.atan2(b[1]-a[1],b[0]-a[0]),s=6;ctx.beginPath();ctx.moveTo(b[0]+Math.cos(g)*s,b[1]+Math.sin(g)*s);ctx.lineTo(b[0]-s*Math.cos(g-.5),b[1]-s*Math.sin(g-.5));ctx.lineTo(b[0]-s*Math.cos(g+.5),b[1]-s*Math.sin(g+.5));ctx.closePath();ctx.fill();}
+ ctx.restore();}
+function coilBack(xs,cy,ry){ctx.strokeStyle='#cfcfcf';ctx.lineWidth=3;xs.forEach(x=>{ctx.beginPath();ctx.ellipse(x,cy,9,ry,0,-Math.PI/2,Math.PI/2);ctx.stroke();});}
+function coilFront(xs,cy,ry){ctx.strokeStyle=COL.ink;ctx.lineWidth=3;xs.forEach(x=>{ctx.beginPath();ctx.ellipse(x,cy,9,ry,0,Math.PI/2,Math.PI*1.5);ctx.stroke();});}
+function loopsX(cx,N,sp){const a=[];for(let i=0;i<N;i++)a.push(cx+(i-(N-1)/2)*sp);return a;}
+function leads(xs,cx,yb,dev,dy){const x0=xs[0],x1=xs[xs.length-1],y=yb+22;return[[[x0,yb],[x0,y],[cx-100,y],[cx-100,dy],[cx-dev,dy]],[[cx+dev,dy],[cx+100,dy],[cx+100,y],[x1,y],[x1,yb]]];}
+function hintDrag(x,y,t,label){const b=Math.sin(t*4)*4;txt(label,x,y+b,{al:'center',size:12,c:COL.acc,w:600});}
+function push(a,v){a.push(v);if(a.length>MAXH)a.shift();}
+
+/* ---------- Scene T: Hall strip, rotatable 3D ---------- */
+const D2R=Math.PI/180;
+function fpoly(pts,fill,stroke,lw=1.2){ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.stroke();}}
+function fsym(x,y,r,down,a){ctx.save();ctx.globalAlpha=a;ctx.strokeStyle=COL.fld;ctx.fillStyle=COL.fld;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.stroke();if(down){const k=r*.6;ctx.beginPath();ctx.moveTo(x-k,y-k);ctx.lineTo(x+k,y+k);ctx.moveTo(x+k,y-k);ctx.lineTo(x-k,y+k);ctx.stroke();}else{ctx.beginPath();ctx.arc(x,y,r*.28,0,7);ctx.fill();}ctx.restore();}
+const T={L:560,W:140,th:12,cx:400,cy:215,yaw:0,el:90,tYaw:0,tEl:90,anim:false,cur:false,Bon:false,I:1,B:1,mat:'generic',Q:0,manual:null,els:[],FS:150,gamma:.8,forces:false,triad:false,rotOK:false,t:0,drag:false,lx:0,ly:0,rot:0,
+ vd(){if(!this.cur)return 0;return(this.mat==='cu'?25:this.mat==='semi'?200:90)*this.I;},
+ Bv(){return this.Bon?this.B:0;},drive(){return this.vd()*this.Bv();},
+ count(){return this.mat==='semi'?22:90;},
+ setup(o){Object.assign(this,{cur:false,Bon:false,I:1,B:1,mat:'generic',Q:0,manual:null,FS:150,gamma:.8,forces:false,triad:false,rotOK:false,rot:0,drag:false},o);this.spawnAll();},
+ view(v){this.anim=true;if(v==='top'){this.tYaw=0;this.tEl=90;}else{this.tYaw=-28;this.tEl=26;}},
+ setView(v){this.view(v);this.yaw=this.tYaw;this.el=this.tEl;this.anim=false;},
+ spawn(e,anyX){e.x=anyX?(-this.L/2+8+Math.random()*(this.L-16)):this.L/2-6;e.y=-this.W/2+8+Math.random()*(this.W-16);return e;},
+ spawnAll(){this.els=[];for(let i=0;i<this.count();i++)this.els.push(this.spawn({},true));},
+ P(X,Y,Z){const a=this.yaw*D2R,e=this.el*D2R,ca=Math.cos(a),sa=Math.sin(a),x1=X*ca-Y*sa,y1=X*sa+Y*ca;return[this.cx+x1,this.cy-(y1*Math.sin(e)+Z*Math.cos(e))];},
+ vis(nx,ny,nz){const a=this.yaw*D2R,e=this.el*D2R,y1=nx*Math.sin(a)+ny*Math.cos(a);return -y1*Math.cos(e)+nz*Math.sin(e)>.001;},
+ down(p){if(!this.rotOK)return;this.drag=true;this.anim=false;this.lx=p.x;this.ly=p.y;},
+ over(){return this.rotOK;},
+ move(p){if(!this.drag)return;const dx=p.x-this.lx,dy=p.y-this.ly;this.lx=p.x;this.ly=p.y;this.yaw=clamp(this.yaw+dx*.35,-80,80);this.el=clamp(this.el+dy*.35,6,90);this.rot+=Math.abs(dx)+Math.abs(dy);},
+ up(){this.drag=false;},
+ update(dt){this.t+=dt;if(this.anim){const k=Math.min(1,dt*5);this.yaw+=(this.tYaw-this.yaw)*k;this.el+=(this.tEl-this.el)*k;if(Math.abs(this.tYaw-this.yaw)<.1&&Math.abs(this.tEl-this.el)<.1)this.anim=false;}
+  if(this.els.length!==this.count())this.spawnAll();const vd=this.vd(),dr=this.drive();
+  if(this.manual!==null)this.Q=this.manual*dr;else{this.Q+=(dr-this.Q)*Math.min(1,dt*this.gamma);if(!dr&&Math.abs(this.Q)<.01)this.Q=0;}
+  const vy=(dr-this.Q)*1.4;for(const e of this.els){e.x-=vd*dt;e.y+=vy*dt;if(e.x<-this.L/2+5)this.spawn(e,false);else if(Math.abs(e.y)>this.W/2-4)this.spawn(e,true);}},
+ draw(){const{L,W}=this,h=this.th/2,B=this.Bv(),topv=this.el>84,fs=B<0?-1:1,P=(x,y,z)=>this.P(x,y,z);
+  const fa=[];if(this.Bon)for(const X of[-225,-135,-45,45,135,225])for(const Y of[-38,38])fa.push([X,Y]);
+  const fA=clamp(Math.abs(B)*.7+.15,0,.8);
+  if(this.Bon&&!topv){ctx.save();for(const[X,Y]of fa){const a=P(X,Y,-h),b=P(X,Y,-72);if(fs>0)arrow(a[0],a[1],b[0],b[1],COL.fld,1.5,8,fA*.75);else{ctx.globalAlpha=fA*.75;poly([b,a],COL.fld,1.5);}}ctx.restore();}
+  const sides=[[[0,-1,0],[[-L/2,-W/2,-h],[L/2,-W/2,-h],[L/2,-W/2,h],[-L/2,-W/2,h]]],[[0,1,0],[[-L/2,W/2,-h],[L/2,W/2,-h],[L/2,W/2,h],[-L/2,W/2,h]]],[[1,0,0],[[L/2,-W/2,-h],[L/2,W/2,-h],[L/2,W/2,h],[L/2,-W/2,h]]],[[-1,0,0],[[-L/2,-W/2,-h],[-L/2,W/2,-h],[-L/2,W/2,h],[-L/2,-W/2,h]]]];
+  for(const[n,c]of sides)if(this.vis(...n))fpoly(c.map(q=>P(...q)),'#dcdcdc',COL.ink,1);
+  fpoly([[-L/2,-W/2,h],[L/2,-W/2,h],[L/2,W/2,h],[-L/2,W/2,h]].map(q=>P(...q)),'rgba(244,244,244,.96)',COL.ink,1.6);
+  const n=Math.round(clamp(Math.abs(this.Q)/150,0,1)*28),sg=this.Q>=0?1:-1;
+  if(n>0)fpoly([[-L/2,sg*(W/2-11),h],[L/2,sg*(W/2-11),h],[L/2,sg*W/2,h],[-L/2,sg*W/2,h]].map(q=>P(...q)),`rgba(255,90,31,${.05+.1*n/28})`,null);
+  if(topv&&this.Bon)for(const[X,Y]of fa){const q=P(X,Y,h);fsym(q[0],q[1],8,fs>0,fA*.7);}
+  ctx.save();ctx.fillStyle=COL.ink;for(const e of this.els){const q=P(e.x,e.y,h+.5);ctx.beginPath();ctx.arc(q[0],q[1],3,0,7);ctx.fill();}ctx.restore();
+  for(let i=0;i<n;i++){const x=-L/2+10+(i+.5)*(L-20)/n,q=P(x,sg*(W/2-5),h+.5),r=P(x,-sg*(W/2-6),h+.5);ctx.fillStyle=COL.ink;ctx.beginPath();ctx.arc(q[0],q[1],3.3,0,7);ctx.fill();txt('+',r[0],r[1],{al:'center',w:700,size:14,c:COL.acc});}
+  if(n>3&&topv){const a=P(-L/2+6,sg*(W/2+20),h),b=P(-L/2+6,-sg*(W/2+20),h);txt('extra electrons: this edge turns negative',a[0],a[1],{size:12,w:600});txt('missing electrons: this edge turns positive',b[0],b[1],{size:12,w:600,c:COL.acc});}
+  if(this.Bon&&!topv){ctx.save();for(const[X,Y]of fa){const a=P(X,Y,140),b=P(X,Y,h);if(fs>0){ctx.globalAlpha=fA*.75;poly([a,b],COL.fld,1.5);}else arrow(b[0],b[1],a[0],a[1],COL.fld,1.5,8,fA*.75);}ctx.restore();}
+  const o=P(0,0,h+1),dr=this.drive();
+  if(this.triad&&this.Bon){const m=P(-85,0,h+1);arrow(o[0],o[1],m[0],m[1],COL.ink,2.8,11);txt('motion',m[0]-4,m[1]-14,{al:'center',size:12.5,w:650});
+   if(topv){fsym(o[0],o[1],15,fs>0,1);txt(fs>0?'field (into screen)':'field (out of screen)',o[0]+20,o[1]+24,{size:12.5,w:650,c:COL.fld});}
+   else{const f=P(0,0,h+1-85*fs);arrow(o[0],o[1],f[0],f[1],COL.fld,2.8,11);txt('field',f[0]+10,f[1]+4,{size:12.5,w:650,c:COL.fld});}
+   if(this.cur){const p=P(0,85*fs,h+1);arrow(o[0],o[1],p[0],p[1],COL.acc,2.8,11);txt('push',p[0]+10,p[1]-6,{size:12.5,w:650,c:COL.acc});}}
+  if(this.forces&&this.cur&&this.Bon){const mg=dr*.6,el=this.Q*.6;if(Math.abs(mg)>3){const p=P(0,mg,h+1);arrow(o[0],o[1],p[0],p[1],COL.acc,3,11);txt('magnetic push',p[0]+12,p[1]+2,{size:12.5,w:650,c:COL.acc});}if(Math.abs(el)>3){const p=P(0,-el,h+1);arrow(o[0],o[1],p[0],p[1],COL.ink,3,11);txt('electric push',p[0]+12,p[1]-2,{size:12.5,w:650});}}
+  if(this.cur||this.triad||this.forces){ctx.save();ctx.fillStyle='#fff';ctx.strokeStyle=COL.acc;ctx.lineWidth=2;ctx.beginPath();ctx.arc(o[0],o[1],7.5,0,7);ctx.fill();ctx.stroke();ctx.restore();}
+  if(this.cur){const a=P(-L/2-72,0,0),b=P(-L/2-6,0,0),c=P(L/2+6,0,0),d=P(L/2+72,0,0);arrow(a[0],a[1],b[0],b[1],COL.ink,2.4,10);arrow(c[0],c[1],d[0],d[1],COL.ink,2.4,10);txt('I',(a[0]+b[0])/2,(a[1]+b[1])/2-14,{al:'center',w:700,size:15});txt('I',(c[0]+d[0])/2,(c[1]+d[1])/2-14,{al:'center',w:700,size:15});const q=P(L/2-4,-W/2-20,h);txt('electrons drift  ←',q[0],q[1],{al:'right',size:12,c:COL.mute});}
+  const ct=P(0,W/2,h),cb=P(0,-W/2,h);poly([ct,[ct[0],ct[1]-30],[772,ct[1]-30],[772,398],[738,398]],COL.wire);poly([cb,[cb[0],398],[622,398]],COL.wire);ctx.fillStyle=COL.ink;ctx.beginPath();ctx.arc(ct[0],ct[1],3.5,0,7);ctx.arc(cb[0],cb[1],3.5,0,7);ctx.fill();
+  meter(680,360,this.Q/this.FS,'Hall voltage');
+  const mlabel={generic:'thin conductive strip',cu:'copper strip',semi:'semiconductor strip'}[this.mat];txt(mlabel,40,488,{size:12,c:COL.mute});
+  if(this.Bon&&this.el<80){const ma=clamp((80-this.el)/22,0,1);ctx.save();ctx.globalAlpha=ma*.92;const z0=150,z1=180,X=300,Y=80;
+   const top=[[-X,-Y,z1],[X,-Y,z1],[X,Y,z1],[-X,Y,z1]].map(q=>P(...q));fpoly(top,'rgba(255,255,255,.9)',COL.ink,1.4);
+   const fr=[[-X,-Y,z0],[X,-Y,z0],[X,-Y,(z0+z1)/2],[-X,-Y,(z0+z1)/2]].map(q=>P(...q)),fr2=[[-X,-Y,(z0+z1)/2],[X,-Y,(z0+z1)/2],[X,-Y,z1],[-X,-Y,z1]].map(q=>P(...q));
+   const nDown=fs>0;fpoly(fr,nDown?COL.ink:'#fff',COL.ink,1.4);fpoly(fr2,nDown?'#fff':COL.ink,COL.ink,1.4);
+   if(this.vis(1,0,0))fpoly([[X,-Y,z0],[X,Y,z0],[X,Y,z1],[X,-Y,z1]].map(q=>P(...q)),'#eee',COL.ink,1.2);
+   const lb=P(0,Y,z1+22);txt(`magnet above the strip, ${nDown?'N':'S'} pole facing down`,lb[0],lb[1],{al:'center',size:12,w:600,c:COL.fld});ctx.restore();}
+  if(this.rotOK&&this.rot<60)txt('drag the picture to rotate it',780,24,{al:'right',size:12,w:600,c:COL.acc,a:.6+.4*Math.sin(this.t*4)});}
+};
+
+/* ---------- Scene S: Hall sensor vs pickup coil ---------- */
+const Ss={mx:150,cy:208,drag:false,off:0,B:0,emf:0,ndH:0,ndC:0,hh:[],hc:[],touched:false,t:0,
+ Bat(m){const d=Math.max(560-(m+75),0)/40;return 1/Math.pow(1+d*d,1.5);},
+ setup(){Object.assign(this,{mx:150,drag:false,emf:0,ndH:0,ndC:0,hh:[],hc:[]});this.B=this.Bat(150);},
+ down(p){if(Math.abs(p.x-this.mx)<95&&Math.abs(p.y-this.cy)<52){this.drag=true;this.off=p.x-this.mx;this.touched=true;}},
+ over(p){return Math.abs(p.x-this.mx)<95&&Math.abs(p.y-this.cy)<52;},
+ move(p){if(this.drag)this.mx=clamp(p.x-this.off,110,465);},up(){this.drag=false;},
+ update(dt){this.t+=dt;const b=this.Bat(this.mx),raw=-(b-this.B)/dt;this.B=b;this.emf+=(raw-this.emf)*Math.min(1,dt*12);if(Math.abs(this.emf)<.002)this.emf=0;this.ndH+=(clamp(b/.75,-1,1)-this.ndH)*Math.min(1,dt*14);this.ndC+=(clamp(this.emf/6,-1,1)-this.ndC)*Math.min(1,dt*14);push(this.hh,b/.75);push(this.hc,this.emf/6);},
+ draw(){const m=this.mx,cy=this.cy;field(LM,m,cy,false,.28,1);
+  ctx.save();ctx.lineWidth=1.6;ctx.strokeStyle=COL.ink;ctx.fillStyle='#fff';rr(m-75,cy-23,150,46,5);ctx.fill();ctx.fillStyle=COL.ink;ctx.beginPath();ctx.moveTo(m,cy-23);ctx.lineTo(m+70,cy-23);ctx.arcTo(m+75,cy-23,m+75,cy+23,5);ctx.arcTo(m+75,cy+23,m,cy+23,5);ctx.lineTo(m,cy+23);ctx.closePath();ctx.fill();rr(m-75,cy-23,150,46,5);ctx.stroke();ctx.restore();
+  txt('S',m-38,cy+1,{al:'center',w:700,size:17});txt('N',m+38,cy+1,{al:'center',w:700,size:17,c:'#fff'});
+  ctx.save();ctx.fillStyle=COL.ink;ctx.fillRect(547,163,26,26);ctx.strokeStyle=COL.ink;ctx.lineWidth=1.5;for(const y of[168,176,184]){ctx.beginPath();ctx.moveTo(573,y);ctx.lineTo(581,y);ctx.stroke();}ctx.restore();
+  txt('Hall sensor',590,176,{size:12.5,w:600,c:COL.acc});
+  const xs=[548,556,564,572];ctx.save();ctx.lineWidth=2.4;ctx.strokeStyle='#cfcfcf';xs.forEach(x=>{ctx.beginPath();ctx.ellipse(x,248,4,18,0,-Math.PI/2,Math.PI/2);ctx.stroke();});ctx.strokeStyle=COL.ink;xs.forEach(x=>{ctx.beginPath();ctx.ellipse(x,248,4,18,0,Math.PI/2,Math.PI*1.5);ctx.stroke();});ctx.restore();
+  txt('pickup coil',590,248,{size:12.5,w:600});
+  meter(470,292,this.ndH,'Hall sensor output');meter(670,292,this.ndC,'pickup coil output');
+  chart(30,392,740,92,[{d:this.hh,c:COL.acc,min:-1.1,max:1.1,label:'Hall sensor: reads B'},{d:this.hc,c:COL.ink,min:-1.1,max:1.1,label:'pickup coil: reads ΔB/Δt'}],{zero:438});
+  if(!this.touched)hintDrag(m,cy-48,this.t,'drag me  →');}
+};
+
+/* ---------- Scene F: coil vs Hall output vs frequency ---------- */
+function fmtV(v){return v>=1?v.toFixed(1):v>=.1?v.toFixed(2):v.toFixed(3);}
+const F={t:0,update(dt){this.t+=dt;},draw(){const X0=110,X1=740,Y0=64,Y1=290,fx=f=>X0+(Math.log10(f)-2)/3*(X1-X0),fy=v=>Y1-(Math.log10(v)+2)/3*(Y1-Y0);
+ ctx.save();ctx.strokeStyle='#ececec';ctx.lineWidth=1;for(const f of[1e3,1e4,1e5]){const x=fx(f);ctx.beginPath();ctx.moveTo(x,Y0);ctx.lineTo(x,Y1);ctx.stroke();}for(const v of[.1,1,10]){const y=fy(v);ctx.beginPath();ctx.moveTo(X0,y);ctx.lineTo(X1,y);ctx.stroke();}ctx.strokeStyle=COL.ink;ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(X0,Y0);ctx.lineTo(X0,Y1);ctx.lineTo(X1,Y1);ctx.stroke();ctx.restore();
+ [[100,'100 Hz'],[1e3,'1 kHz'],[1e4,'10 kHz'],[1e5,'100 kHz']].forEach(([f,l])=>txt(l,fx(f),Y1+16,{al:'center',size:11.5,c:COL.mute}));
+ [[.01,'0.01×'],[.1,'0.1×'],[1,'1×'],[10,'10×']].forEach(([v,l])=>txt(l,X0-8,fy(v),{al:'right',size:11.5,c:COL.mute}));
+ txt('sensor output for the same field strength (relative, equal at 10 kHz)',X0,Y0-22,{size:12,c:'#555'});txt('test frequency',X1,Y1+34,{al:'right',size:12,c:'#555'});
+ poly([[fx(100),fy(.01)],[fx(1e5),fy(10)]],COL.ink,2.6);poly([[fx(100),fy(1)],[fx(1e5),fy(1)]],COL.acc,2.6);
+ txt('pickup coil',fx(1e5)-8,fy(10)+18,{al:'right',size:12.5,w:600});txt('Hall sensor',fx(1e5)-8,fy(1)-13,{al:'right',size:12.5,w:600,c:COL.acc});
+ const f=G.f(),x=fx(f),cv=f/1e4;ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(x,Y0);ctx.lineTo(x,Y1);ctx.stroke();ctx.restore();
+ ctx.fillStyle=COL.ink;ctx.beginPath();ctx.arc(x,fy(cv),5,0,7);ctx.fill();ctx.fillStyle=COL.acc;ctx.beginPath();ctx.arc(x,fy(1),5,0,7);ctx.fill();
+ const L=x>560,tx=L?x-10:x+10,al=L?'right':'left';txt(`coil ${fmtV(cv)}×`,tx,fy(cv)+(cv>1?-14:14),{al,size:12.5,w:650});txt('Hall 1×',tx,fy(1)+(cv>1?14:-14),{al,size:12.5,w:650,c:COL.acc});
+ const d=G.delta(),BY=362;txt('how deep the eddy currents reach in aluminum (δ)',X0,BY-16,{size:12,c:'#555'});ctx.save();ctx.strokeStyle='#d8d8d8';ctx.strokeRect(X0+.5,BY+.5,X1-X0,18);ctx.fillStyle='rgba(255,90,31,.45)';ctx.fillRect(X0,BY,Math.min(d,10)/10*(X1-X0),18);ctx.restore();
+ for(let mm=0;mm<=10;mm+=2)txt(mm+' mm',X0+mm/10*(X1-X0),BY+32,{al:'center',size:11,c:COL.mute});txt(`δ = ${d.toFixed(1)} mm`,Math.min(X0+Math.min(d,10)/10*(X1-X0)+8,X1-80),BY+9,{size:12.5,w:650,c:COL.acc});
+ txt('Lower frequency: deeper eddy currents for any sensor, but smaller output from a coil.',400,440,{al:'center',size:13,w:600});}};
+
+/* ---------- Scene G: ECT cross-section, coil vs Hall at depth ---------- */
+const G={v:1,sensor:'both',depth:6,ti:0,t:0,pass:0,PY:140,MM:24,
+ f(){return 100*Math.pow(10,this.v);},delta(){return 100.7/Math.sqrt(this.f());},
+ sig(kind,d){const f=this.f(),b=100*Math.exp(-d/this.delta())*f/(f+100);return kind==='coil'?b*f/1e4:b;},
+ setup(o){Object.assign(this,{v:1,sensor:'both',depth:6,ti:0,pass:0},o);},
+ update(dt){this.t+=dt;this.pass=Math.max(0,this.pass-dt);},
+ draw(){const PY=this.PY,MM=this.MM,dl=this.delta(),PB=PY+10*MM;
+  ctx.save();ctx.fillStyle='#f3f3f3';ctx.fillRect(60,PY,680,PB-PY);
+  if(!this._g){this._g=ctx.createLinearGradient(60,0,740,0);this._g.addColorStop(0,'rgba(255,90,31,0)');this._g.addColorStop(.32,'rgba(255,90,31,.55)');this._g.addColorStop(.5,'rgba(255,90,31,1)');this._g.addColorStop(.68,'rgba(255,90,31,.55)');this._g.addColorStop(1,'rgba(255,90,31,0)');}
+  ctx.fillStyle=this._g;for(let z=0;z<PB-PY;z+=4){ctx.globalAlpha=.5*Math.exp(-(z/MM)/dl);ctx.fillRect(60,PY+z,680,4);}ctx.globalAlpha=1;
+  ctx.strokeStyle=COL.ink;ctx.lineWidth=1.5;ctx.strokeRect(60,PY,680,PB-PY);ctx.restore();
+  for(let mm=2;mm<=8;mm+=2){const y=PY+mm*MM;poly([[60,y],[68,y]],COL.ink,1.2);txt(mm+' mm',73,y,{size:11,c:COL.mute});}
+  txt('aluminum plate  ·  cross-section  ·  10 mm thick',60,PB+14,{size:12,c:COL.mute});
+  const fy=PY+this.depth*MM;ctx.save();ctx.fillStyle='#fff';ctx.strokeStyle=COL.ink;ctx.lineWidth=1.6;ctx.beginPath();ctx.ellipse(400,fy,34,7,0,0,7);ctx.fill();ctx.stroke();ctx.restore();txt(`flaw at ${this.depth} mm`,442,fy,{size:12,w:600});
+  if(dl<=10){const y=PY+dl*MM;ctx.save();ctx.setLineDash([6,5]);ctx.strokeStyle=COL.acc;ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(60,y);ctx.lineTo(740,y);ctx.stroke();ctx.restore();txt(`δ = ${dl.toFixed(1)} mm`,734,y-PY<22?y+12:y-10,{al:'right',size:12,w:600,c:COL.acc});}else txt(`δ = ${dl.toFixed(1)} mm (deeper than the plate)`,734,PB-12,{al:'right',size:12,w:600,c:COL.acc});
+  ctx.save();ctx.fillStyle='#fff';ctx.strokeStyle=COL.ink;ctx.lineWidth=1.5;rr(318,40,164,86,10);ctx.fill();ctx.stroke();ctx.restore();
+  for(const[x,s]of[[334,1],[444,-1]]){ctx.save();ctx.strokeStyle=COL.ink;ctx.lineWidth=1.4;ctx.strokeRect(x,76,22,40);ctx.beginPath();ctx.arc(x+11,96,6,0,7);ctx.stroke();if(s>0){ctx.fillStyle=COL.ink;ctx.beginPath();ctx.arc(x+11,96,1.8,0,7);ctx.fill();}else{ctx.beginPath();ctx.moveTo(x+7,92);ctx.lineTo(x+15,100);ctx.moveTo(x+15,92);ctx.lineTo(x+7,100);ctx.stroke();}ctx.restore();}
+  txt('drive coil (AC)',400,28,{al:'center',size:12,c:COL.mute});
+  const sh=this.sensor!=='coil',sc=this.sensor!=='hall';
+  if(sh){ctx.fillStyle=COL.ink;ctx.fillRect(391,this.sensor==='both'?60:92,18,18);txt('Hall sensor',498,this.sensor==='both'?69:101,{size:12,w:600,c:COL.acc});}
+  if(sc){const y=this.sensor==='both'?106:96;ctx.save();ctx.lineWidth=2.2;for(let i=0;i<4;i++){ctx.strokeStyle='#cfcfcf';ctx.beginPath();ctx.ellipse(400,y-6+i*4,14,4,0,Math.PI,2*Math.PI);ctx.stroke();ctx.strokeStyle=COL.ink;ctx.beginPath();ctx.ellipse(400,y-6+i*4,14,4,0,0,Math.PI);ctx.stroke();}ctx.restore();txt('pickup coil',498,this.sensor==='both'?110:101,{size:12,w:600});}
+  const rows=[['coil','pickup coil',412],['hall','Hall sensor',452]];const X0=160,WD=540,sc60=v=>clamp(v,0,60)/60*WD;
+  ctx.save();ctx.fillStyle='#ececec';ctx.fillRect(X0,404,sc60(5),64);ctx.restore();txt('noise',X0+sc60(5)/2,478,{al:'center',size:11,c:COL.mute});
+  for(const[k,l,y]of rows){const on=this.sensor==='both'||this.sensor===k,s=this.sig(k,this.depth);ctx.save();ctx.globalAlpha=on?1:.25;txt(l,60,y+8,{size:12.5,w:600,c:k==='hall'?COL.acc:COL.ink});ctx.strokeStyle='#d8d8d8';ctx.lineWidth=1;ctx.strokeRect(X0+.5,y+.5,WD,16);ctx.fillStyle=k==='hall'?COL.acc:COL.ink;ctx.fillRect(X0,y,sc60(s),16);ctx.restore();
+   const st=s>=10?'detected':s>=5?'weak':'lost in noise';if(on)txt(st,X0+WD+10,y+8,{size:12,w:600,c:s>=10?COL.acc:COL.mute});}
+  txt('relative flaw signal',X0+WD,494,{al:'right',size:11,c:COL.mute});
+  if(this.pass>0)txt('Detected',400,fy-24,{al:'center',size:16,w:700,c:COL.acc,a:Math.min(1,this.pass*2)});}
+};
+
+/* ---------- Scene P: the two lab probes ---------- */
+const Pp={sel:null,seen:{mtf:false,refl:false},t:0,_g:{},
+ setup(){this.sel=null;this.seen={mtf:false,refl:false};},
+ hit(p){if(p.x>175&&p.x<265&&p.y>10&&p.y<298)return'mtf';if(p.x>525&&p.x<635&&p.y>10&&p.y<298)return'refl';return null;},
+ down(p){const h=this.hit(p);if(h){this.sel=h;this.seen[h]=true;done(h);}},over(p){return!!this.hit(p);},update(dt){this.t+=dt;},
+ draw(){const cols=[{k:'mtf',cx:220,x0:90,x1:350,d:.225,dl:'at 200 kHz, δ ≈ 0.23 mm',info:['MTF-40-200K-1M  ·  pencil probe','Absolute bridge: one coil drives and senses','200 kHz to 1 MHz','δ ≈ 0.1 to 0.23 mm: surface cracks']},
+  {k:'refl',cx:580,x0:450,x1:710,d:4.5,dl:'at 500 Hz, δ ≈ 4.5 mm',info:['Reflection surface probe  ·  11.2 mm','Separate driver and pickup coils','500 Hz to 60 kHz','δ ≈ 0.4 to 4.5 mm: subsurface, corrosion']}];
+  const PY=300,MM=10;
+  for(const c of cols){ctx.save();ctx.fillStyle='#f3f3f3';ctx.fillRect(c.x0,PY,c.x1-c.x0,80);
+   if(!this._g[c.k]){const g=ctx.createLinearGradient(c.x0,0,c.x1,0);g.addColorStop(0,'rgba(255,90,31,0)');g.addColorStop(.5,'rgba(255,90,31,1)');g.addColorStop(1,'rgba(255,90,31,0)');this._g[c.k]=g;}
+   ctx.fillStyle=this._g[c.k];for(let z=0;z<80;z+=1){ctx.globalAlpha=.55*Math.exp(-(z/MM)/c.d);ctx.fillRect(c.x0,PY+z,c.x1-c.x0,1);}ctx.globalAlpha=1;ctx.strokeStyle=COL.ink;ctx.lineWidth=1.3;ctx.strokeRect(c.x0,PY,c.x1-c.x0,80);ctx.restore();
+   for(let mm=2;mm<=6;mm+=2){const y=PY+mm*MM;poly([[c.x0,y],[c.x0+6,y]],COL.ink,1);txt(mm+' mm',c.x0+9,y,{size:10.5,c:COL.mute});}
+   txt(c.dl,c.cx,PY+94,{al:'center',size:12,w:650,c:COL.acc});
+   const on=this.sel===c.k;
+   if(this.seen[c.k])c.info.forEach((l,i)=>txt(l,c.cx,PY+116+i*18,{al:'center',size:i?12:13,w:i?400:650,c:i?'#444':COL.ink}));
+   else txt('tap the probe to inspect it',c.cx,PY+120+Math.sin(this.t*4)*3,{al:'center',size:12.5,w:600,c:COL.acc});
+   if(on){ctx.save();ctx.setLineDash([5,5]);ctx.strokeStyle=COL.acc;ctx.lineWidth=1.5;rr(c.cx-62,12,124,284,12);ctx.stroke();ctx.restore();}}
+  poly([[220,14],[220,60]],COL.wire,2);ctx.save();ctx.fillStyle=COL.ink;rr(207,60,26,64,7);ctx.fill();ctx.fillStyle='#9a9a9a';ctx.fillRect(215,124,10,142);ctx.fillStyle=COL.ink;rr(212,264,16,30,4);ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=1.4;ctx.beginPath();ctx.ellipse(220,286,5,2,0,0,7);ctx.stroke();ctx.restore();
+  txt('one coil',236,284,{size:11,c:'#555'});
+  poly([[580,14],[580,150]],COL.wire,2);ctx.save();ctx.fillStyle='#fff';ctx.strokeStyle=COL.ink;ctx.lineWidth=1.8;rr(535,150,90,142,12);ctx.fill();ctx.stroke();ctx.lineWidth=2.2;ctx.strokeStyle=COL.ink;ctx.beginPath();ctx.ellipse(580,262,30,7,0,0,7);ctx.stroke();ctx.strokeStyle=COL.acc;ctx.beginPath();ctx.ellipse(580,280,18,5,0,0,7);ctx.stroke();ctx.restore();
+  txt('driver',527,262,{al:'right',size:11,c:'#555'});txt('pickup',527,281,{al:'right',size:11,c:COL.acc});
+  txt('δ for aluminum 6061 (about 43 %IACS). Coil layouts are schematic.',400,494,{al:'center',size:11,c:COL.mute});}
+};
+
+/* ---------- Scene E: concept chain ---------- */
+const E={lit:2,t:0,tx:[['Current flows','through a thin strip'],['A magnetic field','pushes carriers sideways'],['Charge builds','on the two edges'],['Hall voltage','proportional to B'],['Reads B itself','even a static field'],['Low-frequency ECT','deeper flaws']],
+ update(dt){this.t+=dt;},
+ draw(){const bx=[[60,70],[300,70],[540,70],[540,250],[300,250],[60,250]],tx=this.tx;
+ const ar=[[[262,112],[298,112]],[[502,112],[538,112]],[[640,156],[640,248]],[[538,292],[502,292]],[[298,292],[262,292]]];
+ ar.forEach((a,i)=>{const on=i+1<this.lit;arrow(a[0][0],a[0][1],a[1][0],a[1][1],on?COL.ink:'#d8d8d8',2,8);if(on){const t=(this.t*.8+i*.13)%1;ctx.fillStyle=COL.acc;ctx.beginPath();ctx.arc(a[0][0]+(a[1][0]-a[0][0])*t,a[0][1]+(a[1][1]-a[0][1])*t,3.2,0,7);ctx.fill();}});
+ bx.forEach((b,i)=>{const on=i<this.lit;ctx.save();ctx.fillStyle='#fff';ctx.strokeStyle=on?COL.ink:'#dedede';ctx.lineWidth=on?2:1.2;rr(b[0],b[1],200,84,12);ctx.fill();ctx.stroke();ctx.restore();txt(String(i+1),b[0]+14,b[1]+16,{size:11,c:on?COL.acc:'#ccc',w:700});txt(tx[i][0],b[0]+100,b[1]+36,{al:'center',w:650,size:15,c:on?COL.ink:'#c8c8c8'});txt(tx[i][1],b[0]+100,b[1]+56,{al:'center',size:12.5,c:on?'#555':'#d0d0d0'});});
+ if(this.lit>=6)txt('From a deflected electron to a deeper eddy current inspection.',400,420,{al:'center',size:15,w:600,c:COL.acc});}};
+
+const SC={T,S:Ss,F,G,P:Pp,E};
+function seg(id,opts,curv){return `<div class="seg" id="${id}">${opts.map(([v,l])=>`<button data-v="${v}" class="${v===curv?'on':''}">${l}</button>`).join('')}</div>`;}
+function bindSeg(id,fn){document.querySelectorAll(`#${id} button`).forEach(b=>b.onclick=()=>{document.querySelectorAll(`#${id} button`).forEach(x=>x.classList.toggle('on',x===b));fn(b.dataset.v);});}
+function fmtF(f){return f<1000?Math.round(f)+' Hz':(f/1000).toFixed(f<10000?1:0)+' kHz';}
+function freqCtl(){return `<div class="ctrl"><label>Frequency <b id="fq">${fmtF(G.f())}</b></label><input id="fs" type="range" min="0" max="3" step="0.01" value="${G.v}"><div class="note" id="dl">Standard depth of penetration δ = ${G.delta().toFixed(1)} mm</div></div>`;}
+function bindFreq(cb){$('#fs').oninput=e=>{G.v=+e.target.value;$('#fq').textContent=fmtF(G.f());$('#dl').textContent=`Standard depth of penetration δ = ${G.delta().toFixed(1)} mm`;cb&&cb();};}
+const VH={cu:'≈ 4 nV (nanovolts)',semi:'≈ 31 mV (millivolts)'};
+
+/* ---------- steps ---------- */
+const STEPS=[
+{scene:'T',kicker:'Step 1 · Current',title:'Electrons flowing through a strip',lead:'A thin strip carries a current. A voltmeter touches the top and bottom edges, directly across from each other.',
+ controls:()=>`<div class="ctrl"><label>Current</label>${seg('cur',[['0','Off'],['1','On']],T.cur?'1':'0')}</div>`,
+ bind(){bindSeg('cur',v=>{T.cur=v==='1';if(T.cur)done('on');});},
+ tasks:[{id:'on',text:'Switch the current on.'}],
+ enter(){T.setup({});T.setView('top');},
+ quiz:[{q:'Current is flowing, but there is no magnetic field. The voltmeter across the width reads:',o:['Zero','A large voltage','A voltage that grows over time'],a:0,why:'Voltage drops along the length of the strip. Two points straight across from each other sit at the same voltage, so the meter reads zero.',hint:'Look at the meter needle.'},
+       {q:'If you moved the contacts to the two ends of the strip instead, the meter would read:',o:['Still zero','The voltage that pushes the current along the strip','The Hall voltage'],a:1,why:'End to end you measure the driving voltage (V = I × R). Contacts across the width hide it, so anything they read must come from a sideways push.',hint:'Which way does the voltage drop as the current flows?'}]},
+{scene:'T',kicker:'Step 2 · The push',title:'Switch on a magnetic field',lead:'The field points straight down through the strip. From above you see each arrow tail-on, as ⊗. Rotate the picture to see all three directions.',
+ controls:()=>`<div class="ctrl"><label>Magnetization</label>${seg('bf',[['0','Off'],['1','On']],T.Bon?'1':'0')}</div>`,
+ bind(){bindSeg('bf',v=>{T.Bon=v==='1';if(T.Bon)done('bon');});},
+ tasks:[{id:'bon',text:'Switch the magnetization on.'},{id:'rot',text:'Rotate the view, or use the Top view and 3D view buttons.'}],
+ enter(){T.setup({cur:true,triad:true,rotOK:true,gamma:1});T.setView('3d');},tick(){if(T.rot>60)done('rot');},
+ quiz:[{q:'What pushes the electrons toward the top edge?',o:['Electrons repelling each other','The magnetic force on moving charges','The voltmeter pulling them'],a:1,why:'A magnetic field pushes sideways on any moving charge. This is the Lorentz force. A charge at rest feels nothing.',hint:'Nothing moved sideways until the field came on.'},
+       {q:'Look at the three arrows. The motion, the field and the push are:',o:['All pointing the same way','At right angles to each other','The push follows the field'],a:1,why:'The push is always at right angles to both the motion and the field. That is why it points across the strip.',hint:'Rotate the view and compare the three arrows.'}]},
+{scene:'T',kicker:'Step 3 · Balance',title:'Build up the edge charge',lead:'Pushed electrons collect on the top edge and leave the bottom edge positive. Pile up that charge with the slider and watch both pushes on one electron.',
+ controls:()=>`<div class="ctrl"><label>Charge on the edges <b id="mv">${Math.round((T.manual||0)*100)}%</b></label><input id="ms" type="range" min="0" max="100" step="1" value="${Math.round((T.manual||0)*100)}"></div>`,
+ bind(){$('#ms').oninput=e=>{const v=+e.target.value;T.manual=v/100;$('#mv').textContent=v+'%';if(v>=97)done('bal');};},
+ tasks:[{id:'bal',text:'Drag the slider until the two pushes balance.'}],
+ enter(){T.setup({cur:true,Bon:true,forces:true,rotOK:true,manual:0});T.setView('top');},
+ quiz:[{q:'Why do electrons stop piling up on the edge?',o:['The edge runs out of room','The magnetic field weakens','The electric push from the edge charge balances the magnetic push'],a:2,why:'Once the two pushes are equal, electrons travel straight. The steady voltage left across the strip is the Hall voltage.',hint:'Compare the orange and black arrows at 100%.'},
+       {q:'At balance, electrons travel straight again. Are the extra electrons still on the top edge?',o:['No, they spread back out','Yes, and they must stay, because their charge makes the electric push'],a:1,why:'If the edge charge left, the electric push would vanish and the magnetic push would win again. The layer stays as long as the current and the field stay.',hint:'What would happen to the black arrow if the edge charge disappeared?'}]},
+{scene:'T',kicker:'Step 4 · The equation',title:'What sets the Hall voltage?',eq:'<span>V<sub>H</sub> =</span><span class="frac"><span>I · B</span><span>n · q · t</span></span>',lead:'n is the number of charge carriers per volume, q is their charge, and t is the strip thickness.',
+ controls:()=>`<div class="ctrl"><label>Current I <b id="iv">${T.I.toFixed(1)}×</b></label><input id="is" type="range" min="0.2" max="2" step="0.1" value="${T.I}"></div><div class="ctrl"><label>Magnetization B <b id="bv">${T.B.toFixed(1)}</b></label><input id="bs" type="range" min="-1" max="1" step="0.1" value="${T.B}"></div>`,
+ bind(){$('#is').oninput=e=>{T.I=+e.target.value;$('#iv').textContent=T.I.toFixed(1)+'×';if(T.I>=2)done('dbl');};$('#bs').oninput=e=>{T.B=+e.target.value;$('#bv').textContent=T.B.toFixed(1);if(T.B<=-.5)done('rev');};},
+ tasks:[{id:'rev',text:'Reverse the field (drag B below zero).'},{id:'dbl',text:'Double the current to 2×.'}],
+ enter(){T.setup({cur:true,Bon:true,rotOK:true,gamma:1.2});T.setView('top');},
+ quiz:[{q:'Reverse the magnetic field. The Hall voltage:',o:['Reverses polarity','Stays the same','Drops to zero'],a:0,why:'The sideways push flips, so electrons collect on the other edge and the voltage changes sign.',hint:'Which edge collected the electrons after you reversed B?'},
+       {q:'You double both I and B. The Hall voltage becomes:',o:['2 times larger','4 times larger','Unchanged'],a:1,why:'V_H is proportional to I times B, so 2 × 2 = 4.',hint:'Both I and B sit on top of the fraction.'}]},
+{scene:'T',kicker:'Step 5 · Material',title:'Why sensors use semiconductors',lead:'Same current, same field, same 10 µm thickness. Only the number of charge carriers changes.',
+ controls:()=>`<div class="ctrl">${seg('mt',[['cu','Copper'],['semi','Semiconductor']],T.mat)}<div class="note" id="vh">Example at 5 mA and 0.1 T: V<sub>H</sub> ${VH[T.mat]}</div><div class="note">Carrier count and speed are not to scale.</div></div>`,
+ bind(){bindSeg('mt',v=>{T.mat=v;T.Q=0;$('#vh').innerHTML=`Example at 5 mA and 0.1 T: V<sub>H</sub> ${VH[v]}`;done(v);});},
+ tasks:[{id:'cu',text:'Try copper.'},{id:'semi',text:'Try the semiconductor.'}],
+ enter(){T.setup({cur:true,Bon:true,mat:'cu',FS:250,gamma:1.2,rotOK:true});T.setView('top');},
+ quiz:[{q:'Why is the Hall voltage millions of times larger in the semiconductor?',o:['It has far fewer carriers, so each one moves faster and is pushed harder','It is magnetic','It has more electrons to pile up'],a:0,why:'Carrying the same current with fewer carriers means each moves faster. A faster charge feels a stronger sideways push, so V_H is much larger.',hint:'Look at n in the equation from the last step.'}]},
+{scene:'S',kicker:'Step 6 · Hall sensor vs coil',title:'Measuring a field that is not changing',lead:'A Hall sensor reads B itself. A pickup coil only reacts while B changes, as you saw with Faraday\'s law.',
+ tasks:[{id:'move',text:'Move the magnet toward the sensors.'},{id:'hold',text:'Hold it still close to them.'}],
+ enter(){Ss.setup();this.tt=0;},tick(dt){if(Math.abs(Ss.emf)>2)done('move');if(state[cur].tasks.move&&Ss.B>.4&&Math.abs(Ss.emf)<.15){this.tt+=dt;if(this.tt>1)done('hold');}else this.tt=0;},
+ quiz:[{q:'With the magnet held still, which sensor still shows a reading?',o:['The pickup coil','The Hall sensor','Both','Neither'],a:1,why:'The Hall voltage depends on B itself. The coil depends on ΔB/Δt, which is zero when nothing changes.',hint:'Compare the two meters while the magnet is still.'},
+       {q:'So, a pickup coil and a Hall sensor respond to:',o:['B, and how fast B changes','How fast B changes, and B itself','Both respond only to B'],a:1,why:'Pickup coil: rate of change of B (Faraday). Hall sensor: B directly, even a static field.',hint:'The first item is the coil, the second is the Hall sensor.'}]},
+{scene:'F',kicker:'Step 7 · Coils at low frequency',title:'Why a pickup coil fades',lead:'Most eddy current probes sense with coils. A coil responds to how fast the field changes, so its output drops as the frequency drops, even right at the surface.',
+ controls:freqCtl,bind(){bindFreq(()=>{if(G.f()<1000)done('low');});},
+ tasks:[{id:'low',text:'Lower the frequency below 1 kHz and compare the two outputs.'}],
+ enter(){G.v=2.3;},
+ quiz:[{q:'Why does the pickup coil\'s output fall at low frequency?',o:['The flaw is deeper','The field changes more slowly, and a coil responds to the rate of change','The coil heats up'],a:1,why:'It is the slowness, not the depth. Even at the surface, a slowly changing field induces only a small voltage in a coil.',hint:'Faraday\'s law: what does a coil actually respond to?'}]},
+{scene:'G',kicker:'Step 8 · Add depth',title:'Going deeper with low frequency',lead:'Lower frequency reaches deeper, but a deep flaw gives a weak signal to begin with. The coil also loses output at low frequency. The Hall sensor does not.',
+ controls:freqCtl,bind(){bindFreq(()=>{if(G.delta()>=5)done('deep');});},
+ tasks:[{id:'deep',text:'Lower the frequency until δ is at least 5 mm.'}],
+ enter(){G.setup({v:1.5,sensor:'both',depth:6});},
+ quiz:[{q:'Does the Hall sensor make the eddy currents go deeper?',o:['Yes, that is its advantage','No. Frequency sets the depth. The Hall sensor keeps its sensitivity at low frequency'],a:1,why:'Depth is set by frequency (and the material). The coil adds a second loss at low frequency; the Hall sensor does not. Go too low and the eddy currents themselves weaken, so there is still a best frequency.',hint:'Did the δ line move when you changed sensors, or when you changed frequency?'}]},
+{scene:'G',kicker:'Step 9 · Your turn',title:'Set up three inspections',lead:'For each flaw, choose a sensor and a frequency, then press Inspect. A clear detection needs a signal well above the noise.',
+ controls:()=>`<div class="ctrl"><div class="note" id="tg"><b style="color:#111">Flaw ${Math.min(G.ti,2)+1} of 3</b> · depth ${G.depth} mm</div>${seg('sn',[['coil','Pickup coil'],['hall','Hall sensor']],G.sensor)}</div>${freqCtl()}<div class="ctrl"><button class="btn primary small" id="insp">Inspect</button><div class="fb" id="ifb"></div></div>`,
+ bind(){bindSeg('sn',v=>{G.sensor=v;});bindFreq();$('#insp').onclick=()=>{if(state[cur].tasks.ladder)return;const f=$('#ifb'),s=G.sig(G.sensor,G.depth);
+  if(s>=10){G.pass=1.4;f.className='fb ok';const D=[1,3,7];if(G.ti<2){f.textContent=`Detected at ${G.depth} mm. Next flaw.`;const at=cur;setTimeout(()=>{if(cur!==at)return;G.ti++;G.depth=D[G.ti];$('#tg').innerHTML=`<b style="color:#111">Flaw ${G.ti+1} of 3</b> · depth ${G.depth} mm`;f.textContent='';},1300);}else{G.ti=3;f.textContent='All three flaws found.';done('ladder');}}
+  else{f.className='fb no';f.textContent=G.delta()<G.depth/2.5?'The eddy currents barely reach that depth. Try a lower frequency.':G.sensor==='coil'?'A pickup coil\'s output drops with frequency. Try a higher frequency, or the other sensor.':'Still too weak. Adjust the frequency.';}};},
+ tasks:[{id:'ladder',text:'Detect flaws at 1 mm, 3 mm and 7 mm.'}],
+ enter(){G.setup({v:1.7,sensor:'coil',depth:1,ti:0});}},
+{scene:'P',kicker:'Step 10 · Your lab probes',title:'The probes in the hands-on activity',lead:'These are the two probes you will use in the lab. Both sense with coils, in two different ways.',
+ tasks:[{id:'mtf',text:'Tap the pencil probe.'},{id:'refl',text:'Tap the reflection surface probe.'}],
+ enter(){Pp.setup();},
+ quiz:[{q:'Which probe drives the eddy currents and senses them with the same coil?',o:['The MTF-40 pencil probe (absolute bridge)','The reflection surface probe','Neither'],a:0,why:'In an absolute bridge probe, one coil does both jobs. The instrument reads the change in that coil\'s own impedance.',hint:'Read the coil description under each probe.'},
+       {q:'You need to find corrosion on the far side of a 3 mm aluminum skin. Which probe?',o:['The MTF-40 at 500 kHz','The reflection surface probe at a low frequency'],a:1,why:'At 500 kHz, δ is only about 0.14 mm. The reflection probe runs down to 500 Hz, where δ is about 4.5 mm.',hint:'Compare how deep the orange shading reaches under each probe.'},
+       {q:'Does either probe contain a Hall sensor?',o:['Yes, the reflection probe','No, both sense with coils'],a:1,why:'Both are coil probes. A well-designed coil works down to these frequencies. Hall and GMR receivers show up in specialized probes for even lower frequencies or pulsed eddy current.',hint:'Look at what each probe uses to sense.'}]},
+{scene:'E',kicker:'Final check',title:'Put it all together',lead:'Four quick questions. The chain on the left fills in as you go.',final:true,
+ enter(){E.lit=2+state[cur].solved.filter(Boolean).length;},onSolve(){E.lit=2+state[cur].solved.filter(Boolean).length;},
+ quiz:[{q:'In a Hall sensor, the Hall voltage appears:',o:['Along the direction of the current','Parallel to the magnetic field','Across the strip, at right angles to both current and field'],a:2,why:'Carriers are pushed sideways, so the voltage builds across the width.'},
+       {q:'Reverse the magnetic field. The Hall voltage:',o:['Reverses polarity','Doubles','Stays the same'],a:0,why:'The sideways push flips, so the charge collects on the opposite edge.'},
+       {q:'A magnet sits still next to a Hall sensor and a pickup coil. Which gives an output?',o:['Only the pickup coil','Only the Hall sensor','Both'],a:1,why:'Only the Hall sensor reads a static field. The coil needs a changing field.'},
+       {q:'Why are Hall sensors useful for low-frequency eddy current testing?',o:['They push eddy currents deeper into the part','They do not need a drive coil','Their output depends on B, not on how fast it changes'],a:2,why:'Frequency sets the depth. The Hall sensor keeps its sensitivity when that frequency is low.'}]}
+];
+
+/* ---------- step engine ---------- */
+let cur=0,state=STEPS.map(()=>({tasks:{},solved:[],view:0,first:[]}));
+const tasksDone=(i=cur)=>!STEPS[i].tasks||STEPS[i].tasks.every(t=>state[i].tasks[t.id]);
+const quizDone=(i=cur)=>!STEPS[i].quiz||STEPS[i].quiz.every((q,k)=>state[i].solved[k]);
+const stepDone=(i=cur)=>tasksDone(i)&&quizDone(i);
+function done(id){const S=state[cur];if(S.tasks[id])return;S.tasks[id]=true;const el=panel.querySelector(`[data-t="${id}"]`);if(el)el.classList.add('ok');const at=cur;if(tasksDone()){setTimeout(()=>{if(cur===at){renderQuiz();updateNav();}},450);}updateNav();}
+function renderPanel(){const st=STEPS[cur],S=state[cur];let h=`<div class="kicker">${st.kicker}</div><h1>${st.title}</h1><p class="lead">${st.lead}</p>`;if(st.eq)h+=`<div class="eq">${st.eq}</div>`;if(st.controls)h+=st.controls();if(st.tasks)h+=`<div class="tasks">${st.tasks.map(t=>`<div class="task ${S.tasks[t.id]?'ok':''}" data-t="${t.id}"><i></i><span>${t.text}</span></div>`).join('')}</div>`;h+='<div id="quizbox"></div>';panel.innerHTML=h;panel.scrollTop=0;if(st.bind)st.bind();renderQuiz();updateNav();}
+function renderQuiz(){const st=STEPS[cur],S=state[cur],box=$('#quizbox');if(!box)return;if(!st.quiz||!tasksDone()){box.innerHTML='';return;}const n=st.quiz.length;
+ if(st.final&&S.view>=n){const sc=S.first.filter(Boolean).length;box.innerHTML=`<div class="quiz"><div class="kicker">Result</div><div class="big">${sc} / ${n}</div><div class="lead">correct on the first try.</div><button class="btn primary small" id="restart">Start over</button></div>`;$('#restart').onclick=restart;return;}
+ const k=S.view,q=st.quiz[k],sol=S.solved[k];
+ box.innerHTML=`<div class="quiz"><div class="kicker">Check${n>1?` ${k+1} of ${n}`:''}</div><div class="q">${q.q}</div>${q.o.map((o,j)=>`<button class="opt${sol&&j===q.a?' right':''}" data-j="${j}" ${sol?'disabled':''}>${o}</button>`).join('')}<div class="fb ${sol?'ok':''}">${sol?q.why:''}</div>${sol&&k<n-1?'<button class="btn small" id="qn">Next question</button>':''}${sol&&st.final&&k===n-1?'<button class="btn primary small" id="qn">See result</button>':''}</div>`;
+ box.querySelectorAll('.opt').forEach(b=>b.onclick=()=>answer(+b.dataset.j));const qn=$('#qn');if(qn)qn.onclick=()=>{S.view++;renderQuiz();};}
+function answer(j){const st=STEPS[cur],S=state[cur],k=S.view,q=st.quiz[k];if(S.first[k]===undefined)S.first[k]=j===q.a;
+ if(j===q.a){S.solved[k]=true;if(st.onSolve)st.onSolve();renderQuiz();updateNav();}
+ else{const b=$(`#quizbox .opt[data-j="${j}"]`);b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');const f=$('#quizbox .fb');f.className='fb no';f.textContent=q.hint||'Not quite. Try again.';}}
+function updateNav(){const d=$('#dots');d.innerHTML=STEPS.map((s,i)=>`<div class="dot ${i===cur?'cur':stepDone(i)?'done':''}"></div>`).join('');$('#back').disabled=cur===0;const last=cur===STEPS.length-1;$('#next').style.visibility=last?'hidden':'visible';$('#next').disabled=!stepDone();$('#hint').textContent=stepDone()?(last?'':'Nice. Continue when ready.'):!tasksDone()?'Complete the task to continue':'Answer the check to continue';}
+function go(i){cur=clamp(i,0,STEPS.length-1);STEPS[cur].enter&&STEPS[cur].enter();renderPanel();}
+function restart(){state=STEPS.map(()=>({tasks:{},solved:[],view:0,first:[]}));go(0);}
+$('#next').onclick=()=>{if(stepDone())go(cur+1);};$('#back').onclick=()=>go(cur-1);
+
+/* ---------- input + loop ---------- */
+const scene=()=>SC[STEPS[cur].scene];
+cv.addEventListener('pointerdown',e=>{const s=scene();if(s.down){s.down(toL(e));try{cv.setPointerCapture(e.pointerId);}catch(_){}}});
+cv.addEventListener('pointermove',e=>{const s=scene(),p=toL(e);if(s.move)s.move(p);cv.style.cursor=s.drag?'grabbing':(s.over&&s.over(p)?'grab':'default');});
+const up=()=>{const s=scene();if(s.up)s.up();};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+const vbEl=$('#vb');vbEl.querySelectorAll('button').forEach(b=>b.onclick=()=>{T.view(b.dataset.v);T.rot+=100;});
+let last=performance.now();
+function frame(t){const dt=clamp((t-last)/1000,.001,.05);last=t;const s=scene();s.update(dt);vbEl.style.display=(STEPS[cur].scene==='T'&&T.rotOK)?'flex':'none';const st=STEPS[cur];if(st.tick)st.tick.call(st,dt);
+ const v=view;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);ctx.setTransform(v.d*v.s,0,0,v.d*v.s,v.d*v.ox,v.d*v.oy);s.draw();requestAnimationFrame(frame);}
+
+/* ---------- start screen + full screen ---------- */
+const fsOK=!!(document.fullscreenEnabled||document.webkitFullscreenEnabled);
+const isFS=()=>!!(document.fullscreenElement||document.webkitFullscreenElement);
+function enterFS(){const el=document.documentElement,f=el.requestFullscreen||el.webkitRequestFullscreen;if(!f)return;try{const r=f.call(el);if(r&&r.catch)r.catch(()=>{});}catch(_){}}
+function exitFS(){const f=document.exitFullscreen||document.webkitExitFullscreen;if(!f)return;try{const r=f.call(document);if(r&&r.catch)r.catch(()=>{});}catch(_){}}
+const fsb=$('#fsb');if(!fsOK)fsb.style.display='none';else $('#fsnote').textContent='Opens full screen. Press Esc to exit.';
+fsb.onclick=()=>isFS()?exitFS():enterFS();
+const fsUpd=()=>{fsb.textContent=isFS()?'Exit full screen':'Full screen';};
+document.addEventListener('fullscreenchange',fsUpd);document.addEventListener('webkitfullscreenchange',fsUpd);
+$('#startbtn').onclick=()=>{if(fsOK)enterFS();$('#start').remove();};
+
+go(0);requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
