@@ -1,0 +1,45 @@
+<!--
+  Embed code for the Welding Scale exercise.
+  Paste everything below this comment into a Custom HTML block on the course page.
+
+  Browsers only enter full screen after a click, so the start overlay asks for one click.
+  Where full screen is not available (iPhone, or a host page that is itself inside a frame
+  that blocks full screen), the buttons open the exercise in a new tab instead.
+-->
+<style>
+.ndt-ex{position:relative;max-width:1280px;margin:0 auto;background:#fff;box-sizing:border-box;}
+.ndt-ex-bar{display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:6px 0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;}
+.ndt-ex-bar button,.ndt-ex-bar a{font:600 14px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:7px 14px;border-radius:6px;cursor:pointer;text-decoration:none;line-height:1.2;}
+.ndt-ex-bar button{background:#1f4e8c;color:#fff;border:0;}
+.ndt-ex-bar a{background:#fff;color:#1f4e8c;border:1px solid #1f4e8c;}
+.ndt-ex iframe{display:block;width:100%;border:0;}
+.ndt-ex .ndt-ex-exit{display:none;}
+.ndt-ex-start{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:140px;gap:14px;background:rgba(10,20,35,.72);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;text-align:center;}
+.ndt-ex-start button{font:700 20px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:16px 30px;border-radius:10px;border:0;background:#fff;color:#1f4e8c;cursor:pointer;box-shadow:0 6px 24px rgba(0,0,0,.35);}
+.ndt-ex-start .ndt-ex-skip{font:500 15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:transparent;color:#fff;box-shadow:none;text-decoration:underline;padding:6px 10px;}
+.ndt-ex:fullscreen{background:#0b1220;max-width:none;width:100vw;height:100vh;padding:0 10px;}
+.ndt-ex:fullscreen iframe{height:calc(100vh - 50px) !important;}
+.ndt-ex:fullscreen .ndt-ex-enter{display:none;}
+.ndt-ex:fullscreen .ndt-ex-exit{display:inline-block;}
+.ndt-ex:-webkit-full-screen{background:#0b1220;max-width:none;width:100vw;height:100vh;padding:0 10px;}
+.ndt-ex:-webkit-full-screen iframe{height:calc(100vh - 50px) !important;}
+.ndt-ex:-webkit-full-screen .ndt-ex-enter{display:none;}
+.ndt-ex:-webkit-full-screen .ndt-ex-exit{display:inline-block;}
+</style>
+<div class="ndt-ex">
+  <div class="ndt-ex-bar">
+    <button type="button" class="ndt-ex-enter" onclick="var w=this.closest('.ndt-ex'),r=w.requestFullscreen||w.webkitRequestFullscreen;if(r&&(document.fullscreenEnabled||document.webkitFullscreenEnabled)){try{var p=r.call(w);if(p&&p.catch)p.catch(function(){});}catch(e){}}else{window.open(w.querySelector('iframe').src,'_blank');}">&#x26F6; Full screen</button>
+    <button type="button" class="ndt-ex-exit" onclick="var x=document.exitFullscreen||document.webkitExitFullscreen;if(x){x.call(document);}">Exit full screen</button>
+    <a href="https://exercises.ndtvideolibrary.com/welding-scale-exercise.html" target="_blank" rel="noopener">Open in new tab &#x2197;</a>
+  </div>
+  <iframe
+    src="https://exercises.ndtvideolibrary.com/welding-scale-exercise.html"
+    height="940"
+    allow="fullscreen"
+    allowfullscreen
+    title="NDT Welding Ruler Exercise"></iframe>
+  <div class="ndt-ex-start">
+    <button type="button" onclick="var w=this.closest('.ndt-ex'),o=this.parentNode,r=w.requestFullscreen||w.webkitRequestFullscreen;o.style.display='none';if(r&&(document.fullscreenEnabled||document.webkitFullscreenEnabled)){try{var p=r.call(w);if(p&&p.catch)p.catch(function(){});}catch(e){}}else{window.open(w.querySelector('iframe').src,'_blank');}">&#x26F6; Start exercise in full screen</button>
+    <button type="button" class="ndt-ex-skip" onclick="this.parentNode.style.display='none';">Stay on this page</button>
+  </div>
+</div>
