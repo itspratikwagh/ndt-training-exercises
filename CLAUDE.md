@@ -37,3 +37,14 @@ probe coil above a nonmagnetic plate. Each page carries an exact copy of `tools/
 `<script id="physics">` block, so each page stays self-contained and can be embedded on its own. After changing the
 core, a lesson's numbers or its narration claims, update both copies and run `node tools/eddy/check_dodd_deeds.cjs`.
 
+
+## Narrated videos
+
+Lesson videos are an animated canvas page rendered frame by frame to MP4 (see `video/ET-Test-Coil-Arrangements.mp4`).
+
+- `video/src/<name>/script.json` holds the narration lines; `video/src/<name>/scene.html` draws the frame for any
+  time through `window.renderAt(seconds)`, timed from the line ids, so the picture follows the audio when lines change.
+- `python3 tools/video/build_narration.py video/src/<name>` records new or changed lines with the house voice into
+  `video/audio/<name>/` and writes `timeline.js` and `narration.wav` (not committed).
+- `node tools/video/render_video.cjs video/src/<name> video/<name>.mp4` renders 1920x1080 at 30 frames per second.
+  Add `--stills <dir> <seconds...>` to check single frames first.

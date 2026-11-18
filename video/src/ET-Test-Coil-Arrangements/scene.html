@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ET Test Coil Arrangements (video scene)</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 56.25vw; max-height: 100vh; max-width: 177.78vh; margin: 0 auto; }
+  #play { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+          font: 600 28px Inter, Arial, sans-serif; color: #e8eef7; background: rgba(5, 9, 18, .78); cursor: pointer; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<div id="play">Click to play the preview</div>
+<script src="timeline.js"></script>
+<script>
+/* Deterministic animation: renderAt(t) draws the frame for time t (seconds).
+   tools/video/render_video.cjs steps t frame by frame and encodes the MP4.
+   Opened in a browser, the page previews the same animation with narration.wav.
+   The strip-chart signals are schematic teaching shapes, not computed from a physics model. */
+const C = document.getElementById('c'), g = C.getContext('2d');
+const TL = window.TIMELINE, L = {};
+TL.lines.forEach(l => L[l.id] = l);
+const FONT = 'Inter, Arial, "Liberation Sans", sans-serif';
+const COL = { bg: '#0a1020', ink: '#e9eff8', dim: '#8d9bb5', cu: '#f39a45', cuD: '#8a4d1c', pick: '#5fe08a', pickD: '#2a7446',
+  steel: '#9fb0c4', steelD: '#55647a', eddy: '#35d0ff', field: '#b29bff', flaw: '#ff5468', sig: '#7dffa0',
+  panel: '#111a2e', line: '#2b3b5e', accent: '#6aaeff', gold: '#ffd166' };
+
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, u) => a + (b - a) * u;
+const ease = u => { u = clamp(u); return u * u * (3 - 2 * u); };
+const eio = u => { u = clamp(u); return u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2; };
+let t = 0, Z = 1;
+const at = (id, f = 0) => L[id].s + L[id].d * f;         // time at fraction f of a spoken line
+const ramp = (t0, d = .5) => ease((t - t0) / d);          // 0 to 1 starting at t0
+const lw = px => px / Z;                                  // constant on-screen size inside the camera
+
+/* ---------- scenes and their time spans ---------- */
+const ORDER = ['intro', 'abs', 'diff', 'ext', 'hyb', 'thru', 'refl', 'app'];
+const SPAN = {};
+ORDER.forEach((s, i) => {
+  const ls = TL.lines.filter(l => l.scene === s);
+  SPAN[s] = { a: i === 0 ? 0 : ls[0].s - .55, b: 0 };
+});
+ORDER.forEach((s, i) => { SPAN[s].b = i < ORDER.length - 1 ? SPAN[ORDER[i + 1]].a : TL.total; });
+
+/* ---------- drawing helpers ---------- */
+function txt(s, x, y, size, color = COL.ink, align = 'left', weight = 500, alpha = 1) {
+  if (alpha <= 0) return 0;
+  g.save(); g.globalAlpha *= alpha; g.font = `${weight} ${size}px ${FONT}`; g.fillStyle = color; g.textAlign = align;
+  g.textBaseline = 'middle'; g.fillText(s, x, y); const w = g.measureText(s).width; g.restore(); return w;
+}
+const wtxt = (s, x, y, px, color, align, weight, alpha) => txt(s, x, y, px / Z, color, align, weight, alpha);
+function rr(x, y, w, h, r) { g.beginPath(); g.roundRect(x, y, w, h, r); }
+function panel(x, y, w, h, r = 14, fill = COL.panel, stroke = COL.line, alpha = 1) {
+  g.save(); g.globalAlpha *= alpha; rr(x, y, w, h, r); g.fillStyle = fill; g.fill();
+  if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw(2); g.stroke(); } g.restore();
+}
+function chip(s, x, y, alpha, color = COL.accent, size = 28, align = 'left') {
+  if (alpha <= 0) return;
+  g.save(); g.globalAlpha *= alpha; g.font = `600 ${size}px ${FONT}`;
+  const w = g.measureText(s).width + size * 1.3, h = size * 1.75;
+  const x0 = align === 'center' ? x - w / 2 : x; const dy = (1 - alpha) * 14;
+  rr(x0, y - h / 2 + dy, w, h, h / 2); g.fillStyle = 'rgba(16,26,48,.92)'; g.fill(); g.strokeStyle = color; g.lineWidth = 2; g.stroke();
+  g.fillStyle = COL.ink; g.textBaseline = 'middle'; g.textAlign = 'left'; g.fillText(s, x0 + size * .65, y + dy + 1); g.restore();
+}
+function arrow(x0, y0, x1, y1, color, width = 3, alpha = 1, head = 12) {
+  if (alpha <= 0) return;
+  g.save(); g.globalAlpha *= alpha; g.strokeStyle = g.fillStyle = color; g.lineWidth = lw(width); g.lineCap = 'round';
+  const a = Math.atan2(y1 - y0, x1 - x0), h = lw(head);
+  g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1 - Math.cos(a) * h * .8, y1 - Math.sin(a) * h * .8); g.stroke();
+  g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 - Math.cos(a - .45) * h, y1 - Math.sin(a - .45) * h);
+  g.lineTo(x1 - Math.cos(a + .45) * h, y1 - Math.sin(a + .45) * h); g.closePath(); g.fill(); g.restore();
+}
+function wire(pts, color = '#c9d3e2', width = 3, alpha = 1) {
+  g.save(); g.globalAlpha *= alpha; g.strokeStyle = color; g.lineWidth = width; g.lineJoin = 'round'; g.lineCap = 'round';
+  g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke(); g.restore();
+}
+/* coil with a vertical axis, seen from the side: turns stacked from y0 to y1 */
+function coilV(x, y0, y1, w, n, col, colD, part = 'all', ryk = .17) {
+  const ry = w * ryk, th = Math.min((y1 - y0) / n * .66, w * .09);
+  g.save(); g.lineWidth = th; g.lineCap = 'round';
+  for (let i = 0; i < n; i++) {
+    const y = lerp(y0, y1, (i + .5) / n);
+    if (part !== 'front') { g.strokeStyle = colD; g.beginPath(); g.ellipse(x, y, w / 2, ry, 0, Math.PI, 2 * Math.PI); g.stroke(); }
+    if (part !== 'back') { g.strokeStyle = col; g.beginPath(); g.ellipse(x, y, w / 2, ry, 0, 0, Math.PI); g.stroke(); }
+  }
+  g.restore();
+}
+/* encircling coil with a horizontal axis: turns stacked from x0 to x1 around radius R */
+function coilH(x0, x1, cy, R, n, col, colD, part) {
+  const rx = R * .17, th = Math.min((x1 - x0) / n * .66, R * .12);
+  g.save(); g.lineWidth = th; g.lineCap = 'round';
+  for (let i = 0; i < n; i++) {
+    const x = lerp(x0, x1, (i + .5) / n);
+    g.beginPath();
+    if (part === 'back') { g.strokeStyle = colD; g.ellipse(x, cy, rx, R, 0, Math.PI / 2, 1.5 * Math.PI); }
+    else { g.strokeStyle = col; g.ellipse(x, cy, rx, R, 0, -Math.PI / 2, Math.PI / 2); }
+    g.stroke();
+  }
+  g.restore();
+}
+function fieldLoops(x, y, n, a0, da, b0, db, alpha, col = COL.field, dir = 1) {
+  if (alpha <= 0) return;
+  g.save(); g.strokeStyle = col; g.lineWidth = lw(2.4); g.setLineDash([lw(12), lw(9)]);
+  for (let k = 0; k < n; k++) {
+    const a = a0 + da * k, b = b0 + db * k; g.globalAlpha = alpha * (1 - k / (n + 1.5));
+    g.lineDashOffset = -dir * t * lw(46); g.beginPath(); g.ellipse(x - a, y, a, b, 0, 0, 7); g.stroke();
+    g.lineDashOffset = dir * t * lw(46); g.beginPath(); g.ellipse(x + a, y, a, b, 0, 0, 7); g.stroke();
+  }
+  g.restore();
+}
+function eddy(x, y, R, n, alpha, step, col = COL.eddy) {
+  if (alpha <= 0) return;
+  g.save(); g.strokeStyle = col; g.shadowColor = col; g.shadowBlur = 14; g.lineWidth = lw(3);
+  g.setLineDash([lw(16), lw(8)]); g.lineDashOffset = -t * lw(70);
+  for (let k = 0; k < n; k++) {
+    g.globalAlpha = alpha * Math.exp(-k * .55); const r = R * (1 - k * .07);
+    g.beginPath(); g.ellipse(x, y + k * step, r, r * .15, 0, 0, 7); g.stroke();
+  }
+  g.restore();
+}
+function steelGrad(y0, y1, a = '#b4c2d3', b = '#5f6f86') { const gr = g.createLinearGradient(0, y0, 0, y1); gr.addColorStop(0, a); gr.addColorStop(1, b); return gr; }
+function acSource(x, y, r, alpha = 1) {
+  g.save(); g.globalAlpha *= alpha; g.fillStyle = COL.panel; g.strokeStyle = COL.cu; g.lineWidth = 3.5;
+  g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.stroke();
+  g.beginPath(); for (let i = 0; i <= 40; i++) { const u = i / 40; const X = x - r * .6 + u * r * 1.2, Y = y - Math.sin(u * 2 * Math.PI + t * 5) * r * .38; i ? g.lineTo(X, Y) : g.moveTo(X, Y); }
+  g.stroke(); g.restore();
+}
+function meter(x, y, w, h, v, label, col = COL.sig, alpha = 1) {     // v in 0..1
+  g.save(); g.globalAlpha *= alpha; panel(x, y, w, h, 12);
+  wtxt(label, x + w / 2, y + h * .26, 20, COL.dim, 'center', 600);
+  rr(x + 18, y + h * .5, w - 36, h * .3, 6); g.fillStyle = '#0a1222'; g.fill();
+  rr(x + 18, y + h * .5, Math.max(4, (w - 36) * clamp(v)), h * .3, 6); g.fillStyle = col; g.fill(); g.restore();
+}
+/* strip chart in screen space */
+function chart(x, y, w, h, lanes, t0, t1, alpha, marks = []) {
+  if (alpha <= 0) return;
+  g.save(); g.globalAlpha = alpha; rr(x, y, w, h, 14); g.fillStyle = '#0c1426'; g.fill(); g.strokeStyle = COL.line; g.lineWidth = 2; g.stroke();
+  const px0 = x + 250, pw = w - 280, lh = (h - 16) / lanes.length, X = tt => px0 + (tt - t0) / (t1 - t0) * pw, te = Math.min(t, t1);
+  lanes.forEach((ln, i) => {
+    const mid = y + 8 + lh * (i + (ln.base ?? .5)), amp = lh * .4;
+    if (i) { g.strokeStyle = COL.line; g.lineWidth = 1; g.beginPath(); g.moveTo(x + 14, y + 8 + lh * i); g.lineTo(x + w - 14, y + 8 + lh * i); g.stroke(); }
+    txt(ln.label, x + 24, y + 8 + lh * (i + .5), 22, ln.col || COL.ink, 'left', 600);
+    g.strokeStyle = 'rgba(141,155,181,.35)'; g.setLineDash([6, 6]); g.lineWidth = 1.5; g.beginPath(); g.moveTo(px0, mid); g.lineTo(px0 + pw, mid); g.stroke(); g.setLineDash([]);
+    ln.traces.forEach(tr => {
+      g.strokeStyle = tr.col; g.lineWidth = tr.w || 3; g.lineJoin = 'round'; g.beginPath();
+      const N = 500;
+      for (let k = 0; k <= N; k++) { const tt = t0 + (te - t0) * k / N; const Y = mid - clamp(tr.fn(tt) / ln.range, -1.15, 1.15) * amp; k ? g.lineTo(X(tt), Y) : g.moveTo(X(tt), Y); }
+      g.stroke();
+      if (te > t0) { g.fillStyle = tr.col; g.beginPath(); g.arc(X(te), mid - clamp(tr.fn(te) / ln.range, -1.15, 1.15) * amp, (tr.w || 3) + 2.5, 0, 7); g.fill(); }
+    });
+  });
+  marks.forEach(m => { const a = ramp(m.t, .4); if (a > 0) { const mid = y + 8 + lh * (m.lane + (m.dy ?? .14)); txt(m.label, X(m.t), mid, 20, m.col || COL.gold, 'center', 600, a); } });
+  g.restore();
+}
+function camera(keys) {      // keys: [time, cx, cy, zoom]
+  let k = keys[0];
+  if (t >= keys[keys.length - 1][0]) k = keys[keys.length - 1];
+  else for (let i = 0; i < keys.length - 1; i++) if (t >= keys[i][0] && t < keys[i + 1][0]) {
+    const a = keys[i], b = keys[i + 1], u = eio((t - a[0]) / (b[0] - a[0]));
+    k = [t, lerp(a[1], b[1], u), lerp(a[2], b[2], u), Math.exp(lerp(Math.log(a[3]), Math.log(b[3]), u))]; break;
+  }
+  Z = k[3]; g.translate(960, 540); g.scale(Z, Z); g.translate(-k[1], -k[2]);
+}
+function header(title, sub, color = COL.accent) {
+  txt('EDDY CURRENT TESTING  ·  TEST COIL ARRANGEMENTS', 70, 52, 19, COL.dim, 'left', 600);
+  const w = txt(title, 70, 100, 46, color, 'left', 700);
+  if (sub) txt(sub, 70 + w + 20, 104, 30, COL.ink, 'left', 500, .85);
+}
+/* small pictograms used on the title and applications scenes */
+function icon(kind, cx, cy, s, alpha = 1) {
+  g.save(); g.globalAlpha *= alpha; g.translate(cx, cy); g.scale(s, s);
+  g.fillStyle = steelGrad(46, 70); rr(-110, 46, 220, 24, 5);
+  if (kind === 'abs') { g.fill(); coilV(0, -40, 30, 90, 5, COL.cu, COL.cuD); }
+  if (kind === 'diff') { g.fill(); coilV(-48, -40, 30, 70, 5, COL.cu, COL.cuD); coilV(48, -40, 30, 70, 5, COL.gold, '#8a6d1c');
+    txt('+', -48, -66, 34, COL.cu, 'center', 700); txt('−', 48, -66, 34, COL.gold, 'center', 700); }
+  if (kind === 'ext') { rr(-110, 46, 96, 24, 5); g.fill(); rr(14, 46, 96, 24, 5); g.fill();
+    coilV(-62, -40, 30, 70, 5, COL.cu, COL.cuD); coilV(62, -40, 30, 70, 5, COL.gold, '#8a6d1c');
+    txt('STANDARD', -62, 88, 15, COL.dim, 'center', 700); txt('TEST', 62, 88, 15, COL.dim, 'center', 700); }
+  if (kind === 'hyb') { g.fill(); coilV(-40, -40, 30, 100, 5, COL.cu, COL.cuD); coilV(62, -10, 30, 48, 4, COL.pick, COL.pickD);
+    txt('DRIVE', -40, -64, 15, COL.cu, 'center', 700); txt('PICKUP', 62, -34, 15, COL.pick, 'center', 700); }
+  g.restore();
+}
+
+/* ====================== INTRO ====================== */
+function sceneIntro() {
+  const aT = 1 - ramp(L.i1.e - .55, .45);
+  if (aT > 0) {
+    g.save(); g.globalAlpha = aT * ramp(.25, .8);
+    txt('EDDY CURRENT TESTING', 960, 380, 30, COL.dim, 'center', 600);
+    txt('Test Coil Arrangements', 960, 470, 104, COL.ink, 'center', 800);
+    g.fillStyle = COL.accent; g.fillRect(960 - 90, 548, 180, 5);
+    [['Absolute', COL.cu, .46], ['Differential', COL.gold, .6], ['Hybrid', COL.pick, .82]].forEach((w, i) =>
+      txt(w[0], 960 + (i - 1) * 330, 640, 50, w[1], 'center', 700, ramp(at('i1', w[2]), .4)));
+    g.restore();
+  }
+  const a2 = ramp(L.i2.s - .1, .5) * (1 - ramp(at('i3', .42), .5));
+  if (a2 > 0) {
+    g.save(); g.globalAlpha = a2; camera([[L.i2.s, 960, 540, 1], [L.i2.e, 960, 540, 1.12]]);
+    const ind = ramp(at('i2', .28), .6), sen = ramp(at('i2', .6), .6);
+    fieldLoops(960, 440, 4, 90, 55, 130, 40, ind * .9);
+    g.fillStyle = steelGrad(600, 700); rr(430, 600, 1060, 100, 8); g.fill();
+    eddy(960, 618, 190, 4, ind, 20);
+    coilV(960, 380, 500, 210, 7, COL.cu, COL.cuD);
+    for (let i = -1; i <= 1; i++) arrow(960 + i * 60, 590, 960 + i * 60, 520, COL.eddy, 3, sen * (.55 + .45 * Math.sin(t * 5)), 12);
+    wtxt('1  Induce', 520, 330, 42, COL.field, 'center', 700, ind);
+    wtxt('eddy currents in the test object', 520, 380, 26, COL.ink, 'center', 500, ind);
+    wtxt('2  Sense', 1400, 330, 42, COL.eddy, 'center', 700, sen);
+    wtxt('how the test object reacts', 1400, 380, 26, COL.ink, 'center', 500, sen);
+    wtxt('Test object', 1440, 730, 22, COL.dim, 'right', 600);
+    g.restore(); Z = 1;
+  }
+  [['abs', 'Absolute', COL.cu, .5], ['diff', 'Differential', COL.gold, .64], ['hyb', 'Hybrid', COL.pick, .78]].forEach((k, i) => {
+    const a = ramp(at('i3', k[3]), .5); if (a <= 0) return;
+    const x = 960 + (i - 1) * 520;
+    panel(x - 220, 300 + (1 - a) * 20, 440, 420, 22, COL.panel, k[2], a);
+    icon(k[0], x, 480, 1.5, a); txt(k[1], x, 660, 44, k[2], 'center', 700, a);
+  });
+}
+
+/* ====================== ABSOLUTE ====================== */
+const ABS = { t0: 1400, t1: 1680, crack: 1740, top: 664 };
+const absTh = x => 110 - 55 * ease((x - ABS.t0) / (ABS.t1 - ABS.t0));
+const absSig = x => .75 * ease((x - ABS.t0) / (ABS.t1 - ABS.t0)) + 1.0 * Math.exp(-Math.pow((x - ABS.crack) / 17, 2));
+function absPx(tt) {
+  const a = at('a4', .85), b = L.a5.s + .3, c = L.a5.e - .9;
+  if (tt < a) return 1180; if (tt < b) return lerp(1180, 900, eio((tt - a) / (b - a)));
+  return lerp(900, 1790, clamp((tt - b) / (c - b)));
+}
+function sceneAbs() {
+  const S = SPAN.abs, px = absPx(t);
+  g.save();
+  camera([[S.a, 960, 470, 1], [at('a1', .38), 960, 470, 1], [at('a1', .98), 1180, 632, 3.6], [at('a3', .98), 1180, 632, 3.6],
+    [at('a4', .2), 1010, 560, 1.85], [at('a4', .85), 1010, 560, 1.85], [L.a5.s + .3, 1250, 590, 1.15]]);
+  // instrument
+  panel(150, 260, 410, 300, 18, '#18233c', '#3a4c74');
+  rr(180, 288, 350, 190, 8); g.fillStyle = '#06101c'; g.fill();
+  g.strokeStyle = 'rgba(90,200,140,.18)'; g.lineWidth = 1;
+  for (let i = 1; i < 7; i++) { g.beginPath(); g.moveTo(180 + i * 50, 288); g.lineTo(180 + i * 50, 478); g.stroke(); }
+  for (let i = 1; i < 4; i++) { g.beginPath(); g.moveTo(180, 288 + i * 47.5); g.lineTo(530, 288 + i * 47.5); g.stroke(); }
+  const sg = absSig(px); g.fillStyle = COL.sig; g.shadowColor = COL.sig; g.shadowBlur = 14;
+  g.beginPath(); g.arc(300 + sg * 90, 420 - sg * 60, 8, 0, 7); g.fill(); g.shadowBlur = 0;
+  for (let i = 0; i < 3; i++) { g.fillStyle = '#2c3b5c'; g.beginPath(); g.arc(215 + i * 60, 520, 16, 0, 7); g.fill(); }
+  txt('Eddy current instrument', 355, 590, 22, COL.dim, 'center', 600);
+  // cable
+  g.strokeStyle = '#3d4d6d'; g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(560, 400);
+  g.bezierCurveTo(800, 400, px - 200, 60, px, 250); g.stroke();
+  // plate
+  g.fillStyle = steelGrad(ABS.top, ABS.top + 110); g.beginPath(); g.moveTo(640, ABS.top); g.lineTo(1840, ABS.top);
+  for (let x = 1840; x >= 640; x -= 20) g.lineTo(x, ABS.top + absTh(x)); g.closePath(); g.fill();
+  g.fillStyle = '#1a0a10'; g.beginPath(); g.moveTo(ABS.crack - 3, ABS.top); g.lineTo(ABS.crack + 3, ABS.top); g.lineTo(ABS.crack, ABS.top + 36); g.closePath(); g.fill();
+  wtxt('Test object', 660, ABS.top + 135, 22, COL.dim, 'left', 600, 1 - ramp(at('a4', .85), .4));
+  // footprint highlight (a3)
+  const fp = ramp(at('a3', .02), .5) * (1 - ramp(at('a3', .55), .5));
+  if (fp > 0) { g.save(); g.globalAlpha = fp * (.35 + .12 * Math.sin(t * 4)); g.fillStyle = COL.eddy; g.fillRect(px - 44, ABS.top, 88, 58); g.restore();
+    wtxt('area under the coil', px + 54, ABS.top + 30, 28, '#0b2a4a', 'left', 700, fp); }
+  // fields and eddy currents
+  const zoomed = ramp(at('a1', .7), .6), sense = ramp(at('a2', .5), .5) * (1 - ramp(at('a3', 0), .5));
+  fieldLoops(px, 606, 3, 24, 14, 62, 14, zoomed * .85);
+  eddy(px, ABS.top + 7, 40, 3, zoomed, 9);
+  // probe body with cutaway tip
+  g.fillStyle = '#26324e'; rr(px - 45, 250, 90, 300, 14); g.fill();
+  g.fillStyle = 'rgba(70,90,130,.35)'; g.strokeStyle = '#51648e'; g.lineWidth = lw(2); rr(px - 45, 540, 90, 116, 10); g.fill(); g.stroke();
+  coilV(px, 566, 646, 62, 6, COL.cu, COL.cuD, 'back');
+  g.fillStyle = '#3b4252'; rr(px - 13, 556, 26, 98, 4); g.fill();
+  coilV(px, 566, 646, 62, 6, COL.cu, COL.cuD, 'front');
+  for (let i = -1; i <= 1; i += 2) arrow(px + i * 20, ABS.top - 1, px + i * 20, ABS.top - 16, COL.eddy, 2.5, sense * (.5 + .5 * Math.sin(t * 6)), 8);
+  // labels in the close-up
+  const la = ramp(at('a1', .92), .4) * (1 - ramp(at('a4', 0), .4));
+  if (la > 0) { arrow(px + 122, 590, px + 40, 600, COL.cu, 2, la, 9); wtxt('single coil', px + 128, 590, 28, COL.cu, 'left', 700, la); }
+  const l2 = ramp(at('a2', .22), .4) * (1 - ramp(at('a3', 0), .4));
+  wtxt('induces eddy currents', px - 62, 646, 26, COL.eddy, 'right', 600, l2);
+  wtxt('senses the reaction', px + 62, 646, 26, COL.eddy, 'left', 600, ramp(at('a2', .55), .4) * (1 - ramp(at('a3', 0), .4)));
+  const nr = ramp(at('a3', .34), .4) * (1 - ramp(at('a4', 0), .4));
+  wtxt('no reference standard', px - 70, 560, 26, COL.gold, 'right', 600, nr);
+  wtxt('no second coil', px - 70, 582, 26, COL.gold, 'right', 600, ramp(at('a3', .5), .4) * (1 - ramp(at('a4', 0), .4)));
+  g.restore(); Z = 1;
+  header('Absolute arrangement', 'single coil', COL.cu);
+  const off = 1 - ramp(at('a4', .97), .4);
+  [['Conductivity', .42], ['Permeability', .5], ['Thickness', .58], ['Lift-off', .65], ['Temperature', .73], ['Discontinuities', .83]]
+    .forEach((c, i) => chip(c[0], 110, 250 + i * 68, ramp(at('a4', c[1]), .35) * off, COL.cu, 30));
+  const b = L.a5.s + .3, c = L.a5.e - .9;
+  chart(300, 762, 1320, 180, [{ label: 'Absolute coil signal', col: COL.sig, range: 1.9, base: .78, traces: [{ fn: tt => absSig(absPx(tt)), col: COL.sig, w: 4 }] }],
+    b, c, ramp(L.a5.s - .2, .5), [{ t: lerp(b, c, .66), label: 'slow drift: thickness', lane: 0, dy: .2 }, { t: lerp(b, c, .944), label: 'crack', lane: 0, dy: .12, col: COL.flaw }]);
+}
+
+/* ====================== DIFFERENTIAL, SELF-COMPARISON ====================== */
+const DF = { cy: 520, R: 85, c1: 880, c2: 1040, v: 130 };
+DF.tm0 = at('d4', 0) - .4;
+const dfU = tt => 960 - DF.v * (tt - DF.tm0);                 // tube coordinate that sits between the coils at time tt
+DF.uA = dfU(at('d4', .08)); DF.uB = dfU(at('d4', .9)); DF.uC = dfU(at('d5', .02)); DF.uD = dfU(at('d5', .3));
+DF.uK = dfU(at('d5', .56)); DF.uL1 = dfU(at('d6', .42)); DF.uL2 = dfU(at('d6', .9));
+const dfShift = tt => DF.v * Math.max(0, tt - DF.tm0);
+const dfWall = u => 40 - 20 * ease((DF.uA - u) / (DF.uA - DF.uB));
+const dfGroove = u => ease((DF.uL1 - u) / 30) * (1 - ease((DF.uL2 + 30 - u) / 30)) ;
+function dfV(xc, tt) {
+  const u = xc - dfShift(tt);
+  return .4 * (40 - dfWall(u)) / 20 + 1.0 * Math.exp(-Math.pow((u - DF.uK) / 30, 2)) + .8 * ease((DF.uL1 + 25 - u) / 50) * (1 - ease((DF.uL2 + 25 - u) / 50));
+}
+function sceneDiff() {
+  const S = SPAN.diff, sh = dfShift(t), cy = DF.cy, R = DF.R;
+  g.save();
+  camera([[S.a, 960, 440, 1], [at('d1', .3), 960, 440, 1], [at('d1', .85), 960, 520, 2.5], [at('d1', 1), 960, 520, 2.5],
+    [at('d2', .3), 960, 410, 1.45], [at('d3', 1), 960, 410, 1.45], [at('d4', .12), 800, 472, 1.3]]);
+  coilH(DF.c1 - 35, DF.c1 + 35, cy, R + 24, 5, COL.cu, COL.cuD, 'back');
+  coilH(DF.c2 - 35, DF.c2 + 35, cy, R + 24, 5, COL.gold, '#8a6d1c', 'back');
+  // tube in longitudinal section
+  const xa = -200, xb = 2200;
+  g.fillStyle = '#131c30'; g.fillRect(xa, cy - R, xb - xa, 2 * R);
+  for (const s of [-1, 1]) {
+    g.fillStyle = steelGrad(cy + s * R, cy + s * (R - 40), s < 0 ? '#c0cddc' : '#56657c', s < 0 ? '#7b8ba1' : '#8a99ae');
+    g.beginPath(); g.moveTo(xa, cy + s * R);
+    for (let x = xa; x <= xb; x += 10) { const u = x - sh; g.lineTo(x, cy + s * (R - (s < 0 ? 9 * dfGroove(u) : 0))); }
+    for (let x = xb; x >= xa; x -= 10) g.lineTo(x, cy + s * (R - dfWall(x - sh)));
+    g.closePath(); g.fill();
+  }
+  // long groove tint, crack
+  const gx1 = DF.uL2 + sh, gx2 = DF.uL1 + sh;
+  g.fillStyle = 'rgba(255,84,104,.55)'; g.fillRect(gx1 + 15, cy - R, gx2 - gx1 - 30, 9);
+  const kx = DF.uK + sh; g.fillStyle = COL.flaw; g.beginPath(); g.moveTo(kx - 4, cy - R); g.lineTo(kx + 4, cy - R); g.lineTo(kx, cy - R + 14); g.closePath(); g.fill();
+  g.strokeStyle = 'rgba(10,16,32,.5)'; g.lineWidth = 2;
+  for (let u = Math.ceil((xa - sh) / 90) * 90; u < xb - sh; u += 90) { g.beginPath(); g.moveTo(u + sh, cy + R - 9); g.lineTo(u + sh, cy + R); g.stroke(); }
+  coilH(DF.c1 - 35, DF.c1 + 35, cy, R + 24, 5, COL.cu, COL.cuD, 'front');
+  coilH(DF.c2 - 35, DF.c2 + 35, cy, R + 24, 5, COL.gold, '#8a6d1c', 'front');
+  // wiring: series opposition, leads to the instrument
+  const top = cy - R - 24, bot = cy + R + 24;
+  wire([[DF.c1 + 30, bot], [DF.c1 + 30, bot + 26], [DF.c2 - 30, bot + 26], [DF.c2 - 30, bot]], '#c9d3e2', 3);
+  wire([[DF.c1 - 30, top], [DF.c1 - 30, 330]], COL.cu, 3); wire([[DF.c2 + 30, top], [DF.c2 + 30, 330]], COL.gold, 3);
+  wtxt('Coil 1', DF.c1, bot + 52, 24, COL.cu, 'center', 700); wtxt('Coil 2', DF.c2, bot + 52, 24, COL.gold, 'center', 700);
+  const opp = ramp(at('d1', .55), .5) * (1 - ramp(at('d3', .9), .5));
+  if (opp > 0) {
+    arrow(DF.c1 + 62, cy + 30, DF.c1 + 62, cy - 34, COL.cu, 4, opp); arrow(DF.c2 - 62, cy - 30, DF.c2 - 62, cy + 34, COL.gold, 4, opp);
+    wtxt('+', DF.c1, top - 16, 34, COL.cu, 'center', 800, opp); wtxt('−', DF.c2, top - 16, 34, COL.gold, 'center', 800, opp);
+    wtxt('wound in opposition', 960, bot + 80, 24, COL.ink, 'center', 600, opp * (1 - ramp(at('d2', .2), .4)));
+  }
+  // instrument
+  const v1 = dfV(DF.c1, t), v2 = dfV(DF.c2, t), d = v1 - v2, base = .42;
+  panel(700, 160, 520, 170, 16, '#18233c', '#3a4c74');
+  const bar = (y, label, v, col) => { wtxt(label, 724, y, 20, col, 'left', 600); rr(820, y - 11, 370, 22, 5); g.fillStyle = '#0a1222'; g.fill();
+    rr(820, y - 11, 370 * clamp(base + v * .36), 22, 5); g.fillStyle = col; g.fill(); };
+  bar(188, 'Coil 1', v1, COL.cu); bar(222, 'Coil 2', v2, COL.gold);
+  wtxt('Output', 724, 280, 20, COL.sig, 'left', 700); rr(820, 262, 370, 36, 6); g.fillStyle = '#06101c'; g.fill();
+  g.fillStyle = 'rgba(141,155,181,.5)'; g.fillRect(1005 - .75, 262, 1.5, 36);
+  const dd = clamp(d, -1, 1) * 170; g.fillStyle = Math.abs(d) > .2 ? COL.flaw : COL.sig; g.shadowColor = g.fillStyle; g.shadowBlur = 12;
+  rr(1005 + Math.min(0, dd) - 5, 266, Math.abs(dd) + 10, 28, 5); g.fill(); g.shadowBlur = 0;
+  const zr = ramp(at('d2', .7), .4) * (1 - ramp(at('d4', 0), .4));
+  wtxt('Coil 1 − Coil 2 = 0', 1250, 280, 26, COL.sig, 'left', 700, zr);
+  const mv = ramp(DF.tm0, .5); arrow(1330, cy - R - 44, 1470, cy - R - 44, COL.dim, 3, mv); wtxt('tube travel', 1320, cy - R - 44, 22, COL.dim, 'right', 600, mv);
+  g.restore(); Z = 1;
+  header('Differential coil', 'self-comparison technique', COL.gold);
+  const off = 1 - ramp(at('d5', 0), .4);
+  [['Wall thickness', .56], ['Diameter', .68], ['Temperature', .76], ['Conductivity', .86]].forEach((c, i) =>
+    chip(c[0] + ':  not detected', 80, 210 + i * 62, ramp(at('d4', c[1]), .35) * off, COL.gold, 26));
+  const t1 = L.d6.e - .3;
+  chart(300, 742, 1320, 204, [
+    { label: 'Each coil', range: 1.5, base: .8, traces: [{ fn: tt => dfV(DF.c1, tt), col: COL.cu, w: 3 }, { fn: tt => dfV(DF.c2, tt), col: COL.gold, w: 3 }] },
+    { label: 'Output (difference)', col: COL.sig, range: 1.25, traces: [{ fn: tt => dfV(DF.c1, tt) - dfV(DF.c2, tt), col: COL.sig, w: 4 }] }],
+    DF.tm0, t1, ramp(DF.tm0 - .5, .5), [
+    { t: at('d4', .5), label: 'gradual wall change: no output', lane: 1 },
+    { t: at('d5', .56), label: 'crack', lane: 1, col: COL.flaw, dy: .06 },
+    { t: at('d6', .66), label: 'long flaw: ends only', lane: 1, col: COL.flaw }]);
+}
+
+/* ====================== DIFFERENTIAL, EXTERNAL COMPARISON ====================== */
+const EX = { yr: 290, yt: 520, R: 55, x: 960, v: 130 };
+EX.tm0 = at('e2', .4);
+const exU = tt => EX.x - EX.v * (tt - EX.tm0);
+EX.uK = exU(at('e4', .55)); EX.uA = exU(at('e5', .12)); EX.uB = exU(at('e5', .7));
+const exShift = tt => EX.v * Math.max(0, tt - EX.tm0);
+const exCond = u => ease((EX.uA - u) / (EX.uA - EX.uB));
+const exV = tt => { const u = EX.x - exShift(tt); return .9 * Math.exp(-Math.pow((u - EX.uK) / 30, 2)) + .75 * exCond(u); };
+function sceneExt() {
+  const S = SPAN.ext, sh = exShift(t), R = EX.R, x = EX.x;
+  g.save();
+  camera([[S.a, 1050, 420, 1], [at('e1', .25), 1050, 420, 1], [at('e1', .85), 960, 405, 1.85], [at('e2', .05), 960, 405, 1.85], [at('e2', .38), 1060, 440, 1.1]]);
+  coilH(x - 40, x + 40, EX.yr, R + 22, 5, COL.cu, COL.cuD, 'back'); coilH(x - 40, x + 40, EX.yt, R + 22, 5, COL.gold, '#8a6d1c', 'back');
+  // reference standard (stationary)
+  g.fillStyle = steelGrad(EX.yr - R, EX.yr + R, '#c3d0e0', '#5b6a82'); rr(x - 190, EX.yr - R, 380, 2 * R, 10); g.fill();
+  // test bar: colour follows conductivity
+  for (let X = -200; X < 2300; X += 12) {
+    const c = exCond(X - sh), gr = g.createLinearGradient(0, EX.yt - R, 0, EX.yt + R);
+    gr.addColorStop(0, `rgb(${lerp(195, 232, c)},${lerp(208, 178, c)},${lerp(224, 120, c)})`); gr.addColorStop(1, `rgb(${lerp(91, 128, c)},${lerp(106, 84, c)},${lerp(130, 48, c)})`);
+    g.fillStyle = gr; g.fillRect(X, EX.yt - R, 13, 2 * R);
+  }
+  g.strokeStyle = 'rgba(10,16,32,.45)'; g.lineWidth = 2;
+  for (let u = Math.ceil((-200 - sh) / 90) * 90; u < 2300 - sh; u += 90) { g.beginPath(); g.moveTo(u + sh, EX.yt + R - 9); g.lineTo(u + sh, EX.yt + R); g.stroke(); }
+  const kx = EX.uK + sh; g.fillStyle = COL.flaw; g.beginPath(); g.moveTo(kx - 4, EX.yt - R); g.lineTo(kx + 4, EX.yt - R); g.lineTo(kx, EX.yt - R + 30); g.closePath(); g.fill();
+  coilH(x - 40, x + 40, EX.yr, R + 22, 5, COL.cu, COL.cuD, 'front'); coilH(x - 40, x + 40, EX.yt, R + 22, 5, COL.gold, '#8a6d1c', 'front');
+  // wiring and instrument
+  wire([[x - 30, EX.yr + R + 22], [x - 30, EX.yt - R - 22]], '#c9d3e2', 3);
+  wire([[x + 30, EX.yr - R - 22], [x + 30, 170], [1500, 170], [1500, 300]], COL.cu, 3);
+  wire([[x + 30, EX.yt + R + 22], [x + 30, 612], [1500, 612], [1500, 480]], COL.gold, 3);
+  const d = exV(t);
+  panel(1320, 300, 380, 180, 16, '#18233c', '#3a4c74');
+  wtxt('Output', 1510, 340, 22, COL.sig, 'center', 700); wtxt('test coil − reference coil', 1510, 372, 18, COL.dim, 'center', 500);
+  rr(1350, 400, 320, 44, 6); g.fillStyle = '#06101c'; g.fill(); g.fillStyle = 'rgba(141,155,181,.5)'; g.fillRect(1509, 400, 1.5, 44);
+  const dd = clamp(d, -1, 1) * 150; g.fillStyle = Math.abs(d) > .06 ? COL.flaw : COL.sig; g.shadowColor = g.fillStyle; g.shadowBlur = 12;
+  rr(1510 + Math.min(0, dd) - 5, 405, Math.abs(dd) + 10, 34, 5); g.fill(); g.shadowBlur = 0;
+  const lr = ramp(at('e1', .6), .4);
+  wtxt('Reference standard', x - 80, EX.yr - R - 22, 24, COL.cu, 'right', 700, lr); wtxt('Test object', x - 210, EX.yt + R + 30, 24, COL.gold, 'left', 700, lr);
+  wtxt('stays in place', x - 80, EX.yr + R + 22, 20, COL.dim, 'right', 500, ramp(at('e2', .1), .4));
+  const mv = ramp(EX.tm0, .5); arrow(560, EX.yt + R + 30, 700, EX.yt + R + 30, COL.dim, 3, mv);
+  wtxt('conductivity changes', EX.uB + sh + 60, EX.yt, 24, '#201408', 'left', 700, ramp(at('e5', .3), .4));
+  g.restore(); Z = 1;
+  header('Differential coil', 'external comparison technique', COL.gold);
+  [['Conductivity', .52], ['Permeability', .68], ['Dimension', .86]].forEach((c, i) => chip(c[0], 90, 220 + i * 66, ramp(at('e6', c[1]), .35), COL.gold, 30));
+  const t1 = L.e6.s + 1.2;
+  chart(300, 742, 1320, 204, [
+    { label: 'Each coil', range: 1.5, base: .8, traces: [{ fn: () => 0, col: COL.cu, w: 3 }, { fn: exV, col: COL.gold, w: 3 }] },
+    { label: 'Output (difference)', col: COL.sig, range: 1.25, base: .7, traces: [{ fn: exV, col: COL.sig, w: 4 }] }],
+    EX.tm0, t1, ramp(EX.tm0 - .1, .5), [
+    { t: at('e3', .5), label: 'matches the standard', lane: 1, dy: .25 },
+    { t: at('e4', .55), label: 'crack', lane: 1, col: COL.flaw, dy: .1 },
+    { t: at('e5', .75), label: 'gradual change shows', lane: 1, dy: .12 }]);
+}
+
+/* ====================== HYBRID: OVERVIEW ====================== */
+function sceneHyb() {
+  const S = SPAN.hyb;
+  g.save(); camera([[S.a, 960, 500, 1], [at('h1', .3), 960, 500, 1], [at('h1', .9), 880, 520, 1.45], [at('h2', .5), 880, 520, 1.45], [at('h2', .62), 880, 560, 1.3]]);
+  const u1 = eio((t - at('h2', .02)) / (L.h2.d * .22)) - eio((t - at('h2', .5)) / (L.h2.d * .14));     // size change
+  const u2 = eio((t - at('h2', .26)) / (L.h2.d * .2)) - eio((t - at('h2', .52)) / (L.h2.d * .14));     // spacing change
+  const pw = lerp(110, 56, u1), pxx = lerp(1110, 1300, u2), drive = ramp(at('h1', .45), .5), pk = ramp(at('h1', .72), .5);
+  fieldLoops(800, 520, 4, 60, 44, 90, 28, drive * .85);
+  g.fillStyle = steelGrad(620, 720); rr(440, 620, 1040, 100, 8); g.fill();
+  eddy(800, 634, 150, 3, drive, 16); eddy(800, 634, 330, 1, drive * .45, 0);
+  wire([[800, 470], [800, 360]], COL.cu, 3); acSource(800, 330, 32);
+  coilV(800, 470, 590, 170, 7, COL.cu, COL.cuD);
+  wire([[pxx, 500], [pxx, 360]], COL.pick, 3); panel(pxx - 46, 300, 92, 60, 10, '#18233c', COL.pick);
+  g.strokeStyle = COL.pick; g.lineWidth = 3; g.lineCap = 'round'; g.beginPath(); g.moveTo(pxx, 350);
+  g.lineTo(pxx + Math.sin(t * 3) * 14 + 8, 314); g.stroke();
+  coilV(pxx, 590 - pw * .75, 590, pw, 5, COL.pick, COL.pickD);
+  for (let i = -1; i <= 1; i += 2) arrow(pxx + i * pw * .22, 616, pxx + i * pw * .22, 596, COL.eddy, 2.5, pk * (.5 + .5 * Math.sin(t * 6)), 9);
+  wtxt('Driver coil', 800, 270, 28, COL.cu, 'center', 700, drive); wtxt('induces the eddy currents', 800, 240, 20, COL.dim, 'center', 500, drive);
+  wtxt('Pickup coil', pxx, 270, 28, COL.pick, 'center', 700, pk); wtxt('senses the response', pxx, 240, 20, COL.dim, 'center', 500, pk);
+  g.restore(); Z = 1;
+  header('Hybrid coil arrangements', '', COL.pick);
+  [['Driver / pickup', .62], ['Through-transmission', .72], ['Primary / secondary assemblies', .84]].forEach((c, i) =>
+    chip(c[0], [470, 900, 1420][i], 880, ramp(at('h2', c[1]), .35), COL.pick, 30, 'center'));
+}
+
+/* ====================== HYBRID: THROUGH-TRANSMISSION ====================== */
+function sceneThru() {
+  const S = SPAN.thru, x = 960;
+  const sl = (eio((t - at('h4', .04)) / (L.h4.d * .13)) - eio((t - at('h4', .24)) / (L.h4.d * .12))) * 190;
+  const thk = 30 + (eio((t - at('h4', .46)) / (L.h4.d * .16)) - eio((t - at('h4', .8)) / (L.h4.d * .14))) * 58;
+  const sigv = .82 * Math.exp(-Math.pow(sl / 105, 2)) * Math.exp(-(thk - 30) / 34), rx = x + sl, ym = 485;
+  g.save();
+  camera([[S.a, 960, 500, 1], [at('h3', .12), 960, 500, 1], [at('h3', .42), 960, 440, 2.1], [at('h3', .56), 960, 440, 2.1], [at('h3', .8), 1040, 500, 1.3], [L.h4.e - .3, 1040, 500, 1.3], [at('h5', .1), 1040, 560, 1.12]]);
+  // flux through the sheet
+  const fl = ramp(at('h3', .3), .6);
+  g.save(); g.setLineDash([lw(12), lw(9)]); g.lineDashOffset = -t * lw(50); g.lineWidth = lw(2.4);
+  for (let i = -2; i <= 2; i++) {
+    g.strokeStyle = COL.field; g.globalAlpha = fl * .9; g.beginPath(); g.moveTo(x + i * 22, 300); g.lineTo(x + i * 26, ym - thk / 2); g.stroke();
+    g.globalAlpha = fl * clamp(.25 + .75 * Math.exp(-(thk - 30) / 34)); g.beginPath(); g.moveTo(x + i * 26, ym + thk / 2); g.lineTo(x + i * 30, 680); g.stroke();
+  }
+  g.restore();
+  // material
+  g.fillStyle = steelGrad(ym - thk / 2, ym + thk / 2); rr(600, ym - thk / 2, 720, thk, 4); g.fill();
+  eddy(x, ym - thk / 2 + 6, 120, Math.max(1, Math.round(thk / 14)), fl, 12);
+  wtxt('Material', 612, ym - thk / 2 - 20, 22, COL.dim, 'left', 600);
+  // transmitting circuit
+  wire([[x, 300], [x, 250], [560, 250], [560, 298]], COL.cu, 3); wire([[560, 362], [560, 440], [x - 110, 440], [x - 110, 420], [x - 60, 420]], COL.cu, 3);
+  acSource(560, 330, 32); coilV(x, 300, 420, 130, 7, COL.cu, COL.cuD);
+  wtxt('AC source', 512, 330, 22, COL.dim, 'right', 600); wtxt('Transmitting (driver) coil', x + 90, 340, 24, COL.cu, 'left', 700);
+  // receiving circuit
+  const rc = ramp(at('h3', .6), .5);
+  g.save(); g.globalAlpha = rc;
+  wire([[rx, 550], [rx + 100, 550], [rx + 100, 530], [1420, 530], [1420, 560]], COL.pick, 3); wire([[rx, 670], [rx, 730], [1420, 730], [1420, 690]], COL.pick, 3);
+  coilV(rx, 550, 670, 130, 7, COL.pick, COL.pickD);
+  meter(1290, 560, 260, 130, sigv, 'Indicating instrument', sigv < .45 ? COL.flaw : COL.sig);
+  wtxt('Receiving coil', rx - 18, 708, 24, COL.pick, 'right', 700);
+  g.restore();
+  // alignment guide
+  const al = ramp(at('h4', .0), .4) * (1 - ramp(at('h4', .42), .4));
+  if (al > 0) { g.save(); g.globalAlpha = al; g.strokeStyle = COL.gold; g.lineWidth = lw(2); g.setLineDash([lw(8), lw(8)]); g.beginPath(); g.moveTo(x, 270); g.lineTo(x, 720); g.stroke(); g.restore();
+    wtxt(Math.abs(sl) > 30 ? 'misaligned: signal drops' : 'exactly opposite', x - 150, 760, 26, Math.abs(sl) > 30 ? COL.flaw : COL.gold, 'center', 700, al); }
+  const tk = ramp(at('h4', .45), .4) * (1 - ramp(L.h4.e - .4, .4));
+  wtxt(thk > 50 ? 'thicker material: little field gets through' : 'thin material', x - 150, 760, 26, thk > 50 ? COL.flaw : COL.gold, 'center', 700, tk);
+  g.restore(); Z = 1;
+  header('Hybrid', 'through-transmission', COL.pick);
+  [['Drive current: magnitude and frequency', .2], ['Coil parameters: exciting and sensing coils', .58], ['Test object characteristics', .86]].forEach((c, i) =>
+    chip(c[0], 960, 770 + i * 60, ramp(at('h5', c[1]), .35), [COL.cu, COL.pick, COL.steel][i], 27, 'center'));
+}
+
+/* ====================== HYBRID: DRIVER AND PICKUP IN ONE HOUSING ====================== */
+const RF = { top: 640, fast: [700, 1000, 1500], c0: 1150, c1: 1280, crack: 1500 };
+function rfPx(tt) { const a = L.h8.s + .2, b = L.h8.e - .9; return lerp(850, 1640, clamp((tt - a) / (b - a))); }
+const rfSig = x => RF.fast.reduce((s, f) => s + .32 * Math.exp(-Math.pow((x - f) / 34, 2)), 0)
+  + .75 * Math.exp(-Math.pow((x - (RF.c0 + RF.c1) / 2) / 70, 2)) + .7 * Math.exp(-Math.pow((x - RF.crack - 20) / 40, 2));
+function sceneRefl() {
+  const S = SPAN.refl, px = rfPx(t), top = RF.top;
+  g.save();
+  camera([[S.a, 960, 520, 1], [at('h6', .1), 960, 520, 1], [at('h6', .42), 850, 560, 2.5], [at('h6', 1), 850, 560, 2.5], [at('h7', .25), 850, 610, 1.9], [at('h7', 1), 850, 610, 1.9], [L.h8.s + .3, 1130, 575, 1.25]]);
+  const deep = ramp(at('h6', .45), .6);
+  // two-layer joint
+  g.fillStyle = steelGrad(top, top + 42, '#c0cddc', '#8494aa'); g.fillRect(260, top, 1500, 42);
+  g.fillStyle = steelGrad(top + 45, top + 87, '#a9b7c9', '#5f6f86'); g.fillRect(260, top + 45, 1500, 42);
+  g.fillStyle = '#0a1020'; g.fillRect(260, top + 42, 1500, 3);
+  RF.fast.forEach(f => { g.fillStyle = '#6d7c93'; g.beginPath(); g.moveTo(f - 30, top); g.lineTo(f + 30, top); g.lineTo(f + 12, top + 24); g.lineTo(f + 12, top + 87); g.lineTo(f + 22, top + 100); g.lineTo(f - 22, top + 100); g.lineTo(f - 12, top + 87); g.lineTo(f - 12, top + 24); g.closePath(); g.fill();
+    g.strokeStyle = '#33405a'; g.lineWidth = 1.5; g.stroke(); });
+  const near = x => clamp(.35 + .65 * Math.exp(-Math.pow((px - x) / 120, 2)) * ramp(L.h8.s, .5) + .0);
+  g.save(); g.globalAlpha = near((RF.c0 + RF.c1) / 2); g.fillStyle = '#c4622d'; g.shadowColor = COL.flaw; g.shadowBlur = 16 * near((RF.c0 + RF.c1) / 2);
+  g.beginPath(); g.moveTo(RF.c0, top + 45); for (let i = 0; i <= 13; i++) g.lineTo(RF.c0 + i * 10, top + 45 + [0, 8, 14, 11, 17, 21, 15, 19, 12, 16, 9, 12, 5, 0][i]); g.closePath(); g.fill(); g.restore();
+  g.save(); g.globalAlpha = near(RF.crack); g.strokeStyle = COL.flaw; g.lineWidth = 3; g.shadowColor = COL.flaw; g.shadowBlur = 14 * near(RF.crack);
+  g.beginPath(); g.moveTo(RF.crack + 12, top + 56); g.lineTo(RF.crack + 30, top + 62); g.lineTo(RF.crack + 44, top + 58); g.lineTo(RF.crack + 62, top + 68); g.stroke(); g.restore();
+  wtxt('first layer', 280, top - 18, 20, COL.dim, 'left', 600); wtxt('second layer', 280, top + 108, 20, COL.dim, 'left', 600);
+  const fl = ramp(L.h8.s + .5, .5);
+  wtxt('hidden corrosion', (RF.c0 + RF.c1) / 2, top + 108, 22, COL.flaw, 'center', 700, fl); wtxt('subsurface crack', RF.crack + 34, top + 108, 22, COL.flaw, 'left', 700, fl);
+  // probe: field, housing, coils
+  fieldLoops(px, top - 10, 4, 50, 34, 70, 22, deep * .8);
+  eddy(px, top + 8, 115, 5, deep, 15);
+  g.fillStyle = 'rgba(52,68,104,.55)'; g.strokeStyle = '#5b70a0'; g.lineWidth = lw(2.5); rr(px - 150, top - 215, 300, 213, 18); g.fill(); g.stroke();
+  g.fillStyle = '#26324e'; rr(px - 32, top - 300, 64, 90, 10); g.fill();
+  coilV(px, top - 112, top - 22, 250, 6, COL.cu, COL.cuD, 'back', .08);
+  coilV(px, top - 74, top - 20, 84, 4, COL.pick, COL.pickD);
+  g.save(); g.globalAlpha *= .45; coilV(px, top - 112, top - 22, 250, 6, COL.cu, COL.cuD, 'front', .08); g.restore();
+  const la = ramp(at('h6', .4), .4) * (1 - ramp(L.h8.s, .4));
+  wtxt('Driver coil', px + 165, top - 150, 26, COL.cu, 'left', 700, la); arrow(px + 160, top - 150, px + 118, top - 100, COL.cu, 2, la, 9);
+  wtxt('Pickup coil', px - 165, top - 150, 26, COL.pick, 'right', 700, la * ramp(at('h6', .5), .4)); arrow(px - 160, top - 150, px - 30, top - 60, COL.pick, 2, la * ramp(at('h6', .5), .4), 9);
+  wtxt('one housing', px, top - 238, 24, COL.ink, 'center', 600, la * ramp(at('h6', .62), .4));
+  const l7 = ramp(at('h7', .35), .4) * (1 - ramp(L.h8.s, .4));
+  wtxt('field reaches below the surface layer', px, top + 128, 24, COL.field, 'center', 600, l7);
+  g.restore(); Z = 1;
+  header('Hybrid', 'driver and pickup in one housing', COL.pick);
+  const a = L.h8.s + .2, b = L.h8.e - .9, tx = x => lerp(a, b, (x - 850) / 790);
+  chart(300, 772, 1320, 170, [{ label: 'Pickup signal', col: COL.sig, range: 1.15, base: .8, traces: [{ fn: tt => rfSig(rfPx(tt)), col: COL.sig, w: 4 }] }], a, b, ramp(L.h8.s - .2, .5), [
+    { t: tx(1000), label: 'fastener', lane: 0, col: COL.dim, dy: .36 }, { t: tx(1215), label: 'corrosion', lane: 0, col: COL.flaw, dy: .12 }, { t: tx(1512), label: 'fastener + crack', lane: 0, col: COL.flaw, dy: .12 }]);
+}
+
+/* ====================== APPLICATIONS ====================== */
+const CARDS = [
+  { k: 'abs', id: 'p2', x: 80, y: 135, col: COL.cu, h: 'Absolute', s: 'Measure a property', sum: 'Sees everything under one coil', st: 0,
+    b: [['Conductivity measurement, alloy sorting', .2], ['Thickness of nonconductive coatings', .46], ['Gradual wall loss from corrosion', .62]] },
+  { k: 'diff', id: 'p3', x: 980, y: 135, col: COL.gold, h: 'Differential: self-comparison', s: 'Find short, sharp flaws', sum: 'Shows only the difference between two', st: .27,
+    b: [['High-speed testing of tube, bar and wire', .3], ['Pits and cracks in heat exchanger tubing', .5], ['Small surface cracks, with less noise', .68]] },
+  { k: 'ext', id: 'p4', x: 80, y: 545, col: COL.gold, h: 'Differential: external comparison', s: 'Sort against a standard', sum: 'Shows only the difference between two', st: .27,
+    b: [['Compare with a known good standard', .28], ['Alloy and heat treatment', .7], ['Dimension', .88]] },
+  { k: 'hyb', id: 'p5', x: 980, y: 545, col: COL.pick, h: 'Hybrid', s: 'Special geometries', sum: 'Separates driving from sensing', st: .52,
+    b: [['Through-transmission: thin sheet and foil', .26], ['Driver-pickup: aircraft structure', .5], ['Subsurface cracks and hidden corrosion', .68]] }];
+function sceneApp() {
+  const z = 1.72, k = (c) => [c.x + 430, c.y + 195, z];
+  g.save();
+  camera([[SPAN.app.a, 960, 540, 1], [L.p1.e - .5, 960, 540, 1], [at('p2', .08), ...k(CARDS[0])], [L.p2.e - .4, ...k(CARDS[0])], [at('p3', .08), ...k(CARDS[1])], [L.p3.e - .4, ...k(CARDS[1])],
+    [at('p4', .1), ...k(CARDS[2])], [L.p4.e - .4, ...k(CARDS[2])], [at('p5', .08), ...k(CARDS[3])], [L.p5.e - .5, ...k(CARDS[3])], [at('p6', .06), 960, 540, 1]]);
+  CARDS.forEach((c, i) => {
+    const wide = Math.max(1 - ramp(L.p2.s - .4, .5), ramp(L.p6.s - .3, .5)), foc = ramp(L[c.id].s - .4, .5) * (1 - ramp(L[c.id].e - .45, .5));
+    const on = ramp(L.p1.s + i * .25, .5) * clamp(.07 + .93 * Math.max(wide, foc));
+    g.save(); g.globalAlpha = on; panel(c.x, c.y, 860, 390, 22, COL.panel, c.col);
+    icon(c.k, c.x + 135, c.y + 195, 1.0);
+    txt(c.h, c.x + 275, c.y + 58, 34, c.col, 'left', 700); txt(c.s, c.x + 275, c.y + 104, 25, COL.dim, 'left', 600);
+    c.b.forEach((b, j) => { const a = ramp(at(c.id, b[1]), .35); if (a <= 0) return; g.fillStyle = c.col; g.globalAlpha = on * a; g.beginPath(); g.arc(c.x + 285, c.y + 166 + j * 50, 6, 0, 7); g.fill();
+      txt(b[0], c.x + 307 + (1 - a) * 14, c.y + 166 + j * 50, 26, COL.ink, 'left', 500); });
+    g.globalAlpha = on; const sa = ramp(at('p6', c.st), .4);
+    if (sa > 0) { rr(c.x + 275, c.y + 312, 545, 50, 10); g.globalAlpha = sa * .16; g.fillStyle = c.col; g.fill(); g.globalAlpha = 1; txt(c.sum, c.x + 293, c.y + 338, 24, c.col, 'left', 700, sa); }
+    g.restore();
+  });
+  g.restore(); Z = 1;
+  header('Best-suited applications', '', COL.accent);
+}
+
+/* ====================== frame ====================== */
+const SCENES = { intro: sceneIntro, abs: sceneAbs, diff: sceneDiff, ext: sceneExt, hyb: sceneHyb, thru: sceneThru, refl: sceneRefl, app: sceneApp };
+function renderAt(time) {
+  t = time; Z = 1;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.shadowBlur = 0; g.setLineDash([]);
+  const bg = g.createRadialGradient(960, 480, 100, 960, 540, 1200); bg.addColorStop(0, '#111b33'); bg.addColorStop(1, '#070b16');
+  g.fillStyle = bg; g.fillRect(0, 0, 1920, 1080);
+  const name = ORDER.find(s => t >= SPAN[s].a && t < SPAN[s].b) || 'app', S = SPAN[name];
+  g.save(); SCENES[name](); g.restore();
+  // caption for the current narration line
+  const ln = TL.lines.find(l => t >= l.s - .15 && t < l.e - .1);
+  if (ln && ln.cap) {
+    const a = Math.min(ease((t - ln.s + .15) / .35), ease((ln.e - .1 - t) / .3));
+    g.save(); g.globalAlpha = a; g.font = `600 34px ${FONT}`; const w = g.measureText(ln.cap).width + 70;
+    rr(960 - w / 2, 972, w, 62, 31); g.fillStyle = 'rgba(8,13,26,.9)'; g.fill(); g.strokeStyle = 'rgba(106,174,255,.45)'; g.lineWidth = 2; g.stroke();
+    g.restore(); txt(ln.cap, 960, 1004, 34, COL.ink, 'center', 600, a);
+  }
+  g.fillStyle = 'rgba(106,174,255,.55)'; g.fillRect(0, 1074, 1920 * t / TL.total, 6);
+  // scene fades
+  const fade = 1 - Math.min(ease((t - S.a) / .45), ease((S.b - t) / (name === 'app' ? 1.2 : .45)), name === 'intro' ? 1 : 1);
+  if (fade > 0) { g.fillStyle = `rgba(5,8,16,${fade})`; g.fillRect(0, 0, 1920, 1080); }
+}
+window.renderAt = renderAt; window.TOTAL = TL.total;
+
+if (new URLSearchParams(location.search).has('render')) { document.getElementById('play').remove(); renderAt(0); }
+else {
+  const q = new URLSearchParams(location.search); renderAt(+q.get('t') || 0);
+  document.getElementById('play').onclick = e => {
+    e.currentTarget.remove(); const au = new Audio('narration.wav'); au.currentTime = +q.get('t') || 0; au.play();
+    (function loop() { renderAt(Math.min(au.currentTime, TL.total)); if (!au.ended) requestAnimationFrame(loop); })();
+  };
+}
+</script>
+</body>
+</html>
