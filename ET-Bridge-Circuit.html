@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bridge Circuits in Eddy Current Testing</title>
+<style>
+:root{--ink:#111;--mute:#777;--line:#e6e6e6;--acc:#ff5a1f;--fld:#2f6fed;--ok:#13895a;--bad:#d4372c}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#fff;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+.app{height:100vh;max-height:760px;max-width:1240px;margin:0 auto;display:grid;grid-template-rows:54px 1fr 62px}
+header{display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-bottom:1px solid var(--line);gap:16px}
+.brand{font-weight:650;font-size:14px;white-space:nowrap}
+.brand span{color:var(--mute);font-weight:400}
+.dots{display:flex;gap:5px}
+.dot{width:20px;height:4px;border-radius:2px;background:var(--line);transition:background .3s}
+.dot.done{background:var(--ink)}.dot.cur{background:var(--acc)}
+main{display:grid;grid-template-columns:1fr 340px;min-height:0}
+.stage{position:relative;min-height:0;border-right:1px solid var(--line)}
+canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
+.panel{padding:22px 22px 14px;display:flex;flex-direction:column;gap:13px;min-height:0;overflow-y:auto}
+.kicker{font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:var(--mute)}
+h1{font-size:21px;line-height:1.22;font-weight:680;margin-top:-6px}
+.lead{font-size:14px;line-height:1.5;color:#333}
+.eq{font-family:"Cambria Math","STIX Two Math",Georgia,serif;font-size:21px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px}
+.frac{display:inline-flex;flex-direction:column;align-items:center;font-size:17px;line-height:1.1}
+.frac span:first-child{border-bottom:1.5px solid var(--ink);padding:0 3px}
+.tasks{display:flex;flex-direction:column;gap:7px}
+.task{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.4;transition:color .3s}
+.task i{flex:0 0 16px;height:16px;border:1.5px solid var(--ink);border-radius:50%;margin-top:1px;position:relative;transition:background .25s}
+.task.ok i{background:var(--ink)}
+.task.ok i::after{content:"";position:absolute;left:4.2px;top:1.2px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.task.ok{color:var(--mute)}
+.ctrl{display:flex;flex-direction:column;gap:7px;font-size:13px}
+.ctrl label{display:flex;justify-content:space-between;color:var(--mute)}
+.ctrl b{color:var(--ink);font-weight:600}
+input[type=range]{width:100%;accent-color:var(--ink)}
+.seg{display:flex;border:1px solid var(--ink);border-radius:9px;overflow:hidden}
+.seg button{flex:1;border:0;background:#fff;padding:8px 2px;font:inherit;font-size:12.5px;cursor:pointer;border-right:1px solid var(--ink);color:var(--ink)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--ink);color:#fff}
+.note{font-size:12.5px;color:var(--mute)}
+.quiz{border-top:1px solid var(--line);padding-top:13px;display:flex;flex-direction:column;gap:7px;animation:rise .35s ease}
+.quiz .q{font-size:14px;font-weight:620;line-height:1.4;margin-bottom:2px}
+.opt{text-align:left;border:1px solid #d2d2d2;background:#fff;border-radius:9px;padding:8px 12px;font:inherit;font-size:13.5px;line-height:1.35;cursor:pointer;color:var(--ink);transition:border-color .15s,background .15s}
+.opt:hover:not(:disabled){border-color:var(--ink)}
+.opt.right{border-color:var(--ok);background:#eef9f3}
+.opt.wrong{border-color:var(--bad);background:#fdf2f1;animation:shake .3s}
+.opt:disabled{cursor:default;opacity:.55}.opt.right:disabled{opacity:1}
+.fb{font-size:13px;line-height:1.45}
+.fb.ok{color:var(--ok)}.fb.no{color:var(--bad)}
+.big{font-size:44px;font-weight:700;letter-spacing:-1px}
+footer{display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-top:1px solid var(--line);gap:12px}
+.btn{font:inherit;font-size:14px;padding:9px 20px;border-radius:999px;border:1px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;white-space:nowrap}
+.btn.primary{background:var(--ink);color:#fff}
+.btn.small{font-size:13px;padding:7px 14px;align-self:flex-start}
+.btn:disabled{opacity:.22;cursor:default}
+.hint{font-size:12.5px;color:var(--mute);text-align:center}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@media (max-height:640px){.panel{gap:10px;padding-top:16px}h1{font-size:19px}.lead{font-size:13.5px}.eq{padding:6px}}
+html:fullscreen .app{max-width:none;max-height:none}
+html:-webkit-full-screen .app{max-width:none;max-height:none}
+.hright{display:flex;align-items:center;gap:16px}
+.fsbtn{font:inherit;font-size:12px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;padding:5px 12px;cursor:pointer;white-space:nowrap}
+.fsbtn:hover{border-color:var(--ink)}
+.start{position:fixed;inset:0;background:#fff;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px}
+.start h2{font-size:30px;line-height:1.15;font-weight:700;letter-spacing:-.3px}
+.start p{color:#444;font-size:15px;line-height:1.5;max-width:440px}
+.start .btn{font-size:16px;padding:12px 34px;margin-top:6px}
+.start .note{min-height:16px}
+@media (max-width:820px){main{grid-template-columns:1fr;grid-template-rows:50% 50%}.stage{border-right:0;border-bottom:1px solid var(--line)}.panel{padding:14px 16px}h1{font-size:18px}.dot{width:10px}.brand span{display:none}}
+</style>
+</head>
+<body>
+<div class="start" id="start">
+  <div class="kicker">Eddy current · Interactive</div>
+  <h2>Bridge Circuits</h2>
+  <p>Eight short steps, from a balanced bridge to the NULL key on a real flaw detector.</p>
+  <button class="btn primary" id="startbtn">Start</button>
+  <div class="note" id="fsnote"></div>
+</div>
+<div class="app">
+  <header>
+    <div class="brand">Bridge Circuits <span>in Eddy Current Testing</span></div>
+    <div class="hright"><div class="dots" id="dots"></div><button class="fsbtn" id="fsb">Full screen</button></div>
+  </header>
+  <main>
+    <div class="stage"><canvas id="cv"></canvas></div>
+    <div class="panel" id="panel"></div>
+  </main>
+  <footer>
+    <button class="btn" id="back">Back</button>
+    <div class="hint" id="hint"></div>
+    <button class="btn primary" id="next">Next</button>
+  </footer>
+</div>
+<script>
+(()=>{
+const $=s=>document.querySelector(s);
+const cv=$('#cv'),ctx=cv.getContext('2d'),panel=$('#panel');
+const W=800,H=500,MAXH=300;
+const COL={ink:'#111',mute:'#8a8a8a',wire:'#c4c4c4',acc:'#ff5a1f',fld:'#2f6fed',ok:'#13895a'};
+const FONT='-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+let view={s:1,ox:0,oy:0,d:1};
+function resize(){const r=cv.getBoundingClientRect(),d=window.devicePixelRatio||1;cv.width=Math.max(1,Math.round(r.width*d));cv.height=Math.max(1,Math.round(r.height*d));const s=Math.min(r.width/W,r.height/H);view={s,ox:(r.width-W*s)/2,oy:(r.height-H*s)/2,d};}
+new ResizeObserver(resize).observe(cv);resize();
+function toL(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left-view.ox)/view.s,y:(e.clientY-r.top-view.oy)/view.s};}
+function push(a,v){a.push(v);if(a.length>MAXH)a.shift();}
+/* ---------- drawing helpers ---------- */
+function txt(s,x,y,o={}){ctx.save();ctx.font=`${o.w||400} ${o.size||13}px ${FONT}`;ctx.fillStyle=o.c||COL.ink;ctx.globalAlpha=o.a??1;ctx.textAlign=o.al||'left';ctx.textBaseline='middle';ctx.fillText(s,x,y);ctx.restore();}
+function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function arrow(x1,y1,x2,y2,c,w=2,hs=8,a=1){const g=Math.atan2(y2-y1,x2-x1);ctx.save();ctx.globalAlpha=a;ctx.strokeStyle=c;ctx.fillStyle=c;ctx.lineWidth=w;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2-Math.cos(g)*hs*.6,y2-Math.sin(g)*hs*.6);ctx.stroke();ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-hs*Math.cos(g-.45),y2-hs*Math.sin(g-.45));ctx.lineTo(x2-hs*Math.cos(g+.45),y2-hs*Math.sin(g+.45));ctx.closePath();ctx.fill();ctx.restore();}
+function poly(pts,c,w=2){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.stroke();}
+function plen(p){let L=0;for(let i=1;i<p.length;i++)L+=Math.hypot(p[i][0]-p[i-1][0],p[i][1]-p[i-1][1]);return L;}
+function pat(p,s){for(let i=1;i<p.length;i++){const l=Math.hypot(p[i][0]-p[i-1][0],p[i][1]-p[i-1][1]);if(s<=l){const t=s/l;return[p[i-1][0]+(p[i][0]-p[i-1][0])*t,p[i-1][1]+(p[i][1]-p[i-1][1])*t];}s-=l;}return p[p.length-1];}
+function dots(polys,phase,strength,color){const a=clamp(Math.abs(strength),0,1);if(a<.03)return;const L=polys.map(plen),T=L.reduce((x,y)=>x+y,0),g=18;ctx.save();ctx.fillStyle=color;ctx.globalAlpha=a;for(let s0=((phase%g)+g)%g;s0<T;s0+=g){let s=s0,k=0;while(k<polys.length-1&&s>L[k]){s-=L[k];k++;}const p=pat(polys[k],s);ctx.beginPath();ctx.arc(p[0],p[1],2.8,0,7);ctx.fill();}ctx.restore();}
+function meter(cx,top,v,label){const x=cx-58,w=116,h=76;ctx.save();ctx.fillStyle='#fff';ctx.strokeStyle=COL.ink;ctx.lineWidth=1.5;rr(x,top,w,h,10);ctx.fill();ctx.stroke();const oy=top+60,r=42;ctx.strokeStyle='#c8c8c8';ctx.beginPath();ctx.arc(cx,oy,r,Math.PI+.5,2*Math.PI-.5);ctx.stroke();for(const t of[-1,-.5,0,.5,1]){const a=-Math.PI/2+t*1.07,i=t?4:8;ctx.strokeStyle=t?'#c8c8c8':COL.ink;ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*(r-i),oy+Math.sin(a)*(r-i));ctx.lineTo(cx+Math.cos(a)*r,oy+Math.sin(a)*r);ctx.stroke();}const a=-Math.PI/2+clamp(v,-1,1)*1.07;ctx.strokeStyle=COL.acc;ctx.lineWidth=2.4;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(cx,oy);ctx.lineTo(cx+Math.cos(a)*(r-6),oy+Math.sin(a)*(r-6));ctx.stroke();ctx.fillStyle=COL.ink;ctx.beginPath();ctx.arc(cx,oy,3.5,0,7);ctx.fill();ctx.restore();txt(label,cx,top+h+14,{al:'center',c:COL.mute,size:12});}
+function chart(x,y,w,h,series,o={}){ctx.save();ctx.fillStyle='#fff';ctx.fillRect(x,y,w,h);ctx.strokeStyle='#e4e4e4';ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,w,h);
+ if(o.zero!==undefined){ctx.setLineDash([3,4]);ctx.strokeStyle='#d6d6d6';ctx.beginPath();ctx.moveTo(x,o.zero);ctx.lineTo(x+w,o.zero);ctx.stroke();ctx.setLineDash([]);}
+ (o.lines||[]).forEach(l=>{ctx.setLineDash([5,5]);ctx.strokeStyle=l.c;ctx.globalAlpha=.6;ctx.beginPath();ctx.moveTo(x,l.y);ctx.lineTo(x+w,l.y);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;});
+ ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();
+ series.forEach(s=>{const d=s.d,n=d.length;if(n<2)return;ctx.strokeStyle=s.c;ctx.lineWidth=s.w||2;ctx.lineJoin='round';ctx.beginPath();for(let i=0;i<n;i++){const X=x+w-(n-1-i)*(w/(MAXH-1)),v=(d[i]-s.min)/(s.max-s.min),Y=y+h-4-clamp(v,0,1)*(h-8);i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);}ctx.stroke();});
+ ctx.restore();ctx.save();ctx.font=`400 12px ${FONT}`;let lw=24;series.forEach(s=>{if(s.label)lw+=ctx.measureText(s.label).width+46;});ctx.fillStyle='rgba(255,255,255,.92)';ctx.fillRect(x+4,y+4,lw-20,20);if(o.right){const rw=ctx.measureText(o.right).width;ctx.fillRect(x+w-rw-18,y+4,rw+12,20);}ctx.restore();let lx=x+12;series.forEach(s=>{if(!s.label)return;ctx.fillStyle=s.c;ctx.fillRect(lx,y+12,12,3);txt(s.label,lx+17,y+14,{size:12,c:'#555'});lx+=ctx.measureText(s.label).width+46;});if(o.right)txt(o.right,x+w-12,y+14,{al:'right',size:12,c:'#555'});}
+
+/* ---------- complex numbers + coil model ---------- */
+const cx=(re,im)=>({re,im});
+const cadd=(a,b)=>cx(a.re+b.re,a.im+b.im),csub=(a,b)=>cx(a.re-b.re,a.im-b.im);
+const cmul=(a,b)=>cx(a.re*b.re-a.im*b.im,a.re*b.im+a.im*b.re);
+const cdiv=(a,b)=>{const d=b.re*b.re+b.im*b.im;return cx((a.re*b.re+a.im*b.im)/d,(a.im*b.re-a.re*b.im)/d);};
+const cabs=a=>Math.hypot(a.re,a.im),par=(a,b)=>cdiv(cmul(a,b),cadd(a,b));
+const crot=(z,a)=>cx(z.re*Math.cos(a)-z.im*Math.sin(a),z.re*Math.sin(a)+z.im*Math.cos(a));
+/* coil coupled to the eddy current path: q grows with conductivity x frequency, k2 is coupling (falls with lift-off) */
+const R0=1,X0=10;
+function Zc(q,k2){const d=1+q*q;return cx(R0+k2*X0*q/d,X0*(1-k2*q*q/d));}
+const ZAIR=cx(R0,X0),ZREF=Zc(2.5,.55);
+/* bridge: R1 = R2 = 10 ohm, AC source across the bridge, ammeter (2 ohm) across the two legs */
+function bridgeI(Zt,Zb){const Rb=cx(10,0),dV=csub(cdiv(Zt,cadd(Rb,Zt)),cdiv(Zb,cadd(Rb,Zb))),Zth=cadd(par(Rb,Zt),par(Rb,Zb));return cdiv(dV,cadd(cx(2,0),Zth));}
+const SAMP={same:{q:2.5,k2:.55,s:'matches standard'},crack:{q:1.625,k2:.53,s:'cracked'},alloy:{q:3.6,k2:.55,s:'other alloy'}};
+function segDist(px,py,c){const dx=c.bx-c.ax,dy=c.by-c.ay,L=dx*dx+dy*dy;let t=((px-c.ax)*dx+(py-c.ay)*dy)/L;t=clamp(t,0,1);return Math.hypot(px-(c.ax+t*dx),py-(c.ay+t*dy));}
+
+function xl(val,x,y,al,c,w){ctx.save();const f=(z,t)=>{ctx.font=`${w||400} ${z}px ${FONT}`;return ctx.measureText(t).width;};const r=` = ${val} Ω`,a=f(12,'X'),b=f(9,'L'),d=f(12,r),x0=al==='right'?x-(a+b+d):x;ctx.restore();txt('X',x0,y,{size:12,c,w});txt('L',x0+a,y+4,{size:9,c,w});txt(r,x0+a+b,y,{size:12,c,w});}
+/* AC ammeter: zero at the left */
+function meterU(cx0,top,v,label){const x=cx0-58,w=116,h=76;ctx.save();ctx.fillStyle='#fff';ctx.strokeStyle=COL.ink;ctx.lineWidth=1.5;rr(x,top,w,h,10);ctx.fill();ctx.stroke();const oy=top+60,r=42;ctx.strokeStyle='#c8c8c8';ctx.beginPath();ctx.arc(cx0,oy,r,Math.PI+.5,2*Math.PI-.5);ctx.stroke();
+ for(const t of[0,.25,.5,.75,1]){const a=-Math.PI/2-1.07+t*2.14,i=t?4:8;ctx.strokeStyle=t?'#c8c8c8':COL.ink;ctx.beginPath();ctx.moveTo(cx0+Math.cos(a)*(r-i),oy+Math.sin(a)*(r-i));ctx.lineTo(cx0+Math.cos(a)*r,oy+Math.sin(a)*r);ctx.stroke();}
+ const a=-Math.PI/2-1.07+clamp(v,0,1)*2.14;ctx.strokeStyle=COL.acc;ctx.lineWidth=2.4;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(cx0,oy);ctx.lineTo(cx0+Math.cos(a)*(r-6),oy+Math.sin(a)*(r-6));ctx.stroke();ctx.fillStyle=COL.ink;ctx.beginPath();ctx.arc(cx0,oy,3.5,0,7);ctx.fill();ctx.restore();
+ txt('0',cx0-40,top+18,{al:'center',size:10.5,c:COL.mute});txt(label,cx0,top+h+14,{al:'center',c:COL.mute,size:12});}
+/* a bridge leg: resistor, or coil (its resistance + inductance in a dashed box) */
+function leg(x1,y1,x2,y2,type,hl){const L=Math.hypot(x2-x1,y2-y1),a=Math.atan2(y2-y1,x2-x1);ctx.save();ctx.translate(x1,y1);ctx.rotate(a);ctx.strokeStyle=hl?COL.acc:COL.ink;ctx.lineWidth=hl?2.4:2;ctx.lineJoin='round';ctx.lineCap='round';
+ const zig=(s,e,n,amp)=>{ctx.lineTo(s,0);const st=(e-s)/n;for(let i=0;i<n;i++)ctx.lineTo(s+st*(i+.5),i%2?amp:-amp);ctx.lineTo(e,0);};
+ ctx.beginPath();ctx.moveTo(0,0);
+ if(type==='r'){zig(L*.32,L*.68,6,7);ctx.lineTo(L,0);ctx.stroke();}
+ else{zig(L*.24,L*.43,5,6);ctx.lineTo(L*.5,0);const n=4,r=(L*.28)/(2*n);for(let i=0;i<n;i++)ctx.arc(L*.5+r+2*r*i,0,r,Math.PI,0,false);ctx.lineTo(L,0);ctx.stroke();
+  ctx.setLineDash([3,3]);ctx.lineWidth=1.2;ctx.strokeStyle=hl?COL.acc:'#8a8a8a';ctx.strokeRect(L*.19,-16,L*.64,32);}
+ ctx.restore();}
+function source(x,y){ctx.save();ctx.fillStyle='#fff';ctx.strokeStyle=COL.ink;ctx.lineWidth=1.8;ctx.beginPath();ctx.arc(x,y,24,0,7);ctx.fill();ctx.stroke();ctx.lineWidth=2;ctx.beginPath();for(let i=0;i<=24;i++){const X=x-13+i*26/24,Y=y-8*Math.sin(i/24*2*Math.PI);i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);}ctx.stroke();ctx.restore();}
+function probeSide(x,yb,label,lab2){ctx.save();ctx.fillStyle='#fff';ctx.strokeStyle=COL.ink;ctx.lineWidth=1.6;rr(x-17,yb-54,34,54,6);ctx.fill();ctx.stroke();ctx.lineWidth=2;for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(x-11,yb-6-i*5);ctx.lineTo(x+11,yb-6-i*5);ctx.stroke();}ctx.restore();poly([[x,yb-54],[x,yb-74]],COL.wire);if(label)txt(label,x,yb-84,{al:'center',size:12,c:COL.mute});}
+function plate(x,y,w,label,crack){ctx.save();ctx.fillStyle='#f2f2f2';ctx.strokeStyle=COL.ink;ctx.lineWidth=1.4;ctx.fillRect(x,y,w,22);ctx.strokeRect(x,y,w,22);if(crack){ctx.strokeStyle=COL.ink;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(x+w/2+3,y);ctx.lineTo(x+w/2-1,y+8);ctx.lineTo(x+w/2+2,y+14);ctx.stroke();}ctx.restore();txt(label,x+w/2,y+36,{al:'center',size:12,c:COL.mute});}
+
+/* ---------- Scene BR: the bridge circuit ---------- */
+const P={T:[420,80],L:[300,200],R:[540,200],B:[420,320]};
+const PARTS={src:{x:110,y:200,n:'AC source',d:'Supplies alternating current across the bridge.'},
+ r1:{x:360,y:140,n:'R1',d:'One of the two balanced resistors. It sits in the left leg with the testing coil.'},
+ r2:{x:480,y:140,n:'R2',d:'The matching resistor in the right leg, with the balancing coil.'},
+ tc:{x:360,y:260,n:'Testing coil',d:'The coil that goes on the part. Its impedance changes when the part under it changes.'},
+ bc:{x:480,y:260,n:'Balancing coil',d:'Set to match the testing coil so both legs have equal impedance.'},
+ am:{x:420,y:200,n:'Ammeter',d:'Connected across the two legs. It reads the current that flows when the legs are not equal.'}};
+const BR={mode:'ident',Xb:7,yb:150,k2:0,sample:'same',gain:1,mag:0,ph:0,t:0,found:{},hover:null,last:null,drag:false,off:0,touched:false,Zt:ZAIR,Zb:ZAIR,
+ setup(o){Object.assign(this,{Xb:7,yb:150,k2:0,sample:'same',mag:0,found:{},hover:null,last:null,drag:false,touched:false},o);
+  const ref={bal:[ZAIR,cx(R0,5),.95],probe:[Zc(2.5,.55),ZAIR,.85],ref:[Zc(1.625,.53),ZREF,.75]}[this.mode];this.gain=ref?ref[2]/cabs(bridgeI(ref[0],ref[1])):1;},
+ hit(p){for(const k in PARTS){const q=PARTS[k];if(Math.hypot(p.x-q.x,p.y-q.y)<(k==='am'?24:32))return k;}return null;},
+ down(p){if(this.mode==='ident'){const k=this.hit(p);if(k){this.found[k]=true;this.last=k;onPart();}}
+  if(this.mode==='probe'&&Math.abs(p.x-725)<42&&p.y>this.yb-66&&p.y<this.yb+10){this.drag=true;this.off=p.y-this.yb;this.touched=true;}},
+ move(p){if(this.mode==='ident')this.hover=this.hit(p);if(this.drag)this.yb=clamp(p.y-this.off,150,238);},
+ over(p){return this.mode==='ident'?!!this.hit(p):this.mode==='probe'&&Math.abs(p.x-725)<42&&p.y>this.yb-66&&p.y<this.yb+10;},
+ up(){this.drag=false;},
+ update(dt){this.t+=dt;let Zt=ZAIR,Zb=ZAIR;
+  if(this.mode==='bal')Zb=cx(R0,this.Xb);
+  else if(this.mode==='probe'){this.k2=.55*Math.exp(-(238-this.yb)/22);Zt=Zc(2.5,this.k2);}
+  else if(this.mode==='ref'){const s=SAMP[this.sample];Zt=Zc(s.q,s.k2);Zb=ZREF;}
+  this.Zt=Zt;this.Zb=Zb;const m=clamp(cabs(bridgeI(Zt,Zb))*this.gain,0,1.05);this.mag+=(m-this.mag)*Math.min(1,dt*10);if(this.mag<.004)this.mag=0;this.ph=16*Math.sin(2*Math.PI*.8*this.t);},
+ draw(){const{T,L,R,B}=P,id=this.mode==='ident',hl=k=>id&&(this.hover===k||this.last===k);
+  poly([[110,176],[110,80],[190,80]],COL.ink,1.8);leg(190,80,290,80,'r');poly([[290,80],[T[0],T[1]]],COL.ink,1.8);
+  poly([[110,224],[110,360],[420,360],[B[0],B[1]]],COL.ink,1.8);
+  poly([L,[402,200]],COL.ink,1.8);poly([[438,200],R],COL.ink,1.8);
+  dots([[[110,176],[110,80],[420,80],[300,200],[420,320],[420,360],[110,360],[110,224]]],this.ph,.45,COL.ink);
+  dots([[[420,80],[540,200],[420,320]]],this.ph,.45,COL.ink);
+  dots([[[300,200],[540,200]]],this.ph*1.6,this.mag*1.3,COL.acc);
+  leg(T[0],T[1],L[0],L[1],'r',hl('r1'));leg(T[0],T[1],R[0],R[1],'r',hl('r2'));
+  leg(L[0],L[1],B[0],B[1],'coil',hl('tc')||this.mode==='probe');leg(R[0],R[1],B[0],B[1],'coil',hl('bc')||this.mode==='bal');
+  source(110,200);
+  ctx.save();ctx.fillStyle='#fff';ctx.strokeStyle=hl('am')?COL.acc:COL.ink;ctx.lineWidth=1.8;ctx.beginPath();ctx.arc(420,200,18,0,7);ctx.fill();ctx.stroke();ctx.restore();txt('A',420,201,{al:'center',w:700,size:14,c:hl('am')?COL.acc:COL.ink});
+  for(const n of[T,L,R,B]){ctx.fillStyle=COL.ink;ctx.beginPath();ctx.arc(n[0],n[1],3.2,0,7);ctx.fill();}
+  const lab=(k,s,x,y,al)=>{const on=!id||this.found[k];txt(s,x,y,{al,size:12.5,w:on&&id?650:400,c:id?(this.found[k]?COL.acc:'#c4c4c4'):COL.ink});};
+  lab('src',id&&!this.found.src?'?':'AC source',144,200,'left');lab('r1',id&&!this.found.r1?'?':'R1',338,126,'right');lab('r2',id&&!this.found.r2?'?':'R2',502,126,'left');
+  lab('tc',id&&!this.found.tc?'?':'Testing coil',332,286,'right');lab('bc',id&&!this.found.bc?'?':(this.mode==='ref'?'Reference coil':'Balancing coil'),508,286,'left');lab('am',id&&!this.found.am?'?':'Ammeter',420,170,'center');
+  if(this.mode==='bal'){xl(this.Zt.im.toFixed(1),332,306,'right','#555');xl(this.Xb.toFixed(1),508,306,'left',COL.acc,600);}
+  if(this.mode==='probe'){const yb=this.yb;if(this.k2>.08){ctx.save();ctx.globalAlpha=clamp(this.k2*1.6,0,1);ctx.strokeStyle=COL.acc;ctx.lineWidth=2;ctx.setLineDash([6,6]);ctx.lineDashOffset=this.ph*2;ctx.beginPath();ctx.ellipse(725,251,30,5,0,0,7);ctx.stroke();ctx.restore();}
+   probeSide(725,yb,'testing coil');plate(662,240,126,'test sample');if(!this.touched)txt('drag ↓',768,yb-30+Math.sin(this.t*4)*4,{al:'center',size:12,c:COL.acc,w:600});}
+  if(this.mode==='ref'){probeSide(725,124,'inspection coil');plate(662,124,126,'test sample: '+SAMP[this.sample].s,this.sample==='crack');probeSide(725,300,'reference coil');plate(662,300,126,'reference standard');}
+  meterU(420,392,this.mag,'ammeter reading');
+  const bal=this.mag<.035;txt(bal?'Balanced: 0 A':'Unbalanced: current flows',492,430,{size:13,w:600,c:bal?COL.ok:COL.acc});}
+};
+
+/* ---------- Scene DA: differential amplifier ---------- */
+const DA={sample:'same',t:0,ht:[],hr:[],ho:[],amp:0,
+ setup(){Object.assign(this,{sample:'same',ht:[],hr:[],ho:[],amp:0});},
+ update(dt){this.t+=dt;const s=SAMP[this.sample],Zt=Zc(s.q,s.k2),w=2*Math.PI*.7*this.t,v=Z=>cabs(Z)*Math.sin(w+Math.atan2(Z.im,Z.re))/11;
+  const vt=v(Zt),vr=v(ZREF);push(this.ht,vt);push(this.hr,vr);push(this.ho,8*(vt-vr));const A=8*cabs(csub(Zt,ZREF))/11;this.amp+=(A-this.amp)*Math.min(1,dt*8);},
+ draw(){const box=(y,a,b)=>{ctx.save();ctx.fillStyle='#fff';ctx.strokeStyle=COL.ink;ctx.lineWidth=1.6;rr(40,y,232,66,10);ctx.fill();ctx.stroke();ctx.restore();ctx.save();ctx.strokeStyle=COL.ink;ctx.lineWidth=2;ctx.beginPath();for(let i=0;i<4;i++)ctx.arc(66+i*10,y+33,5,Math.PI,0,false);ctx.stroke();ctx.restore();txt(a,108,y+26,{w:650,size:14});txt(b,108,y+45,{size:12,c:'#555'});};
+  box(68,'Testing coil','on the test part: '+SAMP[this.sample].s);box(218,'Reference coil','on the reference standard');
+  poly([[272,101],[336,101],[336,150],[380,150]],COL.ink,1.8);poly([[272,251],[336,251],[336,210],[380,210]],COL.ink,1.8);
+  ctx.save();ctx.fillStyle='#fff';ctx.strokeStyle=COL.ink;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(380,110);ctx.lineTo(380,250);ctx.lineTo(500,180);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
+  txt('+',392,150,{w:700,size:16});txt('−',392,210,{w:700,size:18});txt('differential',418,272,{al:'center',size:12,c:COL.mute});txt('amplifier',418,287,{al:'center',size:12,c:COL.mute});
+  poly([[500,180],[612,180]],COL.ink,1.8);txt('output',556,166,{al:'center',size:12,c:COL.mute});
+  dots([[[500,180],[612,180]]],this.t*40,clamp(this.amp*1.4,0,1),COL.acc);
+  meterU(690,128,clamp(this.amp/.75,0,1),'output level');
+  const y0=318,h=76;chart(30,y0,740,h,[{d:this.ht,c:COL.ink,min:-1.1,max:1.1,label:'testing coil voltage'},{d:this.hr,c:COL.fld,min:-1.1,max:1.1,label:'reference coil voltage'}],{zero:y0+h/2});
+  const y1=404;chart(30,y1,740,80,[{d:this.ho,c:COL.acc,min:-1.1,max:1.1,label:'amplifier output (the difference, amplified)'}],{zero:y1+40});}
+};
+
+/* ---------- Scene AP: real instrument with NULL ---------- */
+const LIFT=csub(Zc(2.5,.38),Zc(2.5,.55)),ROT=Math.PI-Math.atan2(LIFT.im,LIFT.re),GAIN=62,SCX=600,SCY=190;
+const AP={px:110,py:195,drag:false,ox:0,oy:0,touched:false,type:'abs',lift:false,nulled:false,nullRaw:ZAIR,trail:[],hist:[],t:0,out:cx(0,0),pos:false,neg:false,lt:0,
+ crack:{ax:250,ay:118,bx:250,by:268},
+ prox(x,y){const d=segDist(x,y,this.crack);return Math.exp(-((d/16)**2));},
+ Z(x,y){const p=this.prox(x,y);return Zc(2.5*(1-.45*p),(this.lift?.38:.55)*(1-.04*p));},
+ raw(){return this.type==='abs'?this.Z(this.px,this.py):csub(this.Z(this.px-14,this.py),this.Z(this.px+14,this.py));},
+ doNull(){this.nullRaw=this.raw();this.nulled=true;this.trail=[];},
+ setType(t){this.type=t;this.nullRaw=t==='abs'?ZREF:cx(0,0);this.trail=[];},
+ setup(o){Object.assign(this,{px:110,py:195,drag:false,touched:false,type:'abs',lift:false,nulled:false,nullRaw:ZAIR,trail:[],hist:[],pos:false,neg:false,lt:0},o);},
+ down(p){if(Math.hypot(p.x-this.px,p.y-this.py)<34){this.drag=true;this.ox=p.x-this.px;this.oy=p.y-this.py;this.touched=true;}},
+ over(p){return Math.hypot(p.x-this.px,p.y-this.py)<34;},
+ move(p){if(this.drag){this.px=clamp(p.x-this.ox,58,382);this.py=clamp(p.y-this.oy,72,312);}},
+ up(){this.drag=false;},
+ update(dt){this.t+=dt;const r=crot(csub(this.raw(),this.nullRaw),ROT);this.out=r;this.trail.push([SCX+r.re*GAIN,SCY-r.im*GAIN]);if(this.trail.length>700)this.trail.shift();push(this.hist,r.im);},
+ draw(){ctx.save();ctx.fillStyle='#f5f5f5';ctx.strokeStyle=COL.ink;ctx.lineWidth=1.4;ctx.fillRect(30,44,380,296);ctx.strokeRect(30,44,380,296);ctx.restore();
+  txt('aluminum plate  ·  top view',30,30,{size:12,c:COL.mute});
+  const c=this.crack;ctx.save();ctx.strokeStyle=COL.ink;ctx.lineWidth=3;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(c.ax,c.ay);ctx.lineTo(c.bx,c.by);ctx.stroke();ctx.restore();txt('crack',c.ax+10,c.ay-6,{size:12,c:'#555'});
+  const coil=(x,r)=>{ctx.save();ctx.strokeStyle=COL.ink;ctx.lineWidth=3;if(this.lift)ctx.setLineDash([5,5]);ctx.beginPath();ctx.arc(x,this.py,r,0,7);ctx.stroke();ctx.restore();};
+  if(this.type==='abs'){coil(this.px,18);ctx.fillStyle=COL.ink;ctx.beginPath();ctx.arc(this.px,this.py,2.5,0,7);ctx.fill();}else{coil(this.px-14,11);coil(this.px+14,11);}
+  const lx=clamp(this.px,96,344);txt(this.type==='abs'?'absolute probe':'differential probe',lx,this.py+(this.py>280?-34:34),{al:'center',size:11.5,c:COL.mute});
+  if(this.lift)txt('lifted off',lx,this.py+(this.py>280?-48:48),{al:'center',size:11.5,c:COL.acc,w:600});
+  if(!this.touched)txt('drag the probe',this.px,this.py-34+Math.sin(this.t*4)*4,{al:'center',size:12,c:COL.acc,w:600});
+  const x0=SCX-150,y0=SCY-150;txt('instrument screen  ·  bridge output',x0,30,{size:12,c:COL.mute});
+  ctx.save();ctx.fillStyle='#fff';ctx.strokeStyle=COL.ink;ctx.lineWidth=1.4;ctx.fillRect(x0,y0,300,300);ctx.strokeRect(x0,y0,300,300);ctx.beginPath();ctx.rect(x0,y0,300,300);ctx.clip();
+  ctx.strokeStyle='#eee';ctx.lineWidth=1;for(let i=1;i<6;i++){ctx.beginPath();ctx.moveTo(x0+i*50,y0);ctx.lineTo(x0+i*50,y0+300);ctx.moveTo(x0,y0+i*50);ctx.lineTo(x0+300,y0+i*50);ctx.stroke();}
+  ctx.strokeStyle='#cfcfcf';ctx.beginPath();ctx.moveTo(SCX,y0);ctx.lineTo(SCX,y0+300);ctx.moveTo(x0,SCY);ctx.lineTo(x0+300,SCY);ctx.stroke();
+  if(this.trail.length>1){ctx.strokeStyle=COL.acc;ctx.globalAlpha=.45;ctx.lineWidth=1.8;ctx.lineJoin='round';ctx.beginPath();this.trail.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.stroke();ctx.globalAlpha=1;}
+  const d=this.trail[this.trail.length-1]||[SCX,SCY],inside=d[0]>x0&&d[0]<x0+300&&d[1]>y0&&d[1]<y0+300;
+  ctx.fillStyle=COL.acc;ctx.beginPath();ctx.arc(d[0],d[1],5.5,0,7);ctx.fill();ctx.restore();
+  if(!inside)txt('Bridge not balanced: dot is off screen. Press NULL.',SCX,SCY+120,{al:'center',size:12,c:COL.acc,w:600});
+  else if(this.nulled&&cabs(this.out)<.03)txt('balanced',SCX+8,SCY-12,{size:11.5,c:COL.ok});
+  const y1=392;chart(30,y1,740,92,[{d:this.hist,c:COL.acc,min:-1.3,max:1.3,label:'vertical signal vs time'}],{zero:y1+46});}
+};
+
+/* ---------- Scene E: concept chain ---------- */
+const E={lit:2,t:0,update(dt){this.t+=dt;},draw(){const bx=[[60,70],[300,70],[540,70],[540,250],[300,250],[60,250]],tx=[['AC source','powers the bridge'],['Balanced bridge','equal legs, 0 A'],['Probe meets','a flaw or change'],['Testing coil','impedance changes'],['Bridge','unbalances'],['Signal','on the screen']];
+ const ar=[[[262,112],[298,112]],[[502,112],[538,112]],[[640,156],[640,248]],[[538,292],[502,292]],[[298,292],[262,292]]];
+ ar.forEach((a,i)=>{const on=i+1<this.lit;arrow(a[0][0],a[0][1],a[1][0],a[1][1],on?COL.ink:'#d8d8d8',2,8);if(on){const t=(this.t*.8+i*.13)%1;ctx.fillStyle=COL.acc;ctx.beginPath();ctx.arc(a[0][0]+(a[1][0]-a[0][0])*t,a[0][1]+(a[1][1]-a[0][1])*t,3.2,0,7);ctx.fill();}});
+ bx.forEach((b,i)=>{const on=i<this.lit;ctx.save();ctx.fillStyle='#fff';ctx.strokeStyle=on?COL.ink:'#dedede';ctx.lineWidth=on?2:1.2;rr(b[0],b[1],200,84,12);ctx.fill();ctx.stroke();ctx.restore();txt(String(i+1),b[0]+14,b[1]+16,{size:11,c:on?COL.acc:'#ccc',w:700});txt(tx[i][0],b[0]+100,b[1]+36,{al:'center',w:650,size:15,c:on?COL.ink:'#c8c8c8'});txt(tx[i][1],b[0]+100,b[1]+56,{al:'center',size:12.5,c:on?'#555':'#d0d0d0'});});
+ if(this.lit>=6)txt('That is how a bridge turns a flaw into a signal.',400,420,{al:'center',size:15,w:600,c:COL.acc});}};
+
+const SC={BR,DA,AP,E};
+
+/* ---------- steps ---------- */
+const segBtns=(id,opts,curv)=>`<div class="seg" id="${id}">${opts.map(o=>`<button data-v="${o[0]}" class="${curv===o[0]?'on':''}">${o[1]}</button>`).join('')}</div>`;
+function bindSeg(id,fn){document.querySelectorAll(`#${id} button`).forEach(b=>b.onclick=()=>{document.querySelectorAll(`#${id} button`).forEach(x=>x.classList.toggle('on',x===b));fn(b.dataset.v);});}
+function onPart(){const n=Object.keys(BR.found).length,info=$('#info');if(info&&BR.last){const q=PARTS[BR.last];info.innerHTML=`<b>${q.n}.</b> ${q.d}<br><span class="note">${n} of 6 parts found</span>`;}if(n>=6)done('parts');}
+const SAMPLE_OPTS=[['same','Same as standard'],['crack','Cracked'],['alloy','Other alloy']];
+const STEPS=[
+{scene:'BR',kicker:'Step 1 · The circuit',title:'Meet the bridge',lead:'An AC source powers a bridge made of two balanced resistors, a testing coil, a balancing coil and an ammeter. Tap each part marked ? to learn what it does.',
+ controls:()=>`<div class="note" id="info" style="font-size:13.5px;color:#333;line-height:1.45">Tap a part on the diagram.<br><span class="note">0 of 6 parts found</span></div>`,
+ tasks:[{id:'parts',text:'Find all six parts.'}],
+ enter(){BR.setup({mode:'ident'});},
+ quiz:[{q:'How are the parts connected?',o:['All in one loop, one after another','A resistor and the testing coil in one leg, a resistor and the balancing coil in the other, and the ammeter across the two legs','The ammeter in series with the AC source'],a:1,why:'Each leg has a resistor and a coil. The ammeter bridges the gap between the two legs, which is where the circuit gets its name.',hint:'Look at where the ammeter connects: to the point between R1 and the testing coil, and to the point between R2 and the balancing coil.'}]},
+{scene:'BR',kicker:'Step 2 · Balance',title:'Null the meter',lead:'The testing coil is in air. When both legs have equal impedance, no current crosses the middle and the ammeter reads 0 A. Adjust the balancing coil to match.',
+ controls:()=>`<div class="ctrl"><label>Balancing coil inductive reactance <b id="xv">${BR.Xb.toFixed(1)} Ω</b></label><input id="xs" type="range" min="5" max="15" step="0.1" value="${BR.Xb}"></div>`,
+ bind(){$('#xs').oninput=e=>{BR.Xb=+e.target.value;$('#xv').textContent=BR.Xb.toFixed(1)+' Ω';};},
+ tasks:[{id:'bal',text:'Adjust the balancing coil until the ammeter reads 0 A.'}],
+ enter(){BR.setup({mode:'bal'});this.st=0;},tick(dt){if(Math.abs(BR.Xb-10)<.151){this.st+=dt;if(this.st>.4)done('bal');}else this.st=0;},
+ quiz:[{q:'The ammeter reads 0 A. What does that tell you?',o:['The AC source is switched off','The impedance on both sides of the bridge is equal','The testing coil is broken'],a:1,why:'Equal impedance means both middle points sit at the same voltage, so no current flows through the ammeter. That is a balanced bridge.',hint:'Current still flows through both legs. Only the ammeter reads zero.'}]},
+{scene:'BR',kicker:'Step 3 · Unbalance',title:'Bring the coil to a part',lead:'The bridge starts balanced with the testing coil in air. Now place the testing coil on a metal test sample and watch the ammeter.',
+ tasks:[{id:'touch',text:'Drag the testing coil down onto the test sample.'},{id:'lift',text:'Lift it back off the sample.'}],
+ enter(){BR.setup({mode:'probe'});},tick(){if(BR.k2>.45)done('touch');if(state[cur].tasks.touch&&BR.k2<.04)done('lift');},
+ quiz:[{q:'Why does the ammeter move when the coil touches the sample?',o:['Eddy currents in the sample change the testing coil\'s impedance, so the legs are no longer equal','The sample adds current from the AC source','The resistors heat up'],a:0,why:'The eddy currents oppose the coil\'s field and change its impedance. Only one leg changed, so the bridge is out of balance and current crosses the ammeter.',hint:'Which part of the circuit is sitting on the sample?'},
+       {q:'Which part of the bridge actually changed?',o:['R1 and R2','The balancing coil','Only the testing coil'],a:2,why:'Everything else stayed the same. The bridge turns a change in one coil into a reading on the ammeter.',hint:'The balancing coil never moved.'}]},
+{scene:'BR',kicker:'Step 4 · Reference standard',title:'Compare against a known good part',lead:'Another bridge uses two identical coils: a testing coil on the part, and a reference coil on a reference standard. If both coils see the same material, the bridge stays balanced.',
+ controls:()=>`<div class="ctrl"><label>Test sample under the inspection coil</label>${segBtns('samp',SAMPLE_OPTS,BR.sample)}</div>`,
+ bind(){bindSeg('samp',v=>{BR.sample=v;if(v==='crack')done('crack');if(v==='alloy')done('alloy');if(v==='same'&&state[cur].tasks.crack&&state[cur].tasks.alloy)done('same');});},
+ tasks:[{id:'crack',text:'Try the cracked sample.'},{id:'alloy',text:'Try the other alloy.'},{id:'same',text:'Go back to a sample that matches the standard.'}],
+ enter(){BR.setup({mode:'ref'});},
+ quiz:[{q:'The test sample is identical to the reference standard. The ammeter reads:',o:['0 A, because two identical coils on identical material are balanced','Full scale','Half scale'],a:0,why:'Identical coils on identical material have identical impedance. Any difference between the part and the standard shows up as current.',hint:'Look at the reading when you chose "Same as standard".'},
+       {q:'The reading jumped for the cracked sample and for the other alloy. What does the bridge really detect?',o:['Only cracks','Any difference between the test part and the reference standard','Only changes in alloy'],a:1,why:'The bridge only knows the two coils differ. It is the inspector\'s job, and the instrument\'s display, to tell a crack from an alloy or other change.',hint:'Both choices moved the meter.'}]},
+{scene:'DA',kicker:'Step 5 · Modern electronics',title:'A differential amplifier does the same job',lead:'Instead of a bridge, a differential amplifier can compare the two coils. It outputs only the difference between the two coil voltages, so equal inputs give zero output.',
+ controls:()=>`<div class="ctrl"><label>Test part under the testing coil</label>${segBtns('dsamp',SAMPLE_OPTS,DA.sample)}</div>`,
+ bind(){bindSeg('dsamp',v=>{DA.sample=v;if(v==='crack')done('dcrack');});},
+ tasks:[{id:'dcrack',text:'Choose the cracked part and watch the output.'}],
+ enter(){DA.setup();},
+ quiz:[{q:'The two coil voltages are identical. The amplifier output is:',o:['Twice the coil voltage','Zero','Equal to the testing coil voltage'],a:1,why:'A differential amplifier subtracts one input from the other. Identical inputs cancel, exactly like a balanced bridge.',hint:'Look at the orange trace when the part matches the standard.'}]},
+{scene:'AP',kicker:'Step 6 · On a real instrument',title:'NULL, then scan',lead:'On an eddy current flaw detector, the NULL (or BALANCE) key balances the bridge for you against the metal under the probe. The dot shows the bridge output: centered means balanced.',
+ controls:()=>`<div class="ctrl"><button class="btn primary small" id="nullb">NULL</button><div class="fb" id="nfb"></div></div><div class="ctrl"><label>Probe</label>${segBtns('lift',[['on','On the part'],['off','Lifted off']],AP.lift?'off':'on')}</div>`,
+ bind(){$('#nullb').onclick=()=>{const f=$('#nfb');if(AP.lift){f.className='fb no';f.textContent='Put the probe back on the part first.';return;}if(AP.prox(AP.px,AP.py)>.1){f.className='fb no';f.textContent='Move the probe off the crack onto sound metal, then press NULL.';return;}AP.doNull();f.className='fb ok';f.textContent='Bridge balanced on sound metal. The dot jumps to the center.';done('null');};
+  bindSeg('lift',v=>{AP.lift=v==='off';});},
+ tasks:[{id:'null',text:'With the probe on sound metal, press NULL.'},{id:'scan',text:'Scan the probe across the crack.'},{id:'lift',text:'Lift the probe off the part.'}],
+ enter(){AP.setup({});},tick(){const S=state[cur].tasks;if(S.null&&!AP.lift&&AP.prox(AP.px,AP.py)>.5&&cabs(AP.out)>.4)done('scan');if(S.null&&AP.lift&&S.scan)done('lift');},
+ quiz:[{q:'Pressing NULL on sound metal moves the dot to the center because:',o:['It switches the probe off','It balances the bridge against that sound metal, so the output is zero','It erases the crack'],a:1,why:'NULL adjusts the balancing side to match the testing coil on good material. From then on, the dot only moves when something under the probe is different.',hint:'Think back to step 2.'},
+       {q:'Lifting the probe moves the dot sideways, while the crack moves it up. What is the sideways signal?',o:['A second crack','Lift-off','A loose cable'],a:1,why:'Lift-off changes the coupling between coil and part. Inspectors rotate the display so lift-off runs sideways and flaw signals stand out vertically, which is why the strip chart shows the crack but hardly the lift-off.',hint:'What did you change to make it move sideways?'}]},
+{scene:'AP',kicker:'Step 7 · Probe wiring',title:'Absolute and differential probes',lead:'An absolute probe compares its coil with a fixed reference, like step 4. A differential probe puts both bridge coils on the part, side by side, so anything they both see cancels.',
+ controls:()=>`<div class="ctrl"><label>Probe type</label>${segBtns('ptype',[['abs','Absolute'],['diff','Differential']],AP.type)}</div><div class="ctrl"><label>Probe</label>${segBtns('lift2',[['on','On the part'],['off','Lifted off']],AP.lift?'off':'on')}</div>`,
+ bind(){bindSeg('ptype',v=>AP.setType(v));bindSeg('lift2',v=>{AP.lift=v==='off';});},
+ tasks:[{id:'dscan',text:'Switch to Differential and scan across the crack.'},{id:'dlift',text:'Lift the differential probe off the part.'}],
+ enter(){AP.setup({nulled:true});AP.setType('abs');AP.touched=true;AP.pos=AP.neg=false;this.lt=0;},
+ tick(dt){if(AP.type==='diff'&&!AP.lift){if(AP.out.im>.35)AP.pos=true;if(AP.out.im<-.35)AP.neg=true;if(AP.pos&&AP.neg)done('dscan');}
+  if(AP.type==='diff'&&AP.lift&&cabs(AP.out)<.05){this.lt+=dt;if(this.lt>.6)done('dlift');}else this.lt=0;},
+ quiz:[{q:'With the differential probe, why does lift-off barely move the dot?',o:['Both coils lift together, so the bridge stays balanced','The differential probe is not affected by metal','The NULL key was pressed again'],a:0,why:'Lift-off changes both coils equally, and equal changes cancel. Differential probes are good at ignoring gradual changes like lift-off, wobble or slow changes in the part.',hint:'Both coils are in the same probe body.'},
+       {q:'Why does the differential probe swing the dot one way and then the other across the crack?',o:['The crack changes direction halfway','Each coil passes over the crack in turn, unbalancing the bridge first one way and then the other','The instrument reverses the AC source'],a:1,why:'First coil 1 sees the crack and coil 2 sees good metal, then the roles swap. That two-sided signal is the classic differential response.',hint:'Watch which of the two coils is over the crack.'}]},
+{scene:'E',kicker:'Final check',title:'Put it all together',lead:'Four quick questions. The chain on the left fills in as you go.',final:true,
+ enter(){E.lit=2+state[cur].solved.filter(Boolean).length;},onSolve(){E.lit=2+state[cur].solved.filter(Boolean).length;},
+ quiz:[{q:'In a balanced bridge, the ammeter reads:',o:['Full scale','0 A','The source current'],a:1,why:'Equal impedance on both sides means no current crosses between the legs.'},
+       {q:'During an inspection, which bridge component\'s impedance changes?',o:['R1','The testing coil','The AC source'],a:1,why:'The testing coil sits on the part. Changes in the part change its impedance.'},
+       {q:'What can replace the bridge circuit?',o:['A differential amplifier','A second AC source','A larger resistor'],a:0,why:'A differential amplifier also outputs only the difference between the two coils.'},
+       {q:'A testing coil and a reference coil sit on a part and on a reference standard. The bridge unbalances when:',o:['Both see identical material','The part differs from the reference standard','The source frequency is steady'],a:1,why:'Any difference between part and standard unbalances the bridge and produces a signal.'}]}
+];
+
+/* ---------- step engine ---------- */
+let cur=0,state=STEPS.map(()=>({tasks:{},solved:[],view:0,first:[]}));
+const tasksDone=(i=cur)=>!STEPS[i].tasks||STEPS[i].tasks.every(t=>state[i].tasks[t.id]);
+const quizDone=(i=cur)=>!STEPS[i].quiz||STEPS[i].quiz.every((q,k)=>state[i].solved[k]);
+const stepDone=(i=cur)=>tasksDone(i)&&quizDone(i);
+function done(id){const S=state[cur];if(S.tasks[id])return;S.tasks[id]=true;const el=panel.querySelector(`[data-t="${id}"]`);if(el)el.classList.add('ok');const at=cur;if(tasksDone()){setTimeout(()=>{if(cur===at){renderQuiz();updateNav();}},450);}updateNav();}
+function renderPanel(){const st=STEPS[cur],S=state[cur];let h=`<div class="kicker">${st.kicker}</div><h1>${st.title}</h1><p class="lead">${st.lead}</p>`;if(st.eq)h+=`<div class="eq">${st.eq}</div>`;if(st.controls)h+=st.controls();if(st.tasks)h+=`<div class="tasks">${st.tasks.map(t=>`<div class="task ${S.tasks[t.id]?'ok':''}" data-t="${t.id}"><i></i><span>${t.text}</span></div>`).join('')}</div>`;h+='<div id="quizbox"></div>';panel.innerHTML=h;panel.scrollTop=0;if(st.bind)st.bind();renderQuiz();updateNav();}
+function renderQuiz(){const st=STEPS[cur],S=state[cur],box=$('#quizbox');if(!box)return;if(!st.quiz||!tasksDone()){box.innerHTML='';return;}const n=st.quiz.length;
+ if(st.final&&S.view>=n){const sc=S.first.filter(Boolean).length;box.innerHTML=`<div class="quiz"><div class="kicker">Result</div><div class="big">${sc} / ${n}</div><div class="lead">correct on the first try.</div><button class="btn primary small" id="restart">Start over</button></div>`;$('#restart').onclick=restart;return;}
+ const k=S.view,q=st.quiz[k],sol=S.solved[k];
+ box.innerHTML=`<div class="quiz"><div class="kicker">Check${n>1?` ${k+1} of ${n}`:''}</div><div class="q">${q.q}</div>${q.o.map((o,j)=>`<button class="opt${sol&&j===q.a?' right':''}" data-j="${j}" ${sol?'disabled':''}>${o}</button>`).join('')}<div class="fb ${sol?'ok':''}">${sol?q.why:''}</div>${sol&&k<n-1?'<button class="btn small" id="qn">Next question</button>':''}${sol&&st.final&&k===n-1?'<button class="btn primary small" id="qn">See result</button>':''}</div>`;
+ box.querySelectorAll('.opt').forEach(b=>b.onclick=()=>answer(+b.dataset.j));const qn=$('#qn');if(qn)qn.onclick=()=>{S.view++;renderQuiz();};}
+function answer(j){const st=STEPS[cur],S=state[cur],k=S.view,q=st.quiz[k];if(S.first[k]===undefined)S.first[k]=j===q.a;
+ if(j===q.a){S.solved[k]=true;if(st.onSolve)st.onSolve();renderQuiz();updateNav();}
+ else{const b=$(`#quizbox .opt[data-j="${j}"]`);b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');const f=$('#quizbox .fb');f.className='fb no';f.textContent=q.hint||'Not quite. Try again.';}}
+function updateNav(){const d=$('#dots');d.innerHTML=STEPS.map((s,i)=>`<div class="dot ${i===cur?'cur':stepDone(i)?'done':''}"></div>`).join('');$('#back').disabled=cur===0;const last=cur===STEPS.length-1;$('#next').style.visibility=last?'hidden':'visible';$('#next').disabled=!stepDone();$('#hint').textContent=stepDone()?(last?'':'Nice. Continue when ready.'):!tasksDone()?'Complete the task to continue':'Answer the check to continue';}
+function go(i){cur=clamp(i,0,STEPS.length-1);STEPS[cur].enter&&STEPS[cur].enter();renderPanel();}
+function restart(){state=STEPS.map(()=>({tasks:{},solved:[],view:0,first:[]}));go(0);}
+$('#next').onclick=()=>{if(stepDone())go(cur+1);};$('#back').onclick=()=>go(cur-1);
+
+/* ---------- input + loop ---------- */
+const scene=()=>SC[STEPS[cur].scene];
+cv.addEventListener('pointerdown',e=>{const s=scene();if(s.down){s.down(toL(e));try{cv.setPointerCapture(e.pointerId);}catch(_){}}});
+cv.addEventListener('pointermove',e=>{const s=scene(),p=toL(e);if(s.move)s.move(p);cv.style.cursor=s.drag?'grabbing':(s.over&&s.over(p)?'grab':'default');});
+const up=()=>{const s=scene();if(s.up)s.up();};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+let last=performance.now();
+function frame(t){const dt=clamp((t-last)/1000,.001,.05);last=t;const s=scene();s.update(dt);const st=STEPS[cur];if(st.tick)st.tick.call(st,dt);
+ const v=view;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);ctx.setTransform(v.d*v.s,0,0,v.d*v.s,v.d*v.ox,v.d*v.oy);s.draw();requestAnimationFrame(frame);}
+/* ---------- start screen + full screen ---------- */
+const fsOK=!!(document.fullscreenEnabled||document.webkitFullscreenEnabled);
+const isFS=()=>!!(document.fullscreenElement||document.webkitFullscreenElement);
+function enterFS(){const el=document.documentElement,f=el.requestFullscreen||el.webkitRequestFullscreen;if(!f)return;try{const r=f.call(el);if(r&&r.catch)r.catch(()=>{});}catch(_){}}
+function exitFS(){const f=document.exitFullscreen||document.webkitExitFullscreen;if(!f)return;try{const r=f.call(document);if(r&&r.catch)r.catch(()=>{});}catch(_){}}
+const fsb=$('#fsb');if(!fsOK)fsb.style.display='none';else $('#fsnote').textContent='Opens full screen. Press Esc to exit.';
+fsb.onclick=()=>isFS()?exitFS():enterFS();
+const fsUpd=()=>{fsb.textContent=isFS()?'Exit full screen':'Full screen';};
+document.addEventListener('fullscreenchange',fsUpd);document.addEventListener('webkitfullscreenchange',fsUpd);
+$('#startbtn').onclick=()=>{if(fsOK)enterFS();$('#start').remove();};
+
+
+go(0);requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
